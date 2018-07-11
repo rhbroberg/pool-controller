@@ -1,0 +1,17 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+while (<STDIN>) 
+{
+    chomp;
+
+    my @bytes = split(/ /);
+    #print ("i see @bytes\n");
+    foreach my $byte (@bytes) {
+	#	print "another: $byte\n";
+	my $hex = pack 'H2', $byte;
+	print "$hex";
+    }
+}
+print "\n";

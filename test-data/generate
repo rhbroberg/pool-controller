@@ -1,0 +1,3 @@
+#!/bin/ksh
+
+tail +2 sample-data | egrep -v '[0-9][0-9]:[0-9][0-9]:[0-9][0-9]' | perl -p -e 's/\.//g' | cut -c 1-47 | ./convert > sample-all-bin 
