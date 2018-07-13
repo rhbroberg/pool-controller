@@ -7,7 +7,7 @@ const yargs = require('yargs');
 const { StatusEvent, DisplayUpdateEvent, ControlEvent } = require('./utils/events');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 
-var { mongoose } = require('./db/mongoose'); // eslint-disable-line no-unused-vars
+var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('./models/event');
 
@@ -34,13 +34,13 @@ fs.readFile(argv.f, (err, data) => {
         logger.error(err);
         return;
     }
-    parser.parse(data, (buf, len) => {
+    parser.parse(data, (buf) => {
         logger.debug(parser.toHexString());
 
         // change to a factory pattern and an observer pattern for action taken
         try {
             if (isMessage(buf, 0x01, 0x03)) {
-                let event = new DisplayUpdateEvent(buf, len);
+                let event = new DisplayUpdateEvent(buf);
                 const salt = event.getSaltPPM();
                 const ambientTemp = event.getAmbientTemp();
                 logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '');
@@ -63,7 +63,7 @@ fs.readFile(argv.f, (err, data) => {
                 var dbEvent = new Event({
                     _id: new mongoose.Types.ObjectId,
                     source: 'panel',
-                    raw: buf, // trim length first?
+                    raw: buf,
                     eventType: 'status',
                     status: statusMap
                 });
@@ -76,7 +76,7 @@ fs.readFile(argv.f, (err, data) => {
             }
 
             if (isMessage(buf, 0x01, 0x02)) {
-                let event = new StatusEvent(buf, len);
+                let event = new StatusEvent(buf);
                 logger.info('status: ', event.asString(), ';', event.prettyOnBits());
             }
 
@@ -89,14 +89,15 @@ fs.readFile(argv.f, (err, data) => {
             }
 
             if (isMessage(buf, 0xe0, 0x18)) {
-                logger.info('motor: ', buf.toString('ascii', 4, len - 2));
+                logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
             }
 
             if (isMessage(buf, 0x83, 0x01)) {
-                let event = new ControlEvent(buf, len);
+                let event = new ControlEvent(buf);
                 logger.info('control: ', event.prettyOnBits());
             }
-        } catch (e) {
+        }
+        catch (e) {
             processingErrors++;
             logger.error(`event exception '${e}' received, continuing`);
         }

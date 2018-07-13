@@ -51,9 +51,8 @@ const controlMap = {
 };
 
 class Event {
-    constructor(frame, length, validMsb, validLsb) {
+    constructor(frame, validMsb, validLsb) {
         this.frame = frame;
-        this.length = length;
         this.now = moment().valueOf();
 
         if (validLsb && validMsb) {
@@ -76,8 +75,8 @@ class Event {
 }
 
 class ChecksummedEvent extends Event {
-    constructor(frame, length) {
-        super(frame, length);
+    constructor(frame) {
+        super(frame);
 
         if (!this.verifyChecksum()) {
             throw new Error('checksum failure');
@@ -85,8 +84,8 @@ class ChecksummedEvent extends Event {
     }
 
     verifyChecksum() {
-        const msb = this.frame.readUInt8(this.length - 2);
-        const lsb = this.frame.readUInt8(this.length - 1);
+        const msb = this.frame.readUInt8(this.frame.length - 2);
+        const lsb = this.frame.readUInt8(this.frame.length - 1);
         const messageChecksum = msb * 256 + lsb;
 
         logger.trace(`msb ${msb} and lsb ${lsb}`);
@@ -103,7 +102,7 @@ class ChecksummedEvent extends Event {
     computeChecksum() {
         var checksum = 0;
 
-        for (var i = 0; i < this.length - 2; i++) {
+        for (var i = 0; i < this.frame.length - 2; i++) {
             checksum += this.frame.readUInt8(i);
         }
         return checksum;
@@ -119,8 +118,8 @@ class PingEvent extends Event {
 
 // 10 02 01 02 ... ckmsg cklsb
 class StatusEvent extends ChecksummedEvent {
-    constructor(frame, length) {
-        super(frame, length, 0x01, 0x02);
+    constructor(frame) {
+        super(frame, 0x01, 0x02);
     }
 
     bitToInt(byte, mask) {
@@ -159,14 +158,14 @@ class StatusEvent extends ChecksummedEvent {
 
 // 10 02 01 03 .... ckmsb cklsb
 class DisplayUpdateEvent extends ChecksummedEvent {
-    constructor(frame, length) {
-        super(frame, length, 0x01, 0x03);
+    constructor(frame) {
+        super(frame, 0x01, 0x03);
         this.text = frame.toString('ascii', 4);
     }
 
     clearText() {
         // only what's between the header, the trailing NULL, and the checksum is interesting
-        return this.frame.toString('ascii', 4, this.length - 3);
+        return this.frame.toString('ascii', 4, this.frame.length - 3);
     }
 
     extractValue(clause) {
@@ -193,8 +192,8 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
 // 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
 class ControlEvent extends ChecksummedEvent {
-    constructor(frame, length) {
-        super(frame, length, undefined, undefined);
+    constructor(frame) {
+        super(frame, undefined, undefined);
     }
 
     prettyOnBits() {
@@ -212,8 +211,8 @@ class ControlEvent extends ChecksummedEvent {
 
 // e0 18 80 e6 18 9e e0 1e 80
 class MotorTelemetryEvent extends Event {
-    constructor(frame, length) {
-        super(frame, length, undefined, undefined);
+    constructor(frame) {
+        super(frame, undefined, undefined);
     }
 
 }

@@ -45,7 +45,7 @@ class FrameParser {
 
                 logger.debug('complete message length ', this.bufferIndex);
                 logger.trace('contents ', this.toHexString());
-                received(this.payload, this.bufferIndex);
+                received(this.payload.slice(0, this.bufferIndex), this.bufferIndex);
                 this.state = 'begin';
             }
             else {
@@ -74,9 +74,9 @@ class FrameParser {
         } else if (this.state === 'alternate_footer') {
             if (thisByte === 0x80) {
                 logger.debug('alternate message complete');
+                received(this.payload.slice(0, this.bufferIndex), this.bufferIndex);
                 this.state = 'begin';
                 this.bufferIndex = 0;
-                received(this.payload, this.bufferIndex);
             }
         }
     }
