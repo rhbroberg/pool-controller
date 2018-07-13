@@ -25,7 +25,7 @@ fs.readFile(argv.f, (err, data) => {
         return;
     }
     parser.parse(data, (buf, len) => {
-        logger.debug(parser.toString(buf, len));
+        logger.debug(parser.toHexString());
 
         try {
             if (isMessage(buf, 0x01, 0x03)) {

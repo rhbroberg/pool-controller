@@ -14,18 +14,17 @@ class FrameParser {
         this.payload = new Buffer.allocUnsafe(128);
     }
 
-    toString(frame, length) {
+    toHexString() {
         var readable = '';
-        for (var i = 0; i < length; i++) {
-            readable += '0x';
-            readable += frame[i].toString(16).padStart(2, 0);
+        for (var i = 0; i < this.bufferIndex; i++) {
+            readable += this.payload[i].toString(16).padStart(2, 0);
             readable += ' ';
         }
         return readable;
     }
 
     parseRegular(received, thisByte, i) {
-        if (this.state === 'header_1') {
+        if (this.state === 'header') {
             if (thisByte === 0x02) {
                 this.state = 'in_body';
                 this.payload.writeUInt8(thisByte, this.bufferIndex++);
@@ -35,7 +34,7 @@ class FrameParser {
                 this.bufferIndex -= 1; // back up the sub-termination char
 
                 logger.debug('complete message length ', this.bufferIndex);
-                logger.trace('contents ', toString(this.payload, this.bufferIndex));
+                logger.trace('contents ', this.toHexString(this.payload, this.bufferIndex));
                 received(this.payload, this.bufferIndex);
                 this.bufferIndex = 0;
                 this.state = 'begin';
@@ -46,13 +45,13 @@ class FrameParser {
         }
         else {
             logger.error(`parse error: state ${this.state}, byte ${thisByte.toString(16)}, index ${i} `);
-            logger.error(this.toString(this.payload, this.bufferIndex));
+            logger.error(this.toHexString(this.payload, this.bufferIndex));
             this.state = 'begin';
             this.start = i;
         }
     }
 
-    parseAlternate(received, thisByte) {
+    parseMotorTelemetry(received, thisByte) {
         if (this.state === 'alternate_header') {
             if (thisByte === 0x18) {
                 this.state = 'alternate_body';
@@ -76,10 +75,10 @@ class FrameParser {
     parse(hunk, received) {
         for (var i = 0; i < hunk.length; i++) {
             let thisByte = hunk[i];
-            logger.trace('hunka hunka: ', thisByte.toString(16));
+            logger.trace('byte: ', thisByte.toString(16));
             if (this.state === 'begin') {
                 if (thisByte === 0x10) {
-                    this.state = 'header_1';
+                    this.state = 'header';
                     this.start = i;
                     this.mode = 'regular';
                     this.bufferIndex = 0;
@@ -91,7 +90,7 @@ class FrameParser {
             } else if (this.mode === 'regular') {
                 this.parseRegular(received, thisByte, i);
             } else if (this.mode === 'alternate') {
-                this.parseAlternate(received, thisByte);
+                this.parseMotorTelemetry(received, thisByte);
             }
         }
     }

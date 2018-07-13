@@ -32,31 +32,42 @@ const controlMap = {
 };
 
 class Event {
-    constructor(message, length, validMsb, validLsb, shouldVerify) {
-        if (validLsb && validMsb) {
-            this.verifyMessageType(message, validMsb, validLsb);
-        }
-        this.message = message;
+    constructor(frame, length, validMsb, validLsb) {
+        this.frame = frame;
         this.length = length;
         this.now = moment().valueOf();
 
-        if (shouldVerify && !this.verifyChecksum()) {
-            throw new Error('checksum failure');
+        if (validLsb && validMsb) {
+            this.verifyEventType(validMsb, validLsb);
         }
     }
 
-    verifyMessageType(message, msb, lsb) {
-        const isValid = (message.readUInt8(2) === msb && message.readUInt8(3) == lsb) ? true : false;
+    verifyEventType(msb, lsb) {
+        const isValid = (this.frame.readUInt8(2) === msb && this.frame.readUInt8(3) == lsb) ? true : false;
         if (!isValid) {
-            const woe = `wrong message type created: (${message.readUInt8(2)}, ${message.readUInt8(3)} != (${msb}, ${lsb}) `;
+            const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} != (${msb}, ${lsb}) `;
             logger.error(woe);
             throw new Error(woe);
         }
     }
 
+    toHexString() {
+        return this.frame.toHexString();
+    }
+}
+
+class ChecksummedEvent extends Event {
+    constructor(frame, length) {
+        super(frame, length);
+
+        if (!this.verifyChecksum()) {
+            throw new Error('checksum failure');
+        }
+    }
+
     verifyChecksum() {
-        const msb = this.message.readUInt8(this.length - 2);
-        const lsb = this.message.readUInt8(this.length - 1);
+        const msb = this.frame.readUInt8(this.length - 2);
+        const lsb = this.frame.readUInt8(this.length - 1);
         const messageChecksum = msb * 256 + lsb;
 
         logger.trace(`msb ${msb} and lsb ${lsb}`);
@@ -64,7 +75,7 @@ class Event {
         const computedChecksum = this.computeChecksum();
         if (messageChecksum !== computedChecksum) {
             logger.error(`checksum mismatch: found ${messageChecksum.toString(16)}, computed ${computedChecksum.toString(16)}; ${msb} ${lsb}`);
-            logger.error('message: ', this.message.toString());
+            logger.error('message: ', this.frame.toString());
             return false;
         }
         return true;
@@ -74,23 +85,23 @@ class Event {
         var checksum = 0;
 
         for (var i = 0; i < this.length - 2; i++) {
-            checksum += this.message.readUInt8(i);
+            checksum += this.frame.readUInt8(i);
         }
         return checksum;
     }
 }
 
-// 01 01 ... <terminator>
+// 10 02 01 01 ckmsb cklsb
 class PingEvent extends Event {
-    constructor(message) {
-        super(message, 0x01, 0x01, false);
+    constructor(frame) {
+        super(frame, 0x01, 0x01);
     }
 }
 
-// 01 02 ... <terminator>
-class StatusEvent extends Event {
-    constructor(message, length) {
-        super(message, length, 0x01, 0x02, true);
+// 10 02 01 02 ... ckmsg cklsb
+class StatusEvent extends ChecksummedEvent {
+    constructor(frame, length) {
+        super(frame, length, 0x01, 0x02);
     }
 
     bitToInt(byte, mask) {
@@ -105,10 +116,10 @@ class StatusEvent extends Event {
     }
 
     asString() {
-        let msg = this.textBitMaskFromByte(this.message.readUInt8(4));
-        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(5));
-        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(6));
-        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(7));
+        let msg = this.textBitMaskFromByte(this.frame.readUInt8(4));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(5));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(6));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(7));
 
         return msg;
     }
@@ -118,7 +129,7 @@ class StatusEvent extends Event {
 
         for (let byte = 0; byte < 3; byte++) {
             for (let bit = 0; bit < 7; bit++) {
-                if (this.bitToInt(this.message.readUInt8(byte + 4), Math.pow(2, bit))) {
+                if (this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit))) {
                     msg += `'${statusMap[byte][bit]}' `;
                 }
             }
@@ -127,11 +138,11 @@ class StatusEvent extends Event {
     }
 }
 
-// 01 03 .... <terminator>
-class DisplayUpdateEvent extends Event {
-    constructor(message, length) {
-        super(message, length, 0x01, 0x03, true);
-        this.text = message.toString('ascii', 4);
+// 10 02 01 03 .... ckmsb cklsb
+class DisplayUpdateEvent extends ChecksummedEvent {
+    constructor(frame, length) {
+        super(frame, length, 0x01, 0x03);
+        this.text = frame.toString('ascii', 4);
     }
 
     extractValue(clause) {
@@ -156,10 +167,10 @@ class DisplayUpdateEvent extends Event {
     }
 }
 
-// 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
-class ControlEvent extends Event {
-    constructor(message, length) {
-        super(message, length, undefined, undefined, true);
+// 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
+class ControlEvent extends ChecksummedEvent {
+    constructor(frame, length) {
+        super(frame, length, undefined, undefined);
     }
 
     asString() {
@@ -177,14 +188,10 @@ class ControlEvent extends Event {
 
 // e0 18 80 e6 18 9e e0 1e 80
 class MotorTelemetryEvent extends Event {
-    constructor(message, length) {
-        super(message, length, undefined, undefined, false);
+    constructor(frame, length) {
+        super(frame, length, undefined, undefined);
     }
 
 }
-
-// remote control display
-// 04 0a ... checksum terminator
-
 
 module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent };
