@@ -1,8 +1,8 @@
-const parse = require('./../parser/parse');
+const parse = require('./utils/parse');
 const fs = require('fs');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { StatusEvent, DisplayUpdateEvent, ControlEvent } = require('./utils/messages');
+const { StatusEvent, DisplayUpdateEvent, ControlEvent } = require('./utils/events');
 
 var argv = yargs
     .default('f', './test-data/test-data/sample-mid-bin')
