@@ -2,7 +2,7 @@ const parse = require('./../parser/parse');
 const fs = require('fs');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { StatusEvent, DisplayUpdateEvent } = require('./utils/messages');
+const { StatusEvent, DisplayUpdateEvent, ControlEvent } = require('./utils/messages');
 
 var argv = yargs
     .default('f', './test-data/test-data/sample-mid-bin')
@@ -35,7 +35,7 @@ fs.readFile(argv.f, (err, data) => {
 
         if (isMessage(buf, 0x01, 0x02)) {
             let event = new StatusEvent(buf);
-            logger.info('status: ', event.printAllBits(), ';', event.prettyOnBits());
+            logger.info('status: ', event.asString(), ';', event.prettyOnBits());
         }
 
         if (isMessage(buf, 0x01, 0x01)) {
@@ -48,6 +48,11 @@ fs.readFile(argv.f, (err, data) => {
 
         if (isMessage(buf, 0xe0, 0x18)) {
             logger.info('motor: ', buf.toString('ascii', 2, len - 2));
+        }
+
+        if (isMessage(buf, 0x83, 0x01)) {
+            let event = new ControlEvent(buf);
+            logger.info('control: ', event.asString());
         }
 
         // if message is unrecognized, log out hex bytes
