@@ -10,6 +10,7 @@ class FrameParser {
         this.start = 0;
         this.bufferIndex = 0;
         this.subParser;
+        this.parseErrors = 0;
 
         this.payload = new Buffer.allocUnsafe(128);
     }
@@ -36,6 +37,7 @@ class FrameParser {
             } else {
                 logger.error(`header parse error: expected 0x02 after 0x10, but got ${thisByte}`);
                 this.state = 'begin';
+                this.parseErrors++;
             }
         } else if (this.state === 'body') {
             if ((thisByte === 0x03) && (this.payload.readUInt8(this.bufferIndex - 1) === 0x10)) {
@@ -54,6 +56,7 @@ class FrameParser {
             logger.error(`parse error: state ${this.state}, byte ${thisByte.toString(16)}, index ${i} `);
             logger.error(this.toHexString(this.payload, this.bufferIndex));
             this.state = 'begin';
+            this.parseErrors++;
         }
     }
 

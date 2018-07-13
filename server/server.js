@@ -17,6 +17,8 @@ var isMessage = (buf, first, second) => {
     return (buf.readUInt8(2) === first && buf.readUInt8(3) === second) ? true : false;
 };
 
+var processingErrors = 0;
+
 fs.readFile(argv.f, (err, data) => {
     logger.info('starting');
     if (err)
@@ -27,12 +29,13 @@ fs.readFile(argv.f, (err, data) => {
     parser.parse(data, (buf, len) => {
         logger.debug(parser.toHexString());
 
+        // change to a factory pattern and an observer pattern for action taken
         try {
             if (isMessage(buf, 0x01, 0x03)) {
                 let event = new DisplayUpdateEvent(buf, len);
                 const salt = event.getSaltPPM();
                 const ambientTemp = event.getAmbientTemp();
-                logger.info('fixed screen: ', buf.toString('ascii', 4, len - 2), salt ? salt : '', ambientTemp ? ambientTemp : '');
+                logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '');
             }
 
             if (isMessage(buf, 0x01, 0x02)) {
@@ -54,11 +57,14 @@ fs.readFile(argv.f, (err, data) => {
 
             if (isMessage(buf, 0x83, 0x01)) {
                 let event = new ControlEvent(buf, len);
-                logger.info('control: ', event.asString());
+                logger.info('control: ', event.prettyOnBits());
             }
         } catch (e) {
-            logger.error('event exception received, continuing');
+            processingErrors++;
+            logger.error(`event exception '${e}' received, continuing`);
         }
         // if message is unrecognized, log out hex bytes
     });
+
+    logger.info(`processing found ${processingErrors} event errors and ${parser.parseErrors} framing errors`);
 });

@@ -13,22 +13,41 @@ const statusMap = [
 ];
 
 const controlMap = {
-    0x80000000: 'filter',
-    0x20000000: 'plus',
-    0x40000000: 'pool',
 
     0x01000000: 'right',
     0x02000000: 'menu',
     0x04000000: 'left',
     0x08000000: 'off',
 
-    0x00010000: 'light',
+    0x10000000: 'minus',
+    0x20000000: 'plus',
+    0x40000000: 'spillover',
+    0x80000000: 'filter',
+
+    0x00010000: 'lights',
     0x00020000: 'aux1',
     0x00040000: 'aux2',
+    0x00080000: 'aux3',
 
-    0x00000100: 'valve3',
-    0x00000200: 'bottom',
-    0x00000400: 'middle',
+    0x00100000: 'aux4',
+    0x00200000: 'aux5',
+    0x00400000: 'aux6',
+    0x00800000: 'aux7',
+
+    0x00001000: 'valve3',
+    0x00002000: 'valve4/heater2',
+    0x00004000: 'heater1',
+    0x00008000: 'aux8',
+
+    0x00000100: 'aux9',
+    0x00000200: 'aux10',
+    0x00000400: 'aux11',
+    0x00000800: 'aux12',
+
+    0x00000001: 'aux13',
+    0x00000002: 'aux14',
+    0x00000004: 'superchlorinate',
+    0x00000008: 'unlock config'
 };
 
 class Event {
@@ -145,6 +164,11 @@ class DisplayUpdateEvent extends ChecksummedEvent {
         this.text = frame.toString('ascii', 4);
     }
 
+    clearText() {
+        // only what's between the header, the trailing NULL, and the checksum is interesting
+        return this.frame.toString('ascii', 4, this.length - 3);
+    }
+
     extractValue(clause) {
         const match = this.text.match(clause);
         return match ? match[1] : undefined;
@@ -173,7 +197,7 @@ class ControlEvent extends ChecksummedEvent {
         super(frame, length, undefined, undefined);
     }
 
-    asString() {
+    prettyOnBits() {
         var msg = '';
         for (var byte = 5; byte < 9; byte++) {
             for (var key in controlMap) {
