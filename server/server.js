@@ -49,5 +49,7 @@ fs.readFile(argv.f, (err, data) => {
         if (isMessage(buf, 0xe0, 0x18)) {
             logger.info('motor: ', buf.toString('ascii', 2, len - 2));
         }
+
+        // if message is unrecognized, log out hex bytes
     });
 });

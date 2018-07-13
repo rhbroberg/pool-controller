@@ -1,26 +1,38 @@
 const log4js = require('log4js');
+const moment = require('moment');
+
 var logger = log4js.getLogger();
 
-var verifyMessageType = (message, msb, lsb) => {
-    const isValid = (message.readUInt8(0) === msb && message.readUInt8(1) == lsb) ? true : false;
-    if (!isValid) {
-        logger.error(`wrong message type created: (${message.readUInt8(0)}, ${message.readUInt8(1)} != (${msb}, ${lsb}) `);
-        throw new Error('');
+class Event {
+    constructor(message, validMsb, validLsb) {
+        if (validLsb && validMsb) {
+            this.verifyMessageType(message, validMsb, validLsb);
+        }
+        this.message = message;
+        this.now = moment().valueOf();
     }
-};
+
+    verifyMessageType(message, msb, lsb) {
+        const isValid = (message.readUInt8(0) === msb && message.readUInt8(1) == lsb) ? true : false;
+        if (!isValid) {
+            let woe = `wrong message type created: (${message.readUInt8(0)}, ${message.readUInt8(1)} != (${msb}, ${lsb}) `;
+            logger.error(woe);
+            throw new Error(woe);
+        }
+    }
+}
 
 // 01 01 ... <terminator>
-class PingEvent {
+class PingEvent extends Event {
     constructor(message) {
-        verifyMessageType(message, 0x01, 0x01);
+        super(message, 0x01, 0x01);
     }
 }
 
 // 01 02 ... <terminator>
-class StatusEvent {
+class StatusEvent extends Event {
     constructor(message) {
-        verifyMessageType(message, 0x01, 0x02);
-        this.message = message;
+        super(message, 0x01, 0x02);
 
         this.lookup = [
             ['heater1', 'valve3', 'check system', 'pool', 'spa', 'filter', 'lights', 'aux1'],
@@ -65,50 +77,48 @@ class StatusEvent {
 }
 
 // 01 03 .... <terminator>
-class DisplayUpdateEvent {
+class DisplayUpdateEvent extends Event {
     constructor(message) {
-        verifyMessageType(message, 0x01, 0x03);
-        this.message = message;
+        super(message, 0x01, 0x03);
         this.text = message.toString('ascii', 2);
     }
 
-    // return 3100
-    getSaltPPM() {
-        const match = this.text.match(/ +Salt Level +(\d+) PPM/);
-        if (match) {
-            return match[1];
-        }
+    extractValue(clause) {
+        const match = this.text.match(clause);
+        return match ? match[1] : undefined;
     }
 
-    // return 78;
+    getSaltPPM() {
+        return this.extractValue(/ +Salt Level +(\d+) PPM/);
+    }
+
     getAmbientTemp() {
-        const match = this.text.match(/ +Air Temp +(\d+)_F/);
-        if (match) {
-            return match[1];
-        }
+        return this.extractValue(/ +Air Temp +(\d+)_F/);
     }
 
     getPoolTemp() {
-        return 82;
+        return this.extractValue(/ +Pool Temp +(\d+)_F/);
     }
 
     getSpaTemp() {
-        return 104;
+        return this.extractValue(/ +SPA Temp +(\d+)_F/);
     }
 }
 
 // ....
-class ControlEvent {
-    constructor() {
-
+class ControlEvent extends Event {
+    constructor(message) {
+        super(message, undefined, undefined);
     }
+
 }
 
 // e0 18 80 e6 18 9e e0 1e 80
-class MotorTelemetryEvent {
-    constructor() {
-
+class MotorTelemetryEvent extends Event {
+    constructor(message) {
+        super(message, undefined, undefined);
     }
+
 }
 
 // remote control display
