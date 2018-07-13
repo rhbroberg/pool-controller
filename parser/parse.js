@@ -1,9 +1,7 @@
 'use strict';
-const fs = require('fs');
 const log4js = require('log4js');
 
 var logger = log4js.getLogger();
-logger.level = 'info';
 
 var payload;
 var state = 'begin';
@@ -74,7 +72,7 @@ var parseAlternate = (received, thisByte) => {
     if (state === 'alternate_header') {
         if (thisByte === 0x18) {
             state = 'alternate_body';
-            logger.info('alternate message started');
+            logger.debug('alternate message started');
         }
     } else if (state === 'alternate_body') {
         payload.writeUInt8(thisByte, bufferIndex++);
@@ -83,7 +81,7 @@ var parseAlternate = (received, thisByte) => {
         }
     } else if (state === 'alternate_footer') {
         if (thisByte === 0x80) {
-            logger.info('alternate message complete');
+            logger.debug('alternate message complete');
             state = 'begin';
             bufferIndex = 0;
             received(payload, bufferIndex);
@@ -113,34 +111,4 @@ var parse = (hunk, received) => {
     }
 };
 
-var isMessage = (buf, first, second) => {
-    return (buf.readUInt8(0) === first && buf.readUInt8(1) === second) ? true : false;
-};
-
-fs.readFile(__dirname + '/' + '../test-data/sample-all-bin', (err, data) => {
-    logger.info('starting');
-    if (err)
-    {
-        logger.error(err);
-        return;
-    }
-    parse(data, (buf, len) => {
-        logger.debug(frameToString(buf, len));
-
-        if (isMessage(buf, 0x01, 0x03)) {
-            logger.info('screen1: ', buf.toString('ascii', 2, len - 2));
-        }
-
-        if (isMessage(buf, 0x01, 0x01)) {
-            logger.debug('heartbeat');
-        }
-
-        if (isMessage(buf, 0x04, 0x0a)) {
-            logger.info('screen2: ', buf.toString('ascii', 5, len - 5), '\n');
-        }
-
-        if (isMessage(buf, 0xe0, 0x18)) {
-            logger.info('motor: ', buf.toString('ascii', 2, len - 2));
-        }
-    });
-});
+module.exports = { parse, frameToString };
