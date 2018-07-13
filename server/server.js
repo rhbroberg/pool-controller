@@ -1,4 +1,4 @@
-const parse = require('./utils/parse');
+const { FrameParser } = require('./utils/parse');
 const fs = require('fs');
 const log4js = require('log4js');
 const yargs = require('yargs');
@@ -11,6 +11,7 @@ var argv = yargs
 
 var logger = log4js.getLogger();
 logger.level = argv.d;
+var parser = new FrameParser();
 
 var isMessage = (buf, first, second) => {
     return (buf.readUInt8(0) === first && buf.readUInt8(1) === second) ? true : false;
@@ -23,8 +24,8 @@ fs.readFile(argv.f, (err, data) => {
         logger.error(err);
         return;
     }
-    parse.parse(data, (buf, len) => {
-        logger.debug(parse.frameToString(buf, len));
+    parser.parse(data, (buf, len) => {
+        logger.debug(parser.toString(buf, len));
 
         if (isMessage(buf, 0x01, 0x03)) {
             let event = new DisplayUpdateEvent(buf);
