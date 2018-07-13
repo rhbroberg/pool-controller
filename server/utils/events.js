@@ -1,3 +1,5 @@
+'use strict';
+
 const log4js = require('log4js');
 const moment = require('moment');
 
@@ -30,35 +32,65 @@ const controlMap = {
 };
 
 class Event {
-    constructor(message, validMsb, validLsb) {
+    constructor(message, length, validMsb, validLsb, shouldVerify) {
         if (validLsb && validMsb) {
             this.verifyMessageType(message, validMsb, validLsb);
         }
         this.message = message;
+        this.length = length;
         this.now = moment().valueOf();
+
+        if (shouldVerify && !this.verifyChecksum()) {
+            throw new Error('checksum failure');
+        }
     }
 
     verifyMessageType(message, msb, lsb) {
-        const isValid = (message.readUInt8(0) === msb && message.readUInt8(1) == lsb) ? true : false;
+        const isValid = (message.readUInt8(2) === msb && message.readUInt8(3) == lsb) ? true : false;
         if (!isValid) {
-            let woe = `wrong message type created: (${message.readUInt8(0)}, ${message.readUInt8(1)} != (${msb}, ${lsb}) `;
+            const woe = `wrong message type created: (${message.readUInt8(2)}, ${message.readUInt8(3)} != (${msb}, ${lsb}) `;
             logger.error(woe);
             throw new Error(woe);
         }
+    }
+
+    verifyChecksum() {
+        const msb = this.message.readUInt8(this.length - 2);
+        const lsb = this.message.readUInt8(this.length - 1);
+        const messageChecksum = msb * 256 + lsb;
+
+        logger.trace(`msb ${msb} and lsb ${lsb}`);
+
+        const computedChecksum = this.computeChecksum();
+        if (messageChecksum !== computedChecksum) {
+            logger.error(`checksum mismatch: found ${messageChecksum.toString(16)}, computed ${computedChecksum.toString(16)}; ${msb} ${lsb}`);
+            logger.error('message: ', this.message.toString());
+            return false;
+        }
+        return true;
+    }
+
+    computeChecksum() {
+        var checksum = 0;
+
+        for (var i = 0; i < this.length - 2; i++) {
+            checksum += this.message.readUInt8(i);
+        }
+        return checksum;
     }
 }
 
 // 01 01 ... <terminator>
 class PingEvent extends Event {
     constructor(message) {
-        super(message, 0x01, 0x01);
+        super(message, 0x01, 0x01, false);
     }
 }
 
 // 01 02 ... <terminator>
 class StatusEvent extends Event {
-    constructor(message) {
-        super(message, 0x01, 0x02);
+    constructor(message, length) {
+        super(message, length, 0x01, 0x02, true);
     }
 
     bitToInt(byte, mask) {
@@ -73,10 +105,10 @@ class StatusEvent extends Event {
     }
 
     asString() {
-        let msg = this.textBitMaskFromByte(this.message.readUInt8(2));
-        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(3));
-        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(4));
+        let msg = this.textBitMaskFromByte(this.message.readUInt8(4));
         msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(5));
+        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(6));
+        msg += ' ' + this.textBitMaskFromByte(this.message.readUInt8(7));
 
         return msg;
     }
@@ -86,7 +118,7 @@ class StatusEvent extends Event {
 
         for (let byte = 0; byte < 3; byte++) {
             for (let bit = 0; bit < 7; bit++) {
-                if (this.bitToInt(this.message.readUInt8(byte + 2), Math.pow(2, bit))) {
+                if (this.bitToInt(this.message.readUInt8(byte + 4), Math.pow(2, bit))) {
                     msg += `'${statusMap[byte][bit]}' `;
                 }
             }
@@ -97,9 +129,9 @@ class StatusEvent extends Event {
 
 // 01 03 .... <terminator>
 class DisplayUpdateEvent extends Event {
-    constructor(message) {
-        super(message, 0x01, 0x03);
-        this.text = message.toString('ascii', 2);
+    constructor(message, length) {
+        super(message, length, 0x01, 0x03, true);
+        this.text = message.toString('ascii', 4);
     }
 
     extractValue(clause) {
@@ -126,13 +158,13 @@ class DisplayUpdateEvent extends Event {
 
 // 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
 class ControlEvent extends Event {
-    constructor(message) {
-        super(message, undefined, undefined);
+    constructor(message, length) {
+        super(message, length, undefined, undefined, true);
     }
 
     asString() {
         var msg = '';
-        for (var byte = 3; byte < 7; byte++) {
+        for (var byte = 5; byte < 9; byte++) {
             for (var key in controlMap) {
                 if ((key && byte) != 0) {
                     msg += `${controlMap[key]} `;
@@ -145,8 +177,8 @@ class ControlEvent extends Event {
 
 // e0 18 80 e6 18 9e e0 1e 80
 class MotorTelemetryEvent extends Event {
-    constructor(message) {
-        super(message, undefined, undefined);
+    constructor(message, length) {
+        super(message, length, undefined, undefined, false);
     }
 
 }

@@ -7,21 +7,11 @@ class FrameParser {
 
     constructor() {
         this.state = 'begin';
-        this.checksum = 0;
         this.start = 0;
         this.bufferIndex = 0;
         this.mode = 'none';
 
-        this.payload = new Buffer.allocUnsafe(1024);
-    }
-
-    verifyChecksum(msb, lsb) {
-        const messageChecksum = msb * 256 + lsb;
-        if (messageChecksum !== this.checksum) {
-            logger.error(`checksum mismatch: found ${messageChecksum.toString(16)}, computed ${this.checksum.toString(16)} at ${this.start}; ${msb} ${lsb}`);
-            return false;
-        }
-        return true;
+        this.payload = new Buffer.allocUnsafe(128);
     }
 
     toString(frame, length) {
@@ -38,29 +28,20 @@ class FrameParser {
         if (this.state === 'header_1') {
             if (thisByte === 0x02) {
                 this.state = 'in_body';
-                this.bufferIndex = 0;
-                this.checksum += thisByte;
+                this.payload.writeUInt8(thisByte, this.bufferIndex++);
             }
         } else if (this.state === 'in_body') {
             if ((thisByte === 0x03) && (this.payload.readUInt8(this.bufferIndex - 1) === 0x10)) {
-                const msb = this.payload.readUInt8(this.bufferIndex - 3);
-                const lsb = this.payload.readUInt8(this.bufferIndex - 2);
-                logger.trace(`msb ${msb} and lsb ${lsb}`);
-                this.checksum -= (msb + lsb + 0x10); // the 0x10 is the (thisByte -1) sub-termination char
-                this.bufferIndex -= 3; // back up the 2 checksum bytes and the sub-termination char
+                this.bufferIndex -= 1; // back up the sub-termination char
 
-                if (!this.verifyChecksum(msb, lsb)) {
-                    logger.error(this.toString(this.payload, this.bufferIndex));
-                }
-
-                logger.debug('complete message: ', this.checksum.toString(16), this.bufferIndex);
+                logger.debug('complete message length ', this.bufferIndex);
+                logger.trace('contents ', toString(this.payload, this.bufferIndex));
                 received(this.payload, this.bufferIndex);
                 this.bufferIndex = 0;
                 this.state = 'begin';
             }
             else {
                 this.payload.writeUInt8(thisByte, this.bufferIndex++);
-                this.checksum += thisByte;
             }
         }
         else {
@@ -99,9 +80,10 @@ class FrameParser {
             if (this.state === 'begin') {
                 if (thisByte === 0x10) {
                     this.state = 'header_1';
-                    this.checksum = thisByte;
                     this.start = i;
                     this.mode = 'regular';
+                    this.bufferIndex = 0;
+                    this.payload.writeUInt8(thisByte, this.bufferIndex++);
                 } else if (thisByte === 0xe0) {
                     this.state = 'alternate_header';
                     this.mode = 'alternate';
