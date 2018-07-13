@@ -1,8 +1,16 @@
+require('./config/config');
+
 const { FrameParser } = require('./utils/parse');
 const fs = require('fs');
 const log4js = require('log4js');
 const yargs = require('yargs');
 const { StatusEvent, DisplayUpdateEvent, ControlEvent } = require('./utils/events');
+const _ = require('lodash'); // eslint-disable-line no-unused-vars
+
+var { mongoose } = require('./db/mongoose'); // eslint-disable-line no-unused-vars
+var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
+var { Event } = require('./models/event');
+
 
 var argv = yargs
     .default('f', __dirname + '/../test-data/sample-all-bin')
@@ -36,6 +44,35 @@ fs.readFile(argv.f, (err, data) => {
                 const salt = event.getSaltPPM();
                 const ambientTemp = event.getAmbientTemp();
                 logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '');
+
+                var statusMap = [];
+                if (salt) {
+                    statusMap.push({
+                        name: 'salt',
+                        value: salt
+                    });
+                }
+
+                if (ambientTemp) {
+                    statusMap.push({
+                        name: 'ambient',
+                        value: ambientTemp
+                    });
+                }
+
+                var dbEvent = new Event({
+                    _id: new mongoose.Types.ObjectId,
+                    source: 'panel',
+                    raw: buf, // trim length first?
+                    eventType: 'status',
+                    status: statusMap
+                });
+
+                dbEvent.save().then((doc) => {
+                    logger.trace('saved ', doc);
+                }, (e) => {
+                    logger.debug('failed saving Event: ', e);
+                });
             }
 
             if (isMessage(buf, 0x01, 0x02)) {
