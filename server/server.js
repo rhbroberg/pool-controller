@@ -37,34 +37,36 @@ var dispatchEvent = (buf) => {
             const ambientTemp = event.getAmbientTemp();
             logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '');
 
-            var statusMap = [];
+            var statusChanges = [];
             if (salt) {
-                statusMap.push({
+                statusChanges.push({
                     name: 'salt',
                     value: salt
                 });
             }
 
             if (ambientTemp) {
-                statusMap.push({
+                statusChanges.push({
                     name: 'ambient',
                     value: ambientTemp
                 });
             }
 
-            var dbEvent = new Event({
-                _id: new mongoose.Types.ObjectId,
-                source: 'panel',
-                raw: buf,
-                eventType: 'status',
-                status: statusMap
-            });
+            if (statusChanges.length > 0) {
+                var dbEvent = new Event({
+                    _id: new mongoose.Types.ObjectId,
+                    source: 'panel',
+                    raw: buf,
+                    eventType: 'status',
+                    status: statusChanges
+                });
 
-            dbEvent.save().then((doc) => {
-                logger.trace('saved ', doc);
-            }, (e) => {
-                logger.debug('failed saving Event: ', e);
-            });
+                dbEvent.save().then((doc) => {
+                    logger.trace('saved ', doc);
+                }, (e) => {
+                    logger.debug('failed saving Event: ', e);
+                });
+            }
         }
 
         if (isMessage(buf, 0x01, 0x02)) {
