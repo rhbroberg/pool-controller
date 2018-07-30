@@ -16,7 +16,7 @@ var tailHandler = require('./drivers/tailhandler');
 var argv = yargs
     .default('f', __dirname + '/../test-data/sample-all-bin')
     .default('l', 'info')
-    .default('d', 'fromFile')
+    .default('d', 'file')
     .argv;
 
 var logger = log4js.getLogger();

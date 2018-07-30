@@ -12,7 +12,9 @@ var writeEvent = ((port, message) => {
 });
 
 var listen = ((filename, cb) => {
-    var port = new SerialPort(filename, (err) => {
+    var port = new SerialPort(filename, {baudRate: 9600, autoOpen: false});
+
+	port.open(function (err) {
         if (err) {
             return logger.error('Error: ', err.message);
         }
@@ -20,7 +22,7 @@ var listen = ((filename, cb) => {
 
     // Switches the port into "flowing mode"
     port.on('data', function(data) {
-        logger.info('Data:', data);
+//        logger.info('Data:', data);
         cb(data);
     });
 
