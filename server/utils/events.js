@@ -189,6 +189,14 @@ class DisplayUpdateEvent extends ChecksummedEvent {
     getSpaTemp() {
         return this.extractValue(/ +Spa Temp +(\d+)_F/);
     }
+
+    getHeater1() {
+        return this.extractValue(/ +Heater1 +Manual +([^ ]+)/);
+    }
+
+    getCheckSystem() {
+        return this.extractValue(/ +Check System +(.+)$/);
+    }
 }
 
 // 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb

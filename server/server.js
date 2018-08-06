@@ -89,7 +89,6 @@ var dispatchEvent = (buf) => {
         processingErrors++;
         logger.error(`event exception '${e}' received, continuing`);
     }
-    // if message is unrecognized, log out hex bytes
 };
 
 var handleHunk = (data) => {
@@ -97,6 +96,7 @@ var handleHunk = (data) => {
         logger.debug(parser.toHexString());
         // maybe change Event to take the FrameParser instead of the buf?
         if (!dispatchEvent(buf)) {
+            // if message is unrecognized, log out hex bytes
             logger.warn('unrecognized message header bytes: ',
                 buf.readUInt8(2).toString(16).padStart(2, 0),
                 buf.readUInt8(3).toString(16).padStart(2, 0));
