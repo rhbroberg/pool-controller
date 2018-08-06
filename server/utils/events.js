@@ -7,47 +7,48 @@ var logger = log4js.getLogger();
 
 const statusMap = [
     ['heater1', 'valve3', 'check system', 'pool', 'spa', 'filter', 'lights', 'aux1'],
-    ['unknown2.1', 'unknown2.2', 'aux3', 'aux4', 'unknown2.5', 'unknown2.6', 'valve4', 'unknown2.8'],
+    ['unknown2.1', 'unknown2.2', 'aux3', 'aux4', 'aux5', 'unknown2.6', 'valve4', 'unknown2.8'],
     ['unknown3.1', 'unknown3.2', 'unknown3.3', 'unknown3.4', 'unknown3.5', 'unknown3.6', 'unknown3.7', 'unknown3.8'],
-    ['unknown4.1', 'unknown4.2', 'unknown4.3', 'unknown4.4', 'unknown4.5', 'unknown4.6', 'unknown4.7', 'unknown4.8']
+    ['aux14', 'superchlorinate', 'unknown4.3', 'unknown4.4', 'unknown4.5', 'unknown4.6', 'unknown4.7', 'unknown4.8']
 ];
 
 const controlMap = {
+    0: 'aux13', // 0x00 00 00 01
+    1: 'aux14', // 0x00 00 00 02
+    2: 'superchlorinate', // 0x00 00 00 04
+    3: 'unlock config', // 0x00 00 00 08
 
-    0x01000000: 'right',
-    0x02000000: 'menu',
-    0x04000000: 'left',
-    0x08000000: 'off',
+    // curiously, bits 4-7 are not represented
 
-    0x10000000: 'minus',
-    0x20000000: 'plus',
-    0x40000000: 'spillover',
-    0x80000000: 'filter',
+    8: 'aux9', // 0x00 00 01 00: 'aux9',
+    9: 'aux10', // 0x00 00 02 00: 'aux10',
+    10: 'aux11', // 0x00 00 04 00: 'aux11',
+    11: 'aux12', // 0x00 00 08 00: 'aux12',
 
-    0x00010000: 'lights',
-    0x00020000: 'aux1',
-    0x00040000: 'aux2',
-    0x00080000: 'aux3',
+    12: 'valve3', // 0x00 00 10 00: 'valve3',
+    13: 'valve4/heater2', // 0x00 00 20 00: 'valve4/heater2',
+    14: 'heater2', //0x00 00 40 00: 'heater1',
+    15: 'aux8', // 0x00 00 80 00: 'aux8',
 
-    0x00100000: 'aux4',
-    0x00200000: 'aux5',
-    0x00400000: 'aux6',
-    0x00800000: 'aux7',
+    16: 'lights', // 0x00 01 00 00: 'lights',
+    17: 'aux1', // 0x00 02 00 00: 'aux1',
+    18: 'aux2', // 0x00 04 00 00: 'aux2',
+    19: 'aux3', //0x00 08 00 00: 'aux3',
 
-    0x00001000: 'valve3',
-    0x00002000: 'valve4/heater2',
-    0x00004000: 'heater1',
-    0x00008000: 'aux8',
+    20: 'aux4', // 0x00 10 00 00: 'aux4',
+    21: 'aux5', // 0x00 20 00 00: 'aux5',
+    22: 'aux6', // 0x00 40 00 00: 'aux6',
+    23: 'aux7', // 0x00 80 00 00: 'aux7',
 
-    0x00000100: 'aux9',
-    0x00000200: 'aux10',
-    0x00000400: 'aux11',
-    0x00000800: 'aux12',
+    24: 'right', // 0x01 00 00 00: 'right',
+    25: 'menu', // 0x02 00 00 00: 'menu',
+    26: 'left', // 0x04 00 00 00: 'left',
+    27: 'off', // 0x08 00 00 00: 'off',
 
-    0x00000001: 'aux13',
-    0x00000002: 'aux14',
-    0x00000004: 'superchlorinate',
-    0x00000008: 'unlock config'
+    28: 'minus', // 0x10 00 00 00: 'minus',
+    29: 'plus', // 0x20 00 00 00: 'plus',
+    30: 'spillover', // 0x40 00 00 00: 'spillover',
+    31: 'filter' // 0x80 00 00 00: 'filter',
 };
 
 class Event {
@@ -145,8 +146,8 @@ class StatusEvent extends ChecksummedEvent {
     prettyOnBits() {
         let msg = '';
 
-        for (let byte = 0; byte < 3; byte++) {
-            for (let bit = 0; bit < 7; bit++) {
+        for (let byte = 0; byte < 4; byte++) {
+            for (let bit = 0; bit < 8; bit++) {
                 if (this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit))) {
                     msg += `'${statusMap[byte][bit]}' `;
                 }
@@ -198,11 +199,21 @@ class ControlEvent extends ChecksummedEvent {
 
     prettyOnBits() {
         var msg = '';
-        for (var byte = 5; byte < 9; byte++) {
-            for (var key in controlMap) {
-                if ((key && byte) != 0) {
-                    msg += `${controlMap[key]} `;
-                }
+        let commandBits = this.frame.readUInt8(5) * Math.pow(2, 24) +
+            this.frame.readUInt8(6) * Math.pow(2, 16) +
+            this.frame.readUInt8(7) * Math.pow(2, 8) +
+            this.frame.readUInt8(8);
+
+        logger.trace('individual command bytes are ',
+            this.frame.readUInt8(5),
+            this.frame.readUInt8(6),
+            this.frame.readUInt8(7),
+            this.frame.readUInt8(8));
+
+        for (let bitShift = 0; bitShift < 32; bitShift++) {
+            let singleBit = commandBits >> bitShift;
+            if (singleBit & 0x01) {
+                msg += `${controlMap[bitShift]} `;
             }
         }
         return msg;

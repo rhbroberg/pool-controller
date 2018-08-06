@@ -1,0 +1,69 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Device::SerialPort;
+use String::HexConvert ':all';
+use Time::HiRes qw(time);
+use DateTime;
+
+my $port=Device::SerialPort->new("/dev/serial0") || die "cannot open port\n";
+$port->databits(8);
+$port->parity("none");
+$port->stopbits(1);
+$port->baudrate($ARGV[0]);
+$port->write_settings;
+
+print "set baud to $ARGV[0]\n";
+
+my $STALL_DEFAULT=10; # how many seconds to wait for new input
+
+my $timeout=$STALL_DEFAULT;
+
+$port->read_char_time(0);     # don't wait for each character
+$port->read_const_time(100); # 1 second per unfulfilled "read" call
+
+my $chars=0;
+my $buffer="";
+while ($timeout>0)
+{
+    my ($count,$saw)=$port->read(255); # will read _up to_ 255 chars
+    if ($count > 0) {
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+#	print "i got $count bytes back\n";
+	$chars+=$count;
+	$buffer.=$saw;
+
+	#printf("%02d:%02d:%02d\n", $hour,$min,$sec) ;
+	print DateTime->from_epoch( epoch => time )->strftime('%H:%M:%S.%6N') . "\n";
+
+	for (my $i=0; $i<$count; $i++)
+	{
+	    printf "%s ", ascii_to_hex(substr($saw, $i, 1));
+	    if ((($i + 1) % 16 == 0) || ($i +1 == $count))
+	    {
+		my $sanitized = $saw;
+		$sanitized =~ s/\n/./g;
+		$sanitized =~ s/[\x00-\x1F\x7f-\xff]/./g;
+		#print "index " . int($i / 16) * 16 . " len 16\n";
+		my $readable = substr($sanitized, int($i / 16) * 16 , 16);
+ 		print "$readable\n";
+	    }
+	}
+	print "\n";
+	#print "$saw\n";
+	
+	# Check here to see if what we want is in the $buffer
+	# say "last" if we find it
+    }
+    else
+    {
+	$timeout--;
+    }
+}
+
+if ($timeout==0)
+{
+    die "Waited $STALL_DEFAULT seconds and never saw what I wanted\n";
+}

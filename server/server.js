@@ -67,30 +67,23 @@ var dispatchEvent = (buf) => {
                     logger.debug('failed saving Event: ', e);
                 });
             }
-        }
-
-        if (isMessage(buf, 0x01, 0x02)) {
+        } else if (isMessage(buf, 0x01, 0x02)) {
             let event = new StatusEvent(buf);
             logger.info('status: ', event.asString(), ';', event.prettyOnBits());
-        }
-
-        if (isMessage(buf, 0x01, 0x01)) {
+        } else if (isMessage(buf, 0x01, 0x01)) {
             logger.debug('heartbeat');
-        }
-
-        if (isMessage(buf, 0x04, 0x0a)) {
+        } else if (isMessage(buf, 0x04, 0x0a)) {
             //    logger.info('wireless screen: ', buf.toString('ascii', 5, len - 5), '\n');
-        }
-
-        if (isMessage(buf, 0xe0, 0x18)) {
+        } else if (isMessage(buf, 0xe0, 0x18)) {
             let event = new MotorTelemetryEvent(buf); // eslint-disable-line no-unused-vars
             logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
-        }
-
-        if (isMessage(buf, 0x83, 0x01)) {
+        } else if (isMessage(buf, 0x00, 0x8c)) { // dox said  0x83, 0x01 but i find 0x00 0x8c
             let event = new ControlEvent(buf);
             logger.info('control: ', event.prettyOnBits());
+        } else {
+            return false;
         }
+        return true;
     }
     catch (e) {
         processingErrors++;
@@ -102,7 +95,13 @@ var dispatchEvent = (buf) => {
 var handleHunk = (data) => {
     parser.parse(data, (buf) => {
         logger.debug(parser.toHexString());
-        dispatchEvent(buf);
+        // maybe change Event to take the FrameParser instead of the buf?
+        if (!dispatchEvent(buf)) {
+            logger.warn('unrecognized message header bytes: ',
+                buf.readUInt8(2).toString(16).padStart(2, 0),
+                buf.readUInt8(3).toString(16).padStart(2, 0));
+            logger.warn(parser.toHexString());
+        }
     });
 };
 
