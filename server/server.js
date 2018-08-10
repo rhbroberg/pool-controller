@@ -1,9 +1,9 @@
 require('./config/config');
 
-const { FrameParser } = require('./utils/parse');
+const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent } = require('./utils/events');
+const { StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent } = require('./protocol/events');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars

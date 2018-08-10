@@ -1,4 +1,4 @@
-var Tail = require('./../utils/tail');
+var Tail = require('./tail');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
