@@ -1,20 +1,24 @@
 {
-  "name": "pool-iot-api",
-  "version": "1.0.0",
-  "description": "The API for the Pool Controller IOT project",
-  "main": "index.js",
-  "scripts": {
-	"prestart": "npm install",
-	"start": "node index.js"
-  },
-  "keywords": [
-    "swagger"
-  ],
-  "license": "Unlicense",
-  "private": true,
-  "dependencies": {
-    "connect": "^3.2.0",
-    "js-yaml": "^3.3.0",
-    "swagger-tools": "0.10.1"
-  }
+    "name": "poolcontroller",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node server/server.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "connect": "^3.6.6",
+        "js-yaml": "^3.12.0",
+        "lodash": "^4.17.10",
+        "log4js": "^2.10.0",
+        "moment": "^2.22.2",
+        "mongoose": "^4.5.9",
+        "serialport": "^6.2.1",
+        "swagger-tools": "^0.10.4",
+        "yargs": "^12.0.1"
+    },
+    "devDependencies": {}
 }
