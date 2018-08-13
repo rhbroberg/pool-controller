@@ -25,19 +25,28 @@ var parser = new FrameParser();
 var processingErrors = 0;
 
 var isMessage = (buf, first, second) => {
-    return (buf.readUInt8(2) === first && buf.readUInt8(3) === second) ? true : false;
+    return ((typeof first === 'undefined' || buf.readUInt8(2) === first) && 
+    (typeof second === 'undefined' || buf.readUInt8(3) === second)) ? true : false;
 };
 
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken
-    try {
         if (isMessage(buf, 0x01, 0x03)) {
             let event = new DisplayUpdateEvent(buf);
             const salt = event.getSaltPPM();
             const ambientTemp = event.getAmbientTemp();
-            logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '');
+            const poolTemp = event.getPoolTemp();
+
+            logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
             var statusChanges = [];
+            if (poolTemp) {
+                statusChanges.push({
+                    name: 'pool temp',
+                    value: poolTemp
+                });
+            }
+
             if (salt) {
                 statusChanges.push({
                     name: 'salt',
@@ -80,27 +89,32 @@ var dispatchEvent = (buf) => {
         } else if (isMessage(buf, 0x00, 0x8c)) { // dox said  0x83, 0x01 but i find 0x00 0x8c
             let event = new ControlEvent(buf);
             logger.info('control: ', event.prettyOnBits());
+        } else if (isMessage(buf, 0x00, 0x04)) {
+            logger.info('unidentified status: ');
+        } else if (isMessage(buf, 0x04)) {
+            logger.info('unidentified ping');
         } else {
             return false;
         }
         return true;
-    }
-    catch (e) {
-        processingErrors++;
-        logger.error(`event exception '${e}' received, continuing`);
-    }
 };
 
 var handleHunk = (data) => {
     parser.parse(data, (buf) => {
         logger.debug(parser.toHexString());
         // maybe change Event to take the FrameParser instead of the buf?
-        if (!dispatchEvent(buf)) {
-            // if message is unrecognized, log out hex bytes
-            logger.warn('unrecognized message header bytes: ',
-                buf.readUInt8(2).toString(16).padStart(2, 0),
-                buf.readUInt8(3).toString(16).padStart(2, 0));
-            logger.warn(parser.toHexString());
+        try {
+            if (!dispatchEvent(buf)) {
+             // if message is unrecognized, log out hex bytes
+             logger.warn('unrecognized message header bytes: ',
+                 buf.readUInt8(2).toString(16).padStart(2, 0),
+                 buf.readUInt8(3).toString(16).padStart(2, 0));
+             logger.warn(parser.toHexString());
+           }
+        }
+        catch (e) {
+            processingErrors++;
+            logger.error(`event exception '${e}' received (${processingErrors} so far), continuing`);
         }
     });
 };

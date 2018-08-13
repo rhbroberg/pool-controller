@@ -56,15 +56,14 @@ class Event {
         this.frame = frame;
         this.now = moment().valueOf();
 
-        if (validLsb && validMsb) {
-            this.verifyEventType(validMsb, validLsb);
-        }
+        this.verifyEventType(validMsb, validLsb);
     }
 
     verifyEventType(msb, lsb) {
-        const isValid = (this.frame.readUInt8(2) === msb && this.frame.readUInt8(3) == lsb) ? true : false;
+        const isValid = ((typeof msb === 'undefined' || this.frame.readUInt8(2) === msb) && 
+                (typeof lsb === 'undefined' || this.frame.readUInt8(3) == lsb)) ? true : false;
         if (!isValid) {
-            const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} != (${msb}, ${lsb}) `;
+            const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} !=a (${msb}, ${lsb}) `;
             logger.error(woe);
             throw new Error(woe);
         }
@@ -114,6 +113,20 @@ class ChecksummedEvent extends Event {
 class PingEvent extends Event {
     constructor(frame) {
         super(frame, 0x01, 0x01);
+    }
+}
+
+class UnidentifiedPingEvent extends ChecksummedEvent {
+    constructor(frame) {
+        super(frame, 0x04);
+
+        this.secondByte = this.frame.readUInt8(3);
+    }
+}
+
+class UnidentifiedStatusEvent extends ChecksummedEvent {
+    constructor(frame) {
+        super(frame, 0x00, 0x04);
     }
 }
 
