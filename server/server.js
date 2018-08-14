@@ -3,7 +3,7 @@ require('./config/config');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events');
+const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
@@ -25,6 +25,18 @@ var parser = new FrameParser();
 var processingErrors = 0;
 
 require('./index'); // route handler, courtesy of swagger.io
+
+const { EventFactory } = require('./protocol/eventfactory');
+
+// create factory and register all (currently) known events
+var factory = new EventFactory();
+StatusEvent.register(factory);
+DisplayUpdateEvent.register(factory);
+ControlEvent.register(factory);
+UnidentifiedPingEvent.register(factory);
+UnidentifiedStatusEvent.register(factory);
+PingEvent.register(factory);
+MotorTelemetryEvent.register(factory);
 
 var isMessage = (buf, first, second) => {
     return ((typeof first === 'undefined' || buf.readUInt8(2) === first) &&
@@ -62,75 +74,84 @@ var storeEnabledSwitches = (buf, category, enabled) => {
 
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken
-    if (isMessage(buf, 0x01, 0x03)) {
-        let event = new DisplayUpdateEvent(buf);
-        const salt = event.getSaltPPM();
-        const ambientTemp = event.getAmbientTemp();
-        const poolTemp = event.getPoolTemp();
-        var statusChanges = [];
 
-        logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
+    const event = factory.create(buf);
+    if (!event) {
+        // logger.trace('thisEvent is', thisEvent.constructor.name);
+        logger.warn('cannot identify event');
+    }
 
-        if (poolTemp) {
-            statusChanges.push({
-                name: 'pool temp',
-                value: poolTemp
-            });
-        }
+    switch (event.constructor.name) {
+        case 'DisplayUpdateEvent':
+            {
+                const salt = event.getSaltPPM();
+                const ambientTemp = event.getAmbientTemp();
+                const poolTemp = event.getPoolTemp();
+                var statusChanges = [];
 
-        if (salt) {
-            statusChanges.push({
-                name: 'salt',
-                value: salt
-            });
-        }
+                logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
-        if (ambientTemp) {
-            statusChanges.push({
-                name: 'ambient',
-                value: ambientTemp
-            });
-        }
+                if (poolTemp) {
+                    statusChanges.push({
+                        name: 'pool temp',
+                        value: poolTemp
+                    });
+                }
 
-        if (statusChanges.length > 0) {
-            var dbEvent = new Event({
-                _id: new mongoose.Types.ObjectId,
-                source: 'panel',
-                raw: buf,
-                eventType: 'info',
-                status: statusChanges,
-                timestamp: new Date().getTime()
-            });
+                if (salt) {
+                    statusChanges.push({
+                        name: 'salt',
+                        value: salt
+                    });
+                }
 
-            dbEvent.save().then((doc) => {
-                logger.trace('saved ', doc);
-            }, (e) => {
-                logger.debug('failed saving Event: ', e);
-            });
-        }
-    } else if (isMessage(buf, 0x01, 0x02)) {
-        let event = new StatusEvent(buf);
-        logger.info('status: ', event.asString(), ';', event.prettyOnBits());
+                if (ambientTemp) {
+                    statusChanges.push({
+                        name: 'ambient',
+                        value: ambientTemp
+                    });
+                }
 
-        storeEnabledSwitches(buf, 'status', event.enabledSwitches());
-    } else if (isMessage(buf, 0x01, 0x01)) {
-        logger.debug('heartbeat');
-    } else if (isMessage(buf, 0x04, 0x0a)) {
-        //    logger.info('wireless screen: ', buf.toString('ascii', 5, len - 5), '\n');
-    } else if (isMessage(buf, 0xe0, 0x18)) {
-        let event = new MotorTelemetryEvent(buf); // eslint-disable-line no-unused-vars
-        logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
-    } else if (isMessage(buf, 0x00, 0x8c)) { // dox said  0x83, 0x01 but i find 0x00 0x8c
-        let event = new ControlEvent(buf);
-        logger.info('control: ', event.prettyOnBits());
+                if (statusChanges.length > 0) {
+                    var dbEvent = new Event({
+                        _id: new mongoose.Types.ObjectId,
+                        source: 'panel',
+                        raw: buf,
+                        eventType: 'info',
+                        status: statusChanges,
+                        timestamp: new Date().getTime()
+                    });
 
-        storeEnabledSwitches(buf, 'control', event.enabledSwitches());
-    } else if (isMessage(buf, 0x00, 0x04)) {
-        logger.info('unidentified status: ');
-    } else if (isMessage(buf, 0x04)) {
-        logger.info('unidentified ping');
-    } else {
-        return false;
+                    dbEvent.save().then((doc) => {
+                        logger.trace('saved ', doc);
+                    }, (e) => {
+                        logger.debug('failed saving Event: ', e);
+                    });
+                }
+            }
+            break;
+        case 'StatusEvent':
+            logger.info('status: ', event.asString(), ';', event.prettyOnBits());
+            storeEnabledSwitches(buf, 'status', event.enabledSwitches());
+            break;
+        case 'PingEvent':
+            logger.debug('heartbeat');
+            break;
+        case 'MotorTelemetryEvent':
+            logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
+            break;
+        case 'ControlEvent':
+            logger.info('control: ', event.prettyOnBits());
+            storeEnabledSwitches(buf, 'control', event.enabledSwitches());
+            break;
+        case 'UnidentifiedStatusEvent':
+            logger.info('unidentified status: ');
+            break;
+        case 'UnidentifiedPingEvent':
+            logger.info('unidentified ping');
+            break;
+        default:
+            return false;
     }
     return true;
 };

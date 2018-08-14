@@ -51,19 +51,22 @@ const controlMap = {
     31: 'filter' // 0x80 00 00 00: 'filter',
 };
 
+require('./eventfactory');
+
 class Event {
-    constructor(frame, validMsb, validLsb) {
+    constructor(frame, header) {
         this.frame = frame;
         this.now = moment().valueOf();
-
-        this.verifyEventType(validMsb, validLsb);
+        this.validMsb = header[0];
+        this.validLsb = header[1];
+        this.verifyEventType(this.validMsb, this.validLsb);
     }
 
     verifyEventType(msb, lsb) {
         const isValid = ((typeof msb === 'undefined' || this.frame.readUInt8(2) === msb) &&
             (typeof lsb === 'undefined' || this.frame.readUInt8(3) == lsb)) ? true : false;
         if (!isValid) {
-            const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} !=a (${msb}, ${lsb}) `;
+            const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} != (${msb}, ${lsb}) `;
             logger.error(woe);
             throw new Error(woe);
         }
@@ -75,8 +78,8 @@ class Event {
 }
 
 class ChecksummedEvent extends Event {
-    constructor(frame) {
-        super(frame);
+    constructor(frame, header) {
+        super(frame, header);
 
         if (!this.verifyChecksum()) {
             throw new Error('checksum failure');
@@ -131,28 +134,61 @@ class ChecksummedEvent extends Event {
 // 10 02 01 01 ckmsb cklsb
 class PingEvent extends Event {
     constructor(frame) {
-        super(frame, 0x01, 0x01);
+        super(frame, PingEvent.header());
+    }
+
+    static header() {
+        return [0x01, 0x01];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new PingEvent(buf); }));
     }
 }
 
 class UnidentifiedPingEvent extends ChecksummedEvent {
     constructor(frame) {
-        super(frame, 0x04);
+        super(frame, UnidentifiedPingEvent.header());
 
         this.secondByte = this.frame.readUInt8(3);
     }
+
+    static header() {
+        return [0x04];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new UnidentifiedPingEvent(buf); }));
+    }
+
 }
 
 class UnidentifiedStatusEvent extends ChecksummedEvent {
     constructor(frame) {
-        super(frame, 0x00, 0x04);
+        super(frame, UnidentifiedStatusEvent.header());
+    }
+
+    static header() {
+        return [0x00, 0x04];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new UnidentifiedStatusEvent(buf); }));
     }
 }
 
 // 10 02 01 02 ... ckmsg cklsb
 class StatusEvent extends ChecksummedEvent {
     constructor(frame) {
-        super(frame, 0x01, 0x02);
+        super(frame, StatusEvent.header());
+    }
+
+    static header() {
+        return [0x01, 0x02];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new StatusEvent(buf); }));
     }
 
     bitToInt(byte, mask) {
@@ -186,11 +222,21 @@ class StatusEvent extends ChecksummedEvent {
     }
 }
 
+//    wireless screen update header is: 0x04, 0x0a, need message for it to be tagged (even if discarded)
+
 // 10 02 01 03 .... ckmsb cklsb
 class DisplayUpdateEvent extends ChecksummedEvent {
     constructor(frame) {
-        super(frame, 0x01, 0x03);
+        super(frame, DisplayUpdateEvent.header());
         this.text = frame.toString('ascii', 4);
+    }
+
+    static header() {
+        return [0x01, 0x03];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new DisplayUpdateEvent(buf); }));
     }
 
     clearText() {
@@ -229,9 +275,18 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 }
 
 // 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
+// dox said  0x83, 0x01 but i find 0x00 0x8c
 class ControlEvent extends ChecksummedEvent {
     constructor(frame) {
-        super(frame, undefined, undefined);
+        super(frame, ControlEvent.header());
+    }
+
+    static header() {
+        return [0x00, 0x8c];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new ControlEvent(buf); }));
     }
 
     bitsToName(callback) {
@@ -258,8 +313,17 @@ class ControlEvent extends ChecksummedEvent {
 // e0 18 80 e6 18 9e e0 1e 80
 class MotorTelemetryEvent extends Event {
     constructor(frame) {
-        super(frame, undefined, undefined);
+        super(frame, MotorTelemetryEvent.header());
     }
+
+    static header() {
+        return [0xe0, 0x18];
+    }
+
+    static register(factory) {
+        factory.registerEvent(this.header(), ((buf) => { return new MotorTelemetryEvent(buf); }));
+    }
+
 }
 
 module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
