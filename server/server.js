@@ -68,8 +68,8 @@ var dispatchEvent = (buf) => {
 
     const event = factory.create(buf);
     if (!event) {
-        // logger.trace('thisEvent is', thisEvent.constructor.name);
         logger.warn('cannot identify event');
+        return false;
     }
 
     switch (event.constructor.name) {

@@ -35,15 +35,22 @@ exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-var
  * returns TemperatueZoneStatus
  **/
 exports.getPoolTemperature = function(poolId) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
+        var statuses = [];
         var examples = {};
+        var tempName = 'pool temp';
+
+        // swagger enforces it as only 'pool' or 'spa'
+        if (poolId === 'spa') {
+            tempName = 'spa temp'
+        }
+
+        await getMostRecentInfo(tempName, statuses);
+
         examples['application/json'] = {
-            'name': 'name',
-            'id': 'id',
-            'units': 'fahrenheit',
-            'value': 5.962133916683182,
-            'timestamp': '2000-01-23T04:56:07.000+00:00'
+            'zoneStatus': statuses
         };
+
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
