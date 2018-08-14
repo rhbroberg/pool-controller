@@ -40,7 +40,7 @@ paths:
             items:
               type: "string"
               format: "uri"
-              example: "http://10.0.0.225:8080"
+              example: "valve4 aux1"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}/register:
     put:
@@ -94,26 +94,16 @@ paths:
       responses:
         200:
           description: "get device state"
+          schema:
+            $ref: "#/definitions/DeviceState"
       x-swagger-router-controller: "Device"
   /filtration:
     get:
       tags:
       - "Filtration"
-      description: "returns all registered devices"
+      description: "returns all filtration devices"
       operationId: "getFiltrationDevices"
-      parameters:
-      - name: "skip"
-        in: "query"
-        description: "number of records to skip"
-        required: false
-        type: "integer"
-        format: "int32"
-      - name: "limit"
-        in: "query"
-        description: "max number of records to return"
-        required: false
-        type: "integer"
-        format: "int32"
+      parameters: []
       responses:
         200:
           description: "All the devices"
