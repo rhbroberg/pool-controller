@@ -192,7 +192,7 @@ paths:
         200:
           description: "Zone temperature"
           schema:
-            $ref: "#/definitions/TemperatueZoneStatus"
+            $ref: "#/definitions/TemperatureZoneStatus"
       x-swagger-router-controller: "Environment"
   /temperature/{poolId}/heater:
     get:
@@ -401,19 +401,19 @@ definitions:
       zoneStatus:
         type: "array"
         items:
-          $ref: "#/definitions/TemperatueZoneStatus"
+          $ref: "#/definitions/TemperatureZoneStatus"
     description: "ok"
     example:
       zoneStatus:
       - name: "name"
         id: "id"
         units: "fahrenheit"
-        value: 5.962133916683182377482808078639209270477294921875
+        value: 5
         timestamp: "2000-01-23T04:56:07.000+00:00"
       - name: "name"
         id: "id"
         units: "fahrenheit"
-        value: 5.962133916683182377482808078639209270477294921875
+        value: 5
         timestamp: "2000-01-23T04:56:07.000+00:00"
       zones:
       - inputPosition: 6
@@ -453,7 +453,7 @@ definitions:
       zone: "zone"
       name: "name"
       id: 0
-  TemperatueZoneStatus:
+  TemperatureZoneStatus:
     type: "object"
     required:
     - "id"
@@ -467,8 +467,8 @@ definitions:
         type: "string"
         description: "the name of the zone"
       value:
-        type: "number"
-        format: "double"
+        type: "integer"
+        format: "int32"
         description: "the temperature in the zone"
       units:
         type: "string"
@@ -486,7 +486,7 @@ definitions:
       name: "name"
       id: "id"
       units: "fahrenheit"
-      value: 5.962133916683182377482808078639209270477294921875
+      value: 5
       timestamp: "2000-01-23T04:56:07.000+00:00"
   ApiResponse:
     type: "object"
@@ -507,9 +507,22 @@ definitions:
         type: "string"
       state:
         type: "string"
+      setPoint:
+        type: "integer"
+        format: "int32"
+        description: "goal temperature for heater"
+      units:
+        type: "string"
+        description: "the temperature units"
+        enum:
+        - "celcius"
+        - "fahrenheit"
+        default: "fahrenheit"
     example:
+      setPoint: 0
       id: "id"
       state: "state"
+      units: "fahrenheit"
   DeviceState:
     type: "object"
     properties:
