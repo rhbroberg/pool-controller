@@ -184,7 +184,7 @@ paths:
           schema:
             $ref: "#/definitions/TemperatureZoneStatus"
       x-swagger-router-controller: "Environment"
-  /temperature/heater/{poolId}/{state}:
+  /temperature/heater/{poolId}:
     get:
       tags:
       - "Environment"
@@ -198,20 +198,13 @@ paths:
         enum:
         - "pool"
         - "spa"
-      - name: "state"
-        in: "path"
-        required: true
-        type: "string"
-        enum:
-        - "false"
-        - "true"
       responses:
         200:
           description: "heater state"
           schema:
             $ref: "#/definitions/HeaterState"
       x-swagger-router-controller: "Environment"
-  /temperature/heater/{poolId}:
+  /temperature/heater/{poolId}/{state}:
     put:
       tags:
       - "Environment"
