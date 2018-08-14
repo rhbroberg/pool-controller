@@ -5,6 +5,7 @@ const log4js = require('log4js');
 const yargs = require('yargs');
 const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
+const { EventFactory } = require('./protocol/eventfactory');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -26,34 +27,10 @@ var processingErrors = 0;
 
 require('./index'); // route handler, courtesy of swagger.io
 
-const { EventFactory } = require('./protocol/eventfactory');
-
 // create factory and register all (currently) known events
 var factory = new EventFactory();
-StatusEvent.register(factory);
-DisplayUpdateEvent.register(factory);
-ControlEvent.register(factory);
-UnidentifiedPingEvent.register(factory);
-UnidentifiedStatusEvent.register(factory);
-PingEvent.register(factory);
-MotorTelemetryEvent.register(factory);
 
-var isMessage = (buf, first, second) => {
-    return ((typeof first === 'undefined' || buf.readUInt8(2) === first) &&
-        (typeof second === 'undefined' || buf.readUInt8(3) === second)) ? true : false;
-};
-
-var storeEnabledSwitches = (buf, category, enabled) => {
-    var switchesEnabled = [];
-
-    // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
-    enabled.forEach(function(name) {
-        switchesEnabled.push({
-            name: name,
-            value: 1
-        });
-    });
-
+var saveSwitchState = (switchesEnabled, buf, category) => {
     if (switchesEnabled.length > 0) {
         var dbStatusEvent = new Event({
             _id: new mongoose.Types.ObjectId,
@@ -70,6 +47,20 @@ var storeEnabledSwitches = (buf, category, enabled) => {
             logger.info(`failed saving ${category} Event: ${e}`);
         });
     }
+};
+
+var storeEnabledSwitches = (buf, category, enabled) => {
+    var switchesEnabled = [];
+
+    // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
+    enabled.forEach(function(name) {
+        switchesEnabled.push({
+            name: name,
+            value: 1
+        });
+    });
+
+    saveSwitchState(switchesEnabled, buf, category);
 };
 
 var dispatchEvent = (buf) => {
@@ -112,22 +103,7 @@ var dispatchEvent = (buf) => {
                     });
                 }
 
-                if (statusChanges.length > 0) {
-                    var dbEvent = new Event({
-                        _id: new mongoose.Types.ObjectId,
-                        source: 'panel',
-                        raw: buf,
-                        eventType: 'info',
-                        status: statusChanges,
-                        timestamp: new Date().getTime()
-                    });
-
-                    dbEvent.save().then((doc) => {
-                        logger.trace('saved ', doc);
-                    }, (e) => {
-                        logger.debug('failed saving Event: ', e);
-                    });
-                }
+                saveSwitchState(statusChanges, buf, 'info');
             }
             break;
         case 'StatusEvent':

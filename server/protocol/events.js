@@ -51,8 +51,6 @@ const controlMap = {
     31: 'filter' // 0x80 00 00 00: 'filter',
 };
 
-require('./eventfactory');
-
 class Event {
     constructor(frame, header) {
         this.frame = frame;
@@ -140,10 +138,6 @@ class PingEvent extends Event {
     static header() {
         return [0x01, 0x01];
     }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new PingEvent(buf); }));
-    }
 }
 
 class UnidentifiedPingEvent extends ChecksummedEvent {
@@ -156,11 +150,6 @@ class UnidentifiedPingEvent extends ChecksummedEvent {
     static header() {
         return [0x04];
     }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new UnidentifiedPingEvent(buf); }));
-    }
-
 }
 
 class UnidentifiedStatusEvent extends ChecksummedEvent {
@@ -170,10 +159,6 @@ class UnidentifiedStatusEvent extends ChecksummedEvent {
 
     static header() {
         return [0x00, 0x04];
-    }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new UnidentifiedStatusEvent(buf); }));
     }
 }
 
@@ -185,10 +170,6 @@ class StatusEvent extends ChecksummedEvent {
 
     static header() {
         return [0x01, 0x02];
-    }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new StatusEvent(buf); }));
     }
 
     bitToInt(byte, mask) {
@@ -233,10 +214,6 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
     static header() {
         return [0x01, 0x03];
-    }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new DisplayUpdateEvent(buf); }));
     }
 
     clearText() {
@@ -285,10 +262,6 @@ class ControlEvent extends ChecksummedEvent {
         return [0x00, 0x8c];
     }
 
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new ControlEvent(buf); }));
-    }
-
     bitsToName(callback) {
         let commandBits = this.frame.readUInt8(5) * Math.pow(2, 24) +
             this.frame.readUInt8(6) * Math.pow(2, 16) +
@@ -319,11 +292,6 @@ class MotorTelemetryEvent extends Event {
     static header() {
         return [0xe0, 0x18];
     }
-
-    static register(factory) {
-        factory.registerEvent(this.header(), ((buf) => { return new MotorTelemetryEvent(buf); }));
-    }
-
 }
 
 module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
