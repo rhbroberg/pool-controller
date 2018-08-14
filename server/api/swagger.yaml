@@ -184,7 +184,7 @@ paths:
           schema:
             $ref: "#/definitions/TemperatureZoneStatus"
       x-swagger-router-controller: "Environment"
-  /temperature/{poolId}/heater:
+  /temperature/heater/{poolId}/{state}:
     get:
       tags:
       - "Environment"
@@ -198,13 +198,20 @@ paths:
         enum:
         - "pool"
         - "spa"
+      - name: "state"
+        in: "path"
+        required: true
+        type: "string"
+        enum:
+        - "false"
+        - "true"
       responses:
         200:
           description: "heater state"
           schema:
             $ref: "#/definitions/HeaterState"
       x-swagger-router-controller: "Environment"
-  /temperature/{poolId}/heater/{state}:
+  /temperature/heater/{poolId}:
     put:
       tags:
       - "Environment"
@@ -223,13 +230,13 @@ paths:
         required: true
         type: "string"
         enum:
-        - "false"
-        - "true"
+        - "off"
+        - "on"
       responses:
         200:
           description: "Status of the operation"
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/HeaterState"
       x-swagger-router-controller: "Environment"
   /lighting:
     get:
@@ -497,6 +504,9 @@ definitions:
         type: "string"
       state:
         type: "string"
+        enum:
+        - "on"
+        - "off"
       setPoint:
         type: "integer"
         format: "int32"
@@ -511,7 +521,7 @@ definitions:
     example:
       setPoint: 0
       id: "id"
-      state: "state"
+      state: "on"
       units: "fahrenheit"
   DeviceState:
     type: "object"
