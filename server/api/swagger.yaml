@@ -511,11 +511,16 @@ definitions:
         - "celcius"
         - "fahrenheit"
         default: "fahrenheit"
+      timestamp:
+        type: "string"
+        format: "date-time"
+        description: "the timestamp when the temperature was measured"
     example:
       setPoint: 0
       id: "id"
       state: "on"
       units: "fahrenheit"
+      timestamp: "2000-01-23T04:56:07.000+00:00"
   DeviceState:
     type: "object"
     properties:
