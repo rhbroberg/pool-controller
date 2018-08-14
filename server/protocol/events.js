@@ -60,8 +60,8 @@ class Event {
     }
 
     verifyEventType(msb, lsb) {
-        const isValid = ((typeof msb === 'undefined' || this.frame.readUInt8(2) === msb) && 
-                (typeof lsb === 'undefined' || this.frame.readUInt8(3) == lsb)) ? true : false;
+        const isValid = ((typeof msb === 'undefined' || this.frame.readUInt8(2) === msb) &&
+            (typeof lsb === 'undefined' || this.frame.readUInt8(3) == lsb)) ? true : false;
         if (!isValid) {
             const woe = `wrong message type created: (${this.frame.readUInt8(2)}, ${this.frame.readUInt8(3)} !=a (${msb}, ${lsb}) `;
             logger.error(woe);
@@ -107,6 +107,25 @@ class ChecksummedEvent extends Event {
         }
         return checksum;
     }
+
+    prettyOnBits() {
+        let msg = '';
+
+        this.bitsToName((name) => {
+            msg += `'${name}' `;
+        });
+        return msg;
+    }
+
+    enabledSwitches() {
+        let enabled = [];
+
+        this.bitsToName((name) => {
+            enabled.push(name);
+        });
+        return enabled;
+    }
+
 }
 
 // 10 02 01 01 ckmsb cklsb
@@ -156,17 +175,14 @@ class StatusEvent extends ChecksummedEvent {
         return msg;
     }
 
-    prettyOnBits() {
-        let msg = '';
-
+    bitsToName(callback) {
         for (let byte = 0; byte < 4; byte++) {
             for (let bit = 0; bit < 8; bit++) {
                 if (this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit))) {
-                    msg += `'${statusMap[byte][bit]}' `;
+                    callback(statusMap[byte][bit]);
                 }
             }
         }
-        return msg;
     }
 }
 
@@ -218,8 +234,7 @@ class ControlEvent extends ChecksummedEvent {
         super(frame, undefined, undefined);
     }
 
-    prettyOnBits() {
-        var msg = '';
+    bitsToName(callback) {
         let commandBits = this.frame.readUInt8(5) * Math.pow(2, 24) +
             this.frame.readUInt8(6) * Math.pow(2, 16) +
             this.frame.readUInt8(7) * Math.pow(2, 8) +
@@ -234,10 +249,9 @@ class ControlEvent extends ChecksummedEvent {
         for (let bitShift = 0; bitShift < 32; bitShift++) {
             let singleBit = commandBits >> bitShift;
             if (singleBit & 0x01) {
-                msg += `${controlMap[bitShift]} `;
+                callback(controlMap[bitShift]);
             }
         }
-        return msg;
     }
 }
 
@@ -246,7 +260,6 @@ class MotorTelemetryEvent extends Event {
     constructor(frame) {
         super(frame, undefined, undefined);
     }
-
 }
 
-module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent };
+module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };

@@ -3,7 +3,7 @@ require('./config/config');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent } = require('./protocol/events');
+const { StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
@@ -14,7 +14,7 @@ var fileHandler = require('./drivers/filehandler');
 var tailHandler = require('./drivers/tailhandler');
 
 var argv = yargs
-    .default('f', __dirname + '/../test-data/sample-all-bin')
+    .default('f', __dirname + '/../test-data/sample-various-bin')
     .default('l', 'info')
     .default('d', 'file')
     .argv;
@@ -24,9 +24,40 @@ logger.level = argv.l;
 var parser = new FrameParser();
 var processingErrors = 0;
 
+require('./index'); // route handler, courtesy of swagger.io
+
 var isMessage = (buf, first, second) => {
     return ((typeof first === 'undefined' || buf.readUInt8(2) === first) &&
         (typeof second === 'undefined' || buf.readUInt8(3) === second)) ? true : false;
+};
+
+var storeEnabledSwitches = (buf, category, enabled) => {
+    var switchesEnabled = [];
+
+    // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
+    enabled.forEach(function(name) {
+        switchesEnabled.push({
+            name: name,
+            value: 1
+        });
+    });
+
+    if (switchesEnabled.length > 0) {
+        var dbStatusEvent = new Event({
+            _id: new mongoose.Types.ObjectId,
+            source: 'panel',
+            raw: buf,
+            eventType: category,
+            status: switchesEnabled,
+            timestamp: new Date().getTime()
+        });
+
+        dbStatusEvent.save().then((doc) => {
+            logger.trace('saved ', doc);
+        }, (e) => {
+            logger.info(`failed saving ${category} Event: ${e}`);
+        });
+    }
 };
 
 var dispatchEvent = (buf) => {
@@ -36,10 +67,10 @@ var dispatchEvent = (buf) => {
         const salt = event.getSaltPPM();
         const ambientTemp = event.getAmbientTemp();
         const poolTemp = event.getPoolTemp();
+        var statusChanges = [];
 
         logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
-        var statusChanges = [];
         if (poolTemp) {
             statusChanges.push({
                 name: 'pool temp',
@@ -66,7 +97,7 @@ var dispatchEvent = (buf) => {
                 _id: new mongoose.Types.ObjectId,
                 source: 'panel',
                 raw: buf,
-                eventType: 'status',
+                eventType: 'info',
                 status: statusChanges,
                 timestamp: new Date().getTime()
             });
@@ -80,6 +111,8 @@ var dispatchEvent = (buf) => {
     } else if (isMessage(buf, 0x01, 0x02)) {
         let event = new StatusEvent(buf);
         logger.info('status: ', event.asString(), ';', event.prettyOnBits());
+
+        storeEnabledSwitches(buf, 'status', event.enabledSwitches());
     } else if (isMessage(buf, 0x01, 0x01)) {
         logger.debug('heartbeat');
     } else if (isMessage(buf, 0x04, 0x0a)) {
@@ -90,6 +123,8 @@ var dispatchEvent = (buf) => {
     } else if (isMessage(buf, 0x00, 0x8c)) { // dox said  0x83, 0x01 but i find 0x00 0x8c
         let event = new ControlEvent(buf);
         logger.info('control: ', event.prettyOnBits());
+
+        storeEnabledSwitches(buf, 'control', event.enabledSwitches());
     } else if (isMessage(buf, 0x00, 0x04)) {
         logger.info('unidentified status: ');
     } else if (isMessage(buf, 0x04)) {

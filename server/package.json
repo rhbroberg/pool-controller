@@ -5,7 +5,8 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node server/server.js"
+        "start": "node server.js -f ../test-data/sample-various-bin",
+        "test-realistic": "node server.js -f /tmp/in -d tail"
     },
     "author": "",
     "license": "ISC",

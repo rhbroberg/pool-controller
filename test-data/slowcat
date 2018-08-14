@@ -1,4 +1,4 @@
 #!/bin/ksh
 
 cp /dev/null /tmp/in
-cat test-data/sample-mid-bin | perl -e '$| = 1; print && select undef,undef,undef,.5 while <>;' >> /tmp/in
+cat $1 | perl -e '$| = 1; print && select undef,undef,undef,.5 while <>;' >> /tmp/in

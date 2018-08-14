@@ -5,9 +5,9 @@ var logger = log4js.getLogger();
 var listen = ((filename, cb) => {
     logger.info('tailing file', filename);
 
-    var tail = new Tail(filename, /\003/);
+    var tail = new Tail(filename, /\003/, { 'interval': 500 });
     tail.on('line', (data) => {
-        logger.info('got another tail hunk');
+        logger.debug('got another tail hunk');
         cb(data);
     });
 });
