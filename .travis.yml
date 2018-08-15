@@ -1,5 +1,7 @@
 language: node_js
 node_js:
  - "9"
+before_install:
+  - npm i -g npm@5.6.0
 service: mongodb
 script: cd server && npm install && npm test
