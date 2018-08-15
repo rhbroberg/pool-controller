@@ -109,11 +109,13 @@ class ChecksummedEvent extends Event {
         return checksum;
     }
 
-    prettyOnBits() {
+    prettyBits(wantsOn) {
         let msg = '';
 
-        this.bitsToName((name) => {
-            msg += `'${name}' `;
+        this.bitsToName((name, isOn) => {
+            if (wantsOn === isOn) {
+                msg += `'${name}' `;
+            }
         });
         return msg;
     }
@@ -121,8 +123,10 @@ class ChecksummedEvent extends Event {
     enabledSwitches() {
         let enabled = [];
 
-        this.bitsToName((name) => {
-            enabled.push(name);
+        this.bitsToName((name, isOn) => {
+            if (isOn) {
+                enabled.push(name);
+            }
         });
         return enabled;
     }
@@ -195,11 +199,39 @@ class StatusEvent extends ChecksummedEvent {
     bitsToName(callback) {
         for (let byte = 0; byte < 4; byte++) {
             for (let bit = 0; bit < 8; bit++) {
-                if (this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit))) {
-                    callback(statusMap[byte][bit]);
+                callback(statusMap[byte][bit], this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit)));
+            }
+        }
+    }
+
+    rawMask() {
+        const mask = (this.frame.readUInt8(4)) +
+            (this.frame.readUInt8(5) << 8) +
+            (this.frame.readUInt8(6) << 16) +
+            (this.frame.readUInt8(7) << 24);
+
+        return mask;
+    }
+
+    diff(previousMask) {
+        let nowEnabled = [];
+        let nowDisabled = [];
+
+        const currentMask = this.rawMask();
+        const changedMask = previousMask ^ currentMask;
+
+        for (let bitShift = 0; bitShift < 32; bitShift++) {
+            const isChanged = changedMask >> bitShift;
+            if (isChanged & 0x01) {
+                if ((currentMask >> bitShift) & 0x01) {
+                    nowEnabled.push(statusMap[Math.floor(bitShift / 8)][bitShift % 8]);
+                } else {
+                    nowDisabled.push(statusMap[Math.floor(bitShift / 8)][bitShift % 8]);
                 }
             }
         }
+
+        return { 'nowEnabled': nowEnabled, 'nowDisabled': nowDisabled };
     }
 }
 
@@ -276,9 +308,7 @@ class ControlEvent extends ChecksummedEvent {
 
         for (let bitShift = 0; bitShift < 32; bitShift++) {
             let singleBit = commandBits >> bitShift;
-            if (singleBit & 0x01) {
-                callback(controlMap[bitShift]);
-            }
+            callback(controlMap[bitShift], singleBit & 0x01);
         }
     }
 }

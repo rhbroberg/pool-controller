@@ -7,6 +7,12 @@ var { Event } = require('../models/event');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
+// lines up with strings in db storage
+const tempNames = {
+    'pool': 'pool temp',
+    'spa': 'spa temp'
+}
+
 /**
  * gets the state of the heater
  *
@@ -14,12 +20,21 @@ var logger = log4js.getLogger();
  * returns HeaterState
  **/
 exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
-        examples['application/json'] = {
-            'id': 'id',
-            'state': 'state'
-        };
+
+        await Event.findOne({ 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 }).exec((err, doc) => {
+            if (doc) {
+                examples['application/json'] = {
+                    'id': doc.status[0]._id,
+                    'units': 'fahrenheit',
+                    'timestamp': doc.timestamp,
+                    'state': doc.status[0].value ? 'on' : 'off',
+                    'setpoint': '42'
+                };
+            }
+        });
+
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
@@ -38,14 +53,8 @@ exports.getPoolTemperature = function(poolId) { // eslint-disable-line no-unused
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var statuses = [];
         var examples = {};
-        var tempName = 'pool temp';
 
-        // swagger enforces it as only 'pool' or 'spa'
-        if (poolId === 'spa') {
-            tempName = 'spa temp'
-        }
-
-        await getMostRecentInfo(tempName, statuses);
+        await getMostRecentInfo(tempNames[poolId], statuses);
 
         examples['application/json'] = {
             'zoneStatus': statuses

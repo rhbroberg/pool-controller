@@ -49,19 +49,22 @@ var saveSwitchState = (switchesEnabled, buf, category) => {
     }
 };
 
-var storeEnabledSwitches = (buf, category, enabled) => {
+var storeChangedSwitches = (buf, category, changed, enabled) => {
     var switchesEnabled = [];
 
     // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
-    enabled.forEach(function(name) {
+    changed.forEach(function(name) {
         switchesEnabled.push({
             name: name,
-            value: 1
+            value: enabled
         });
     });
 
     saveSwitchState(switchesEnabled, buf, category);
 };
+
+// in reality, retrieve this from db at startup
+var previousStatusMask = 0;
 
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken
@@ -107,8 +110,16 @@ var dispatchEvent = (buf) => {
             }
             break;
         case 'StatusEvent':
-            logger.info('status: ', event.asString(), ';', event.prettyOnBits());
-            storeEnabledSwitches(buf, 'status', event.enabledSwitches());
+            const eventDiffs = event.diff(previousStatusMask);
+            logger.info('status: ', event.asString(), ';', event.prettyBits(1));
+
+            previousStatusMask = event.rawMask();
+            logger.debug(eventDiffs);
+            if (eventDiffs.nowEnabled.length > 0 || eventDiffs.nowDisabled.length > 0) {
+                logger.debug('storing changes');
+                storeChangedSwitches(buf, 'status', eventDiffs.nowEnabled, 1);
+                storeChangedSwitches(buf, 'status', eventDiffs.nowDisabled, 0);
+            }
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
@@ -117,14 +128,14 @@ var dispatchEvent = (buf) => {
             logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
             break;
         case 'ControlEvent':
-            logger.info('control: ', event.prettyOnBits());
-            storeEnabledSwitches(buf, 'control', event.enabledSwitches());
+            logger.info('control: ', event.prettyBits(1));
+            storeChangedSwitches(buf, 'control', event.enabledSwitches(), 1);
             break;
         case 'UnidentifiedStatusEvent':
-            logger.info('unidentified status: ');
+            logger.debug('unidentified status:');
             break;
         case 'UnidentifiedPingEvent':
-            logger.info('unidentified ping');
+            logger.debug('unidentified ping');
             break;
         default:
             return false;
@@ -162,4 +173,6 @@ if (argv.d === 'file') {
 } else if (argv.d === 'serial') {
     logger.info('starting serial port listening to ', argv.f);
     serial.listen(argv.f, handleHunk);
+} else if (argv.d === 'none') {
+    logger.info('no new data forthcoming');
 }
