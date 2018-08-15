@@ -1,3 +1,4 @@
+'use strict';
 require('./config/config');
 
 const { FrameParser } = require('./protocol/parse');
@@ -49,22 +50,41 @@ var saveSwitchState = (switchesEnabled, buf, category) => {
     }
 };
 
-var storeChangedSwitches = (buf, category, changed, enabled) => {
-    var switchesEnabled = [];
+var switchStates = (changed, enabled) => {
+    var switchesChanged = [];
 
     // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
     changed.forEach(function(name) {
-        switchesEnabled.push({
+        switchesChanged.push({
             name: name,
             value: enabled
         });
     });
 
-    saveSwitchState(switchesEnabled, buf, category);
+    return switchesChanged;
 };
 
-// in reality, retrieve this from db at startup
+// in reality, retrieve these from db at startup
 var previousStatusMask = 0;
+var presentTemp = {
+    'pool temp': -1,
+    'spa temp': -1,
+    'ambient': -1
+};
+
+var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
+    if (newValue) {
+        if (presentTemp[statusName] !== newValue) {
+            statusChanges.push({
+                name: statusName,
+                value: newValue
+            });
+        } else {
+            logger.info(`compressing ${statusName}`);
+        }
+        presentTemp[statusName] = newValue;
+    }
+}
 
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken
@@ -85,28 +105,15 @@ var dispatchEvent = (buf) => {
 
                 logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
-                if (poolTemp) {
-                    statusChanges.push({
-                        name: 'pool temp',
-                        value: poolTemp
-                    });
-                }
+                maybeUpdateStatus(statusChanges, poolTemp, 'pool temp');
+                maybeUpdateStatus(statusChanges, salt, 'salt');
+                maybeUpdateStatus(statusChanges, ambientTemp, 'ambient');
 
-                if (salt) {
-                    statusChanges.push({
-                        name: 'salt',
-                        value: salt
-                    });
+                if (statusChanges.length === 0) {
+                    // always update the lastUpdated timestamp
+                } else {
+                    saveSwitchState(statusChanges, buf, 'info');
                 }
-
-                if (ambientTemp) {
-                    statusChanges.push({
-                        name: 'ambient',
-                        value: ambientTemp
-                    });
-                }
-
-                saveSwitchState(statusChanges, buf, 'info');
             }
             break;
         case 'StatusEvent':
@@ -117,8 +124,12 @@ var dispatchEvent = (buf) => {
             logger.debug(eventDiffs);
             if (eventDiffs.nowEnabled.length > 0 || eventDiffs.nowDisabled.length > 0) {
                 logger.debug('storing changes');
-                storeChangedSwitches(buf, 'status', eventDiffs.nowEnabled, 1);
-                storeChangedSwitches(buf, 'status', eventDiffs.nowDisabled, 0);
+                const nowEnabled = switchStates(eventDiffs.nowEnabled, 1);
+                const nowDisabled = switchStates(eventDiffs.nowDisabled, 0);
+
+                saveSwitchState(nowEnabled.concat(nowDisabled), buf, 'status');
+            } else {
+                // always update the lastUpdated timestamp
             }
             break;
         case 'PingEvent':
@@ -128,8 +139,13 @@ var dispatchEvent = (buf) => {
             logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
             break;
         case 'ControlEvent':
-            logger.info('control: ', event.prettyBits(1));
-            storeChangedSwitches(buf, 'control', event.enabledSwitches(), 1);
+            if (event.enabledSwitches().length === 0) {
+                logger.info('control: zeroed out all bits');
+            } else {
+                logger.info('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
+                const toggleBits = switchStates(event.enabledSwitches(), 1);
+                saveSwitchState(toggleBits, buf, 'control');
+            }
             break;
         case 'UnidentifiedStatusEvent':
             logger.debug('unidentified status:');

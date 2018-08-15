@@ -131,6 +131,20 @@ class ChecksummedEvent extends Event {
         return enabled;
     }
 
+    disabledSwitches() {
+        let disabled = [];
+
+        this.bitsToName((name, isOn) => {
+            if (!isOn) {
+                disabled.push(name);
+            }
+        });
+        return disabled;
+    }
+
+    bitToInt(byte, mask) {
+        return byte & mask ? 1 : 0;
+    }
 }
 
 // 10 02 01 01 ckmsb cklsb
@@ -174,10 +188,6 @@ class StatusEvent extends ChecksummedEvent {
 
     static header() {
         return [0x01, 0x02];
-    }
-
-    bitToInt(byte, mask) {
-        return byte & mask ? 1 : 0;
     }
 
     textBitMaskFromByte(byte) {
@@ -294,11 +304,24 @@ class ControlEvent extends ChecksummedEvent {
         return [0x00, 0x8c];
     }
 
+    textBitMaskFromByte(byte) {
+        let mask = `${this.bitToInt(byte, 0x80)}${this.bitToInt(byte, 0x40)}${this.bitToInt(byte, 0x20)}${this.bitToInt(byte, 0x10)}`;
+        mask += `.${this.bitToInt(byte, 0x08)}${this.bitToInt(byte, 0x04)}${this.bitToInt(byte, 0x02)}${this.bitToInt(byte, 0x01)}`;
+
+        return mask;
+    }
+
+    rawMask() {
+        let mask = (this.frame.readUInt8(5) << 24) +
+            (this.frame.readUInt8(6) << 16) +
+            (this.frame.readUInt8(7) << 8) +
+            (this.frame.readUInt8(8));
+
+        return mask;
+    }
+
     bitsToName(callback) {
-        let commandBits = this.frame.readUInt8(5) * Math.pow(2, 24) +
-            this.frame.readUInt8(6) * Math.pow(2, 16) +
-            this.frame.readUInt8(7) * Math.pow(2, 8) +
-            this.frame.readUInt8(8);
+        let commandBits = this.rawMask();
 
         logger.trace('individual command bytes are ',
             this.frame.readUInt8(5),
@@ -311,6 +334,16 @@ class ControlEvent extends ChecksummedEvent {
             callback(controlMap[bitShift], singleBit & 0x01);
         }
     }
+
+    asString() {
+        let msg = this.textBitMaskFromByte(this.frame.readUInt8(5));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(6));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(7));
+        msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(8));
+
+        return msg;
+    }
+
 }
 
 // e0 18 80 e6 18 9e e0 1e 80
