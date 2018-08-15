@@ -4,9 +4,9 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node server.js -f ../test-data/sample-various-bin",
+        "test": "node server.js",
         "test-realistic": "node server.js -f /tmp/in -d tail"
+        "start": "node server.js -d serial"
     },
     "author": "",
     "license": "ISC",

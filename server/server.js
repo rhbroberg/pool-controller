@@ -26,7 +26,11 @@ logger.level = argv.l;
 var parser = new FrameParser();
 var processingErrors = 0;
 
-require('./index'); // route handler, courtesy of swagger.io
+// if webserver is run app will not exit in 'file' mode (which is only used for testing)
+if (argv.d !== 'file') {
+    logger.info('web server is active');
+    require('./index'); // route handler, courtesy of swagger.io
+}
 
 // create factory and register all (currently) known events
 var factory = new EventFactory();
