@@ -1,0 +1,914 @@
+[32m[2018-08-15T15:45:50.201] [INFO] default - [39mstarting file processing of /Users/rhb/Developer/PoolController/server/../test-data/sample-various-bin
+[32m[2018-08-15T15:45:50.206] [INFO] default - [39mprocessing found 0 event errors
+Your server is listening on port 8080 (http://localhost:8080)
+Swagger-ui is available on http://localhost:8080/docs
+[32m[2018-08-15T15:45:50.502] [INFO] default - [39mstarting
+[91m[2018-08-15T15:45:50.506] [ERROR] default - [39mchecksum mismatch: found 408, computed 12; 4 8
+[91m[2018-08-15T15:45:50.506] [ERROR] default - [39mmessage:  
+[91m[2018-08-15T15:45:50.506] [ERROR] default - [39mevent exception 'Error: checksum failure' received (1 so far), continuing
+[32m[2018-08-15T15:45:50.510] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.523] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.529] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.532] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.533] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.533] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.538] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.539] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.539] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.542] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.543] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.544] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.547] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.548] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.549] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.551] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.551] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.553] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.553] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.555] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.556] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.556] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.558] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.559] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.562] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.563] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.565] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.565] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.566] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.567] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.568] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.571] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.572] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.575] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.576] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.578] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.578] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.579] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.579] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.579] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.582] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.582] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.582] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.584] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.585] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.585] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.587] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.587] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.590] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.592] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.592] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.596] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.597] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.597] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.603] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.604] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.604] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.614] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.615] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.617] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.620] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.621] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.645] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.646] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.651] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.656] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.659] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.659] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.663] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.666] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.666] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.670] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.671] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.674] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.674] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.677] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.679] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.680] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.682] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.683] [INFO] default - [39mfixed screen:         Sunday              12:29P          
+[32m[2018-08-15T15:45:50.685] [INFO] default - [39mcontrol:  0000.0000 0000.0001 0000.0000 0000.0000  is toggling  'lights' 
+[32m[2018-08-15T15:45:50.686] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[33m[2018-08-15T15:45:50.688] [WARN] default - [39mcannot identify event
+[33m[2018-08-15T15:45:50.688] [WARN] default - [39munrecognized message header bytes:  01 50
+[33m[2018-08-15T15:45:50.688] [WARN] default - [39m10 02 01 50 01 00 14
+[32m[2018-08-15T15:45:50.689] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.691] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.692] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.696] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.696] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.700] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.700] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.703] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.703] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.704] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.710] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.711] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.713] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.714] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.717] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.718] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.721] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.721] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.722] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.722] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.725] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.725] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.726] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.727] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.729] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.729] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.730] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.732] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.733] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.733] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.734] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.734] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.737] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.738] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.738] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.740] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.741] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.741] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.744] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.745] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.745] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.746] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.748] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.748] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.750] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.752] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.754] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.755] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.755] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.758] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.758] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.761] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.762] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.763] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.764] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.765] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.767] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.768] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.769] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.771] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.772] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.774] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.775] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.778] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.778] [INFO] default - [39mfixed screen:         Sunday              12:30P          
+[32m[2018-08-15T15:45:50.779] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.779] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.782] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.782] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.782] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.783] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.784] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.784] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.786] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.786] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.786] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.786] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.787] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.788] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.789] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.789] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.790] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.791] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.791] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.792] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.793] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.793] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.793] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.795] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.795] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.798] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.798] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.799] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.800] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.800] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.803] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.804] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.806] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.807] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.809] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.809] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.811] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.811] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.812] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.814] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.815] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.817] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.818] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.820] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.821] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.821] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[91m[2018-08-15T15:45:50.822] [ERROR] default - [39mchecksum mismatch: found 803, computed 8f3; 8 3
+[91m[2018-08-15T15:45:50.822] [ERROR] default - [39mmessage:  
+�   Air Temp   51_F              �          
+[91m[2018-08-15T15:45:50.822] [ERROR] default - [39mevent exception 'Error: checksum failure' received (2 so far), continuing
+[32m[2018-08-15T15:45:50.823] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.823] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.825] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.825] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.826] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.828] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.829] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.829] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.833] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.833] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.833] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.834] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.834] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.835] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.836] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.836] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.837] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.837] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.837] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.839] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.839] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.839] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.840] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.841] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.841] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.843] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.843] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.845] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.845] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.845] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.846] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.847] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.847] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.849] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.849] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.851] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.852] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.853] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.853] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.853] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.854] [INFO] default - [39mcontrol:  0000.0000 0000.0001 0000.0000 0000.0000  is toggling  'lights' 
+[32m[2018-08-15T15:45:50.855] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.856] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.856] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.857] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.858] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.858] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.860] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.860] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.861] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.861] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.862] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.863] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.864] [INFO] default - [39mfixed screen:         Sunday              12:31P          
+[32m[2018-08-15T15:45:50.865] [INFO] default - [39mcontrol:  0000.0000 0000.0001 0000.0000 0000.0000  is toggling  'lights' 
+[32m[2018-08-15T15:45:50.866] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.867] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.868] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.868] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.869] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.869] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.871] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.871] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.873] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.873] [INFO] default - [39mfixed screen:         Lights            Turned On         
+[32m[2018-08-15T15:45:50.873] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.874] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.875] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.876] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.877] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.878] [INFO] default - [39mstatus:  0011.0010 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'lights' 
+[32m[2018-08-15T15:45:50.878] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.879] [INFO] default - [39mcontrol:  0000.0000 0000.0001 0000.0000 0000.0000  is toggling  'lights' 
+[32m[2018-08-15T15:45:50.880] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.881] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.882] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.882] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.883] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.884] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.885] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.885] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.886] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.887] [INFO] default - [39mfixed screen:         Lights            Turned Off        
+[32m[2018-08-15T15:45:50.888] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.889] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.889] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.890] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.890] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.892] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.892] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.893] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.894] [INFO] default - [39mfixed screen:         Sunday              12:32P          
+[32m[2018-08-15T15:45:50.895] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.895] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.896] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.896] [INFO] default - [39mfixed screen:    Air Temp   51_F                         51 
+[32m[2018-08-15T15:45:50.896] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.897] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0000 0000.0010  is toggling  'aux14' 
+[32m[2018-08-15T15:45:50.898] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.899] [INFO] default - [39mfixed screen:       Spa Filter          Turned On         
+[32m[2018-08-15T15:45:50.900] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.900] [INFO] default - [39mfixed screen:       Spa Filter          Turned On         
+[32m[2018-08-15T15:45:50.901] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.901] [INFO] default - [39mfixed screen:       Spa Filter          Turned On         
+[32m[2018-08-15T15:45:50.903] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.904] [INFO] default - [39mfixed screen:       Spa Filter          Turned On         
+[32m[2018-08-15T15:45:50.905] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.905] [INFO] default - [39mfixed screen:       Spa Filter          Turned On         
+[32m[2018-08-15T15:45:50.906] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.908] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.908] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.908] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.911] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.912] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.912] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.913] [INFO] default - [39mstatus:  0111.0001 0000.0000 0000.0000 1000.0000 ; 'valve3' 'check system' 'pool' 'aux1' 'aux14' 
+[32m[2018-08-15T15:45:50.913] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.914] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.914] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0000 0000.0010  is toggling  'aux14' 
+[32m[2018-08-15T15:45:50.915] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.916] [INFO] default - [39mfixed screen:       Spa Filter          Turned Off        
+[32m[2018-08-15T15:45:50.917] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.917] [INFO] default - [39mfixed screen:       Spa Filter          Turned Off        
+[32m[2018-08-15T15:45:50.919] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.919] [INFO] default - [39mfixed screen:       Spa Filter          Turned Off        
+[32m[2018-08-15T15:45:50.920] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.920] [INFO] default - [39mfixed screen:       Spa Filter          Turned Off        
+[32m[2018-08-15T15:45:50.922] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.922] [INFO] default - [39mfixed screen:       Spa Filter          Turned Off        
+[32m[2018-08-15T15:45:50.922] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.922] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:50.924] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:50.924] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:50.924] [ERROR] default - [39mevent exception 'Error: checksum failure' received (3 so far), continuing
+[32m[2018-08-15T15:45:50.924] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.924] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.925] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:50.926] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:50.926] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:50.926] [ERROR] default - [39mevent exception 'Error: checksum failure' received (4 so far), continuing
+[32m[2018-08-15T15:45:50.927] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.927] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.927] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:50.928] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:50.928] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:50.928] [ERROR] default - [39mevent exception 'Error: checksum failure' received (5 so far), continuing
+[32m[2018-08-15T15:45:50.928] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.929] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.929] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:50.930] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:50.930] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:50.930] [ERROR] default - [39mevent exception 'Error: checksum failure' received (6 so far), continuing
+[32m[2018-08-15T15:45:50.930] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.930] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:50.930] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:50.931] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.931] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.931] [INFO] default - [39mcontrol:  1000.0000 0000.0000 0000.0000 0000.0000  is toggling  'filter' 
+[32m[2018-08-15T15:45:50.932] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.933] [INFO] default - [39mfixed screen:      Pool Filter          High Speed        
+[32m[2018-08-15T15:45:50.936] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.936] [INFO] default - [39mfixed screen:      Pool Filter          High Speed        
+[32m[2018-08-15T15:45:50.938] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.938] [INFO] default - [39mfixed screen:      Pool Filter          High Speed        
+[32m[2018-08-15T15:45:50.939] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.939] [INFO] default - [39mfixed screen:      Pool Filter          High Speed        
+[32m[2018-08-15T15:45:50.941] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.941] [INFO] default - [39mfixed screen:      Pool Filter          High Speed        
+[32m[2018-08-15T15:45:50.941] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.941] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.943] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.943] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.943] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.944] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.945] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.945] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.946] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.946] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.946] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.947] [INFO] default - [39mcontrol:  1000.0000 0000.0000 0000.0000 0000.0000  is toggling  'filter' 
+[32m[2018-08-15T15:45:50.948] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.949] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:45     
+[32m[2018-08-15T15:45:50.949] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.949] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:45     
+[32m[2018-08-15T15:45:50.950] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:44     
+[32m[2018-08-15T15:45:50.951] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:43     
+[32m[2018-08-15T15:45:50.951] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.951] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:43     
+[91m[2018-08-15T15:45:50.952] [ERROR] default - [39mchecksum mismatch: found c9e, computed d6e; 12 158
+[91m[2018-08-15T15:45:50.952] [ERROR] default - [39mmessage:  Pool Filter Low Spd   Start delay� 2:42   �
+[91m[2018-08-15T15:45:50.952] [ERROR] default - [39mevent exception 'Error: checksum failure' received (7 so far), continuing
+[32m[2018-08-15T15:45:50.953] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:41     
+[32m[2018-08-15T15:45:50.954] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.954] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:41     
+[91m[2018-08-15T15:45:50.954] [ERROR] default - [39mchecksum mismatch: found c9c, computed d6c; 12 156
+[91m[2018-08-15T15:45:50.954] [ERROR] default - [39mmessage:  Pool Filter Low Spd   Start delay� 2:40   �
+[91m[2018-08-15T15:45:50.954] [ERROR] default - [39mevent exception 'Error: checksum failure' received (8 so far), continuing
+[32m[2018-08-15T15:45:50.955] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:39     
+[32m[2018-08-15T15:45:50.956] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.956] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:39     
+[91m[2018-08-15T15:45:50.958] [ERROR] default - [39mchecksum mismatch: found ca3, computed cfb; 12 163
+[91m[2018-08-15T15:45:50.958] [ERROR] default - [39mmessage:  Pool Filter Low Spd   StartX delay 2:38   �
+[91m[2018-08-15T15:45:50.958] [ERROR] default - [39mevent exception 'Error: checksum failure' received (9 so far), continuing
+[32m[2018-08-15T15:45:50.960] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.960] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.961] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.961] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.962] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.963] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.963] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.963] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.965] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.965] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.966] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.968] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.969] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:50.969] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:50.970] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:29     
+[32m[2018-08-15T15:45:50.972] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:50.972] [INFO] default - [39mfixed screen:  Pool Filter Low Spd   Start delay 2:29     
+[91m[2018-08-15T15:45:50.973] [ERROR] default - [39mchecksum mismatch: found ca2, computed d72; 12 162
+[91m[2018-08-15T15:45:50.973] [ERROR] default - [39mmessage:  Pool Filter Low Spd   Start delay� 2:28   �
+[91m[2018-08-15T15:45:50.973] [ERROR] default - [39mevent exception 'Error: checksum failure' received (10 so far), continuing
+[32m[2018-08-15T15:45:50.973] [INFO] default - [39mcontrol:  1000.0000 0000.0000 0000.0000 0000.0000  is toggling  'filter' 
+[32m[2018-08-15T15:45:50.974] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.975] [INFO] default - [39mfixed screen:      Pool Filter             Off            
+[32m[2018-08-15T15:45:50.976] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.976] [INFO] default - [39mfixed screen:      Pool Filter             Off            
+[32m[2018-08-15T15:45:50.978] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.978] [INFO] default - [39mfixed screen:      Pool Filter             Off            
+[32m[2018-08-15T15:45:50.980] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.980] [INFO] default - [39mfixed screen:      Pool Filter             Off            
+[32m[2018-08-15T15:45:50.982] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.982] [INFO] default - [39mfixed screen:      Pool Filter             Off            
+[32m[2018-08-15T15:45:50.983] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.984] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.984] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.985] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.986] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.988] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.988] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.990] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.990] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:50.991] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.992] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.995] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:50.997] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:50.998] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:50.998] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.000] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.000] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.002] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.003] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.003] [INFO] default - [39mfixed screen:         Sunday              12:33P          
+[32m[2018-08-15T15:45:51.008] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.008] [INFO] default - [39mfixed screen:         Sunday              12:33P          
+[32m[2018-08-15T15:45:51.010] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.013] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.013] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:51.013] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:51.014] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:51.014] [ERROR] default - [39mevent exception 'Error: checksum failure' received (11 so far), continuing
+[32m[2018-08-15T15:45:51.014] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.015] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.015] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:51.016] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:51.016] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:51.016] [ERROR] default - [39mevent exception 'Error: checksum failure' received (12 so far), continuing
+[32m[2018-08-15T15:45:51.016] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.017] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.017] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.018] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.019] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.019] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.020] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[91m[2018-08-15T15:45:51.020] [ERROR] default - [39mchecksum mismatch: found 857, computed 927; 8 87
+[91m[2018-08-15T15:45:51.020] [ERROR] default - [39mmessage:       Salt Level        �   2600 PPM       W
+[91m[2018-08-15T15:45:51.020] [ERROR] default - [39mevent exception 'Error: checksum failure' received (13 so far), continuing
+[32m[2018-08-15T15:45:51.021] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.021] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.021] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.022] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.023] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.023] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.024] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.024] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.025] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.026] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.027] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.027] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.029] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.029] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.030] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.030] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.031] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.032] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.032] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.033] [INFO] default - [39mcontrol:  0000.0000 0000.1000 0000.0000 0000.0000  is toggling  'aux3' 
+[32m[2018-08-15T15:45:51.034] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.035] [INFO] default - [39mfixed screen:       Yard Light          Turned On         
+[32m[2018-08-15T15:45:51.036] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.036] [INFO] default - [39mfixed screen:       Yard Light          Turned On         
+[32m[2018-08-15T15:45:51.037] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.037] [INFO] default - [39mfixed screen:       Yard Light          Turned On         
+[32m[2018-08-15T15:45:51.038] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.039] [INFO] default - [39mfixed screen:       Yard Light          Turned On         
+[32m[2018-08-15T15:45:51.040] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.040] [INFO] default - [39mfixed screen:       Yard Light          Turned On         
+[32m[2018-08-15T15:45:51.041] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.042] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.043] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.044] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.044] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.045] [INFO] default - [39mstatus:  0011.0000 0010.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux3' 
+[32m[2018-08-15T15:45:51.046] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.046] [INFO] default - [39mcontrol:  0000.0000 0000.1000 0000.0000 0000.0000  is toggling  'aux3' 
+[32m[2018-08-15T15:45:51.047] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.048] [INFO] default - [39mfixed screen:       Yard Light          Turned Off        
+[32m[2018-08-15T15:45:51.049] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.049] [INFO] default - [39mfixed screen:       Yard Light          Turned Off        
+[32m[2018-08-15T15:45:51.051] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.051] [INFO] default - [39mfixed screen:       Yard Light          Turned Off        
+[32m[2018-08-15T15:45:51.053] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.053] [INFO] default - [39mfixed screen:       Yard Light          Turned Off        
+[32m[2018-08-15T15:45:51.056] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.057] [INFO] default - [39mfixed screen:       Yard Light          Turned Off        
+[32m[2018-08-15T15:45:51.058] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.060] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.060] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.062] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.063] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.063] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[91m[2018-08-15T15:45:51.064] [ERROR] default - [39mchecksum mismatch: found e01e, computed 35e; 224 30
+[91m[2018-08-15T15:45:51.064] [ERROR] default - [39mmessage:   �        �����
+[91m[2018-08-15T15:45:51.064] [ERROR] default - [39mevent exception 'Error: checksum failure' received (14 so far), continuing
+[32m[2018-08-15T15:45:51.065] [INFO] default - [39mfixed screen:         Sunday              12:34P          
+[32m[2018-08-15T15:45:51.066] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.066] [INFO] default - [39mfixed screen:         Sunday              12:34P          
+[32m[2018-08-15T15:45:51.067] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.067] [INFO] default - [39mfixed screen:         Sunday              12:34P          
+[32m[2018-08-15T15:45:51.068] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.068] [INFO] default - [39mfixed screen:         Sunday              12:34P          
+[32m[2018-08-15T15:45:51.069] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.070] [INFO] default - [39mfixed screen:         Sunday              12:34P          
+[32m[2018-08-15T15:45:51.071] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.071] [INFO] default - [39mcompressing ambient
+[91m[2018-08-15T15:45:51.072] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:51.072] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:51.072] [ERROR] default - [39mevent exception 'Error: checksum failure' received (15 so far), continuing
+[32m[2018-08-15T15:45:51.073] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.073] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.073] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.074] [INFO] default - [39mcontrol:  0000.0000 0010.0000 0000.0000 0000.0000  is toggling  'aux5' 
+[32m[2018-08-15T15:45:51.075] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.077] [INFO] default - [39mfixed screen:         Blower            Turned On         
+[32m[2018-08-15T15:45:51.078] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.078] [INFO] default - [39mfixed screen:         Blower            Turned On         
+[32m[2018-08-15T15:45:51.080] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.080] [INFO] default - [39mfixed screen:         Blower            Turned On         
+[32m[2018-08-15T15:45:51.081] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.082] [INFO] default - [39mfixed screen:         Blower            Turned On         
+[32m[2018-08-15T15:45:51.083] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.083] [INFO] default - [39mfixed screen:         Blower            Turned On         
+[91m[2018-08-15T15:45:51.083] [ERROR] default - [39mchecksum mismatch: found 772, computed 862; 7 114
+[91m[2018-08-15T15:45:51.084] [ERROR] default - [39mmessage:    Air Temp   50_F              �          r
+[91m[2018-08-15T15:45:51.084] [ERROR] default - [39mevent exception 'Error: checksum failure' received (16 so far), continuing
+[32m[2018-08-15T15:45:51.087] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.088] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.088] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.089] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.089] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.089] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.090] [INFO] default - [39mstatus:  0011.0000 0000.1000 0000.0000 0000.0000 ; 'check system' 'pool' 'aux5' 
+[32m[2018-08-15T15:45:51.090] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.090] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.091] [INFO] default - [39mcontrol:  0000.0000 0010.0000 0000.0000 0000.0000  is toggling  'aux5' 
+[32m[2018-08-15T15:45:51.092] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.093] [INFO] default - [39mfixed screen:         Blower            Turned Off        
+[32m[2018-08-15T15:45:51.094] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.095] [INFO] default - [39mfixed screen:         Blower            Turned Off        
+[32m[2018-08-15T15:45:51.096] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.096] [INFO] default - [39mfixed screen:         Blower            Turned Off        
+[32m[2018-08-15T15:45:51.097] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.098] [INFO] default - [39mfixed screen:         Blower            Turned Off        
+[32m[2018-08-15T15:45:51.099] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.099] [INFO] default - [39mfixed screen:         Blower            Turned Off        
+[32m[2018-08-15T15:45:51.099] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.099] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.100] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[91m[2018-08-15T15:45:51.101] [ERROR] default - [39mchecksum mismatch: found 1000, computed 818; 16 0
+[91m[2018-08-15T15:45:51.101] [ERROR] default - [39mmessage:  
+�          Air Temp   50_F                         
+[91m[2018-08-15T15:45:51.101] [ERROR] default - [39mevent exception 'Error: checksum failure' received (17 so far), continuing
+[32m[2018-08-15T15:45:51.102] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.102] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.102] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.102] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.103] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.104] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.105] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.105] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.106] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.107] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[33m[2018-08-15T15:45:51.108] [WARN] default - [39mcannot identify event
+[33m[2018-08-15T15:45:51.108] [WARN] default - [39munrecognized message header bytes:  01 ff
+[33m[2018-08-15T15:45:51.108] [WARN] default - [39m10 02 01 ff 02 0c 00 00 00 00 00 00 00 00 21
+[32m[2018-08-15T15:45:51.109] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.111] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.111] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.114] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.115] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.115] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.117] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.118] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.119] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.119] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.120] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.120] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.121] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.122] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.122] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.123] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 
+[32m[2018-08-15T15:45:51.123] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.123] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0000 0000.0100  is toggling  'superchlorinate' 
+[32m[2018-08-15T15:45:51.125] [INFO] default - [39mstatus:  0011.0000 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.127] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.127] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned On         
+[32m[2018-08-15T15:45:51.129] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.129] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned On         
+[32m[2018-08-15T15:45:51.130] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.130] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned On         
+[32m[2018-08-15T15:45:51.131] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.132] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned On         
+[32m[2018-08-15T15:45:51.133] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.134] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned On         
+[32m[2018-08-15T15:45:51.134] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.135] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.135] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.138] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0100.0000 ; 'check system' 'pool' 'filter' 'superchlorinate' 
+[32m[2018-08-15T15:45:51.139] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.140] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0000 0000.0100  is toggling  'superchlorinate' 
+[32m[2018-08-15T15:45:51.143] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.145] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.145] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned Off        
+[32m[2018-08-15T15:45:51.147] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.147] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned Off        
+[32m[2018-08-15T15:45:51.148] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.148] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned Off        
+[32m[2018-08-15T15:45:51.150] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.150] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned Off        
+[32m[2018-08-15T15:45:51.151] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.151] [INFO] default - [39mfixed screen:    Super Chlorinate       Turned Off        
+[32m[2018-08-15T15:45:51.152] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.153] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.153] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.154] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.154] [INFO] default - [39mfixed screen:         Sunday              12:35P          
+[32m[2018-08-15T15:45:51.155] [INFO] default - [39mfixed screen:         Sunday              12:36P          
+[32m[2018-08-15T15:45:51.156] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[91m[2018-08-15T15:45:51.156] [ERROR] default - [39mchecksum mismatch: found 7e0, computed 7f0; 7 224
+[91m[2018-08-15T15:45:51.157] [ERROR] default - [39mmessage:         Sunday              12�36P         �
+[91m[2018-08-15T15:45:51.157] [ERROR] default - [39mevent exception 'Error: checksum failure' received (18 so far), continuing
+[32m[2018-08-15T15:45:51.158] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.158] [INFO] default - [39mfixed screen:         Sunday              12:36P          
+[32m[2018-08-15T15:45:51.159] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.161] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.162] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.162] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.162] [INFO] default - [39mcompressing pool temp
+[91m[2018-08-15T15:45:51.162] [ERROR] default - [39mchecksum mismatch: found 802, computed 892; 8 2
+[91m[2018-08-15T15:45:51.162] [ERROR] default - [39mmessage:  
+�   Air Temp   50_F       �                 
+[91m[2018-08-15T15:45:51.163] [ERROR] default - [39mevent exception 'Error: checksum failure' received (19 so far), continuing
+[32m[2018-08-15T15:45:51.163] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.163] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.164] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.165] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.165] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.166] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.166] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.166] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.167] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.167] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.167] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.171] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.171] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[91m[2018-08-15T15:45:51.173] [ERROR] default - [39mheader parse error: expected 0x02 after 0x10, but got 153
+[91m[2018-08-15T15:45:51.173] [ERROR] default - [39mheader parse error: expected 0x02 after 0x10, but got 3
+[32m[2018-08-15T15:45:51.173] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.174] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.174] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.175] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.175] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.175] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.176] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.177] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.177] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.178] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.178] [INFO] default - [39mfixed screen:       Salt Level           2600 PPM       2600  
+[32m[2018-08-15T15:45:51.178] [INFO] default - [39mcompressing salt
+[32m[2018-08-15T15:45:51.179] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.180] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.180] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.181] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.182] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.183] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.183] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.184] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.184] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.185] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.186] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.186] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.187] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0100 0000.0000  is toggling  'aux11' 
+[91m[2018-08-15T15:45:51.188] [ERROR] default - [39mchecksum mismatch: found a6a, computed b18; 10 106
+[91m[2018-08-15T15:45:51.188] [ERROR] default - [39mmessage:  
+�       Heater1           Auto Control   �  
+j
+[91m[2018-08-15T15:45:51.188] [ERROR] default - [39mevent exception 'Error: checksum failure' received (20 so far), continuing
+[32m[2018-08-15T15:45:51.189] [INFO] default - [39mfixed screen:        Heater1           Auto Control       
+[32m[2018-08-15T15:45:51.190] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.190] [INFO] default - [39mfixed screen:        Heater1           Auto Control       
+[32m[2018-08-15T15:45:51.191] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.191] [INFO] default - [39mfixed screen:        Heater1           Auto Control       
+[32m[2018-08-15T15:45:51.192] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.193] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0100 0000.0000  is toggling  'aux11' 
+[32m[2018-08-15T15:45:51.194] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[33m[2018-08-15T15:45:51.195] [WARN] default - [39mcannot identify event
+[33m[2018-08-15T15:45:51.195] [WARN] default - [39munrecognized message header bytes:  01 ff
+[33m[2018-08-15T15:45:51.195] [WARN] default - [39m10 02 01 ff 02 28 00 00 00 00 00 00 00 00 3d
+[32m[2018-08-15T15:45:51.196] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.197] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.197] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.199] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0001 0000.0000  is toggling  'aux9' 
+[32m[2018-08-15T15:45:51.200] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.201] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.201] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.203] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0001 0000.0000  is toggling  'aux9' 
+[32m[2018-08-15T15:45:51.204] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.205] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.206] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.206] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.207] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.208] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.208] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.209] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0001 0000.0000  is toggling  'aux9' 
+[32m[2018-08-15T15:45:51.210] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.211] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.212] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.212] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.213] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.214] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.215] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.215] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.217] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.217] [INFO] default - [39mfixed screen:       Spa Party           Turned On         
+[32m[2018-08-15T15:45:51.218] [INFO] default - [39mfixed screen:         Sunday              12:36P          
+[32m[2018-08-15T15:45:51.219] [INFO] default - [39mstatus:  0101.0100 0000.0000 0000.0000 0000.0000 ; 'valve3' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.219] [INFO] default - [39mfixed screen:         Sunday              12:36P          
+[32m[2018-08-15T15:45:51.220] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0001 0000.0000  is toggling  'aux9' 
+[32m[2018-08-15T15:45:51.221] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.222] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.222] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.222] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.223] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.223] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.225] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.225] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.226] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.227] [INFO] default - [39mfixed screen:       Spa Party           Turned Off        
+[32m[2018-08-15T15:45:51.227] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.228] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.228] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.229] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.230] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.231] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.231] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.231] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0010 0000.0000  is toggling  'aux10' 
+[32m[2018-08-15T15:45:51.232] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.235] [INFO] default - [39mfixed screen:         Valve4            Turned On         
+[32m[2018-08-15T15:45:51.235] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.236] [INFO] default - [39mfixed screen:         Valve4            Turned On         
+[32m[2018-08-15T15:45:51.237] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.237] [INFO] default - [39mfixed screen:         Valve4            Turned On         
+[32m[2018-08-15T15:45:51.238] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.239] [INFO] default - [39mfixed screen:         Valve4            Turned On         
+[32m[2018-08-15T15:45:51.239] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.240] [INFO] default - [39mfixed screen:         Valve4            Turned On         
+[32m[2018-08-15T15:45:51.241] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.242] [INFO] default - [39mstatus:  0001.0100 0000.0010 0000.0000 0000.0000 ; 'pool' 'filter' 'valve4' 
+[32m[2018-08-15T15:45:51.243] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.243] [INFO] default - [39mcontrol:  0000.0000 0000.0000 0000.0010 0000.0000  is toggling  'aux10' 
+[32m[2018-08-15T15:45:51.244] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.245] [INFO] default - [39mfixed screen:         Valve4            Turned Off        
+[32m[2018-08-15T15:45:51.246] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.246] [INFO] default - [39mfixed screen:         Valve4            Turned Off        
+[32m[2018-08-15T15:45:51.250] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.250] [INFO] default - [39mfixed screen:         Valve4            Turned Off        
+[32m[2018-08-15T15:45:51.251] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.252] [INFO] default - [39mfixed screen:         Valve4            Turned Off        
+[32m[2018-08-15T15:45:51.253] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.253] [INFO] default - [39mfixed screen:         Valve4            Turned Off        
+[32m[2018-08-15T15:45:51.254] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.254] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.255] [INFO] default - [39mfixed screen:         Sunday              12:37P          
+[32m[2018-08-15T15:45:51.255] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.256] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.256] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.257] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.257] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.258] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.258] [INFO] default - [39mstatus:  0001.0100 0000.0000 0000.0000 0000.0000 ; 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.259] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.259] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.260] [INFO] default - [39mcontrol:  0000.0001 0000.0000 0000.0000 0000.0000  is toggling  'right' 
+[32m[2018-08-15T15:45:51.260] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.261] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.261] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.262] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.262] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.262] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.264] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.265] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.265] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.266] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.266] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.266] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.267] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.267] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.267] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.268] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.269] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.269] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.270] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.270] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.272] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.272] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.273] [INFO] default - [39mfixed screen:    Chlorinator Off         No Flow          
+[32m[2018-08-15T15:45:51.273] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.274] [INFO] default - [39mfixed screen:    Chlorinator Off         No Flow          
+[32m[2018-08-15T15:45:51.275] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.276] [INFO] default - [39mfixed screen:    Chlorinator Off         No Flow          
+[32m[2018-08-15T15:45:51.278] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.278] [INFO] default - [39mfixed screen:    Chlorinator Off         No Flow          
+[32m[2018-08-15T15:45:51.279] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.279] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:51.281] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.281] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.282] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.283] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.284] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.284] [INFO] default - [39mfixed screen:        Heater1            Manual Off        
+[32m[2018-08-15T15:45:51.284] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.285] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.286] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.287] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.287] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.288] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.288] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.290] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.290] [INFO] default - [39mfixed screen:      Check System          Low Salt         
+[32m[2018-08-15T15:45:51.290] [INFO] default - [39mfixed screen:         Sunday              12:38P          
+[32m[2018-08-15T15:45:51.291] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.291] [INFO] default - [39mfixed screen:         Sunday              12:38P          
+[32m[2018-08-15T15:45:51.292] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.293] [INFO] default - [39mfixed screen:         Sunday              12:38P          
+[32m[2018-08-15T15:45:51.294] [INFO] default - [39mcontrol: zeroed out all bits
+[32m[2018-08-15T15:45:51.295] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.295] [INFO] default - [39mfixed screen:         Sunday              12:38P          
+[32m[2018-08-15T15:45:51.296] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.296] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.297] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.297] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.297] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.298] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.298] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.298] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.299] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.300] [INFO] default - [39mfixed screen:    Pool Temp  63_F                          63
+[32m[2018-08-15T15:45:51.300] [INFO] default - [39mcompressing pool temp
+[32m[2018-08-15T15:45:51.300] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.300] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.301] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.301] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.301] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.302] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.303] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.303] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.304] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.304] [INFO] default - [39mfixed screen:    Air Temp   50_F                         50 
+[32m[2018-08-15T15:45:51.304] [INFO] default - [39mcompressing ambient
+[32m[2018-08-15T15:45:51.304] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.306] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.306] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.307] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.307] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.308] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 
+[32m[2018-08-15T15:45:51.308] [INFO] default - [39mfixed screen:    Pool Chlorinator          70%            
+[32m[2018-08-15T15:45:51.309] [INFO] default - [39mfixed screen:    Chlorinator Off         No Flow          
+[32m[2018-08-15T15:45:51.312] [INFO] default - [39mstatus:  0011.0100 0000.0000 0000.0000 0000.0000 ; 'check system' 'pool' 'filter' 

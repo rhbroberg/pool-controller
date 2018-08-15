@@ -5,7 +5,7 @@
     "main": "index.js",
     "scripts": {
         "test": "node server.js",
-        "test-realistic": "node server.js -f /tmp/in -d tail"
+        "test-realistic": "node server.js -f /tmp/in -d tail",
         "start": "node server.js -d serial"
     },
     "author": "",
