@@ -17,7 +17,7 @@ var listen = ((filename, cb) => {
         setTimeout(function() {
             logger.info('so long and thanks for all the fish');
             mongoose.disconnect();
-        }, 1000)
+        }, 1000);
     });
 });
 

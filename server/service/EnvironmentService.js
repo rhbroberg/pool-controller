@@ -11,7 +11,7 @@ var logger = log4js.getLogger();
 const tempNames = {
     'pool': 'pool temp',
     'spa': 'spa temp'
-}
+};
 
 /**
  * gets the state of the heater

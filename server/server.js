@@ -1,10 +1,13 @@
 'use strict';
 require('./config/config');
+// eslint and js-beautify fight about having scopes in a switch 'case'; if you make a scope, js-beautify
+// fails to properly indent it; if you don't make a scope, eslint complaints about it
+/* eslint-disable no-case-declarations */
 
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events');
+const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events'); // eslint-disable-line no-unused-vars
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
 
@@ -88,7 +91,7 @@ var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
         }
         presentTemp[statusName] = newValue;
     }
-}
+};
 
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken

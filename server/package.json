@@ -6,7 +6,8 @@
     "scripts": {
         "test": "node server.js",
         "test-realistic": "node server.js -f /tmp/in -d tail",
-        "start": "node server.js -d serial"
+        "start": "node server.js -d serial",
+        "linter": "eslint --ignore-pattern node_modules --ignore-pattern utils --ignore-pattern controllers ."
     },
     "author": "",
     "license": "ISC",

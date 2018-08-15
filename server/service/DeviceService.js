@@ -14,7 +14,7 @@ var logger = log4js.getLogger();
  * no response value expected for this operation
  **/
 exports.getDeviceState = function(deviceId) {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var current;
 
@@ -22,12 +22,12 @@ exports.getDeviceState = function(deviceId) {
             current = presentValue;
         });
 
-        const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId });
+        const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId; });
         const deviceCurrentValue = deviceCurrent ? deviceCurrent.value : 0;
 
         await Event.findOne({ 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 }).exec((err, lastChanged) => {
             if (lastChanged) {
-                const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId });
+                const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
                 examples['application/json'] = {
                     'id': devicePrevious._id,
                     'previousUpdate': lastChanged.timestamp,
@@ -56,7 +56,7 @@ exports.getDeviceState = function(deviceId) {
             resolve();
         }
     });
-}
+};
 
 
 /**
@@ -66,8 +66,8 @@ exports.getDeviceState = function(deviceId) {
  * limit Integer max number of records to return (optional)
  * returns List
  **/
-exports.getDevices = function(skip, limit) {
-    return new Promise(async function(resolve, reject) {
+exports.getDevices = function(skip, limit) { // eslint-disable-line no-unused-vars
+    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var indicators = [];
 
@@ -87,7 +87,7 @@ exports.getDevices = function(skip, limit) {
             resolve();
         }
     });
-}
+};
 
 
 /**
@@ -95,12 +95,12 @@ exports.getDevices = function(skip, limit) {
  * deviceId String 
  * returns DeviceRegistrationInfo
  **/
-exports.registerDevice = function(deviceId) {
-    return new Promise(function(resolve, reject) {
+exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-vars
+    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         examples['application/json'] = {
-            "id": "0729a580-2240-11e6-9eb5-0002a5d5c51b",
-            "uri": "http://10.0.0.220:8080"
+            'id': '0729a580-2240-11e6-9eb5-0002a5d5c51b',
+            'uri': 'http://10.0.0.220:8080'
         };
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
@@ -108,7 +108,7 @@ exports.registerDevice = function(deviceId) {
             resolve();
         }
     });
-}
+};
 
 
 /**
@@ -117,14 +117,14 @@ exports.registerDevice = function(deviceId) {
  * state String 
  * returns DeviceState
  **/
-exports.setDeviceState = function(deviceId, state) {
-    return new Promise(function(resolve, reject) {
+exports.setDeviceState = function(deviceId, state) { // eslint-disable-line no-unused-vars
+    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         examples['application/json'] = {
-            "level": 0,
-            "lastUpdate": "2000-01-23T04:56:07.000+00:00",
-            "name": "name",
-            "id": "id"
+            'level': 0,
+            'lastUpdate': '2000-01-23T04:56:07.000+00:00',
+            'name': 'name',
+            'id': 'id'
         };
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
@@ -132,4 +132,4 @@ exports.setDeviceState = function(deviceId, state) {
             resolve();
         }
     });
-}
+};
