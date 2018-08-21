@@ -20,25 +20,35 @@ var options = {
 var spec = fs.readFileSync(path.join(__dirname, 'api/swagger.yaml'), 'utf8');
 var swaggerDoc = jsyaml.safeLoad(spec);
 
-// Initialize the Swagger middleware
-swaggerTools.initializeMiddleware(swaggerDoc, function(middleware) {
 
-    // Interpret Swagger resources and attach metadata to request - must be first in swagger-tools middleware chain
-    app.use(middleware.swaggerMetadata());
+var initializeServer = (async (cb) => {
+    // Initialize the Swagger middleware
+    await swaggerTools.initializeMiddleware(swaggerDoc, function(middleware) {
 
-    // Validate Swagger requests
-    app.use(middleware.swaggerValidator());
+        // Interpret Swagger resources and attach metadata to request - must be first in swagger-tools middleware chain
+        app.use(middleware.swaggerMetadata());
 
-    // Route validated requests to appropriate controller
-    app.use(middleware.swaggerRouter(options));
+        // Validate Swagger requests
+        app.use(middleware.swaggerValidator());
 
-    // Serve the Swagger documents and Swagger UI
-    app.use(middleware.swaggerUi());
+        // Route validated requests to appropriate controller
+        app.use(middleware.swaggerRouter(options));
 
-    // Start the server
-    http.createServer(app).listen(serverPort, function() {
-        console.log('Your server is listening on port %d (http://localhost:%d)', serverPort, serverPort);
-        console.log('Swagger-ui is available on http://localhost:%d/docs', serverPort);
+        // Serve the Swagger documents and Swagger UI
+        app.use(middleware.swaggerUi());
+
+        // create server and app in this order for callback
+        var server = http.createServer(app);
+        cb(app, server);
+
+        // Start the server
+        server.listen(serverPort, function() {
+            console.log('Your server is listening on port %d (http://localhost:%d)', serverPort, serverPort);
+            console.log('Swagger-ui is available on http://localhost:%d/docs', serverPort);
+
+        });
+
     });
-
 });
+
+module.exports = { initializeServer };

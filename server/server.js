@@ -4,12 +4,15 @@ require('./config/config');
 // fails to properly indent it; if you don't make a scope, eslint complaints about it
 /* eslint-disable no-case-declarations */
 
+var http = require('http');
+var socketIO = require('socket.io');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
 const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events'); // eslint-disable-line no-unused-vars
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
+const path = require('path');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -17,6 +20,10 @@ var { Event } = require('./models/event');
 var serial = require('./drivers/serial');
 var fileHandler = require('./drivers/filehandler');
 var tailHandler = require('./drivers/tailhandler');
+const express = require('express');
+const publicPath = path.join(__dirname, './public');
+var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
+var io;
 
 var argv = yargs
     .default('f', __dirname + '/../test-data/sample-various-bin')
@@ -32,7 +39,33 @@ var processingErrors = 0;
 // if webserver is run app will not exit in 'file' mode (which is only used for testing)
 if (argv.d !== 'file') {
     logger.info('web server is active');
-    require('./index'); // route handler, courtesy of swagger.io
+
+    initializeServer((app, server) => {
+        app.use(express.static(publicPath));
+
+        io = socketIO(server);
+        // console.log('created io ', io);
+
+        io.on('connection', (socket) => { // eslint-disable-line no-unused-vars// eslint-disable-line no-unused-vars
+            console.log('connecting');
+            socket.on('join', (params, callback) => {
+                console.log('page joined');
+                socket.join('datastream');
+
+                socket.emit('streaming', 'now streaming');
+                socket.broadcast.emit('datastream').emit('streaming', 'another streamer attached');
+                io.emit('streaming', 'this is from io.emit');
+
+                if (callback) {
+                    callback();
+                }
+            });
+
+            socket.on('disconnect', () => {
+                console.log('disconnecting');
+            });
+        });
+    });
 }
 
 // create factory and register all (currently) known events
@@ -93,6 +126,14 @@ var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
     }
 };
 
+var streamEvent = (text) => {
+    // send to sockets if established
+    if (io) {
+        logger.trace('sending streaming');
+        io.emit('streaming', text);
+    }
+};
+
 var dispatchEvent = (buf) => {
     // change to a factory pattern and an observer pattern for action taken
 
@@ -122,6 +163,7 @@ var dispatchEvent = (buf) => {
                     saveSwitchState(statusChanges, buf, 'info');
                 }
             }
+            streamEvent(JSON.stringify(statusChanges, undefined, 2));
             break;
         case 'StatusEvent':
             const eventDiffs = event.diff(previousStatusMask);
@@ -138,9 +180,14 @@ var dispatchEvent = (buf) => {
             } else {
                 // always update the lastUpdated timestamp
             }
+
+            streamEvent(JSON.stringify(event.enabledSwitches(), undefined, 2));
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
+            if (logger.isTraceEnabled()) {
+                streamEvent('heartbeat');
+            }
             break;
         case 'MotorTelemetryEvent':
             logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
@@ -153,6 +200,7 @@ var dispatchEvent = (buf) => {
                 const toggleBits = switchStates(event.enabledSwitches(), 1);
                 saveSwitchState(toggleBits, buf, 'control');
             }
+            streamEvent(JSON.stringify(event.enabledSwitches(), undefined, 2));
             break;
         case 'UnidentifiedStatusEvent':
             logger.debug('unidentified status:');
