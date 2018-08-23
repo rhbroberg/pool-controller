@@ -42,19 +42,15 @@ if (argv.d !== 'file') {
 
     initializeServer((app, server) => {
         app.use(express.static(publicPath));
-
         io = socketIO(server);
-        // console.log('created io ', io);
 
         io.on('connection', (socket) => { // eslint-disable-line no-unused-vars// eslint-disable-line no-unused-vars
-            console.log('connecting');
+            logger.debug('connecting from client', socket);
             socket.on('join', (params, callback) => {
-                console.log('page joined');
                 socket.join('datastream');
 
-                socket.emit('streaming', 'now streaming');
-                socket.broadcast.emit('datastream').emit('streaming', 'another streamer attached');
-                io.emit('streaming', 'this is from io.emit');
+                socket.emit('catchup', 'here is where i would stream the data up to this point');
+                socket.broadcast.emit('datastream').emit('peers', 'hey everybody, another streamer attached');
 
                 if (callback) {
                     callback();
@@ -62,7 +58,7 @@ if (argv.d !== 'file') {
             });
 
             socket.on('disconnect', () => {
-                console.log('disconnecting');
+                logger.debug('disconnecting');
             });
         });
     });
@@ -126,11 +122,14 @@ var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
     }
 };
 
-var streamEvent = (text) => {
+var streamEvent = (kind, text) => {
     // send to sockets if established
     if (io) {
         logger.trace('sending streaming');
-        io.emit('streaming', text);
+        io.emit('streaming', JSON.stringify({
+            kind: kind,
+            text: text
+        }, undefined, 2));
     }
 };
 
@@ -159,11 +158,12 @@ var dispatchEvent = (buf) => {
 
                 if (statusChanges.length === 0) {
                     // always update the lastUpdated timestamp
+                    // maybe update streamers with 'last updated'
                 } else {
                     saveSwitchState(statusChanges, buf, 'info');
+                    streamEvent('info', statusChanges);
                 }
             }
-            streamEvent(JSON.stringify(statusChanges, undefined, 2));
             break;
         case 'StatusEvent':
             const eventDiffs = event.diff(previousStatusMask);
@@ -177,16 +177,20 @@ var dispatchEvent = (buf) => {
                 const nowDisabled = switchStates(eventDiffs.nowDisabled, 0);
 
                 saveSwitchState(nowEnabled.concat(nowDisabled), buf, 'status');
+                streamEvent('status', {
+                    nowEnabled: eventDiffs.nowEnabled,
+                    nowDisabled: eventDiffs.nowDisabled
+                });
             } else {
                 // always update the lastUpdated timestamp
+                // maybe update streamers with 'last updated'
             }
 
-            streamEvent(JSON.stringify(event.enabledSwitches(), undefined, 2));
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
             if (logger.isTraceEnabled()) {
-                streamEvent('heartbeat');
+                streamEvent('heartbeat', undefined);
             }
             break;
         case 'MotorTelemetryEvent':
@@ -199,8 +203,8 @@ var dispatchEvent = (buf) => {
                 logger.info('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
                 const toggleBits = switchStates(event.enabledSwitches(), 1);
                 saveSwitchState(toggleBits, buf, 'control');
+                streamEvent('control', event.enabledSwitches());
             }
-            streamEvent(JSON.stringify(event.enabledSwitches(), undefined, 2));
             break;
         case 'UnidentifiedStatusEvent':
             logger.debug('unidentified status:');
