@@ -9,49 +9,48 @@
 </head>
 
 <body class="chat">
-    <div class="chat__sidebar">
-        <h3>People</h3>
-        <div id="users"></div>
+    <div class="streaming__sidebar">
+        <h3>info</h3>
+        <div id="info__crawl"></div>
     </div>
 
-    <div class="chat__main">
-        <ol id="messages" class="chat__messages"> </ol>
-
-        <div class="chat__footer">
-            <form id="message-form">
-                <input name="message" type="text" placeholder="Type message here" autofocus autocomplete="off" />
-                <button>Send</button>
-            </form>
-            <button id="send-location">Send location</button>
-        </div>
+    <div class="streaming__sidebar">
+        <h3>status</h3>
+        <div id="status__crawl"></div>
     </div>
 
-    <script id="message-template" type="text/template">
+    <div class="streaming__sidebar">
+        <h3>control</h3>
+        <div id="control__crawl"></div>
+    </div>
+
+    <script id="status-template" type="text/template">
         <li class="message">
-            <div class="message__title">
-                <h4>{{from}}</h4>
-                <span>{{createdAt}}</span>
+            <div class="info__timestamp">
+                <h4>{{timestamp}}</h4>
             </div>
-            <div class="message__body">
-                <p>{{text}}</p>
+            <div class="disabled__title">
+                <span>{{nowDisabled}}</span>
+            </div>
+            <div class="enabled__title">
+                <span>{{nowEnabled}}</span>
             </div>
         </li>
     </script>
 
-    <script id="location-message-template" type="text/template">
+    <script id="info-template" type="text/template">
         <li class="message">
-            <div class="message__title">
-                <h4>{{from}}</h4>
-                <span>{{createdAt}}</span>
+            <div class="info__timestamp">
+                <h4>{{timestamp}}</h4>
             </div>
-            <div class="message__body">
-                <p>
-                    <a href="{{url}}" target="_blank">My Current Location</a>
-                </p>
+            <div class="info__name">
+                <h4>{{name}}</h4>
+            </div>
+            <div class="info__value">
+                <h4>{{value}}</h4>
             </div>
         </li>
     </script>
-
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/libs/jquery-3.3.1.min.js"></script>
@@ -61,9 +60,9 @@
         var socket = io();
     </script>
     <script>
-        function scrollToBottom() {
+        function scrollToBottom(whichForm) {
             // selectors
-            var messages = jQuery('#messages');
+            var messages = jQuery(whichForm);
             var newMessage = messages.children('li:last-child');
 
             // heights
@@ -77,18 +76,47 @@
                 messages.scrollTop(scrollHeight);
             }
         }
-        socket.on('streaming', function(message) {
-            //var formattedTime = moment(message.createdAt).format('h:mm a');
-            var template = jQuery('#message-template').html();
-            var html = Mustache.render(template, {
-                text: message,
-                //   from: message.from,
-                //     createdAt: formattedTime
-            });
+        socket.on('streaming', function(cleartext) {
+            const message = JSON.parse(cleartext);
 
-            jQuery('#messages').append(html);
-            scrollToBottom();
-            console.log('got streaming', message);
+            if (message.kind === 'info') {
+                console.log('got info', message.text);
+                var template = jQuery('#info-template').html();
+
+                for (var i = 0; i < message.text.length; i++) {
+                    var html = Mustache.render(template, {
+                        timestamp: message.timestamp,
+                        name: message.text[i].name,
+                        value: message.text[i].value
+                    });
+
+                    jQuery('#info__crawl').append(html);
+                }
+            } else if (message.kind === 'status') {
+                var template = jQuery('#status-template').html();
+                var html = Mustache.render(template, {
+                    nowEnabled: message.text.nowEnabled,
+                    nowDisabled: message.text.nowDisabled,
+                    timestamp: message.timestamp
+                });
+
+                console.log('got status', message.text);
+                jQuery('#status__crawl').append(html);
+            } else if (message.kind === 'control') {
+                var template = jQuery('#status-template').html();
+
+                for (var i = 0; i < message.text.length; i++) {
+                    var html = Mustache.render(template, {
+                        nowEnabled: message.text[i],
+                        timestamp: message.timestamp
+                    });
+
+                    jQuery('#control__crawl').append(html);
+                    scrollToBottom('#control__crawl');
+                }
+
+                console.log('got control', message.text);
+            }
         });
     </script>
 

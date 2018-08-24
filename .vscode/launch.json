@@ -8,8 +8,8 @@
         "type": "node",
         "request": "launch",
         "name": "Launch Program",
-        "program": "${workspaceFolder}/server/server.js"
-        //"args": "-f test-data/sample-various-bin"
+        "program": "${workspaceFolder}/server/server.js",
+        "args": "[-f /tmp/in, -d tail]"
     },
     {
         "type": "node",

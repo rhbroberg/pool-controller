@@ -4,7 +4,6 @@ require('./config/config');
 // fails to properly indent it; if you don't make a scope, eslint complaints about it
 /* eslint-disable no-case-declarations */
 
-var http = require('http');
 var socketIO = require('socket.io');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
@@ -67,7 +66,7 @@ if (argv.d !== 'file') {
 // create factory and register all (currently) known events
 var factory = new EventFactory();
 
-var saveSwitchState = (switchesEnabled, buf, category) => {
+var saveSwitchState = (switchesEnabled, buf, category, timestamp) => {
     if (switchesEnabled.length > 0) {
         var dbStatusEvent = new Event({
             _id: new mongoose.Types.ObjectId,
@@ -75,7 +74,7 @@ var saveSwitchState = (switchesEnabled, buf, category) => {
             raw: buf,
             eventType: category,
             status: switchesEnabled,
-            timestamp: new Date().getTime()
+            timestamp: timestamp
         });
 
         dbStatusEvent.save().then((doc) => {
@@ -122,26 +121,27 @@ var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
     }
 };
 
-var streamEvent = (kind, text) => {
-    // send to sockets if established
+var streamEvent = (kind, text, timestamp) => {
+    // send to sockets (if established)
     if (io) {
-        logger.trace('sending streaming');
+        logger.trace('streaming data to http listeners at ', timestamp);
         io.emit('streaming', JSON.stringify({
             kind: kind,
-            text: text
+            text: text,
+            timestamp: timestamp
         }, undefined, 2));
     }
 };
 
 var dispatchEvent = (buf) => {
-    // change to a factory pattern and an observer pattern for action taken
-
+    // maybe change to an observer pattern for action taken
     const event = factory.create(buf);
     if (!event) {
         logger.warn('cannot identify event');
         return false;
     }
 
+    const timestamp = new Date().getTime();
     switch (event.constructor.name) {
         case 'DisplayUpdateEvent':
             {
@@ -160,8 +160,8 @@ var dispatchEvent = (buf) => {
                     // always update the lastUpdated timestamp
                     // maybe update streamers with 'last updated'
                 } else {
-                    saveSwitchState(statusChanges, buf, 'info');
-                    streamEvent('info', statusChanges);
+                    saveSwitchState(statusChanges, buf, 'info', timestamp);
+                    streamEvent('info', statusChanges, timestamp);
                 }
             }
             break;
@@ -176,11 +176,11 @@ var dispatchEvent = (buf) => {
                 const nowEnabled = switchStates(eventDiffs.nowEnabled, 1);
                 const nowDisabled = switchStates(eventDiffs.nowDisabled, 0);
 
-                saveSwitchState(nowEnabled.concat(nowDisabled), buf, 'status');
+                saveSwitchState(nowEnabled.concat(nowDisabled), buf, 'status', timestamp);
                 streamEvent('status', {
                     nowEnabled: eventDiffs.nowEnabled,
                     nowDisabled: eventDiffs.nowDisabled
-                });
+                }, timestamp);
             } else {
                 // always update the lastUpdated timestamp
                 // maybe update streamers with 'last updated'
@@ -202,8 +202,8 @@ var dispatchEvent = (buf) => {
             } else {
                 logger.info('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
                 const toggleBits = switchStates(event.enabledSwitches(), 1);
-                saveSwitchState(toggleBits, buf, 'control');
-                streamEvent('control', event.enabledSwitches());
+                saveSwitchState(toggleBits, buf, 'control', timestamp);
+                streamEvent('control', event.enabledSwitches(), timestamp);
             }
             break;
         case 'UnidentifiedStatusEvent':

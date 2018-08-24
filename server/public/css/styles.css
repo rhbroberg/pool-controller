@@ -91,9 +91,9 @@ button:disabled {
     display: flex;
 }
 
-.chat__sidebar {
+.streaming__sidebar {
     overflow-y: scroll;
-    width: 260px;
+    width: 560px;
     height: 100vh;
     background: -moz-linear-gradient(125deg, rgba(39, 107, 130, 1) 0%, rgba(49, 84, 129, 1) 100%);
     /* ff3.6+ */
@@ -109,17 +109,17 @@ button:disabled {
     /* w3c */
 }
 
-.chat__sidebar h3 {
+.streaming__sidebar h3 {
     color: #e6eaee;
     margin: 10px 20px;
     text-align: left;
 }
 
-.chat__sidebar ul {
+.streaming__sidebar ul {
     list-style-type: none;
 }
 
-.chat__sidebar li {
+.streaming__sidebar li {
     background: #e6eaee;
     border: 1px solid #e1e1e1;
     border-radius: 5px;
@@ -172,25 +172,80 @@ button:disabled {
     padding: 10px;
 }
 
-.message__title {
+.info__timestamp {
     display: flex;
     margin-bottom: 5px;
 }
 
-.message__title h4 {
+.info__timestamp h4 {
+    font-weight: 600;
+    margin-right: 10px;
+    color: #000000;
+}
+
+.info__name {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.info__name h4 {
+    font-weight: 600;
+    margin-right: 10px;
+    color: #ff00dd;
+}
+
+.info__name span {
+    color: #00ffff;
+}
+
+.info__value {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.info__value h4 {
+    font-weight: 100;
+    margin-right: 10px;
+    color: #5a7a5d;
+}
+
+.info__value span {
+    color: #0000ff;
+}
+
+.enabled__title {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.enabled__title h4 {
     font-weight: 600;
     margin-right: 10px;
 }
 
-.message__title span {
-    color: #999;
+.enabled__title span {
+    color: #089608;
+}
+
+.disabled__title {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+.disabled__title h4 {
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.disabled__title span {
+    color: #ff0000;
 }
 
 @media (max-width: 600px) {
     * {
         font-size: 1rem;
     }
-    .chat__sidebar {
+    .streaming__sidebar {
         display: none;
     }
     .chat__footer {
