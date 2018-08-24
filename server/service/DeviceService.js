@@ -18,14 +18,14 @@ exports.getDeviceState = function(deviceId) {
         var examples = {};
         var current;
 
-        await Event.findOne({ 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 }).exec((err, presentValue) => {
+        await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 }).exec((err, presentValue) => {
             current = presentValue;
         });
 
         const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId; });
         const deviceCurrentValue = deviceCurrent ? deviceCurrent.value : 0;
 
-        await Event.findOne({ 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 }).exec((err, lastChanged) => {
+        await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 }).exec((err, lastChanged) => {
             if (lastChanged) {
                 const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
                 examples['application/json'] = {

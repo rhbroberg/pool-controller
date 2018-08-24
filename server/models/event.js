@@ -23,7 +23,7 @@ var EventSchema = new Schema({
 });
 
 // auto-create mongo indexes; idempotent
-EventSchema.index({ eventType: 1, status: 1, timestamp: -1 }, { name: 'eventType_1' });
+EventSchema.index({ eventType: 1, status: 1, timestamp: -1, 'status.0.name': 1, 'status.0.value': 1 }, { name: 'eventType_1' });
 var Event = mongoose.model('events', EventSchema);
 
 module.exports = { Event };
