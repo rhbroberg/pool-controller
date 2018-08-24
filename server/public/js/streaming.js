@@ -1,4 +1,4 @@
-/* global jQuery io Mustache */
+/* global jQuery io Mustache moment */
 
 var socket = io();
 
@@ -26,9 +26,9 @@ socket.on('info', function(cleartext) {
 
     for (var i = 0; i < message.text.length; i++) {
         var html = Mustache.render(template, {
-            timestamp: message.timestamp,
             name: message.text[i].name,
-            value: message.text[i].value
+            value: message.text[i].value,
+            timestamp: moment(message.timestamp).format('YYYY-MM-DDTHH:mm:ss')
         });
 
         jQuery('#info__crawl').append(html);
@@ -37,10 +37,11 @@ socket.on('info', function(cleartext) {
 socket.on('status', function(cleartext) {
     const message = JSON.parse(cleartext);
     var template = jQuery('#status-template').html();
+
     var html = Mustache.render(template, {
         nowEnabled: message.text.nowEnabled,
         nowDisabled: message.text.nowDisabled,
-        timestamp: message.timestamp
+        timestamp: moment(message.timestamp).format('YYYY-MM-DDTHH:mm:ss')
     });
 
     console.log('got status', message.text);
@@ -53,7 +54,7 @@ socket.on('control', function(cleartext) {
     for (var i = 0; i < message.text.length; i++) {
         var html = Mustache.render(template, {
             nowEnabled: message.text[i],
-            timestamp: message.timestamp
+            timestamp: moment(message.timestamp).format('YYYY-MM-DDTHH:mm:ss')
         });
 
         jQuery('#control__crawl').append(html);
