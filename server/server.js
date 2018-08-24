@@ -125,7 +125,7 @@ var streamEvent = (kind, text, timestamp) => {
     // send to sockets (if established)
     if (io) {
         logger.trace('streaming data to http listeners at ', timestamp);
-        io.emit('streaming', JSON.stringify({
+        io.emit(kind, JSON.stringify({
             kind: kind,
             text: text,
             timestamp: timestamp
