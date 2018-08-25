@@ -112,7 +112,7 @@ paths:
             items:
               type: "string"
               format: "uri"
-              example: "http://10.0.0.225:8080"
+              example: "pool"
       x-swagger-router-controller: "Filtration"
   /filtration/{pumpId}/{state}:
     put:

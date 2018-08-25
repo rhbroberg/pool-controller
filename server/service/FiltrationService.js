@@ -9,7 +9,7 @@
 exports.getFiltrationDevices = function() {
   return new Promise(function(resolve, reject) {
     var examples = {};
-    examples['application/json'] = [ "http://10.0.0.225:8080", "http://10.0.0.225:8080" ];
+    examples['application/json'] = [ "pool", "pool" ];
     if (Object.keys(examples).length > 0) {
       resolve(examples[Object.keys(examples)[0]]);
     } else {
