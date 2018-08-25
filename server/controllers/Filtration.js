@@ -4,9 +4,7 @@ var utils = require('../utils/writer.js');
 var Filtration = require('../service/FiltrationService');
 
 module.exports.getFiltrationDevices = function getFiltrationDevices (req, res, next) {
-  var skip = req.swagger.params['skip'].value;
-  var limit = req.swagger.params['limit'].value;
-  Filtration.getFiltrationDevices(skip,limit)
+  Filtration.getFiltrationDevices()
     .then(function (response) {
       utils.writeJson(res, response);
     })
