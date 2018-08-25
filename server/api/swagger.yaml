@@ -528,17 +528,16 @@ definitions:
         type: "string"
       name:
         type: "string"
+      value:
+        type: "string"
       lastUpdate:
         type: "string"
         format: "date-time"
-      level:
-        type: "integer"
-        format: "int32"
     example:
-      level: 0
       lastUpdate: "2000-01-23T04:56:07.000+00:00"
       name: "name"
       id: "id"
+      value: "value"
   DeviceRegistrationInfo:
     type: "object"
     properties:
