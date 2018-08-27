@@ -12,52 +12,75 @@ const statusMap = [
     ['aux14', 'superchlorinate', 'unknown4.3', 'unknown4.4', 'unknown4.5', 'unknown4.6', 'unknown4.7', 'unknown4.8']
 ];
 
-const controlMap = {
-    0: 'aux13', // 0x00 00 00 01
-    1: 'aux14', // 0x00 00 00 02
-    2: 'superchlorinate', // 0x00 00 00 04
-    3: 'unlock config', // 0x00 00 00 08
+class TwoWayMap {
+    constructor(map) {
+        this.map = map;
+        this.reverseMap = {};
+        for (var key in map) {
+            var value = map[key];
+            this.reverseMap[value] = key;
+        }
+    }
+
+    fromIndex(key) { return this.map[key]; }
+    fromName(key) { return this.reverseMap[key]; }
+}
+
+const controlMap = new TwoWayMap({
+    '0': 'aux13', // 0x00 00 00 01
+    '1': 'aux14', // 0x00 00 00 02
+    '2': 'superchlorinate', // 0x00 00 00 04
+    '3': 'unlock config', // 0x00 00 00 08
 
     // curiously, bits 4-7 are not represented
 
-    8: 'aux9', // 0x00 00 01 00: 'aux9',
-    9: 'aux10', // 0x00 00 02 00: 'aux10',
-    10: 'aux11', // 0x00 00 04 00: 'aux11',
-    11: 'aux12', // 0x00 00 08 00: 'aux12',
+    '8': 'aux9', // 0x00 00 01 00: 'aux9',
+    '9': 'aux10', // 0x00 00 02 00: 'aux10',
+    '10': 'aux11', // 0x00 00 04 00: 'aux11',
+    '11': 'aux12', // 0x00 00 08 00: 'aux12',
 
-    12: 'valve3', // 0x00 00 10 00: 'valve3',
-    13: 'valve4/heater2', // 0x00 00 20 00: 'valve4/heater2',
-    14: 'heater2', //0x00 00 40 00: 'heater1',
-    15: 'aux8', // 0x00 00 80 00: 'aux8',
+    '12': 'valve3', // 0x00 00 10 00: 'valve3',
+    '13': 'valve4/heater2', // 0x00 00 20 00: 'valve4/heater2',
+    '14': 'heater2', //0x00 00 40 00: 'heater1',
+    '15': 'aux8', // 0x00 00 80 00: 'aux8',
 
-    16: 'lights', // 0x00 01 00 00: 'lights',
-    17: 'aux1', // 0x00 02 00 00: 'aux1',
-    18: 'aux2', // 0x00 04 00 00: 'aux2',
-    19: 'aux3', //0x00 08 00 00: 'aux3',
+    '16': 'lights', // 0x00 01 00 00: 'lights',
+    '17': 'aux1', // 0x00 02 00 00: 'aux1',
+    '18': 'aux2', // 0x00 04 00 00: 'aux2',
+    '19': 'aux3', //0x00 08 00 00: 'aux3',
 
-    20: 'aux4', // 0x00 10 00 00: 'aux4',
-    21: 'aux5', // 0x00 20 00 00: 'aux5',
-    22: 'aux6', // 0x00 40 00 00: 'aux6',
-    23: 'aux7', // 0x00 80 00 00: 'aux7',
+    '20': 'aux4', // 0x00 10 00 00: 'aux4',
+    '21': 'aux5', // 0x00 20 00 00: 'aux5',
+    '22': 'aux6', // 0x00 40 00 00: 'aux6',
+    '23': 'aux7', // 0x00 80 00 00: 'aux7',
 
-    24: 'right', // 0x01 00 00 00: 'right',
-    25: 'menu', // 0x02 00 00 00: 'menu',
-    26: 'left', // 0x04 00 00 00: 'left',
-    27: 'off', // 0x08 00 00 00: 'off',
+    '24': 'right', // 0x01 00 00 00: 'right',
+    '25': 'menu', // 0x02 00 00 00: 'menu',
+    '26': 'left', // 0x04 00 00 00: 'left',
+    '27': 'off', // 0x08 00 00 00: 'off',
 
-    28: 'minus', // 0x10 00 00 00: 'minus',
-    29: 'plus', // 0x20 00 00 00: 'plus',
-    30: 'spillover', // 0x40 00 00 00: 'spillover',
-    31: 'filter' // 0x80 00 00 00: 'filter',
-};
+    '28': 'minus', // 0x10 00 00 00: 'minus',
+    '29': 'plus', // 0x20 00 00 00: 'plus',
+    '30': 'spillover', // 0x40 00 00 00: 'spillover',
+    '31': 'filter' // 0x80 00 00 00: 'filter',
+});
 
 class Event {
     constructor(frame, header) {
-        this.frame = frame;
         this.now = moment().valueOf();
         this.validMsb = header[0];
         this.validLsb = header[1];
-        this.verifyEventType(this.validMsb, this.validLsb);
+
+        if (frame) {
+            this.frame = frame;
+            this.verifyEventType(this.validMsb, this.validLsb);
+        } else {
+            this.frame = Buffer.alloc(32, 0);
+            this.frame.writeUInt8(0x10, 0);
+            this.frame.writeUInt8(0x02, 1);
+            this.frame.writeUInt8(this.validMsb, 2);
+            this.frame.writeUInt8(this.validLsb, 3);
+        }
     }
 
     verifyEventType(msb, lsb) {
@@ -79,8 +102,11 @@ class ChecksummedEvent extends Event {
     constructor(frame, header) {
         super(frame, header);
 
-        if (!this.verifyChecksum()) {
-            throw new Error('checksum failure');
+        // only verify instances with valid starting data
+        if (frame) {
+            if (!this.verifyChecksum()) {
+                throw new Error('checksum failure');
+            }
         }
     }
 
@@ -106,7 +132,19 @@ class ChecksummedEvent extends Event {
         for (var i = 0; i < this.frame.length - 2; i++) {
             checksum += this.frame.readUInt8(i);
         }
+
         return checksum;
+    }
+
+    freeze(newLength) {
+        var resizedBuf = this.frame.slice(0, newLength);
+        this.frame = resizedBuf;
+        const checksum = this.computeChecksum();
+        const msb = Math.floor(checksum / 256);
+        const lsb = checksum % 256;
+
+        resizedBuf.writeUInt8(msb, this.frame.length - 2);
+        resizedBuf.writeUInt8(lsb, this.frame.length - 1);
     }
 
     prettyBits(wantsOn) {
@@ -295,6 +333,7 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
 // 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
 // dox said  0x83, 0x01 but i find 0x00 0x8c
+// 0x8c wireless, 0x03 keypad, 0x02 panel
 class ControlEvent extends ChecksummedEvent {
     constructor(frame) {
         super(frame, ControlEvent.header());
@@ -331,7 +370,7 @@ class ControlEvent extends ChecksummedEvent {
 
         for (let bitShift = 0; bitShift < 32; bitShift++) {
             let singleBit = commandBits >> bitShift;
-            callback(controlMap[bitShift], singleBit & 0x01);
+            callback(controlMap.fromIndex(bitShift), singleBit & 0x01);
         }
     }
 
@@ -342,6 +381,58 @@ class ControlEvent extends ChecksummedEvent {
         msg += ' ' + this.textBitMaskFromByte(this.frame.readUInt8(8));
 
         return msg;
+    }
+
+    // extend this class for InitiateControlEvent?
+
+    toggleControls(toToggle) {
+        let bytes = [0, 0, 0, 0];
+
+        toToggle.forEach((s) => {
+            var mask;
+            const bitPosition = controlMap.fromName(s);
+            mask |= (0x01 << bitPosition);
+            const whichByte = Math.floor(bitPosition / 8);
+            bytes[whichByte] |= ((mask >> (whichByte * 8)) & 0xff);
+        });
+
+        // write bytes to buffer
+        for (let byte = 0; byte < 4; byte++)
+        {
+            this.frame.writeUInt8(bytes[byte], 8 - byte); // locations: 8, 7, 6, 5 (highest location is lowest byte in block)
+            this.frame.writeUInt8(bytes[byte], 12 - byte); // locations 12, 11, 10, 9 (ditto)
+        }
+        logger.info('i made this ', this.asString(), this.prettyBits(1));
+    }
+
+    toggleControlsAlternate(toToggle) {
+        // first build the mask from each bit location
+        var mask = 0;
+        toToggle.forEach((s) => {
+            const bitPosition = 17;
+
+            mask |= (0x01 << bitPosition);
+        });
+
+        // set bit position indexed into each byte to be written out
+        for (let byte = 0; byte < 4; byte++) {
+            let thisByte = 0;
+            for (let bit = 0; bit < 8; bit++) {
+                thisByte |= ((mask >> (byte * 8)) & 0xff);
+            }
+            this.frame.writeUInt8(thisByte, 8 - byte); // locations: 8, 7, 6, 5 (highest location is lowest byte in block)
+            this.frame.writeUInt8(thisByte, 12 - byte); // locations: 12, 11, 10, 9 (ditto)
+        }
+
+        logger.info('i made this ', this.asString(), this.prettyBits(1));
+    }
+
+    payload() {
+        this.frame.writeUInt8(0x01, 4);
+        this.frame.writeUInt8(0x00, 13);
+        this.freeze(16);
+
+        return this.frame;
     }
 
 }

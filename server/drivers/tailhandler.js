@@ -1,6 +1,7 @@
 var Tail = require('./tail');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
+const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('../protocol/events'); // eslint-disable-line no-unused-vars
 
 var listen = ((filename, cb) => {
     logger.info('tailing file', filename);
@@ -12,4 +13,9 @@ var listen = ((filename, cb) => {
     });
 });
 
-module.exports = { listen };
+var writeEvent = ((message) => {
+    const myControl = new ControlEvent(message);
+    logger.info('writing control event: ', myControl.asString());
+});
+
+module.exports = { listen, writeEvent };

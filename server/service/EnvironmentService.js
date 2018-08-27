@@ -106,6 +106,12 @@ async function getMostRecentInfo(name, statuses) {
     });
 }
 
+var controlCB;
+
+exports.registerControlListener = function(cb) {
+    controlCB = cb;
+};
+
 /**
  *
  * returns TemperatureSummary
@@ -114,6 +120,8 @@ exports.temperatureSummary = function() {
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var statuses = [];
+
+        controlCB('lights');
 
         await getMostRecentInfo('ambient', statuses);
         await getMostRecentInfo('pool temp', statuses);

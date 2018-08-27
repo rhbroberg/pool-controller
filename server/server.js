@@ -12,6 +12,7 @@ const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetry
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
 const path = require('path');
+const environmentService = require('./service/EnvironmentService');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -23,6 +24,8 @@ const express = require('express');
 const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
 var io;
+var controlRequests = [];
+var driver;
 
 var argv = yargs
     .default('f', __dirname + '/../test-data/sample-various-bin')
@@ -192,6 +195,13 @@ var dispatchEvent = (buf) => {
             if (logger.isTraceEnabled()) {
                 streamEvent('heartbeat', undefined);
             }
+            if (controlRequests.length > 0) {
+                var cb = controlRequests.shift();
+
+                logger.info('ping calling queued callback');
+                cb();
+                // now must queue a callback to verify it got changed
+            }
             break;
         case 'MotorTelemetryEvent':
             logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
@@ -238,16 +248,35 @@ var handleHunk = (data) => {
     });
 };
 
+var controlListener = ((whatChange) => {
+    logger.info('will initiate change for', whatChange);
+    // 10 02 00 83 01 00 01 00 00 00 01 00 00 00 ckmsb cklsb for lights
+
+    controlRequests.push(() => {
+        var updateIt = new ControlEvent();
+        updateIt.toggleControls(['lights', 'aux3']);
+        driver.writeEvent(updateIt.payload());
+    });
+
+});
+
+environmentService.registerControlListener(controlListener);
+
 if (argv.d === 'file') {
+    driver = fileHandler;
     logger.info('starting file processing of', argv.f);
-    fileHandler.listen(argv.f, handleHunk);
+    // fileHandler.listen(argv.f, handleHunk);
     logger.info(`processing found ${processingErrors} event errors`);
 } else if (argv.d === 'tail') {
+    driver = tailHandler;
     logger.info('starting tail listening on', argv.f);
-    tailHandler.listen(argv.f, handleHunk);
+    // tailHandler.listen(argv.f, handleHunk);
 } else if (argv.d === 'serial') {
+    driver = serial;
     logger.info('starting serial port listening to ', argv.f);
-    serial.listen(argv.f, handleHunk);
+    //    port = serial.listen(argv.f, handleHunk);
 } else if (argv.d === 'none') {
     logger.info('no new data forthcoming');
 }
+
+driver.listen(argv.f, handleHunk);
