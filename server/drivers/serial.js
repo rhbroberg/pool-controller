@@ -4,12 +4,20 @@ var logger = log4js.getLogger();
 var port;
 
 var writeEvent = ((message) => {
-    port.write(message, function(err) {
+    logger.trace('writing message', message.length, JSON.stringify(message));
+    var result = port.write(message, 'binary', function(err) {
         if (err) {
             return logger.error('Error on write: ', err.message);
         }
         logger.trace('message written');
     });
+    logger.trace('result of write is ', result);
+    // per dox, only drain if write() returned false
+    if (!result) {
+        port.drain(() => {
+            logger.trace('drain callback complete');
+        });
+    }
 });
 
 var listen = ((filename, cb) => {

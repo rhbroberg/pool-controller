@@ -25,6 +25,7 @@ const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
 var io;
 var controlRequests = [];
+var controlVerification = [];
 var driver;
 
 var argv = yargs
@@ -184,7 +185,16 @@ var dispatchEvent = (buf) => {
                     nowEnabled: eventDiffs.nowEnabled,
                     nowDisabled: eventDiffs.nowDisabled
                 }, timestamp);
+
+                if (controlVerification.length > 0) {
+                    logger.info('verified control change');
+                    controlVerification.shift();
+                }
             } else {
+                if (controlVerification.length > 0) {
+                    logger.info('verification failed! retrying');
+                    controlRequests.push(controlVerification.shift());
+                }
                 // always update the lastUpdated timestamp
                 // maybe update streamers with 'last updated'
             }
@@ -197,8 +207,9 @@ var dispatchEvent = (buf) => {
             }
             if (controlRequests.length > 0) {
                 var cb = controlRequests.shift();
+                controlVerification.push(cb);
 
-                logger.info('ping calling queued callback');
+                logger.debug('ping calling queued callback');
                 cb();
                 // now must queue a callback to verify it got changed
             }
@@ -248,16 +259,17 @@ var handleHunk = (data) => {
     });
 };
 
+// placeholder for initial write testing
 var controlListener = ((whatChange) => {
     logger.info('will initiate change for', whatChange);
     // 10 02 00 83 01 00 01 00 00 00 01 00 00 00 ckmsb cklsb for lights
 
+    var updateIt = new ControlEvent();
+    updateIt.toggleControls(['lights']);
+    var payload = updateIt.payload();
     controlRequests.push(() => {
-        var updateIt = new ControlEvent();
-        updateIt.toggleControls(['lights', 'aux3']);
-        driver.writeEvent(updateIt.payload());
+        driver.writeEvent(payload);
     });
-
 });
 
 environmentService.registerControlListener(controlListener);

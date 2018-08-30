@@ -93,8 +93,8 @@ class FrameParser {
                     this.bufferIndex = 0;
                     this.payload.writeUInt8(thisByte, this.bufferIndex++);
                 } else if (thisByte === 0xe0) {
-                    this.state = 'alternate_header';
-                    this.subParser = this.parseMotorTelemetry;
+                    //   this.state = 'alternate_header';
+                    //   this.subParser = this.parseMotorTelemetry;
                 }
             } else {
                 this.subParser(received, thisByte, i);

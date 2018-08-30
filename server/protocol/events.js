@@ -126,10 +126,11 @@ class ChecksummedEvent extends Event {
         return true;
     }
 
-    computeChecksum() {
+    computeChecksum(length) {
         var checksum = 0;
+        const size = length ? length : this.frame.length;
 
-        for (var i = 0; i < this.frame.length - 2; i++) {
+        for (var i = 0; i < size - 2; i++) {
             checksum += this.frame.readUInt8(i);
         }
 
@@ -137,14 +138,19 @@ class ChecksummedEvent extends Event {
     }
 
     freeze(newLength) {
-        var resizedBuf = this.frame.slice(0, newLength);
+        var resizedBuf = this.frame.slice(0, newLength + 2);
         this.frame = resizedBuf;
-        const checksum = this.computeChecksum();
+        const checksum = this.computeChecksum(newLength); // don't checksum trailing stanza
         const msb = Math.floor(checksum / 256);
         const lsb = checksum % 256;
 
-        resizedBuf.writeUInt8(msb, this.frame.length - 2);
-        resizedBuf.writeUInt8(lsb, this.frame.length - 1);
+        logger.debug('computed checksum is ', checksum.toString(16), msb.toString(16), lsb.toString(16));
+
+        resizedBuf.writeUInt8(msb, this.frame.length - 4);
+        resizedBuf.writeUInt8(lsb, this.frame.length - 3);
+        resizedBuf.writeUInt8(0x10, this.frame.length - 2);
+        resizedBuf.writeUInt8(0x03, this.frame.length - 1);
+        this.frame = resizedBuf;
     }
 
     prettyBits(wantsOn) {
@@ -402,15 +408,14 @@ class ControlEvent extends ChecksummedEvent {
             this.frame.writeUInt8(bytes[byte], 8 - byte); // locations: 8, 7, 6, 5 (highest location is lowest byte in block)
             this.frame.writeUInt8(bytes[byte], 12 - byte); // locations 12, 11, 10, 9 (ditto)
         }
-        logger.info('i made this ', this.asString(), this.prettyBits(1));
+        logger.debug('created control message:', this.asString(), this.prettyBits(1));
     }
 
     toggleControlsAlternate(toToggle) {
         // first build the mask from each bit location
         var mask = 0;
         toToggle.forEach((s) => {
-            const bitPosition = 17;
-
+            const bitPosition = controlMap.fromName(s);
             mask |= (0x01 << bitPosition);
         });
 
@@ -424,7 +429,21 @@ class ControlEvent extends ChecksummedEvent {
             this.frame.writeUInt8(thisByte, 12 - byte); // locations: 12, 11, 10, 9 (ditto)
         }
 
-        logger.info('i made this ', this.asString(), this.prettyBits(1));
+        logger.debug('created conrol message:', this.asString(), this.prettyBits(1));
+    }
+
+    myToHexString(buf) {
+        var readable;
+
+        for (var i = 0; i < buf.length; i++) {
+            if (!readable) {
+                readable = '';
+            } else {
+                readable += ' ';
+            }
+            readable += buf[i].toString(16).padStart(2, 0);
+        }
+        return readable;
     }
 
     payload() {
@@ -432,6 +451,7 @@ class ControlEvent extends ChecksummedEvent {
         this.frame.writeUInt8(0x00, 13);
         this.freeze(16);
 
+        logger.debug('payload is ', this.myToHexString(this.frame));
         return this.frame;
     }
 
@@ -447,5 +467,29 @@ class MotorTelemetryEvent extends Event {
         return [0xe0, 0x18];
     }
 }
+
+/*
+    a block of non-toggle commands from an internet discussion?  will have to investigate
+// 10 02 00 8c 01 00 01 00 00 00 01 00 00 00 00 a1 10 03
+    /*
+    Here is the strings that work for my controller, they were a little different then what you are using.
+
+Filter
+10 2 0 5 2 0 2 0 7F 0 9A 10 3 On
+10 2 0 5 0 2 0 2 7F 0 9A 10 3 Off
+
+Lights
+10 2 0 5 20 0 20 0 7F 0 D6 10 3 On
+10 2 0 5 0 20 0 20 7F 0 D6 10 3 Off
+
+Cleaner
+10 2 0 5 10 0 0 10 0 0 7F 0 B6 10 3 On
+10 2 0 5 0 10 0 0 10 0 7F 0 B6 10 3 off
+
+Waterfall
+10 2 0 5 8 0 8 0 7F 0 A6 10 3 On
+10 2 0 5 0 8 0 8 7F 0 A6 10 3 Off
+
+*/
 
 module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
