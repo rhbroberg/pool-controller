@@ -110,6 +110,11 @@ exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-v
     });
 };
 
+var controlCB;
+
+exports.registerControlListener = function(cb) {
+    controlCB = cb;
+};
 
 /**
  *
@@ -120,12 +125,18 @@ exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-v
 exports.setDeviceState = function(deviceId, state) { // eslint-disable-line no-unused-vars
     return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
+
+        logger.info(`setting ${deviceId} to ${state}`);
+        const currentDeviceState = controlCB(deviceId);
+
         examples['application/json'] = {
             'level': 0,
-            'lastUpdate': '2000-01-23T04:56:07.000+00:00',
-            'name': 'name',
-            'id': 'id'
+            'lastUpdate': new Date().getTime(),
+            'name': deviceId,
+            'id': 'id',
+            'state': currentDeviceState
         };
+
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {

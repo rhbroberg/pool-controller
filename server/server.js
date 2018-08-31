@@ -13,6 +13,7 @@ const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
 const path = require('path');
 const environmentService = require('./service/EnvironmentService');
+const deviceService = require('./service/DeviceService');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -104,7 +105,6 @@ var switchStates = (changed, enabled) => {
 };
 
 // in reality, retrieve these from db at startup
-var previousStatusMask = 0;
 var presentTemp = {
     'pool temp': -1,
     'spa temp': -1,
@@ -136,6 +136,9 @@ var streamEvent = (kind, text, timestamp) => {
         }, undefined, 2));
     }
 };
+
+// really retrieve this from db
+var currentStatus = new ControlEvent();;
 
 var dispatchEvent = (buf) => {
     // maybe change to an observer pattern for action taken
@@ -170,10 +173,11 @@ var dispatchEvent = (buf) => {
             }
             break;
         case 'StatusEvent':
+            const previousStatusMask = currentStatus.rawMask();
             const eventDiffs = event.diff(previousStatusMask);
             logger.info('status: ', event.asString(), ';', event.prettyBits(1));
 
-            previousStatusMask = event.rawMask();
+            currentStatus = event;
             logger.debug(eventDiffs);
             if (eventDiffs.nowEnabled.length > 0 || eventDiffs.nowDisabled.length > 0) {
                 logger.debug('storing changes');
@@ -187,8 +191,10 @@ var dispatchEvent = (buf) => {
                 }, timestamp);
 
                 if (controlVerification.length > 0) {
-                    logger.info('verified control change');
-                    controlVerification.shift();
+                    logger.info('verified control change: ', request.requestedChange, request.presentStatus, event.enabledSwitches());
+                    const request = controlVerification.shift();
+                    // half duplex means we won't actually receive this event we just sent, so fake it
+                    dispatchEvent(new ControlEvent(Buffer.alloc(request.payload)));
                 }
             } else {
                 if (controlVerification.length > 0) {
@@ -206,12 +212,11 @@ var dispatchEvent = (buf) => {
                 streamEvent('heartbeat', undefined);
             }
             if (controlRequests.length > 0) {
-                var cb = controlRequests.shift();
-                controlVerification.push(cb);
+                const request = controlRequests.shift();
+                controlVerification.push(request);
 
                 logger.debug('ping calling queued callback');
-                cb();
-                // now must queue a callback to verify it got changed
+                driver.writeEvent(request.payload);
             }
             break;
         case 'MotorTelemetryEvent':
@@ -261,32 +266,35 @@ var handleHunk = (data) => {
 
 // placeholder for initial write testing
 var controlListener = ((whatChange) => {
-    logger.info('will initiate change for', whatChange);
-    // 10 02 00 83 01 00 01 00 00 00 01 00 00 00 ckmsb cklsb for lights
+    logger.info('scheduling control change for', whatChange);
 
+    const enabledDevices = currentStatus.enabledSwitches();
     var updateIt = new ControlEvent();
-    updateIt.toggleControls(['lights']);
-    var payload = updateIt.payload();
-    controlRequests.push(() => {
-        driver.writeEvent(payload);
+    updateIt.toggleControls([whatChange]);
+
+    const payload = updateIt.payload();
+    controlRequests.push({
+        requestedChange: whatChange,
+        payload: payload,
+        presentStatus: enabledDevices
     });
+
+    return (enabledDevices.includes(whatChange)) ? true : false;
 });
 
 environmentService.registerControlListener(controlListener);
+deviceService.registerControlListener(controlListener);
 
 if (argv.d === 'file') {
     driver = fileHandler;
     logger.info('starting file processing of', argv.f);
-    // fileHandler.listen(argv.f, handleHunk);
     logger.info(`processing found ${processingErrors} event errors`);
 } else if (argv.d === 'tail') {
     driver = tailHandler;
     logger.info('starting tail listening on', argv.f);
-    // tailHandler.listen(argv.f, handleHunk);
 } else if (argv.d === 'serial') {
     driver = serial;
     logger.info('starting serial port listening to ', argv.f);
-    //    port = serial.listen(argv.f, handleHunk);
 } else if (argv.d === 'none') {
     logger.info('no new data forthcoming');
 }

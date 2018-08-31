@@ -106,7 +106,7 @@ async function getMostRecentInfo(name, statuses) {
     });
 }
 
-var controlCB;
+var controlCB; // eslint-disable-line no-unused-vars
 
 exports.registerControlListener = function(cb) {
     controlCB = cb;
@@ -120,8 +120,6 @@ exports.temperatureSummary = function() {
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var statuses = [];
-
-        controlCB('lights');
 
         await getMostRecentInfo('ambient', statuses);
         await getMostRecentInfo('pool temp', statuses);

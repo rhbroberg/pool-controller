@@ -111,8 +111,8 @@ class ChecksummedEvent extends Event {
     }
 
     verifyChecksum() {
-        const msb = this.frame.readUInt8(this.frame.length - 2);
-        const lsb = this.frame.readUInt8(this.frame.length - 1);
+        const msb = this.frame.readUInt8(this.frame.length - 4);
+        const lsb = this.frame.readUInt8(this.frame.length - 3);
         const messageChecksum = msb * 256 + lsb;
 
         logger.trace(`msb ${msb} and lsb ${lsb}`);
@@ -128,7 +128,7 @@ class ChecksummedEvent extends Event {
 
     computeChecksum(length) {
         var checksum = 0;
-        const size = length ? length : this.frame.length;
+        const size = length ? length : this.frame.length - 2;
 
         for (var i = 0; i < size - 2; i++) {
             checksum += this.frame.readUInt8(i);
@@ -140,7 +140,7 @@ class ChecksummedEvent extends Event {
     freeze(newLength) {
         var resizedBuf = this.frame.slice(0, newLength + 2);
         this.frame = resizedBuf;
-        const checksum = this.computeChecksum(newLength); // don't checksum trailing stanza
+        const checksum = this.computeChecksum(); // don't checksum trailing stanza
         const msb = Math.floor(checksum / 256);
         const lsb = checksum % 256;
 
@@ -304,7 +304,7 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
     clearText() {
         // only what's between the header, the trailing NULL, and the checksum is interesting
-        return this.frame.toString('ascii', 4, this.frame.length - 3);
+        return this.frame.toString('ascii', 4, this.frame.length - 5);
     }
 
     extractValue(clause) {
@@ -489,6 +489,9 @@ Cleaner
 Waterfall
 10 2 0 5 8 0 8 0 7F 0 A6 10 3 On
 10 2 0 5 0 8 0 8 7F 0 A6 10 3 Off
+
+// example of lights-on
+// payload = new Buffer([0x10, 0x2, 0x00, 0x05, 0x20, 0x00, 0x20, 0x00, 0x7F, 0x00, 0xD6, 0x10, 0x03]);
 
 */
 

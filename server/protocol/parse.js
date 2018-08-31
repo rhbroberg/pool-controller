@@ -41,9 +41,9 @@ class FrameParser {
             }
         } else if (this.state === 'body') {
             if ((thisByte === 0x03) && (this.payload.readUInt8(this.bufferIndex - 1) === 0x10)) {
-                this.bufferIndex -= 1; // back up the sub-termination char
+                this.payload.writeUInt8(thisByte, this.bufferIndex++);
 
-                logger.debug('complete message length ', this.bufferIndex);
+                logger.debug('complete message length (including terminator)', this.bufferIndex);
                 logger.trace('contents ', this.toHexString());
                 received(this.payload.slice(0, this.bufferIndex), this.bufferIndex);
                 this.state = 'begin';
@@ -93,6 +93,8 @@ class FrameParser {
                     this.bufferIndex = 0;
                     this.payload.writeUInt8(thisByte, this.bufferIndex++);
                 } else if (thisByte === 0xe0) {
+                    // commented this out during field testing; an error in the bitstream caused
+                    // runaway parsing to not recognize 'regular' frames.  must re-think how this works
                     //   this.state = 'alternate_header';
                     //   this.subParser = this.parseMotorTelemetry;
                 }

@@ -7,14 +7,20 @@
     {
         "type": "node",
         "request": "launch",
-        "name": "Launch Program",
+        "name": "Tail dash-eff",
         "program": "${workspaceFolder}/server/server.js",
-        "args": "[-f /tmp/in, -d tail]"
+        "args": ["-f", "/tmp/in", "-d", "tail"]
     },
     {
         "type": "node",
         "request": "launch",
-        "name": "Launch Program",
+        "name": "Single File",
         "program": "${workspaceFolder}/server/server.js"
+    },
+    {
+        "type": "node",
+        "request": "attach",
+        "name": "Attach To Process",
+        "port": 5858
     }]
 }
