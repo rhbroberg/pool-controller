@@ -138,7 +138,8 @@ var streamEvent = (kind, text, timestamp) => {
 };
 
 // really retrieve this from db
-var currentStatus = new ControlEvent();;
+var currentStatusMask = 0;
+var currentEnabledSwitches = [];
 
 var dispatchEvent = (buf) => {
     // maybe change to an observer pattern for action taken
@@ -173,11 +174,11 @@ var dispatchEvent = (buf) => {
             }
             break;
         case 'StatusEvent':
-            const previousStatusMask = currentStatus.rawMask();
-            const eventDiffs = event.diff(previousStatusMask);
+            const eventDiffs = event.diff(currentStatusMask);
             logger.info('status: ', event.asString(), ';', event.prettyBits(1));
+            currentStatusMask = event.rawMask();
+            currentEnabledSwitches = event.enabledSwitches();
 
-            currentStatus = event;
             logger.debug(eventDiffs);
             if (eventDiffs.nowEnabled.length > 0 || eventDiffs.nowDisabled.length > 0) {
                 logger.debug('storing changes');
@@ -191,10 +192,10 @@ var dispatchEvent = (buf) => {
                 }, timestamp);
 
                 if (controlVerification.length > 0) {
-                    logger.info('verified control change: ', request.requestedChange, request.presentStatus, event.enabledSwitches());
                     const request = controlVerification.shift();
+                    logger.info('verified control change: ', request.requestedChange, request.presentStatus, event.enabledSwitches());
                     // half duplex means we won't actually receive this event we just sent, so fake it
-                    dispatchEvent(new ControlEvent(Buffer.alloc(request.payload)));
+                    dispatchEvent(request.payload);
                 }
             } else {
                 if (controlVerification.length > 0) {
@@ -204,7 +205,6 @@ var dispatchEvent = (buf) => {
                 // always update the lastUpdated timestamp
                 // maybe update streamers with 'last updated'
             }
-
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
@@ -259,7 +259,7 @@ var handleHunk = (data) => {
         }
         catch (e) {
             processingErrors++;
-            logger.error(`event exception '${e}' received (${processingErrors} so far), continuing`);
+            logger.error(`event exception '${e}' received (${processingErrors} so far), continuing: ${e.stack}`);
         }
     });
 };
@@ -268,7 +268,7 @@ var handleHunk = (data) => {
 var controlListener = ((whatChange) => {
     logger.info('scheduling control change for', whatChange);
 
-    const enabledDevices = currentStatus.enabledSwitches();
+    const enabledDevices = currentEnabledSwitches;
     var updateIt = new ControlEvent();
     updateIt.toggleControls([whatChange]);
 

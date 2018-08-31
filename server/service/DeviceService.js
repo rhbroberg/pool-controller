@@ -124,6 +124,7 @@ exports.registerControlListener = function(cb) {
  **/
 exports.setDeviceState = function(deviceId, state) { // eslint-disable-line no-unused-vars
     return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+        // need top-level catch here for exceptions which will otherwise be silently ignored
         var examples = {};
 
         logger.info(`setting ${deviceId} to ${state}`);
