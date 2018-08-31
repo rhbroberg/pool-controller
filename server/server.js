@@ -39,6 +39,17 @@ var logger = log4js.getLogger();
 logger.level = argv.l;
 var parser = new FrameParser();
 var processingErrors = 0;
+// create factory and register all (currently) known events
+var factory = new EventFactory();
+// in reality, retrieve these from db at startup
+var presentTemp = {
+    'pool temp': -1,
+    'spa temp': -1,
+    'ambient': -1
+};
+// really retrieve this from db at startup
+var currentStatusMask = 0;
+var currentEnabledSwitches = [];
 
 // if webserver is run app will not exit in 'file' mode (which is only used for testing)
 if (argv.d !== 'file') {
@@ -68,25 +79,26 @@ if (argv.d !== 'file') {
     });
 }
 
-// create factory and register all (currently) known events
-var factory = new EventFactory();
+var saveStatus = (switchesEnabled, buf, category, timestamp) => {
+    var dbStatusEvent = new Event({
+        _id: new mongoose.Types.ObjectId,
+        source: 'panel',
+        raw: buf,
+        eventType: category,
+        status: switchesEnabled,
+        timestamp: timestamp
+    });
+
+    dbStatusEvent.save().then((doc) => {
+        logger.trace('saved ', doc);
+    }, (e) => {
+        logger.info(`failed saving ${category} Event: ${e}`);
+    });
+};
 
 var saveSwitchState = (switchesEnabled, buf, category, timestamp) => {
     if (switchesEnabled.length > 0) {
-        var dbStatusEvent = new Event({
-            _id: new mongoose.Types.ObjectId,
-            source: 'panel',
-            raw: buf,
-            eventType: category,
-            status: switchesEnabled,
-            timestamp: timestamp
-        });
-
-        dbStatusEvent.save().then((doc) => {
-            logger.trace('saved ', doc);
-        }, (e) => {
-            logger.info(`failed saving ${category} Event: ${e}`);
-        });
+        saveStatus(switchesEnabled, buf, category, timestamp);
     }
 };
 
@@ -104,14 +116,7 @@ var switchStates = (changed, enabled) => {
     return switchesChanged;
 };
 
-// in reality, retrieve these from db at startup
-var presentTemp = {
-    'pool temp': -1,
-    'spa temp': -1,
-    'ambient': -1
-};
-
-var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
+var addIfChanged = (statusChanges, newValue, statusName) => {
     if (newValue) {
         if (presentTemp[statusName] !== newValue) {
             statusChanges.push({
@@ -119,7 +124,7 @@ var maybeUpdateStatus = (statusChanges, newValue, statusName) => {
                 value: newValue
             });
         } else {
-            logger.info(`compressing ${statusName}`);
+            logger.debug(`compressing ${statusName}`);
         }
         presentTemp[statusName] = newValue;
     }
@@ -136,10 +141,6 @@ var streamEvent = (kind, text, timestamp) => {
         }, undefined, 2));
     }
 };
-
-// really retrieve this from db
-var currentStatusMask = 0;
-var currentEnabledSwitches = [];
 
 var dispatchEvent = (buf) => {
     // maybe change to an observer pattern for action taken
@@ -158,11 +159,11 @@ var dispatchEvent = (buf) => {
                 const poolTemp = event.getPoolTemp();
                 var statusChanges = [];
 
-                logger.info('fixed screen: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
+                logger.info('info: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
-                maybeUpdateStatus(statusChanges, poolTemp, 'pool temp');
-                maybeUpdateStatus(statusChanges, salt, 'salt');
-                maybeUpdateStatus(statusChanges, ambientTemp, 'ambient');
+                addIfChanged(statusChanges, poolTemp, 'pool temp');
+                addIfChanged(statusChanges, salt, 'salt');
+                addIfChanged(statusChanges, ambientTemp, 'ambient');
 
                 if (statusChanges.length === 0) {
                     // always update the lastUpdated timestamp
@@ -239,6 +240,7 @@ var dispatchEvent = (buf) => {
             logger.debug('unidentified ping');
             break;
         default:
+            saveStatus([], buf, 'unrecognized', timestamp);
             return false;
     }
     return true;
@@ -260,11 +262,11 @@ var handleHunk = (data) => {
         catch (e) {
             processingErrors++;
             logger.error(`event exception '${e}' received (${processingErrors} so far), continuing: ${e.stack}`);
+            saveStatus([], buf, 'failed', new Date().getTime());
         }
     });
 };
 
-// placeholder for initial write testing
 var controlListener = ((whatChange) => {
     logger.info('scheduling control change for', whatChange);
 
@@ -282,9 +284,6 @@ var controlListener = ((whatChange) => {
     return (enabledDevices.includes(whatChange)) ? true : false;
 });
 
-environmentService.registerControlListener(controlListener);
-deviceService.registerControlListener(controlListener);
-
 if (argv.d === 'file') {
     driver = fileHandler;
     logger.info('starting file processing of', argv.f);
@@ -299,4 +298,6 @@ if (argv.d === 'file') {
     logger.info('no new data forthcoming');
 }
 
+environmentService.registerControlListener(controlListener);
+deviceService.registerControlListener(controlListener);
 driver.listen(argv.f, handleHunk);
