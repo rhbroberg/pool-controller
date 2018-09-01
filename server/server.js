@@ -25,6 +25,7 @@ const express = require('express');
 const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
 var io;
+const hbs = require('hbs');
 var controlRequests = [];
 var controlVerification = [];
 var driver;
@@ -56,6 +57,35 @@ if (argv.d !== 'file') {
     logger.info('web server is active');
 
     initializeServer((app, server) => {
+        app.set('view engine', 'hbs');
+        app.get('/graphit', async (req, res) => {
+            await res.render('pooltemp.hbs', {
+                pageTitle: 'pool temp page',
+                dateRange: '2018-08-30T00:00:00.000Z'
+            });
+        });
+
+        hbs.registerHelper('getTemperatureData', async (arg) => {
+            logger.info('get temp got ', arg.data.root.dateRange);
+            // {'eventType': 'info', 'status': { $elemMatch: { 'name': 'pool temp' }  }, timestamp: { $gte: ISODate('2018-08-30T00:00:00.000Z')} } 
+
+            var temperatures = [];
+            const events = await Event.find({
+                'eventType': 'info',
+                'status': { $elemMatch: { 'name': 'pool temp' } },
+                timestamp: { $gte: arg.data.root.dateRange }
+            }).select('timestamp').select('status').sort('timestamp');
+
+            events.forEach(function(event) {
+                logger.info('event: ', event.timestamp, event.status[0].value); //, JSON.stringify(event.status, undefined, 2));
+                temperatures.push([event.timestamp, event.status[0].value]);
+            });
+            const placeholder = JSON.stringify(temperatures, undefined, 2);
+            logger.info('final string is ', placeholder);
+
+            return placeholder;
+        });
+
         app.use(express.static(publicPath));
         io = socketIO(server);
 
