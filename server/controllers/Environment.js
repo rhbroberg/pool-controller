@@ -16,7 +16,9 @@ module.exports.getHeaterState = function getHeaterState (req, res, next) {
 
 module.exports.getPoolTemperature = function getPoolTemperature (req, res, next) {
   var poolId = req.swagger.params['poolId'].value;
-  Environment.getPoolTemperature(poolId)
+  var date = req.swagger.params['date'].value;
+  var limit = req.swagger.params['limit'].value;
+  Environment.getPoolTemperature(poolId,date,limit)
     .then(function (response) {
       utils.writeJson(res, response);
     })

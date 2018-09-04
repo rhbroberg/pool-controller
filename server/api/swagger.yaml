@@ -178,6 +178,15 @@ paths:
         enum:
         - "pool"
         - "spa"
+      - name: "date"
+        in: "query"
+        description: "historical date bracket"
+        required: false
+        type: "string"
+      - name: "limit"
+        in: "query"
+        description: "result set maximum size"
+        required: false
       responses:
         200:
           description: "Zone temperature"
