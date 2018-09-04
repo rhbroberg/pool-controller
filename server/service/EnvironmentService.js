@@ -49,12 +49,31 @@ exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-var
  * poolId String 
  * returns TemperatueZoneStatus
  **/
-exports.getPoolTemperature = function(poolId) { // eslint-disable-line no-unused-vars
+exports.getPoolTemperature = function(poolId, date, limit) { // eslint-disable-line no-unused-vars
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var statuses = [];
         var examples = {};
 
-        await getMostRecentInfo(tempNames[poolId], statuses);
+        if (typeof date === 'undefined') {
+            await getMostRecentInfo(tempNames[poolId], statuses);
+        } else {
+            var temperatures = [];
+            const events = await Event.find({
+                'eventType': 'info',
+                'status': { $elemMatch: { 'name': 'pool temp' } },
+                timestamp: { $gte: date }
+            }).select('timestamp').select('status').sort('timestamp').limit(typeof limit !== 'undefined' ? limit : 0);
+
+            events.forEach(function(event) {
+                logger.trace('event: ', event.timestamp, event.status[0].value);
+                temperatures.push([event.timestamp, event.status[0].value]);
+            });
+            statuses.push({
+                'name': tempNames[poolId],
+                'units': 'fahrenheit',
+                'values': temperatures
+            });
+        }
 
         examples['application/json'] = {
             'zoneStatus': statuses
