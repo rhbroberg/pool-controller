@@ -187,6 +187,7 @@ paths:
         in: "query"
         description: "result set maximum size"
         required: false
+        type: "integer"
       responses:
         200:
           description: "Zone temperature"
