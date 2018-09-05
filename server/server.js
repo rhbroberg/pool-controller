@@ -47,6 +47,11 @@ var presentTemp = {
     'spa temp': -1,
     'ambient': -1
 };
+var previousTemp = {
+    'pool temp': -1,
+    'spa temp': -1,
+    'ambient': -1
+};
 // really retrieve this from db at startup
 var currentStatusMask = 0;
 var currentEnabledSwitches = [];
@@ -119,11 +124,17 @@ var switchStates = (changed, enabled) => {
 var addIfChanged = (statusChanges, newValue, statusName) => {
     if (newValue) {
         if (presentTemp[statusName] !== newValue) {
-            statusChanges.push({
-                name: statusName,
-                value: newValue
-            });
-        } else {
+            if ((typeof previousTemp[statusName] !== 'undefined') && (newValue === previousTemp[statusName]) && (Math.abs(presentTemp[statusName] - newValue) === 1)) {
+                logger.info(`hystereses prevention for ${statusName} : ${newValue}, ${previousTemp[statusName]}, ${presentTemp[statusName]} `);
+            } else {
+                statusChanges.push({
+                    name: statusName,
+                    value: newValue
+                });
+                previousTemp[statusName] = presentTemp[statusName];
+            }
+        }
+        else {
             logger.debug(`compressing ${statusName}`);
         }
         presentTemp[statusName] = newValue;
@@ -261,7 +272,10 @@ var handleHunk = (data) => {
         }
         catch (e) {
             processingErrors++;
-            logger.error(`event exception '${e}' received (${processingErrors} so far), continuing: ${e.stack}`);
+            logger.error(`event exception '${e}' received (${processingErrors} so far), continuing`);
+            if (e === 'checksum failure') {
+                logger.error(e.stack);
+            }
             saveStatus([], buf, 'failed', new Date().getTime());
         }
     });
