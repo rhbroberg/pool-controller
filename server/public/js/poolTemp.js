@@ -17,7 +17,7 @@ function drawBasic() {
 
     data.addColumn('string', 'date');
     data.addColumn('number', 'Pool');
-    const lastWeek = y = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString();
+    const lastWeek = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString();
     const url = `http://${window.location.host}/rhbroberg/pool-api/1.0.0/temperature/pool?date=${lastWeek}&limit=0`;
 
     // or else use https://stackoverflow.com/questions/12460378/how-to-get-json-from-url-in-javascript
