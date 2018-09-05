@@ -64,8 +64,20 @@ exports.getPoolTemperature = function(poolId, date, limit) { // eslint-disable-l
                 timestamp: { $gte: date }
             }).select('timestamp').select('status').sort('timestamp').limit(typeof limit !== 'undefined' ? limit : 0);
 
+            let lastTime;
             events.forEach(function(event) {
                 logger.trace('event: ', event.timestamp, event.status[0].value);
+                if (1 === 0 /* option to fill in time slots*/ ) {
+                    const nextTime = new Date(event.timestamp).getTime();
+                    if (typeof lastTime !== 'undefined') {
+                        logger.trace('comparing old ', lastTime, ' to new ', nextTime);
+                        for (let makeup = lastTime + 60 * 60 * 1000; makeup < nextTime + 60 * 60 * 1000; makeup += 60 * 60 * 1000) {
+                            logger.trace('making up time', new Date(makeup));
+                            temperatures.push([new Date(makeup), event.status[0].value]);
+                        }
+                    }
+                    lastTime = nextTime;
+                }
                 temperatures.push([event.timestamp, event.status[0].value]);
             });
             statuses.push({
