@@ -13,4 +13,4 @@ RUN npm install && npm cache clean --force
 WORKDIR /opt/pool-controller
 COPY server /opt/pool-controller
 
-CMD [ "node", "server.js", "-d", "tail", "-f", "/tmp/in" ]
+CMD [ "node", "server.js", "-d", "serial", "-f", "/dev/ttyUSB0" ]
