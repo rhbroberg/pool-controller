@@ -1,0 +1,12 @@
+image: rhbroberg/mongo
+manifests:
+  -
+    image: rhbroberg/mongo-amd64
+    platform:
+      architecture: amd64
+      os: linux
+  -
+    image: andresvidal/rpi3-mongodb3
+    platform:
+      architecture: arm
+      os: linux

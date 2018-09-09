@@ -12,14 +12,22 @@ This project is still in its infancy.  Some features I intend to add are:
 
  - full REST api control of all pool devices
  - full REST api visibility into current status and information from the pool controller
- - streaming (socketIO) updates of events
+ + streaming (socketIO) updates of events
  - logging of unrecognized messages to a specific location for study
  - web authentication and authorization
  - name mapping from generic (aux1, aux2, ...) to specific (yard lights, low-speed, etc.)
- - temperature visualization
+ + temperature visualization
  - notification (temperature ranges, freeze pump activation, no-flow during pump operation, etc.)
  - native ios application
  - basic web interface to control devices
+
+
+To test using Docker on non-ARM:
+
+docker build -f Dockerfile-osx -t rhbroberg/pool-controller-x64 .
+docker-compose up -d
+(optionally)
+    docker push rhbroberg/pool-controller-x64
 
 
 # Swagger generated server
