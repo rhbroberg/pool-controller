@@ -9,7 +9,7 @@ services:
     volumes:
       - /data/db:/data/db
       - /data/configdb:/data/configdb
-    command: mongod --journal
+    command: bash -c "rm -f /data/db/mongod.lock && mongod --journal"
     restart: always
   pool:
     image: rhbroberg/pool-controller-arm:latest
