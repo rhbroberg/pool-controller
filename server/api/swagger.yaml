@@ -357,8 +357,8 @@ securityDefinitions:
     in: "header"
   OAuth2:
     type: "oauth2"
-    authorizationUrl: "https://localhost/oauth/authorize"
-    tokenUrl: "https://localhost/oauth/token"
+    authorizationUrl: "http://localhost:8080"
+    tokenUrl: "https://localhost:8080/oauth/redirect"
     flow: "accessCode"
     scopes:
       read: "Grants read access"
