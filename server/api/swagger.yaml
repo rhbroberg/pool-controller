@@ -80,6 +80,9 @@ paths:
           description: "set device state"
           schema:
             $ref: "#/definitions/DeviceState"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}:
     get:
@@ -188,6 +191,7 @@ paths:
         description: "result set maximum size"
         required: false
         type: "integer"
+        default: 0
       responses:
         200:
           description: "Zone temperature"
@@ -344,6 +348,22 @@ paths:
         200:
           description: "Logs out user"
       x-swagger-router-controller: "UserManagement"
+securityDefinitions:
+  BasicAuth:
+    type: "basic"
+  ApiKeyAuth:
+    type: "apiKey"
+    name: "X-API-Key"
+    in: "header"
+  OAuth2:
+    type: "oauth2"
+    authorizationUrl: "https://localhost/oauth/authorize"
+    tokenUrl: "https://localhost/oauth/token"
+    flow: "accessCode"
+    scopes:
+      read: "Grants read access"
+      write: "Grants write access"
+      admin: "Grants read and write access to administrative information"
 definitions:
   User:
     type: "object"
