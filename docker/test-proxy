@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+docker run --rm -d -p 80:80 -p 443:443 \
+    --name nginx-proxy \
+    -v /path/to/certs:/etc/nginx/certs:ro \
+    -v /etc/nginx/vhost.d \
+    -v /usr/share/nginx/html \
+    -v /var/run/docker.sock:/tmp/docker.sock:ro \
+    --label com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy \
+    rhbroberg/nginx-proxy
+
+docker run --rm -d \
+     -v /path/to/certs:/etc/nginx/certs:rw \
+     -v /var/run/docker.sock:/var/run/docker.sock:ro \
+     --volumes-from nginx-proxy \
+     rhbroberg/docker-letsencrypt-nginx-proxy-companion
+
+#docker run -e "VIRTUAL_HOST=pool.mystic.onthegrid.net" --expose 80 --name web-content -d nginx
+docker run --rm -d --name example-app -e "VIRTUAL_HOST=pool.mystic.onthegrid.net" -e LETSENCRYPT_HOST=pool.mystic.onthegrid.net -e LETSENCRYPT_EMAIL=rhbroberg@yahoo.com httpd:2.4
+

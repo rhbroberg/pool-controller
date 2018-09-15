@@ -1,4 +1,4 @@
-FROM node
+FROM node:10-alpine
 EXPOSE 8080
 
 RUN mkdir -p /opt/pool-controller
