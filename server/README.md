@@ -6,7 +6,7 @@ A raspberry pi zero is not quite fast enough to reliably send the control signal
 
 A REST api is generated/maintained by swagger; the api is present at
 
-http://localhost:8080/docs
+http://localhost:80/docs
 
 This project is still in its infancy.  Some features I intend to add are:
 

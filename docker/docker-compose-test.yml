@@ -7,8 +7,6 @@ services:
         com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
     container_name: nginx-reverse-proxy
     restart: always
-    depends_on:
-      - pool
     ports:
       - "80:80"
       - "443:443"
@@ -29,8 +27,6 @@ services:
     restart: always
     volumes_from:
       - nginx-proxy
-    depends_on:
-      - nginx-proxy
     volumes:
       - /path/to/certs:/etc/nginx/certs:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -39,29 +35,16 @@ services:
         max-size: "2m"
         max-file: "10"
 
-  mongo:
-    image: andresvidal/rpi3-mongodb3
-    ports:
-      - 27017:27017
-      - 27018:27018
-    volumes:
-      - /data/db:/data/db
-      - /data/configdb:/data/configdb
-    command: bash -c "rm -f /data/db/mongod.lock && mongod --journal"
-    restart: always
-
   pool:
-    image: rhbroberg/pool-controller
+    image: httpd:2.4
     restart: always
     environment:
       - VIRTUAL_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_EMAIL=rhbroberg@yahoo.com
       - NODE_ENV=docker-test
-    depends_on:
-      - mongo
-    expose:
-      - "80"
-    devices:
-    - "/dev/ttyUSB0:/dev/ttyUSB0"
+#    expose:
+#      - "80"
+#    devices:
+#    - "/dev/ttyUSB0:/dev/ttyUSB0"
 
