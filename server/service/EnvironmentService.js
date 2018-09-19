@@ -67,7 +67,7 @@ exports.getPoolTemperature = function(poolId, date, limit) { // eslint-disable-l
             let lastTime;
             events.forEach(function(event) {
                 logger.trace('event: ', event.timestamp, event.status[0].value);
-                if (1 === 0 /* option to fill in time slots*/ ) {
+                if (limit === -1 /* code disabled for now; option to fill in time slots*/ ) {
                     const nextTime = new Date(event.timestamp).getTime();
                     if (typeof lastTime !== 'undefined') {
                         logger.trace('comparing old ', lastTime, ' to new ', nextTime);
