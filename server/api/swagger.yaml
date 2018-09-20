@@ -81,7 +81,7 @@ paths:
           schema:
             $ref: "#/definitions/DeviceState"
       security:
-      - oauth2:
+      - OAuth2:
         - "write"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}:
