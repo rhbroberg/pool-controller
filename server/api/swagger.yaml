@@ -316,6 +316,10 @@ paths:
       responses:
         200:
           description: "Status of user creation"
+          headers:
+            x-auth:
+              type: "string"
+              description: "authorization token"
           schema:
             $ref: "#/definitions/User"
       x-swagger-router-controller: "UserManagement"
