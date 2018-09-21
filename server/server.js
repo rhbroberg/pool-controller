@@ -14,6 +14,7 @@ const { EventFactory } = require('./protocol/eventfactory');
 const path = require('path');
 const environmentService = require('./service/EnvironmentService');
 const deviceService = require('./service/DeviceService');
+const { User } = require('./models/user');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars

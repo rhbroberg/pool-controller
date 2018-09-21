@@ -6,6 +6,7 @@ var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
+const { authenticate } = require('../utils/authenticate');
 
 // lines up with strings in db storage
 const tempNames = {
@@ -151,6 +152,8 @@ exports.temperatureSummary = function() {
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var statuses = [];
+
+        authenticate
 
         await getMostRecentInfo('ambient', statuses);
         await getMostRecentInfo('pool temp', statuses);
