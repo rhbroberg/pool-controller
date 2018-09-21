@@ -306,7 +306,13 @@ paths:
       tags:
       - "User management"
       operationId: "createUser"
-      parameters: []
+      parameters:
+      - in: "body"
+        name: "credentials"
+        description: "user credentials"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
       responses:
         200:
           description: "Status of user creation"
@@ -319,7 +325,13 @@ paths:
       tags:
       - "User management"
       operationId: "loginUser"
-      parameters: []
+      parameters:
+      - in: "body"
+        name: "credentials"
+        description: "user credentials"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
       responses:
         200:
           description: "Status of login"
@@ -368,12 +380,12 @@ definitions:
   User:
     type: "object"
     properties:
-      id:
-        type: "string"
       email:
         type: "string"
+      password:
+        type: "string"
     example:
-      id: "id"
+      password: "password"
       email: "email"
   LightingZone:
     type: "object"
