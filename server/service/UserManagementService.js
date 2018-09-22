@@ -1,34 +1,27 @@
 'use strict';
 
 const { User } = require('./../models/user');
+const log4js = require('log4js');
+var logger = log4js.getLogger();
 
 /**
  *
  * returns User
  **/
-exports.createUser = function() {
-    return new Promise(function(resolve, reject) {
+exports.createUser = function(credentials) {
+    return new Promise(async function(resolve, reject) {
 
-        // try {
-        //     const body = _.pick(req.body, ['email', 'password']);
-        //     const user = new User(body);
+        logger.info('user creds are', credentials);
 
-        //     await user.save();
-        //     const token = await user.generateAuthToken();
-        //     res.header('x-auth', token).send(user);
-        // } catch (e) {
-        //     res.status(400).send(e);
-        // }
+        try {
+            const user = new User({ email: credentials.email, password: credentials.password });
 
-        var examples = {};
-        examples['application/json'] = {
-            'id': 'id',
-            'email': 'email'
-        };
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
+            await user.save();
+            const token = await user.generateAuthToken();
+            resolve({ token });
+        } catch (e) {
+            logger.debug('woe: ', e);
+            reject();
         }
     });
 };
@@ -58,7 +51,7 @@ exports.getUser = function() {
  *
  * returns User
  **/
-exports.loginUser = function() {
+exports.loginUser = function(credentials) {
     return new Promise(function(resolve, reject) {
         var examples = {};
         examples['application/json'] = {

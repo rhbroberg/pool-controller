@@ -5,7 +5,8 @@
     },
     "development": {
         "PORT": 8080,
-        "MONGODB_URI": "mongodb://127.0.0.1:27017/Pool"
+        "MONGODB_URI": "mongodb://127.0.0.1:27017/Pool",
+        "JWT_SECRET": "not your fathers api"
     },
     "docker-test": {
         "PORT": 80,
