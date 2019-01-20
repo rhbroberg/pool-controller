@@ -64,4 +64,8 @@ services:
       - "80"
     devices:
     - "/dev/ttyUSB0:/dev/ttyUSB0"
+    logging:
+      options:
+        max-size: "50m"
+
 

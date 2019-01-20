@@ -1,1 +1,7 @@
 FROM andresvidal/rpi3-mongodb3 
+
+#COPY ./mongo-docker-entrypoint.sh /docker-entrypoint.sh
+
+ENTRYPOINT ["mongod"]
+#CMD []
+
