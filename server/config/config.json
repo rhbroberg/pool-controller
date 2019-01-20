@@ -1,14 +1,15 @@
 {
     "test": {
-        "PORT": 3000,
+        "PORT": 8080,
         "MONGODB_URI": "mongodb://localhost:27017/PoolTest"
     },
     "development": {
-        "PORT": 3000,
-        "MONGODB_URI": "mongodb://127.0.0.1:27017/Pool"
+        "PORT": 8080,
+        "MONGODB_URI": "mongodb://127.0.0.1:27017/Pool",
+        "JWT_SECRET": "not your fathers api"
     },
     "docker-test": {
-        "PORT": 3000,
+        "PORT": 80,
         "MONGODB_URI": "mongodb://mongo:27017/Pool"
     }
 }

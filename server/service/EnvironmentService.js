@@ -6,6 +6,7 @@ var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
+const { authenticate } = require('../utils/authenticate');
 
 // lines up with strings in db storage
 const tempNames = {
@@ -67,7 +68,7 @@ exports.getPoolTemperature = function(poolId, date, limit) { // eslint-disable-l
             let lastTime;
             events.forEach(function(event) {
                 logger.trace('event: ', event.timestamp, event.status[0].value);
-                if (1 === 0 /* option to fill in time slots*/ ) {
+                if (limit === -1 /* code disabled for now; option to fill in time slots*/ ) {
                     const nextTime = new Date(event.timestamp).getTime();
                     if (typeof lastTime !== 'undefined') {
                         logger.trace('comparing old ', lastTime, ' to new ', nextTime);
@@ -151,6 +152,8 @@ exports.temperatureSummary = function() {
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var statuses = [];
+
+        authenticate
 
         await getMostRecentInfo('ambient', statuses);
         await getMostRecentInfo('pool temp', statuses);
