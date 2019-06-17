@@ -28,7 +28,7 @@ var initializeServer = (async (cb) => {
         app.use(middleware.swaggerMetadata());
 
         // enforce authentication and authorization
-        app.use(middleware.swaggerSecurity({ OAuth2: (req, def, scopes, callback) => authenticate(req, def, scopes, callback) }));
+        // app.use(middleware.swaggerSecurity({ OAuth2: (req, def, scopes, callback) => authenticate(req, def, scopes, callback) }));
 
         // Validate Swagger requests
         app.use(middleware.swaggerValidator());
