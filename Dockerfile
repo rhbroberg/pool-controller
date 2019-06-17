@@ -9,6 +9,8 @@ RUN npm install && npm cache clean --force
 
 FROM node:10.16-alpine
 
+RUN apk add --no-cache tzdata
+
 ENV NODE_ENV=docker-test
 WORKDIR /opt/pool-controller
 COPY --from=builder /opt/pool-controller/node_modules /opt/pool-controller/node_modules

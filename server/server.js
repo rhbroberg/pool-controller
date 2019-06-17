@@ -164,6 +164,11 @@ var dispatchEvent = (buf) => {
 
     const timestamp = new Date().getTime();
     switch (event.constructor.name) {
+        case 'KeyboardEvent':
+            {
+                logger.info('keyboard: ', event.asString());
+            }
+            break;
         case 'DisplayUpdateEvent':
             {
                 const salt = event.getSaltPPM();

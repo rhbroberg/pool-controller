@@ -291,6 +291,58 @@ class StatusEvent extends ChecksummedEvent {
 
 //    wireless screen update header is: 0x04, 0x0a, need message for it to be tagged (even if discarded)
 
+// 10 02 (00 03 [01 02 04 10 20 40] 00 00 00) {2,1} .... ckmsb cklsb
+class KeyboardEvent extends ChecksummedEvent {
+    constructor(frame) {
+        super(frame, KeyboardEvent.header());
+        this.text = frame.toString('ascii', 4);
+    }
+
+    static header() {
+        return [0x00, 0x03];
+    }
+
+    asString() {
+        let keycode = this.frame.readUInt8(5);
+        let keyname = 'none';
+
+        switch (keycode) {
+            case 0x01: // right
+                {
+                    keyname = 'right';
+                }
+            break;
+            case 0x02:  // menu
+                {
+                    keyname = 'menu';
+                }
+            break;
+            case 0x04:  // left
+                {
+                    keyname = 'left';
+                }
+            break;
+            case 0x10:  // down
+                {
+                    keyname = 'down';
+                }
+            break;
+            case 0x20:  // up
+                {
+                    keyname = 'up';
+                }
+            break;
+            case 0x40:
+                {
+
+                }
+            break;
+            default:
+        }
+        return keyname;
+    }
+}
+
 // 10 02 01 03 .... ckmsb cklsb
 class DisplayUpdateEvent extends ChecksummedEvent {
     constructor(frame) {
@@ -493,6 +545,16 @@ Waterfall
 // example of lights-on
 // payload = new Buffer([0x10, 0x2, 0x00, 0x05, 0x20, 0x00, 0x20, 0x00, 0x7F, 0x00, 0xD6, 0x10, 0x03]);
 
+// cycling thru different menus:
+- 19 is checksum of 10.02..00 (before 19)
+10 02 00 03 02 00 00 00 02 00 00 00 00 19 10 03 menu
+10 02 00 03 01 00 00 00 01 00 00 00 00 17 10 03 right
+10 02 00 03 04 00 00 00 04 00 00 00 00 1d 10 03 left
+10 02 00 03 20 00 00 00 20 00 00 00 00 55 10 03 up
+10 02 00 03 10 00 00 00 00 10 00 00 00 00 00 35 10 03 down
+10 02 00 03 40 00 00 00 40 00 00 00 00 95 10 03 
+10 02 00 03 01 00 00 00 00 00 00 00 00 16 10 03
+
 */
 
-module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
+module.exports = { PingEvent, DisplayUpdateEvent, KeyboardEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
