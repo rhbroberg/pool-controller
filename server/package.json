@@ -21,7 +21,7 @@
         "lodash": "^4.17.10",
         "log4js": "^2.10.0",
         "moment": "^2.22.2",
-        "mongoose": "^4.5.9",
+        "mongoose": "^4.13.21",
         "serialport": "^6.2.1",
         "socket.io": "^2.1.1",
         "swagger-tools": "^0.10.4",
