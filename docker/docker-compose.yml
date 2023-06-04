@@ -3,8 +3,6 @@ version: '2.0'
 services:
   nginx-proxy:
     image: rhbroberg/nginx-proxy
-    labels:
-        com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
     container_name: nginx-reverse-proxy
     restart: always
     depends_on:
@@ -40,7 +38,7 @@ services:
         max-file: "10"
 
   mongo:
-    image: andresvidal/rpi3-mongodb3
+    image: mongo
     ports:
       - 27017:27017
       - 27018:27018
