@@ -19,6 +19,19 @@ exports.registerResetListener = function(listener) {
 
 var nameOf = (user) => user && user.email ? user.email : 'unknown user';
 
+const SERVICE_NAME = 'pool-controller';
+const { version } = require('../package.json');
+const startedAt = new Date();
+
+/**
+ * identifies the service, so a client can tell it found a pool controller server
+ *
+ * returns SystemInfo
+ **/
+exports.info = function() {
+    return { service: SERVICE_NAME, version, startedAt };
+};
+
 /**
  * creates the default admin account if there are no accounts; run at startup
  **/

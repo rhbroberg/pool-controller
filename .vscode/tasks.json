@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Lint server",
+            "type": "shell",
+            "command": "npm run linter",
+            "options": { "cwd": "${workspaceFolder}/server" },
+            "problemMatcher": "$eslint-stylish",
+            "presentation": { "reveal": "never" },
+            "runOptions": { "runOn": "folderOpen" }
+        }
+    ]
+}

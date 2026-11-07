@@ -706,6 +706,19 @@ paths:
       - OAuth2:
         - "account"
       x-swagger-router-controller: "UserManagement"
+  /system/info:
+    get:
+      tags:
+      - "System"
+      description: "identifies this server as the pool controller service; needs neither the database nor the pool controller, so it answers whenever the server is up"
+      operationId: "getSystemInfo"
+      parameters: []
+      responses:
+        200:
+          description: "the service identity"
+          schema:
+            $ref: "#/definitions/SystemInfo"
+      x-swagger-router-controller: "System"
   /system/factory-reset:
     post:
       tags:
@@ -1020,6 +1033,18 @@ definitions:
       previousMode:
         type: "string"
       requestedAt:
+        type: "string"
+        format: "date-time"
+  SystemInfo:
+    type: "object"
+    properties:
+      service:
+        type: "string"
+        enum:
+        - "pool-controller"
+      version:
+        type: "string"
+      startedAt:
         type: "string"
         format: "date-time"
   EventEntry:

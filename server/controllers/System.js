@@ -3,6 +3,10 @@
 var utils = require('../utils/writer.js');
 var System = require('../service/SystemService');
 
+module.exports.getSystemInfo = function getSystemInfo (req, res) {
+  utils.writeJson(res, System.info());
+};
+
 module.exports.factoryReset = function factoryReset (req, res) {
   System.factoryReset(req.user)
     .then(function (response) {

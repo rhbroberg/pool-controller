@@ -11,8 +11,10 @@
         "simulate-verbose": "node server.js -f ../test-data/sample-various-bin -d sim -v",
         "seed-history": "node tools/seed-history.js --days 30",
         "remove-seeded-history": "node tools/seed-history.js --remove",
+        "find-servers": "node tools/find-servers.js",
         "start": "node server.js -d serial",
-        "linter": "eslint ."
+        "linter": "eslint .",
+        "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
     },
     "author": "",
     "license": "ISC",
@@ -23,7 +25,7 @@
         "js-yaml": "^3.12.0",
         "jsonwebtoken": "^8.3.0",
         "lodash": "^4.17.10",
-        "log4js": "^2.10.0",
+        "log4js": "^6.9.1",
         "moment": "^2.22.2",
         "mongoose": "^8.24.8",
         "serialport": "^13.0.0",

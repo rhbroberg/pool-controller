@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var password = ""
     @State private var isSigningIn = false
     @State private var signInError: String?
+    @State private var isScanningNetwork = false
 
     private var trimmedAddress: String {
         draftAddress.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,12 +33,23 @@ struct SettingsView: View {
                             .submitLabel(.done)
                     }
                     LabeledContent("Server") {
-                        TextField("192.168.1.20:8080", text: $draftAddress)
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.URL)
-                            .textContentType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+                        HStack(spacing: 12) {
+                            TextField("", text: $draftAddress)
+                                .accessibilityLabel("Server")
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.URL)
+                                .textContentType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            Button {
+                                isScanningNetwork = true
+                            } label: {
+                                Image(systemName: "magnifyingglass")
+                            }
+                            // borderless so tapping the text field doesn't also start a scan
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("Scan Network")
+                        }
                     }
                     Picker("Retry Every", selection: $reconnectSeconds) {
                         ForEach(Self.reconnectChoices, id: \.self) { seconds in
@@ -48,7 +60,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Pool")
                 } footer: {
-                    Text("The server attached to your pool controller, with its port.")
+                    Text("The server attached to your pool controller, with its port. Tap \(Image(systemName: "magnifyingglass")) to look for one on your network.")
                 }
 
                 Section {
@@ -114,6 +126,9 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: Binding(get: { store.commissioning != nil },
                                                   set: { if !$0 { store.cancelCommissioning() } })) {
                 CommissioningView(store: store, serverAddress: trimmedAddress)
+            }
+            .sheet(isPresented: $isScanningNetwork) {
+                NetworkScanView { draftAddress = $0 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

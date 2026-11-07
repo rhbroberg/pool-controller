@@ -32,6 +32,7 @@ struct StatusView: View {
                     if store.connection == .disconnected {
                         OfflineBanner(host: ServerAddress.display(serverAddress),
                                       reason: store.connectionFailure,
+                                      nextAttempt: store.nextAttempt,
                                       isRetrying: store.isLoading,
                                       retry: { pollGeneration += 1 },
                                       change: { showingSettings = true })
@@ -640,6 +641,7 @@ private struct ConnectionIndicator: View {
 private struct OfflineBanner: View {
     let host: String
     let reason: String?
+    let nextAttempt: Date?
     let isRetrying: Bool
     let retry: () -> Void
     let change: () -> Void
@@ -669,12 +671,24 @@ private struct OfflineBanner: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: "wifi.exclamationmark")
                 .foregroundStyle(.red)
-            Text("Can’t reach \(host)")
-                .font(.subheadline.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Can’t reach \(host)")
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                if isRetrying {
+                    Text("Reconnecting…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if let nextAttempt, nextAttempt > .now {
+                    Text("Retrying in \(Text(timerInterval: Date.now...nextAttempt, countsDown: true))")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(["Can’t reach \(host).", reason].compactMap(\.self).joined(separator: " "))
+        .accessibilityLabel(["Can’t reach \(host).", reason, "Retries automatically."].compactMap(\.self).joined(separator: " "))
     }
 
     @ViewBuilder

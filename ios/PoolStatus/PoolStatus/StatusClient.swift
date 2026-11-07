@@ -24,6 +24,15 @@ struct SignInResult: Decodable {
     let mustChangeCredentials: Bool?
 }
 
+/// How a server identifies itself; only a pool controller server says `poolService`.
+struct SystemInfo: Decodable {
+    static let poolService = "pool-controller"
+
+    let service: String
+    let version: String
+    let startedAt: Date
+}
+
 /// An account as the server describes it, without a token.
 struct AccountInfo: Decodable, Identifiable, Hashable {
     let email: String
@@ -42,6 +51,12 @@ struct StatusClient {
     func fetchStatus() async throws -> [StatusReading] {
         let data = try await send(URLRequest(url: try url(for: "status")))
         return try Self.decoder.decode([StatusReading].self, from: data)
+    }
+
+    /// Answers without the database or the pool controller, so it works whenever the server is up.
+    func fetchSystemInfo(timeout: TimeInterval) async throws -> SystemInfo {
+        let data = try await send(URLRequest(url: try url(for: "system/info")), timeout: timeout)
+        return try Self.decoder.decode(SystemInfo.self, from: data)
     }
 
     func signIn(email: String, password: String) async throws -> SignInResult {
@@ -228,9 +243,9 @@ struct StatusClient {
         return url
     }
 
-    private func send(_ request: URLRequest) async throws -> Data {
+    private func send(_ request: URLRequest, timeout: TimeInterval = 10) async throws -> Data {
         var request = request
-        request.timeoutInterval = 10
+        request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         // the server's validator rejects any request without a JSON content type, body or not
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
