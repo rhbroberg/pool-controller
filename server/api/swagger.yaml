@@ -100,6 +100,21 @@ paths:
           schema:
             $ref: "#/definitions/DeviceState"
       x-swagger-router-controller: "Device"
+  /status:
+    get:
+      tags:
+      - "Status"
+      description: "returns the most recent recorded value of every status and info reading"
+      operationId: "getCurrentStatus"
+      parameters: []
+      responses:
+        200:
+          description: "latest value for each reading"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StatusValue"
+      x-swagger-router-controller: "Status"
   /filtration:
     get:
       tags:
@@ -388,6 +403,9 @@ definitions:
         type: "string"
       password:
         type: "string"
+      token:
+        type: "string"
+        description: "returned by login and user creation; send it as the x-auth header"
     example:
       password: "password"
       email: "email"
@@ -576,6 +594,9 @@ definitions:
         type: "string"
       value:
         type: "string"
+      previousValue:
+        type: "string"
+        description: "the state before a set request; the change is confirmed by a later status frame"
       lastUpdate:
         type: "string"
         format: "date-time"
@@ -584,6 +605,35 @@ definitions:
       name: "name"
       id: "id"
       value: "value"
+  StatusValue:
+    type: "object"
+    required:
+    - "name"
+    - "category"
+    - "value"
+    - "timestamp"
+    properties:
+      name:
+        type: "string"
+        description: "the reading name, as stored by the server"
+      category:
+        type: "string"
+        description: "status for device switches, info for measurements from the display"
+        enum:
+        - "status"
+        - "info"
+      value:
+        type: "number"
+        description: "1 or 0 for switches; the measured value for info readings"
+      timestamp:
+        type: "string"
+        format: "date-time"
+        description: "when this value was recorded"
+    example:
+      name: "filter"
+      category: "status"
+      value: 1
+      timestamp: "2000-01-23T04:56:07.000+00:00"
   DeviceRegistrationInfo:
     type: "object"
     properties:

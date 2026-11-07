@@ -28,6 +28,8 @@ var io;
 var replayStarted = false;
 var controlRequests = [];
 var controlVerification = [];
+// filter shutdown has been seen to take about a dozen status frames
+const CONTROL_VERIFY_STATUS_FRAMES = 40;
 var driver;
 
 var argv = yargs
@@ -210,21 +212,10 @@ var dispatchEvent = (buf) => {
                     nowEnabled: eventDiffs.nowEnabled,
                     nowDisabled: eventDiffs.nowDisabled
                 }, timestamp);
-
-                if (controlVerification.length > 0) {
-                    const request = controlVerification.shift();
-                    logger.info('verified control change: ', request.requestedChange, request.presentStatus, event.enabledSwitches());
-                    // half duplex means we won't actually receive this event we just sent, so fake it
-                    dispatchEvent(request.payload);
-                }
-            } else {
-                if (controlVerification.length > 0) {
-                    logger.info('verification failed! retrying');
-                    controlRequests.push(controlVerification.shift());
-                }
-                // always update the lastUpdated timestamp
-                // maybe update streamers with 'last updated'
             }
+            // always update the lastUpdated timestamp
+            // maybe update streamers with 'last updated'
+            verifyControlRequests();
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
@@ -233,10 +224,15 @@ var dispatchEvent = (buf) => {
             }
             if (controlRequests.length > 0) {
                 const request = controlRequests.shift();
-                controlVerification.push(request);
+                if (isSwitchOn(request.requestedChange) === request.desiredOn) {
+                    logger.info(`${request.requestedChange} is already ${request.desiredOn ? 'on' : 'off'}; not sending`);
+                } else {
+                    request.statusFramesWaited = 0;
+                    controlVerification.push(request);
 
-                logger.debug('ping calling queued callback');
-                driver.writeEvent(request.payload);
+                    logger.debug('ping calling queued callback');
+                    driver.writeEvent(request.payload);
+                }
             }
             break;
         case 'MotorTelemetryEvent':
@@ -289,21 +285,48 @@ var handleHunk = (data) => {
     });
 };
 
-var controlListener = ((whatChange) => {
-    logger.info('scheduling control change for', whatChange);
+var isSwitchOn = (name) => currentEnabledSwitches.includes(name);
 
-    const enabledDevices = currentEnabledSwitches;
+// a keypress only toggles, so a request is confirmed by watching status frames rather than
+// pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it
+var verifyControlRequests = () => {
+    controlVerification = controlVerification.filter((request) => {
+        if (isSwitchOn(request.requestedChange) === request.desiredOn) {
+            logger.info('verified control change: ', request.requestedChange, request.desiredOn ? 'on' : 'off');
+            // half duplex means we won't actually receive this event we just sent, so fake it
+            dispatchEvent(request.payload);
+            return false;
+        }
+        if (++request.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
+            logger.warn('control change not confirmed by the controller: ', request.requestedChange, request.desiredOn ? 'on' : 'off');
+            return false;
+        }
+        return true;
+    });
+};
+
+var controlListener = ((whatChange, desiredOn) => {
+    if (!ControlEvent.isControl(whatChange)) {
+        throw new Error(`'${whatChange}' is not a controller button`);
+    }
+
+    const isOn = isSwitchOn(whatChange);
+    if (isOn === desiredOn) {
+        logger.info(`${whatChange} is already ${isOn ? 'on' : 'off'}`);
+        return isOn;
+    }
+
+    logger.info(`scheduling ${whatChange} ${desiredOn ? 'on' : 'off'}`);
     var updateIt = new ControlEvent();
     updateIt.toggleControls([whatChange]);
 
-    const payload = updateIt.payload();
     controlRequests.push({
         requestedChange: whatChange,
-        payload: payload,
-        presentStatus: enabledDevices
+        desiredOn: desiredOn,
+        payload: updateIt.payload()
     });
 
-    return (enabledDevices.includes(whatChange)) ? true : false;
+    return isOn;
 });
 
 if (argv.d === 'file') {

@@ -5,7 +5,7 @@ var UserManagement = require('../service/UserManagementService');
 
 module.exports.createUser = function createUser(req, res, next) {
     var credentials = req.swagger.params['credentials'].value;
-    UserManagement.createUser(credentials)
+    UserManagement.createUser(credentials, req.headers['x-auth'])
         .then(function(response) {
             utils.writeJson(res, response);
         })

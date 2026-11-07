@@ -14,6 +14,13 @@
     {
         "type": "node",
         "request": "launch",
+        "name": "Tail long capture",
+        "program": "${workspaceFolder}/server/server.js",
+        "args": ["-f", "${workspaceFolder}/test-data/sample-all-bin", "-d", "tail", "--from-start"]
+    },
+    {
+        "type": "node",
+        "request": "launch",
         "name": "Single File",
         "program": "${workspaceFolder}/server/server.js"
     },

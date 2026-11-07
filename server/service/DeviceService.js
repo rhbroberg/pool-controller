@@ -5,6 +5,7 @@ const _ = require('lodash'); // eslint-disable-line no-unused-vars
 var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
+var utils = require('../utils/writer.js');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -117,26 +118,26 @@ exports.registerControlListener = function(cb) {
  * state String 
  * returns DeviceState
  **/
-exports.setDeviceState = function(deviceId, state) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
-        // need top-level catch here for exceptions which will otherwise be silently ignored
-        var examples = {};
-
+exports.setDeviceState = function(deviceId, state) {
+    return new Promise(function(resolve, reject) {
+        const desiredOn = state === 'true';
         logger.info(`setting ${deviceId} to ${state}`);
-        const currentDeviceState = controlCB(deviceId);
 
-        examples['application/json'] = {
-            'level': 0,
-            'lastUpdate': new Date().getTime(),
-            'name': deviceId,
-            'id': 'id',
-            'state': currentDeviceState
-        };
-
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
+        let wasOn;
+        try {
+            wasOn = controlCB(deviceId, desiredOn);
+        } catch (e) {
+            reject(utils.respondWithCode(400, { code: 400, message: e.message }));
+            return;
         }
+
+        // the controller confirms the change on a later status frame; GET /status reports it
+        resolve({
+            'id': deviceId,
+            'name': deviceId,
+            'value': String(desiredOn),
+            'previousValue': String(wasOn),
+            'lastUpdate': new Date().toISOString()
+        });
     });
 };

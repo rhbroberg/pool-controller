@@ -34,15 +34,17 @@ const controlMap = new TwoWayMap({
 
     // curiously, bits 4-7 are not represented
 
-    '8': 'aux9', // 0x00 00 01 00: 'aux9',
-    '9': 'aux10', // 0x00 00 02 00: 'aux10',
-    '10': 'aux11', // 0x00 00 04 00: 'aux11',
-    '11': 'aux12', // 0x00 00 08 00: 'aux12',
+    // bits 8-15 follow test-data/pool-decode.txt; valve3 and valve4 are confirmed by
+    // presses in sample-various-bin, heater1 is not
+    '8': 'valve3', // 0x00 00 01 00: 'valve3',
+    '9': 'valve4/heater2', // 0x00 00 02 00: 'valve4/heater2',
+    '10': 'heater1', // 0x00 00 04 00: 'heater1',
+    '11': 'aux8', // 0x00 00 08 00: 'aux8',
 
-    '12': 'valve3', // 0x00 00 10 00: 'valve3',
-    '13': 'valve4/heater2', // 0x00 00 20 00: 'valve4/heater2',
-    '14': 'heater2', //0x00 00 40 00: 'heater1',
-    '15': 'aux8', // 0x00 00 80 00: 'aux8',
+    '12': 'aux9', // 0x00 00 10 00: 'aux9',
+    '13': 'aux10', // 0x00 00 20 00: 'aux10',
+    '14': 'aux11', // 0x00 00 40 00: 'aux11',
+    '15': 'aux12', // 0x00 00 80 00: 'aux12',
 
     '16': 'lights', // 0x00 01 00 00: 'lights',
     '17': 'aux1', // 0x00 02 00 00: 'aux1',
@@ -349,6 +351,10 @@ class ControlEvent extends ChecksummedEvent {
         return [0x00, 0x8c];
     }
 
+    static isControl(name) {
+        return typeof controlMap.fromName(name) !== 'undefined';
+    }
+
     textBitMaskFromByte(byte) {
         let mask = `${this.bitToInt(byte, 0x80)}${this.bitToInt(byte, 0x40)}${this.bitToInt(byte, 0x20)}${this.bitToInt(byte, 0x10)}`;
         mask += `.${this.bitToInt(byte, 0x08)}${this.bitToInt(byte, 0x04)}${this.bitToInt(byte, 0x02)}${this.bitToInt(byte, 0x01)}`;
@@ -395,11 +401,9 @@ class ControlEvent extends ChecksummedEvent {
         let bytes = [0, 0, 0, 0];
 
         toToggle.forEach((s) => {
-            var mask;
-            const bitPosition = controlMap.fromName(s);
-            mask |= (0x01 << bitPosition);
+            const bitPosition = Number(controlMap.fromName(s));
             const whichByte = Math.floor(bitPosition / 8);
-            bytes[whichByte] |= ((mask >> (whichByte * 8)) & 0xff);
+            bytes[whichByte] |= (0x01 << (bitPosition % 8));
         });
 
         // write bytes to buffer

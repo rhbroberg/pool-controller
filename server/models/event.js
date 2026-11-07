@@ -26,6 +26,8 @@ var EventSchema = new Schema({
 // bubble under wallpaper alert: timestamp first, some queries super fast, others super slow
 EventSchema.index({ eventType: 1, timestamp: -1, status: 1, 'status.0.name': 1, 'status.0.value': 1, 'status.1.name': 1, 'status.1.value': 1, 'status.2.name': 1, 'status.2.value': 1 }, { name: 'eventType_1' });
 EventSchema.index({ timestamp: -1, eventType: 1, status: 1, 'status.0.name': 1, 'status.0.value': 1, 'status.1.name': 1, 'status.1.value': 1, 'status.2.name': 1, 'status.2.value': 1 }, { name: 'eventType_other' });
+// newest value of one named reading without walking past readings that change more often
+EventSchema.index({ eventType: 1, 'status.name': 1, timestamp: -1 }, { name: 'eventType_statusName_timestamp' });
 var Event = mongoose.model('events', EventSchema);
 
 module.exports = { Event };
