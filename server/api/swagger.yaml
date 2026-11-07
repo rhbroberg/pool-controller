@@ -161,6 +161,77 @@ paths:
           schema:
             $ref: "#/definitions/ApiResponse"
       x-swagger-router-controller: "History"
+  /events:
+    get:
+      tags:
+      - "Event log"
+      description: "recorded events a page at a time, newest first unless order is asc. Pass the previous page's next as cursor for the following page."
+      operationId: "getEvents"
+      parameters:
+      - name: "types"
+        in: "query"
+        description: "event types to include (all by default): status (switches changing), info (readings), control (keypad and remote presses), action (signed-in accounts acting), failed and unrecognized (frames the server could not use)"
+        required: false
+        type: "array"
+        items:
+          type: "string"
+          enum:
+          - "status"
+          - "info"
+          - "control"
+          - "action"
+          - "failed"
+          - "unrecognized"
+        collectionFormat: "csv"
+      - name: "user"
+        in: "query"
+        description: "only this account's actions, or controller for events no account made"
+        required: false
+        type: "string"
+      - name: "cursor"
+        in: "query"
+        description: "next from the previous page"
+        required: false
+        type: "string"
+      - name: "order"
+        in: "query"
+        required: false
+        type: "string"
+        enum:
+        - "desc"
+        - "asc"
+        default: "desc"
+      - name: "limit"
+        in: "query"
+        description: "events per page, at most 200"
+        required: false
+        type: "integer"
+        default: 50
+      responses:
+        200:
+          description: "a page of events"
+          schema:
+            $ref: "#/definitions/EventPage"
+        400:
+          description: "an unknown type or an unusable cursor"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      x-swagger-router-controller: "EventLog"
+  /events/users:
+    get:
+      tags:
+      - "Event log"
+      description: "every account with a recorded action, for filtering the log"
+      operationId: "getEventUsers"
+      parameters: []
+      responses:
+        200:
+          description: "account names"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      x-swagger-router-controller: "EventLog"
   /panel/display:
     get:
       tags:
@@ -909,6 +980,42 @@ definitions:
       name: "name"
       id: "id"
       value: "value"
+  EventEntry:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+      timestamp:
+        type: "string"
+        format: "date-time"
+      type:
+        type: "string"
+        description: "status, info, control, action, failed or unrecognized"
+      user:
+        type: "string"
+        description: "the account that acted; only on action events"
+      summary:
+        type: "string"
+        description: "what happened, in a sentence"
+      details:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            name:
+              type: "string"
+            value:
+              type: "number"
+  EventPage:
+    type: "object"
+    properties:
+      events:
+        type: "array"
+        items:
+          $ref: "#/definitions/EventEntry"
+      next:
+        type: "string"
+        description: "cursor for the following page; null when there are no more events"
   HistoryPoint:
     type: "object"
     properties:
