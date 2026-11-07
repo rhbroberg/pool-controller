@@ -56,16 +56,12 @@ struct EquipmentControl: Identifiable {
     }
 
     static let all = [
+        // valve4 runs the heat pump at this installation
+        EquipmentControl(name: "valve4", systemImage: "heat.waves", tint: .pink, group: .heating),
         // the heater key switches between Manual Off and Auto Control on the panel display
         EquipmentControl(name: "heater1", systemImage: "flame", tint: .orange, group: .heating,
                          stateReading: "heater1 mode", onText: "Auto", offText: "Manual Off"),
-        // valve4 runs the heat pump at this installation
-        EquipmentControl(name: "valve4", systemImage: "heat.waves", tint: .pink, group: .heating),
-        EquipmentControl(name: "filter", systemImage: "fan", tint: .blue, group: .circulation,
-                         confirmOff: Confirmation(
-                            title: "Turn off the filter?",
-                            message: "The pump stops. Water stops circulating, and the pool temperature reading pauses until it runs again.",
-                            action: "Turn Off Filter")),
+        EquipmentControl(name: "filter", systemImage: "fan", tint: .blue, group: .circulation),
         // aux14 is labelled Spa Filter on this panel; it brings valve3 and aux1 with it
         EquipmentControl(name: "aux14", systemImage: "bathtub", tint: .cyan, group: .circulation),
         EquipmentControl(name: "lights", systemImage: "lightbulb", tint: .yellow, group: .features),
