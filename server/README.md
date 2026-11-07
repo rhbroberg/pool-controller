@@ -4,6 +4,8 @@ There have been a few other implementations of "connect a server to your AquaLog
 
 A raspberry pi zero is not quite fast enough to reliably send the control signals without collision; I'm using a rpi 3+, along with a usb rs485 connector.
 
+Hayward command documentation is here: https://commerce.hayward-pool-assets.com/magento/2025/AQ-CO-SERIAL/092329C_RevB_6861.pdf
+
 A REST api is generated/maintained by swagger; the api is present at
 
 http://localhost:80/docs
