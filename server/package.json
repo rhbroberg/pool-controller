@@ -12,7 +12,7 @@
         "seed-history": "node tools/seed-history.js --days 30",
         "remove-seeded-history": "node tools/seed-history.js --remove",
         "start": "node server.js -d serial",
-        "linter": "eslint --ignore-pattern node_modules --ignore-pattern utils --ignore-pattern controllers ."
+        "linter": "eslint ."
     },
     "author": "",
     "license": "ISC",
@@ -31,5 +31,9 @@
         "swagger-tools": "^0.10.4",
         "sway": "^2.0.4",
         "yargs": "^12.0.1"
+    },
+    "devDependencies": {
+        "eslint": "^9.39.5",
+        "globals": "^17.14.0"
     }
 }
