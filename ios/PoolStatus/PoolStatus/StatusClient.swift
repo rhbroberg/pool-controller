@@ -136,6 +136,15 @@ struct StatusClient {
         _ = try await send(request)
     }
 
+    /// Asks the server to step the water flow to `mode`; it presses the spillover key until the
+    /// controller reports that mode.
+    func setWaterMode(_ mode: WaterMode, token: String) async throws {
+        var request = URLRequest(url: try url(for: "water/mode/\(mode.rawValue)"))
+        request.httpMethod = "PUT"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
+    }
+
     /// Asks the server to press the device's button if it isn't already in `on` state.
     /// The controller confirms the change on a later status frame.
     func setDevice(_ name: String, on: Bool, token: String) async throws {

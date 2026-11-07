@@ -27,8 +27,6 @@ enum WaterBody: String, Identifiable {
     var id: String { rawValue }
     var title: String { self == .pool ? "Pool" : "Spa" }
     var temperatureName: String { self == .pool ? "pool temp" : "spa temp" }
-    /// The heater warms whichever body is circulating; the spa circulates while its filter (aux14) runs.
-    var heatsWhileSpaFilterRuns: Bool { self == .spa }
 }
 
 /// Temperature, air and heater history for one body of water, fetched a time window at a
@@ -57,6 +55,9 @@ final class TemperatureHistoryModel {
     static let heaterName = "heater1"
     static let heatPumpName = "valve4"
     static let spaFilterName = "aux14"
+    static let poolPumpName = "filter"
+    static let spaModeName = "spa"
+    static let spilloverName = "spillover"
 
     let water: WaterBody
 
@@ -75,7 +76,7 @@ final class TemperatureHistoryModel {
     }
 
     private var names: [String] {
-        [water.temperatureName, Self.airName, Self.heaterName, Self.heatPumpName, Self.spaFilterName]
+        [water.temperatureName, Self.airName, Self.heaterName, Self.heatPumpName, Self.poolPumpName] + Self.circulationNames
     }
 
     func samples(_ name: String) -> [Sample] {
@@ -166,50 +167,75 @@ final class TemperatureHistoryModel {
 
     // MARK: - Chart data
 
-    /// Times `source` (the heater or the heat pump) was running for this body of water,
-    /// ending no later than `end`.
+    /// Times `source` (the heater or the heat pump) was warming this body of water, ending no
+    /// later than `end`. The two are in series, so both send their heat to the same place.
     func heatingIntervals(from source: String, through end: Date) -> [Interval] {
-        let heater = samples(source).map { (date: $0.date, heater: Optional($0.value != 0), spa: Bool?.none) }
-        let spaFilter = samples(Self.spaFilterName).map { (date: $0.date, heater: Bool?.none, spa: Optional($0.value != 0)) }
-        let changes = (heater + spaFilter).sorted { $0.date < $1.date }
-
-        var intervals: [Interval] = []
-        var heaterOn = false
-        var spaOn = false
-        var heatingSince: Date?
-        for change in changes where change.date <= end {
-            heaterOn = change.heater ?? heaterOn
-            spaOn = change.spa ?? spaOn
-            let heating = heaterOn && spaOn == water.heatsWhileSpaFilterRuns
-            if heating, heatingSince == nil {
-                heatingSince = change.date
-            } else if !heating, let start = heatingSince {
-                intervals.append(Interval(start: start, end: change.date))
-                heatingSince = nil
-            }
+        intervals([source] + Self.circulationNames, through: end) { state in
+            (state[source] ?? false) && heats(state)
         }
-        if let start = heatingSince {
-            intervals.append(Interval(start: start, end: end))
-        }
-        return intervals
     }
 
     /// The water temperature line. Readings persist until they change, so each segment is
-    /// carried to its end. The spa's line only covers times its filter ran and starts at that
-    /// run's first reading, since a reading from an earlier run is stale.
+    /// carried to its end. Each sensor sits just downstream of its pump, so the line only covers
+    /// times that pump ran, starting at that run's first reading, since an earlier one is stale.
     func waterSegments(through end: Date) -> [Segment] {
         let readings = waterSamples.filter { $0.date <= end }
         guard !readings.isEmpty else {
             return []
         }
-        let spaFilter = samples(Self.spaFilterName)
-        guard water == .spa, !spaFilter.isEmpty else {
+        guard !samples(pumpName).isEmpty else {
             return [Segment(id: 0, samples: extended(readings, to: end))]
         }
-        return runningIntervals(spaFilter, through: end).enumerated().compactMap { index, interval in
+        let running = intervals([pumpName], through: end) { $0[pumpName] == true }
+        return running.enumerated().compactMap { index, interval in
             let inside = readings.filter { $0.date >= interval.start && $0.date <= interval.end }
             return inside.isEmpty ? nil : Segment(id: index, samples: extended(inside, to: interval.end))
         }
+    }
+
+    /// The pump just upstream of this body's temperature sensor.
+    private var pumpName: String {
+        water == .pool ? Self.poolPumpName : Self.spaFilterName
+    }
+
+    /// The switches that decide where water, and so heat, goes.
+    private static let circulationNames = [spaFilterName, spaModeName, spilloverName]
+
+    /// Heat reaches both bodies in spillover; otherwise the spa while water flows through it
+    /// (spa mode or the spa filter), and the pool the rest of the time.
+    private func heats(_ state: [String: Bool]) -> Bool {
+        if state[Self.spilloverName] == true {
+            return true
+        }
+        let toSpa = state[Self.spaModeName] == true || state[Self.spaFilterName] == true
+        return water == .spa ? toSpa : !toSpa
+    }
+
+    /// The stretches of time `condition` held, replaying every change to the switches in `names`.
+    private func intervals(_ names: [String], through end: Date,
+                           where condition: ([String: Bool]) -> Bool) -> [Interval] {
+        let changes = names
+            .flatMap { name in samples(name).map { (date: $0.date, name: name, on: $0.value != 0) } }
+            .filter { $0.date <= end }
+            .sorted { $0.date < $1.date }
+
+        var state: [String: Bool] = [:]
+        var result: [Interval] = []
+        var since: Date?
+        for change in changes {
+            state[change.name] = change.on
+            let holds = condition(state)
+            if holds, since == nil {
+                since = change.date
+            } else if !holds, let start = since {
+                result.append(Interval(start: start, end: change.date))
+                since = nil
+            }
+        }
+        if let start = since {
+            result.append(Interval(start: start, end: end))
+        }
+        return result
     }
 
     func airSegment(through end: Date) -> [Sample] {
@@ -225,20 +251,4 @@ final class TemperatureHistoryModel {
         return line
     }
 
-    private func runningIntervals(_ switchSamples: [Sample], through end: Date) -> [Interval] {
-        var intervals: [Interval] = []
-        var since: Date?
-        for sample in switchSamples where sample.date <= end {
-            if sample.value != 0, since == nil {
-                since = sample.date
-            } else if sample.value == 0, let start = since {
-                intervals.append(Interval(start: start, end: sample.date))
-                since = nil
-            }
-        }
-        if let start = since {
-            intervals.append(Interval(start: start, end: end))
-        }
-        return intervals
-    }
 }

@@ -47,6 +47,13 @@ struct StatusView: View {
                         StatusCard(measurements: store.measurements)
                             .opacity(store.isConnected ? 1 : 0.5)
 
+                        WaterFlowControl(current: store.waterMode,
+                                         pending: store.pendingWaterMode,
+                                         isEnabled: store.isConnected && store.canControl) { mode in
+                            Task { await store.setWaterMode(mode, serverAddress: serverAddress) }
+                        }
+                        .opacity(store.isConnected ? 1 : 0.5)
+
                         HStack(spacing: 12) {
                             NavigationLink {
                                 PanelView(store: store)
@@ -146,6 +153,46 @@ struct StatusView: View {
         }
         let turnOn = !store.isOn(control)
         Task { await store.setControl(control, on: turnOn, serverAddress: serverAddress) }
+    }
+}
+
+/// Pool, spa or spillover: shows the controller's mode and steps it to the one picked.
+private struct WaterFlowControl: View {
+    let current: WaterMode?
+    let pending: WaterMode?
+    let isEnabled: Bool
+    let select: (WaterMode) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Water Flow", systemImage: "arrow.triangle.branch")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let pending {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Switching to \(pending.title)…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else if current == nil {
+                    Text("Waiting for the controller")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Picker("Water Flow", selection: Binding(get: { pending ?? current ?? .pool },
+                                                   set: { select($0) })) {
+                ForEach(WaterMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(!isEnabled || pending != nil || current == nil)
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -320,7 +367,7 @@ private struct StatusCard: View {
         .contentShape(.rect)
         .foregroundStyle(measurement.isDimmed ? .tertiary : .primary)
         .accessibilityElement(children: .combine)
-        .accessibilityHint(measurement.isDimmed ? "Spa filter is off; this reading may be old" : "")
+        .accessibilityHint(measurement.isDimmed ? "Its pump is off, so this reading may be old" : "")
     }
 }
 
@@ -341,35 +388,36 @@ private struct ControlTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: control.systemImage)
-                        .symbolVariant(isOn ? .fill : .none)
-                        .font(.title3)
-                        .foregroundStyle(isOn ? control.tint : Color.secondary)
-                    Spacer()
-                    if isPending {
-                        ProgressView()
-                    } else if isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                // icons differ in height; a fixed row keeps tiles side by side the same size
-                .frame(height: 26)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 10) {
+                Image(systemName: control.systemImage)
+                    .symbolVariant(isOn ? .fill : .none)
+                    .font(.title3)
+                    .foregroundStyle(isOn ? control.tint : Color.secondary)
+                    // icons differ in size; a fixed frame keeps the names lined up
+                    .frame(width: 28, height: 28)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(control.title)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     Text(stateText)
-                        .font(.subheadline)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                if isPending {
+                    ProgressView()
+                        .controlSize(.small)
+                } else if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(isOn ? Color(.secondarySystemGroupedBackground) : Color(.tertiarySystemFill),
                         in: .rect(cornerRadius: 18))
             .shadow(color: .black.opacity(isOn ? 0.08 : 0), radius: 6, y: 2)

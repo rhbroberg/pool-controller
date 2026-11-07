@@ -34,6 +34,14 @@ struct EquipmentControl: Identifiable {
     ]
 }
 
+/// Where the water flows. The controller's spillover key steps through these in order.
+enum WaterMode: String, CaseIterable, Identifiable {
+    case pool, spa, spillover
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
 /// One value on the status card's measurement line.
 struct Measurement: Identifiable {
     let name: String
@@ -72,6 +80,8 @@ final class StatusStore {
     private(set) var commissioning: Credentials?
     /// Requested state for controls the controller hasn't confirmed yet.
     private(set) var pending: [String: Bool] = [:]
+    /// A requested water flow mode the controller hasn't reached yet.
+    private(set) var pendingWaterMode: WaterMode?
     /// Whether the saved account's role has been checked with the server since launch.
     private var accountChecked = false
 
@@ -84,13 +94,29 @@ final class StatusStore {
     var canControl: Bool { role?.canControl ?? false }
     var isAdmin: Bool { role?.isAdmin ?? false }
 
-    /// The spa filter runs on aux14 at this installation.
-    var spaFilterOn: Bool {
-        reading(named: "aux14")?.isOn ?? false
+    /// The controller's water flow mode: spillover if that switch is on, otherwise spa if it is,
+    /// otherwise pool. Unknown until the server has reported the pool switch.
+    var waterMode: WaterMode? {
+        if reading(named: "spillover")?.isOn == true {
+            return .spillover
+        }
+        if reading(named: "spa")?.isOn == true {
+            return .spa
+        }
+        return reading(named: "pool") == nil ? nil : .pool
     }
 
-    /// Pool and spa temperatures always have a slot; the spa's is dimmed, as a stale
-    /// reading, while the spa filter is off.
+    /// Whether the pump feeding a temperature sensor runs: each sensor sits just downstream of
+    /// its pump, so its reading is current only then. The pool's is the filter pump; the spa's is
+    /// the spa filter (aux14 at this installation), whatever the water flow mode.
+    func pumpRunning(for temperatureName: String) -> Bool {
+        reading(named: Self.pumpForTemperature[temperatureName] ?? "")?.isOn == true
+    }
+
+    static let pumpForTemperature = ["pool temp": "filter", "spa temp": "aux14"]
+
+    /// Pool and spa temperatures always have a slot; each is dimmed, as a stale reading,
+    /// while its pump is off.
     var measurements: [Measurement] {
         Self.measurementOrder.compactMap { name in
             let reading = reading(named: name)
@@ -100,7 +126,7 @@ final class StatusStore {
             return Measurement(name: name,
                                title: StatusReading.displayName(for: name),
                                value: reading?.formattedValue ?? "--°F",
-                               isDimmed: name == "spa temp" && !spaFilterOn)
+                               isDimmed: Self.pumpForTemperature[name] != nil && !pumpRunning(for: name))
         }
     }
 
@@ -276,6 +302,40 @@ final class StatusStore {
             // an admin may have changed this account's role
             await refreshAccount(serverAddress: serverAddress)
             errorMessage = "Your account can’t change equipment."
+        } catch {
+            handle(error)
+        }
+    }
+
+    /// How long to wait for the controller to step through to a requested water flow mode;
+    /// longer than for a switch, since it may take two presses.
+    static let waterModeTimeout: Duration = .seconds(45)
+
+    /// Asks the server for a water flow mode, then polls until the controller reports it.
+    func setWaterMode(_ mode: WaterMode, serverAddress: String) async {
+        guard let credentials, mode != waterMode else {
+            return
+        }
+        pendingWaterMode = mode
+        defer { pendingWaterMode = nil }
+
+        do {
+            try await StatusClient(serverAddress: serverAddress).setWaterMode(mode, token: credentials.token)
+            let deadline = ContinuousClock.now + Self.waterModeTimeout
+            while ContinuousClock.now < deadline {
+                try await Task.sleep(for: .seconds(1))
+                await refresh(from: serverAddress)
+                if waterMode == mode || !isConnected {
+                    return
+                }
+            }
+            errorMessage = "The controller hasn’t switched to \(mode.title) yet."
+        } catch StatusClientError.unauthorized {
+            signOut()
+            errorMessage = "Your sign-in is no longer valid. Sign in again to change the water flow."
+        } catch StatusClientError.server(code: 403, message: _) {
+            await refreshAccount(serverAddress: serverAddress)
+            errorMessage = "Your account can’t change the water flow."
         } catch {
             handle(error)
         }
