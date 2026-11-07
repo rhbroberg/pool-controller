@@ -8,7 +8,7 @@ const log4js = require('log4js');
 var logger = log4js.getLogger();
 
 // must match the names server.js records for display updates
-const infoNames = ['ambient', 'pool temp', 'salt'];
+const infoNames = ['ambient', 'pool temp', 'spa temp', 'salt', 'heater1 mode'];
 
 var latestInfo = async (name) => {
     const doc = await Event.findOne({ eventType: 'info', status: { $elemMatch: { name: name } } })

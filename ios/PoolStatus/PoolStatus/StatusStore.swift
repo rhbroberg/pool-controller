@@ -3,20 +3,40 @@ import Observation
 import SwiftUI
 
 /// Equipment the app can switch. Only buttons whose control bits are confirmed by
-/// captured presses belong here; pool/spa and the heater are shown as status only.
+/// captured presses belong here.
 struct EquipmentControl: Identifiable {
+    /// The button name sent to `PUT /devices/{name}/{state}`.
     let name: String
     let systemImage: String
     let tint: Color
+    /// The reading that reports this control's state, when it isn't the status bit of the same name.
+    var stateReading: String?
+    var onText = "On"
 
     var id: String { name }
     var title: String { StatusReading.displayName(for: name) }
+    var stateName: String { stateReading ?? name }
 
     static let all = [
         EquipmentControl(name: "filter", systemImage: "fan", tint: .blue),
+        // aux14 is labelled Spa Filter on this panel; it brings valve3 and aux1 with it
+        EquipmentControl(name: "aux14", systemImage: "bathtub", tint: .cyan),
         EquipmentControl(name: "lights", systemImage: "lightbulb", tint: .yellow),
-        EquipmentControl(name: "superchlorinate", systemImage: "bubbles.and.sparkles", tint: .teal)
+        EquipmentControl(name: "superchlorinate", systemImage: "bubbles.and.sparkles", tint: .teal),
+        // the heater key switches between Manual Off and Auto Control on the panel display
+        EquipmentControl(name: "heater1", systemImage: "flame", tint: .orange,
+                         stateReading: "heater1 mode", onText: "Auto")
     ]
+}
+
+/// One value on the status card's measurement line.
+struct Measurement: Identifiable {
+    let name: String
+    let title: String
+    let value: String
+    let isDimmed: Bool
+
+    var id: String { name }
 }
 
 @Observable
@@ -49,18 +69,24 @@ final class StatusStore {
 
     var isConnected: Bool { connection == .connected }
 
-    var measurements: [StatusReading] {
-        readings
-            .filter { $0.category == .info }
-            .sorted {
-                (Self.measurementOrder.firstIndex(of: $0.name) ?? .max) <
-                    (Self.measurementOrder.firstIndex(of: $1.name) ?? .max)
-            }
+    /// The spa filter runs on aux14 at this installation.
+    var spaFilterOn: Bool {
+        reading(named: "aux14")?.isOn ?? false
     }
 
-    /// Read-only switches shown in the status card.
-    var statusSwitches: [StatusReading] {
-        ["pool", "spa", "heater1"].compactMap { reading(named: $0) }
+    /// Pool and spa temperatures always have a slot; the spa's is dimmed, as a stale
+    /// reading, while the spa filter is off.
+    var measurements: [Measurement] {
+        Self.measurementOrder.compactMap { name in
+            let reading = reading(named: name)
+            guard reading != nil || name == "pool temp" || name == "spa temp" else {
+                return nil
+            }
+            return Measurement(name: name,
+                               title: StatusReading.displayName(for: name),
+                               value: reading?.formattedValue ?? "--°F",
+                               isDimmed: name == "spa temp" && !spaFilterOn)
+        }
     }
 
     var needsAttention: Bool {
@@ -75,8 +101,8 @@ final class StatusStore {
         readings.first { $0.name == name }
     }
 
-    func isOn(_ name: String) -> Bool {
-        pending[name] ?? reading(named: name)?.isOn ?? false
+    func isOn(_ control: EquipmentControl) -> Bool {
+        pending[control.name] ?? reading(named: control.stateName)?.isOn ?? false
     }
 
     func isPending(_ name: String) -> Bool {
@@ -146,7 +172,7 @@ final class StatusStore {
             while ContinuousClock.now < deadline {
                 try await Task.sleep(for: .seconds(1))
                 await refresh(from: serverAddress)
-                if reading(named: control.name)?.isOn == on || !isConnected {
+                if reading(named: control.stateName)?.isOn == on || !isConnected {
                     return
                 }
             }

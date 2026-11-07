@@ -9,16 +9,36 @@ var logger = log4js.getLogger();
 
 const FRAME_INTERVAL_MS = 25;
 const RESPONSE_DELAY_MS = 100;
+// the simulator has no panel menus; it acknowledges a navigation key on the display instead
+const KEY_ECHO_MS = 4000;
+const panelKeyLabels = { menu: 'MENU', left: '< LEFT', right: 'RIGHT >', minus: '- DOWN', plus: '+ UP' };
 
 // control buttons whose name differs from the status bit they drive
 const statusNameForControl = {
     'valve4/heater2': 'valve4'
 };
+// in sample-various-bin, the aux14 (spa filter) key brings valve3 and aux1 on and off with it
+const linkedSwitches = {
+    aux14: ['valve3', 'aux1']
+};
+// the captures never show a spa temperature; this is shown while the spa filter runs
+const SPA_TEMP_F = 98;
+const SPA_TEMP_EVERY_MS = 5000;
+// what the panel displays when these switches change, as seen in sample-various-bin
+const switchMessages = {
+    aux14: 'Spa Filter'
+};
 
 var frames = [];
 var statusTemplate;
+var displayTemplate;
 var switchMask = 0;
+var heaterAuto = false;
+var echoUntil = 0;
+var spaTempShownAt = 0;
 var emit;
+
+var isOn = (name) => ((switchMask >>> StatusEvent.bitPosition(name)) & 1) === 1;
 
 var loadCapture = (filename) => {
     const parser = new FrameParser();
@@ -42,16 +62,23 @@ var loadCapture = (filename) => {
             statusTemplate = frame;
             switchMask = event.rawMask() >>> 0;
         }
-        frames.push({ kind, frame });
+        // 4 header bytes, 40 characters, a NUL, the checksum and the trailer
+        if (kind === 'DisplayUpdateEvent' && !displayTemplate && frame.length === 49) {
+            displayTemplate = frame;
+        }
+        const display = kind === 'DisplayUpdateEvent';
+        frames.push({
+            kind,
+            frame,
+            heater: display && typeof event.getHeater1Mode() !== 'undefined'
+        });
     });
     if (!statusTemplate) {
         throw new Error(`${filename} has no status frames to start from`);
     }
 };
 
-var statusFrame = () => {
-    const frame = Buffer.from(statusTemplate);
-    frame.writeUInt32LE(switchMask >>> 0, 4);
+var writeChecksum = (frame) => {
     let checksum = 0;
     for (let i = 0; i < frame.length - 4; i++) {
         checksum += frame.readUInt8(i);
@@ -59,6 +86,27 @@ var statusFrame = () => {
     frame.writeUInt16BE(checksum, frame.length - 4);
     return frame;
 };
+
+var statusFrame = () => {
+    const frame = Buffer.from(statusTemplate);
+    frame.writeUInt32LE(switchMask >>> 0, 4);
+    return writeChecksum(frame);
+};
+
+var centered = (text, width) => {
+    const left = Math.max(0, Math.floor((width - text.length) / 2));
+    return (' '.repeat(left) + text).padEnd(width).slice(0, width);
+};
+
+// two 20 character lines, laid out like the panel's own display frames
+var displayFrame = (line1, line2) => {
+    const frame = Buffer.from(displayTemplate);
+    const text = centered(line1, 20) + centered(line2, 20);
+    frame.write(text, 4, 40, 'ascii');
+    return writeChecksum(frame);
+};
+
+var heaterFrame = () => displayFrame('Heater1', heaterAuto ? 'Auto Control' : 'Manual Off');
 
 var listen = ((filename, cb) => {
     emit = cb;
@@ -74,9 +122,21 @@ var listen = ((filename, cb) => {
 
     let next = 0;
     setInterval(() => {
-        const { kind, frame } = frames[next];
+        const { kind, frame, heater } = frames[next];
         next = (next + 1) % frames.length;
-        emit(kind === 'StatusEvent' ? statusFrame() : frame);
+        if (kind === 'DisplayUpdateEvent' && Date.now() < echoUntil) {
+            return;
+        }
+        if (kind === 'StatusEvent') {
+            emit(statusFrame());
+        } else if (heater) {
+            emit(heaterFrame());
+        } else if (kind === 'DisplayUpdateEvent' && isOn('aux14') && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
+            spaTempShownAt = Date.now();
+            emit(displayFrame(`Spa Temp   ${SPA_TEMP_F}_F`, ''));
+        } else {
+            emit(frame);
+        }
     }, FRAME_INTERVAL_MS);
 });
 
@@ -86,7 +146,20 @@ var writeEvent = ((message) => {
     logger.debug('simulator received control event:', pressed.join(', '));
 
     setTimeout(() => {
-        pressed.forEach((name) => {
+        const keys = pressed.filter((name) => panelKeyLabels[name]);
+        if (keys.length > 0 && displayTemplate) {
+            echoUntil = Date.now() + KEY_ECHO_MS;
+            emit(displayFrame('SIMULATOR', keys.map((key) => panelKeyLabels[key]).join(' ')));
+        }
+
+        if (pressed.includes('heater1') && displayTemplate) {
+            heaterAuto = !heaterAuto;
+            echoUntil = Date.now() + KEY_ECHO_MS;
+            emit(heaterFrame());
+            logger.debug(`simulator: heater1 is now ${heaterAuto ? 'auto' : 'off'}`);
+        }
+
+        pressed.filter((name) => !panelKeyLabels[name] && name !== 'heater1').forEach((name) => {
             const statusName = statusNameForControl[name] || name;
             const bit = StatusEvent.bitPosition(statusName);
             if (typeof bit === 'undefined') {
@@ -94,7 +167,17 @@ var writeEvent = ((message) => {
                 return;
             }
             switchMask = (switchMask ^ (1 << bit)) >>> 0;
-            logger.debug(`simulator: ${statusName} is now ${(switchMask >>> bit) & 1 ? 'on' : 'off'}`);
+            const nowOn = isOn(statusName);
+            (linkedSwitches[statusName] || []).forEach((linked) => {
+                const linkedBit = StatusEvent.bitPosition(linked);
+                switchMask = nowOn ? (switchMask | (1 << linkedBit)) >>> 0 : (switchMask & ~(1 << linkedBit)) >>> 0;
+            });
+            if (switchMessages[statusName] && displayTemplate) {
+                echoUntil = Date.now() + KEY_ECHO_MS;
+                spaTempShownAt = Date.now();
+                emit(displayFrame(switchMessages[statusName], nowOn ? 'Turned On' : 'Turned Off'));
+            }
+            logger.debug(`simulator: ${statusName} is now ${nowOn ? 'on' : 'off'}`);
         });
         emit(statusFrame());
     }, RESPONSE_DELAY_MS);

@@ -50,6 +50,19 @@ struct StatusClient {
         _ = try await send(request)
     }
 
+    func fetchPanelDisplay() async throws -> PanelDisplay {
+        let data = try await send(URLRequest(url: try url(for: "panel/display")))
+        return try Self.decoder.decode(PanelDisplay.self, from: data)
+    }
+
+    /// Queues one press of a panel key; the server sends it on the next controller ping.
+    func pressPanelKey(_ key: PanelKey, token: String) async throws {
+        var request = URLRequest(url: try url(for: "panel/keys/\(key.rawValue)"))
+        request.httpMethod = "PUT"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
+    }
+
     func url(for path: String) throws -> URL {
         var base = serverAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         if !base.contains("://") {

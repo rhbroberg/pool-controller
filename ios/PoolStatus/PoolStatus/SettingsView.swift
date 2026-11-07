@@ -7,8 +7,10 @@ struct SettingsView: View {
     let store: StatusStore
 
     @AppStorage("reconnectSeconds") private var reconnectSeconds = StatusStore.defaultReconnectSeconds
+    @AppStorage("poolName") private var poolName = StatusView.defaultPoolName
     @Environment(\.dismiss) private var dismiss
     @State private var draftAddress = ""
+    @State private var draftPoolName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var isSigningIn = false
@@ -21,6 +23,16 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField(StatusView.defaultPoolName, text: $draftPoolName)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                } header: {
+                    Text("Pool Name")
+                } footer: {
+                    Text("Shown as the title of the main screen.")
+                }
+
                 Section {
                     TextField("http://192.168.1.20:8080", text: $draftAddress)
                         .keyboardType(.URL)
@@ -95,12 +107,17 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         serverAddress = trimmedAddress
+                        let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        poolName = name.isEmpty ? StatusView.defaultPoolName : name
                         dismiss()
                     }
                     .disabled(trimmedAddress.isEmpty)
                 }
             }
-            .onAppear { draftAddress = serverAddress }
+            .onAppear {
+                draftAddress = serverAddress
+                draftPoolName = poolName
+            }
         }
     }
 

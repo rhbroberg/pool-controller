@@ -57,15 +57,20 @@ paths:
           description: "successfully registered device"
           schema:
             $ref: "#/definitions/DeviceRegistrationInfo"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}/{state}:
     put:
       tags:
       - "Device"
       operationId: "setDeviceState"
+      description: "sets a controller button's device on or off; nothing is sent if it is already in that state"
       parameters:
       - name: "deviceId"
         in: "path"
+        description: "a controller button such as filter, lights, heater1, superchlorinate or aux14; spafilter is accepted for aux14"
         required: true
         type: "string"
       - name: "state"
@@ -92,6 +97,7 @@ paths:
       parameters:
       - name: "deviceId"
         in: "path"
+        description: "a status switch name; spafilter is accepted for aux14"
         required: true
         type: "string"
       responses:
@@ -115,6 +121,49 @@ paths:
             items:
               $ref: "#/definitions/StatusValue"
       x-swagger-router-controller: "Status"
+  /panel/display:
+    get:
+      tags:
+      - "Panel"
+      description: "returns the most recent text shown on the panel display"
+      operationId: "getPanelDisplay"
+      parameters: []
+      responses:
+        200:
+          description: "the panel display"
+          schema:
+            $ref: "#/definitions/PanelDisplay"
+        404:
+          description: "the panel has not reported any display text yet"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      x-swagger-router-controller: "Panel"
+  /panel/keys/{key}:
+    put:
+      tags:
+      - "Panel"
+      description: "presses one panel key, as the wireless remote would"
+      operationId: "pressPanelKey"
+      parameters:
+      - name: "key"
+        in: "path"
+        required: true
+        type: "string"
+        enum:
+        - "menu"
+        - "left"
+        - "right"
+        - "minus"
+        - "plus"
+      responses:
+        200:
+          description: "the key press is queued for the next controller ping"
+          schema:
+            $ref: "#/definitions/PanelKeyPress"
+      security:
+      - OAuth2:
+        - "write"
+      x-swagger-router-controller: "Panel"
   /filtration:
     get:
       tags:
@@ -154,6 +203,9 @@ paths:
           description: "response"
           schema:
             $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "Filtration"
   /filtration/{pumpId}:
     get:
@@ -259,6 +311,9 @@ paths:
           description: "Status of the operation"
           schema:
             $ref: "#/definitions/HeaterState"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "Environment"
   /lighting:
     get:
@@ -315,6 +370,9 @@ paths:
           description: "Status of the operation"
           schema:
             $ref: "#/definitions/LightingZoneStatus"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "Lighting"
   /users:
     post:
@@ -378,6 +436,9 @@ paths:
       responses:
         200:
           description: "Logs out user"
+      security:
+      - OAuth2:
+        - "write"
       x-swagger-router-controller: "UserManagement"
 securityDefinitions:
   BasicAuth:
@@ -605,6 +666,45 @@ definitions:
       name: "name"
       id: "id"
       value: "value"
+  PanelDisplay:
+    type: "object"
+    required:
+    - "lines"
+    - "blinking"
+    - "timestamp"
+    properties:
+      lines:
+        type: "array"
+        description: "each line of the display, 20 characters wide"
+        items:
+          type: "string"
+      blinking:
+        type: "array"
+        description: "for each line, the positions of characters the panel is blinking"
+        items:
+          type: "array"
+          items:
+            type: "integer"
+      timestamp:
+        type: "string"
+        format: "date-time"
+        description: "when the panel sent this text"
+    example:
+      lines:
+      - "      Saturday      "
+      - "        6:42A       "
+      blinking:
+      - []
+      - [9]
+      timestamp: "2000-01-23T04:56:07.000+00:00"
+  PanelKeyPress:
+    type: "object"
+    properties:
+      key:
+        type: "string"
+      requestedAt:
+        type: "string"
+        format: "date-time"
   StatusValue:
     type: "object"
     required:

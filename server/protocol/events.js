@@ -320,6 +320,31 @@ class DisplayUpdateEvent extends ChecksummedEvent {
         return this.frame.toString('ascii', 4, this.frame.length - 5);
     }
 
+    // the panel LCD is two lines of 20 characters; a set high bit marks a blinking character
+    // and '_' is the panel's degree sign
+    panelLines() {
+        const lineLength = 20;
+        const lines = [];
+        const blinking = [];
+        const end = this.frame.length - 5;
+
+        for (let start = 4; start < end; start += lineLength) {
+            let text = '';
+            const blinks = [];
+            for (let i = start; i < Math.min(start + lineLength, end); i++) {
+                const c = this.frame.readUInt8(i);
+                if (c & 0x80) {
+                    blinks.push(i - start);
+                }
+                const ch = String.fromCharCode(c & 0x7f);
+                text += ch === '_' ? '°' : ch;
+            }
+            lines.push(text);
+            blinking.push(blinks);
+        }
+        return { lines, blinking };
+    }
+
     extractValue(clause) {
         const match = this.text.match(clause);
         return match ? match[1] : undefined;
@@ -343,6 +368,13 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
     getHeater1() {
         return this.extractValue(/ +Heater1 +Manual +([^ ]+)/);
+    }
+
+    // the heater key switches between "Manual Off" and "Auto Control"; the heater1 status
+    // bit only reports whether it is firing
+    getHeater1Mode() {
+        const match = this.clearText().match(/Heater1 +(Manual Off|Manual On|Auto Control)/);
+        return match ? match[1] : undefined;
     }
 
     getCheckSystem() {

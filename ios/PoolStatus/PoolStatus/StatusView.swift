@@ -2,8 +2,10 @@ import SwiftUI
 
 struct StatusView: View {
     static let defaultServerAddress = "http://localhost:8080"
+    static let defaultPoolName = "Pool"
 
     @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
+    @AppStorage("poolName") private var poolName = StatusView.defaultPoolName
     @AppStorage("reconnectSeconds") private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @Environment(\.scenePhase) private var scenePhase
     @State private var store = StatusStore()
@@ -42,7 +44,7 @@ struct StatusView: View {
                     }
 
                     if !store.readings.isEmpty {
-                        StatusCard(measurements: store.measurements, switches: store.statusSwitches)
+                        StatusCard(measurements: store.measurements)
                             .opacity(store.isConnected ? 1 : 0.5)
 
                         VStack(alignment: .leading, spacing: 12) {
@@ -52,22 +54,38 @@ struct StatusView: View {
                             LazyVGrid(columns: columns, spacing: 12) {
                                 ForEach(EquipmentControl.all) { control in
                                     ControlTile(control: control,
-                                                isOn: store.isOn(control.name),
-                                                isPending: store.isPending(control.name)) {
+                                                isOn: store.isOn(control),
+                                                isPending: store.isPending(control.name),
+                                                isLocked: store.credentials == nil) {
                                         toggle(control)
                                     }
                                 }
                             }
-                            .disabled(!store.isConnected)
+                            .disabled(!store.isConnected || store.credentials == nil)
                             .opacity(store.isConnected ? 1 : 0.5)
 
-                            if store.credentials == nil && store.isConnected {
-                                Button("Sign in to turn equipment on and off") {
+                            if store.credentials == nil {
+                                SignInPrompt(text: "Sign in to turn equipment on and off") {
                                     showingSettings = true
                                 }
-                                .font(.footnote)
                             }
                         }
+
+                        NavigationLink {
+                            PanelView(store: store)
+                        } label: {
+                            HStack {
+                                Label("Panel Control", systemImage: "dpad")
+                                    .font(.headline)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+                        }
+                        .buttonStyle(.plain)
 
                         UpdateFooter(lastChange: store.lastSwitchChange, lastRefresh: store.lastRefresh)
                     }
@@ -91,7 +109,7 @@ struct StatusView: View {
                     }
                 }
             }
-            .navigationTitle("Pool")
+            .navigationTitle(poolName.isEmpty ? Self.defaultPoolName : poolName)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     ConnectionIndicator(connection: store.connection)
@@ -122,10 +140,9 @@ struct StatusView: View {
 
     private func toggle(_ control: EquipmentControl) {
         guard store.credentials != nil else {
-            showingSettings = true
             return
         }
-        let turnOn = !store.isOn(control.name)
+        let turnOn = !store.isOn(control)
         Task { await store.setControl(control, on: turnOn, serverAddress: serverAddress) }
     }
 }
@@ -225,39 +242,28 @@ private struct CheckSystemBar: View {
 }
 
 private struct StatusCard: View {
-    let measurements: [StatusReading]
-    let switches: [StatusReading]
+    let measurements: [Measurement]
 
     var body: some View {
-        VStack(spacing: 16) {
-            if !measurements.isEmpty {
-                HStack(spacing: 0) {
-                    ForEach(Array(measurements.enumerated()), id: \.element.id) { index, reading in
-                        if index > 0 {
-                            Divider()
-                        }
-                        VStack(spacing: 2) {
-                            Text(reading.formattedValue)
-                                .font(.title2.monospacedDigit())
-                                .fontWeight(.semibold)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                            Text(reading.displayName)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .accessibilityElement(children: .combine)
-                    }
+        HStack(spacing: 0) {
+            ForEach(Array(measurements.enumerated()), id: \.element.id) { index, measurement in
+                if index > 0 {
+                    Divider()
                 }
-            }
-
-            if !switches.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(switches) { reading in
-                        StatusChip(reading: reading)
-                    }
+                VStack(spacing: 2) {
+                    Text(measurement.value)
+                        .font(.title2.monospacedDigit())
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(measurement.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(measurement.isDimmed ? .tertiary : .primary)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint(measurement.isDimmed ? "Spa filter is off; this reading may be old" : "")
             }
         }
         .padding()
@@ -266,41 +272,19 @@ private struct StatusCard: View {
     }
 }
 
-private struct StatusChip: View {
-    let reading: StatusReading
-
-    private var systemImage: String {
-        switch reading.name {
-        case "pool": "figure.pool.swim"
-        case "spa": "bathtub"
-        case "heater1": "flame"
-        default: "circle"
-        }
-    }
-
-    var body: some View {
-        Label(reading.displayName, systemImage: systemImage)
-            .font(.subheadline.weight(.medium))
-            .symbolVariant(reading.isOn ? .fill : .none)
-            .foregroundStyle(reading.isOn ? Color.white : Color.secondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(reading.isOn ? Color.accentColor : Color(.tertiarySystemFill), in: .capsule)
-            .accessibilityLabel("\(reading.displayName) \(reading.isOn ? "on" : "off")")
-    }
-}
-
 private struct ControlTile: View {
     let control: EquipmentControl
     let isOn: Bool
     let isPending: Bool
+    /// Shows the state but can't be changed until the user signs in.
+    let isLocked: Bool
     let action: () -> Void
 
     private var stateText: String {
         if isPending {
-            return isOn ? "Turning On…" : "Turning Off…"
+            return isOn ? "Turning \(control.onText)…" : "Turning Off…"
         }
-        return isOn ? "On" : "Off"
+        return isOn ? control.onText : "Off"
     }
 
     var body: some View {
@@ -314,6 +298,10 @@ private struct ControlTile: View {
                     Spacer()
                     if isPending {
                         ProgressView()
+                    } else if isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -337,6 +325,7 @@ private struct ControlTile: View {
         .sensoryFeedback(.selection, trigger: isOn)
         .accessibilityLabel(control.title)
         .accessibilityValue(stateText)
+        .accessibilityHint(isLocked ? "Sign in to change" : "")
         .accessibilityAddTraits(.isToggle)
     }
 }

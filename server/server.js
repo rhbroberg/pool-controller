@@ -14,6 +14,7 @@ const { EventFactory } = require('./protocol/eventfactory');
 const path = require('path');
 const environmentService = require('./service/EnvironmentService');
 const deviceService = require('./service/DeviceService');
+const panelService = require('./service/PanelService');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -64,6 +65,9 @@ var previousTemp = {
 // really retrieve this from db at startup
 var currentStatusMask = 0;
 var currentEnabledSwitches = [];
+var latestDisplay;
+// 1 for auto, 0 for off, undefined until the panel displays the heater line
+var heaterAuto;
 
 // if webserver is run app will not exit in 'file' mode (which is only used for testing)
 if (argv.d !== 'file') {
@@ -182,11 +186,23 @@ var dispatchEvent = (buf) => {
                 const salt = event.getSaltPPM();
                 const ambientTemp = event.getAmbientTemp();
                 const poolTemp = event.getPoolTemp();
+                const spaTemp = event.getSpaTemp();
+                const heaterMode = event.getHeater1Mode();
                 var statusChanges = [];
 
+                if (typeof heaterMode !== 'undefined') {
+                    const auto = /Off$/.test(heaterMode) ? 0 : 1;
+                    if (auto !== heaterAuto) {
+                        heaterAuto = auto;
+                        statusChanges.push({ name: 'heater1 mode', value: auto });
+                    }
+                }
+
+                latestDisplay = Object.assign(event.panelLines(), { timestamp: new Date(timestamp).toISOString() });
                 logger.debug('info: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
                 addIfChanged(statusChanges, poolTemp, 'pool temp');
+                addIfChanged(statusChanges, spaTemp, 'spa temp');
                 addIfChanged(statusChanges, salt, 'salt');
                 addIfChanged(statusChanges, ambientTemp, 'ambient');
 
@@ -228,7 +244,10 @@ var dispatchEvent = (buf) => {
             }
             if (controlRequests.length > 0) {
                 const request = controlRequests.shift();
-                if (isSwitchOn(request.requestedChange) === request.desiredOn) {
+                if (request.momentary) {
+                    logger.debug(`sending panel key ${request.requestedChange} for ${request.requestedBy}`);
+                    driver.writeEvent(request.payload);
+                } else if (isSwitchOn(request.requestedChange) === request.desiredOn) {
                     logger.info(`${request.requestedChange} reached ${request.desiredOn ? 'on' : 'off'} before it was sent for ${request.requestedBy}; not sending`);
                 } else {
                     request.statusFramesWaited = 0;
@@ -289,7 +308,8 @@ var handleHunk = (data) => {
     });
 };
 
-var isSwitchOn = (name) => currentEnabledSwitches.includes(name);
+// the heater's on/off is its mode from the display, not its status bit
+var isSwitchOn = (name) => name === 'heater1' ? heaterAuto === 1 : currentEnabledSwitches.includes(name);
 
 // a keypress only toggles, so a request is confirmed by watching status frames rather than
 // pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it
@@ -313,6 +333,9 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
     if (!ControlEvent.isControl(whatChange)) {
         throw new Error(`'${whatChange}' is not a controller button`);
     }
+    if (whatChange === 'heater1' && typeof heaterAuto === 'undefined') {
+        throw new Error('the panel has not shown the heater mode yet; try again shortly');
+    }
 
     const isOn = isSwitchOn(whatChange);
     if (isOn === desiredOn) {
@@ -331,6 +354,25 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
     });
 
     return isOn;
+});
+
+const panelKeys = ['menu', 'left', 'right', 'minus', 'plus'];
+
+// menu and arrow keys change what the panel displays, not a status bit, so they are
+// sent once and never verified
+var panelKeyListener = ((key, requestedBy) => {
+    if (!panelKeys.includes(key)) {
+        throw new Error(`'${key}' is not a panel navigation key`);
+    }
+
+    var press = new ControlEvent();
+    press.toggleControls([key]);
+    controlRequests.push({
+        requestedChange: key,
+        requestedBy: requestedBy,
+        momentary: true,
+        payload: press.payload()
+    });
 });
 
 if (argv.d === 'file') {
@@ -352,6 +394,8 @@ if (argv.d === 'file') {
 
 environmentService.registerControlListener(controlListener);
 deviceService.registerControlListener(controlListener);
+panelService.registerKeyListener(panelKeyListener);
+panelService.registerDisplaySource(() => latestDisplay);
 if (argv.d === 'tail' && argv.fromStart) {
     logger.info('replay waits for a browser connection');
 } else if (driver) {

@@ -9,12 +9,23 @@ var utils = require('../utils/writer.js');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
+// names this installation's panel shows for generic outputs; keys are lowercase letters and
+// digits only, so "spa filter", "spa-filter" and "spaFilter" all match
+const deviceAliases = {
+    spafilter: 'aux14'
+};
+
+var resolveDevice = (deviceId) => deviceAliases[deviceId.toLowerCase().replace(/[^a-z0-9]/g, '')] || deviceId;
+
+var describeDevice = (requested, device) => requested === device ? device : `${requested} (${device})`;
+
 /**
  *
  * deviceId String 
  * no response value expected for this operation
  **/
-exports.getDeviceState = function(deviceId) {
+exports.getDeviceState = function(requestedId) {
+    const deviceId = resolveDevice(requestedId);
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
         var current;
@@ -120,8 +131,10 @@ exports.registerControlListener = function(cb) {
  **/
 var onOff = (isOn) => isOn ? 'on' : 'off';
 
-exports.setDeviceState = function(deviceId, state, user) {
+exports.setDeviceState = function(requestedId, state, user) {
     return new Promise(function(resolve, reject) {
+        const deviceId = resolveDevice(requestedId);
+        const label = describeDevice(requestedId, deviceId);
         const desiredOn = state === 'true';
         const who = user && user.email ? user.email : 'unknown user';
 
@@ -129,15 +142,15 @@ exports.setDeviceState = function(deviceId, state, user) {
         try {
             wasOn = controlCB(deviceId, desiredOn, who);
         } catch (e) {
-            logger.warn(`REST ${who}: rejected ${deviceId} ${onOff(desiredOn)}: ${e.message}`);
+            logger.warn(`REST ${who}: rejected ${label} ${onOff(desiredOn)}: ${e.message}`);
             reject(utils.respondWithCode(400, { code: 400, message: e.message }));
             return;
         }
 
         if (wasOn === desiredOn) {
-            logger.info(`REST ${who}: ${deviceId} already ${onOff(wasOn)}, nothing sent`);
+            logger.info(`REST ${who}: ${label} already ${onOff(wasOn)}, nothing sent`);
         } else {
-            logger.info(`REST ${who}: ${deviceId} ${onOff(wasOn)} -> ${onOff(desiredOn)}`);
+            logger.info(`REST ${who}: ${label} ${onOff(wasOn)} -> ${onOff(desiredOn)}`);
         }
 
         // the controller confirms the change on a later status frame; GET /status reports it
