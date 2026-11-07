@@ -501,6 +501,16 @@ systemService.registerResetListener(() => {
     waterModeRequest = undefined;
 });
 
+// docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish
+['SIGTERM', 'SIGINT'].forEach((signal) => {
+    process.once(signal, () => {
+        logger.info(`${signal} received; shutting down`);
+        mongoose.disconnect()
+            .catch(() => {})
+            .then(() => process.exit(0));
+    });
+});
+
 mongoose.connection.asPromise()
     .then(() => systemService.commissionIfEmpty())
     .catch((e) => logger.error(`could not check for accounts: ${e}`));
