@@ -80,6 +80,24 @@ struct StatusClient {
         _ = try await send(request)
     }
 
+    /// Readings for each name from `from` up to `to`, plus each one's value as the window opens.
+    func fetchHistory(names: [String], from: Date, to: Date) async throws -> HistoryResponse {
+        let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        guard var components = URLComponents(url: try url(for: "history"), resolvingAgainstBaseURL: false) else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        components.queryItems = [
+            URLQueryItem(name: "names", value: names.joined(separator: ",")),
+            URLQueryItem(name: "from", value: iso.format(from)),
+            URLQueryItem(name: "to", value: iso.format(to))
+        ]
+        guard let url = components.url else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        let data = try await send(URLRequest(url: url))
+        return try Self.decoder.decode(HistoryResponse.self, from: data)
+    }
+
     func fetchPanelDisplay() async throws -> PanelDisplay {
         let data = try await send(URLRequest(url: try url(for: "panel/display")))
         return try Self.decoder.decode(PanelDisplay.self, from: data)

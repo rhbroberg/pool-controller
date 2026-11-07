@@ -9,6 +9,8 @@
         "test-realistic": "node server.js -f /tmp/in -d tail",
         "simulate": "node server.js -f ../test-data/sample-various-bin -d sim",
         "simulate-verbose": "node server.js -f ../test-data/sample-various-bin -d sim -v",
+        "seed-history": "node tools/seed-history.js --days 30",
+        "remove-seeded-history": "node tools/seed-history.js --remove",
         "start": "node server.js -d serial",
         "linter": "eslint --ignore-pattern node_modules --ignore-pattern utils --ignore-pattern controllers ."
     },
@@ -25,11 +27,9 @@
         "moment": "^2.22.2",
         "mongoose": "^8.24.8",
         "serialport": "^13.0.0",
-        "validator": "^13.15.35",
         "socket.io": "^2.1.1",
         "swagger-tools": "^0.10.4",
         "sway": "^2.0.4",
         "yargs": "^12.0.1"
-    },
-    "devDependencies": {}
+    }
 }

@@ -250,25 +250,49 @@ private struct StatusCard: View {
                 if index > 0 {
                     Divider()
                 }
-                VStack(spacing: 2) {
-                    Text(measurement.value)
-                        .font(.title2.monospacedDigit())
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text(measurement.title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if let water = Self.historyWater[measurement.name] {
+                    NavigationLink {
+                        TemperatureHistoryView(water: water)
+                    } label: {
+                        cell(measurement, showsHistory: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the temperature history")
+                } else {
+                    cell(measurement, showsHistory: false)
                 }
-                .frame(maxWidth: .infinity)
-                .foregroundStyle(measurement.isDimmed ? .tertiary : .primary)
-                .accessibilityElement(children: .combine)
-                .accessibilityHint(measurement.isDimmed ? "Spa filter is off; this reading may be old" : "")
             }
         }
         .padding()
         .frame(maxWidth: .infinity)
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+    }
+
+    /// Measurements that open a temperature history when tapped.
+    private static let historyWater: [String: WaterBody] = ["pool temp": .pool, "spa temp": .spa]
+
+    private func cell(_ measurement: Measurement, showsHistory: Bool) -> some View {
+        VStack(spacing: 2) {
+            Text(measurement.value)
+                .font(.title2.monospacedDigit())
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            HStack(spacing: 2) {
+                Text(measurement.title)
+                if showsHistory {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .semibold))
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(.rect)
+        .foregroundStyle(measurement.isDimmed ? .tertiary : .primary)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(measurement.isDimmed ? "Spa filter is off; this reading may be old" : "")
     }
 }
 

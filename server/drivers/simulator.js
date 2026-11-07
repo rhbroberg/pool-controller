@@ -21,9 +21,15 @@ const statusNameForControl = {
 const linkedSwitches = {
     aux14: ['valve3', 'aux1']
 };
-// the captures never show a spa temperature; this is shown while the spa filter runs
-const SPA_TEMP_F = 98;
+// the captures never show a spa temperature; one is shown while the spa filter runs
 const SPA_TEMP_EVERY_MS = 5000;
+// while the heater is in auto it fires, warming the spa if the spa filter runs and the pool
+// otherwise; with it off, both cool slowly
+const TEMP_STEP_MS = 30 * 1000;
+const POOL_MAX_F = 88;
+const SPA_MAX_F = 104;
+const SPA_COOLS_TO_F = 90;
+const POOL_COOLING_STEPS = 4;
 // the panel announces a labelled output changing as "<label> / Turned On"
 const switchMessages = panelLabels;
 
@@ -34,6 +40,9 @@ var switchMask = 0;
 var heaterAuto = false;
 var echoUntil = 0;
 var spaTempShownAt = 0;
+var poolTempF;
+var spaTempF = 98;
+var tempSteps = 0;
 var emit;
 
 var isOn = (name) => ((switchMask >>> StatusEvent.bitPosition(name)) & 1) === 1;
@@ -65,10 +74,15 @@ var loadCapture = (filename) => {
             displayTemplate = frame;
         }
         const display = kind === 'DisplayUpdateEvent';
+        const poolTemp = display ? event.getPoolTemp() : undefined;
+        if (typeof poolTemp !== 'undefined' && typeof poolTempF === 'undefined') {
+            poolTempF = Number(poolTemp);
+        }
         frames.push({
             kind,
             frame,
-            heater: display && typeof event.getHeater1Mode() !== 'undefined'
+            heater: display && typeof event.getHeater1Mode() !== 'undefined',
+            pool: typeof poolTemp !== 'undefined'
         });
     });
     if (!statusTemplate) {
@@ -106,6 +120,30 @@ var displayFrame = (line1, line2) => {
 
 var heaterFrame = () => displayFrame('Heater1', heaterAuto ? 'Auto Control' : 'Manual Off');
 
+var setSwitch = (name, on) => {
+    const bit = 1 << StatusEvent.bitPosition(name);
+    switchMask = on ? (switchMask | bit) >>> 0 : (switchMask & ~bit) >>> 0;
+};
+
+var stepTemperatures = () => {
+    tempSteps++;
+    const spaRunning = isOn('aux14');
+    if (heaterAuto) {
+        if (spaRunning) {
+            spaTempF = Math.min(SPA_MAX_F, spaTempF + 1);
+        } else {
+            poolTempF = Math.min(POOL_MAX_F, poolTempF + 1);
+        }
+    } else {
+        if (spaTempF > SPA_COOLS_TO_F) {
+            spaTempF--;
+        }
+        if (tempSteps % POOL_COOLING_STEPS === 0 && poolTempF > 0) {
+            poolTempF--;
+        }
+    }
+};
+
 var listen = ((filename, cb) => {
     emit = cb;
     // frames that fail their checksum are dropped; don't log each one while loading
@@ -117,10 +155,14 @@ var listen = ((filename, cb) => {
         logger.level = level;
     }
     logger.info(`simulating the controller with ${frames.length} frames from ${filename}`);
+    if (typeof poolTempF === 'undefined') {
+        poolTempF = 78;
+    }
+    setInterval(stepTemperatures, TEMP_STEP_MS);
 
     let next = 0;
     setInterval(() => {
-        const { kind, frame, heater } = frames[next];
+        const { kind, frame, heater, pool } = frames[next];
         next = (next + 1) % frames.length;
         if (kind === 'DisplayUpdateEvent' && Date.now() < echoUntil) {
             return;
@@ -129,9 +171,11 @@ var listen = ((filename, cb) => {
             emit(statusFrame());
         } else if (heater) {
             emit(heaterFrame());
+        } else if (pool) {
+            emit(displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
         } else if (kind === 'DisplayUpdateEvent' && isOn('aux14') && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
             spaTempShownAt = Date.now();
-            emit(displayFrame(`Spa Temp   ${SPA_TEMP_F}_F`, ''));
+            emit(displayFrame(`Spa Temp   ${spaTempF}_F`, ''));
         } else {
             emit(frame);
         }
@@ -152,6 +196,7 @@ var writeEvent = ((message) => {
 
         if (pressed.includes('heater1') && displayTemplate) {
             heaterAuto = !heaterAuto;
+            setSwitch('heater1', heaterAuto);
             echoUntil = Date.now() + KEY_ECHO_MS;
             emit(heaterFrame());
             logger.debug(`simulator: heater1 is now ${heaterAuto ? 'auto' : 'off'}`);
