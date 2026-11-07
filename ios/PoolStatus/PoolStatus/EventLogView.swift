@@ -13,24 +13,16 @@ struct EventLogView: View {
 
     var body: some View {
         List {
-            Section {
-                ForEach(model.events) { event in
-                    EventRow(event: event)
-                        .onAppear {
-                            if event.id == model.events.last?.id {
-                                Task { await model.loadMore(serverAddress: serverAddress) }
-                            }
+            ForEach(model.events) { event in
+                EventRow(event: event)
+                    .onAppear {
+                        if event.id == model.events.last?.id {
+                            Task { await model.loadMore(serverAddress: serverAddress) }
                         }
-                }
-                if model.isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
                     }
-                }
-            } header: {
-                header
+            }
+            if !model.events.isEmpty || model.isLoading {
+                endRow
             }
         }
         .listStyle(.plain)
@@ -50,9 +42,6 @@ struct EventLogView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             filterBar
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            statusLine
         }
         .navigationTitle("Event Log")
         .navigationBarTitleDisplayMode(.inline)
@@ -77,9 +66,9 @@ struct EventLogView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                if model.kinds.count < EventKind.allCases.count {
-                    Button("Show All") {
-                        model.kinds = Set(EventKind.allCases)
+                if model.kinds != EventLogModel.defaultKinds {
+                    Button("Reset") {
+                        model.kinds = EventLogModel.defaultKinds
                     }
                     .font(.footnote)
                 }
@@ -89,11 +78,16 @@ struct EventLogView: View {
                     filterChip(kind)
                 }
             }
-            HStack(spacing: 8) {
-                Text("User")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                userMenu
+            // side by side where they fit; a long account name puts them on separate lines
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    userMenu
+                    orderMenu
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    userMenu
+                    orderMenu
+                }
             }
         }
         .padding(.horizontal)
@@ -152,55 +146,48 @@ struct EventLogView: View {
         .accessibilityLabel("User: \(model.user.title)")
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            Button {
-                model.ascending.toggle()
-            } label: {
-                HStack(spacing: 4) {
-                    Text("Time")
-                    Image(systemName: model.ascending ? "chevron.up" : "chevron.down")
-                        .font(.caption2.weight(.bold))
-                }
-                .frame(width: EventRow.timeWidth, alignment: .leading)
+    private var orderMenu: some View {
+        Menu {
+            Picker("Order", selection: $model.ascending) {
+                Text("Newest First").tag(false)
+                Text("Oldest First").tag(true)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.accentColor)
-            .accessibilityLabel(model.ascending ? "Time, oldest first" : "Time, newest first")
-            .accessibilityHint("Reverses the order")
-            Text("Event")
-            Spacer()
+        } label: {
+            HStack(spacing: 4) {
+                Label(model.ascending ? "Oldest First" : "Newest First", systemImage: "arrow.up.arrow.down")
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+            }
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .foregroundStyle(Color.primary)
+            .background(Color(.tertiarySystemFill), in: .capsule)
         }
-        .font(.footnote.weight(.semibold))
-        .textCase(nil)
+        .accessibilityLabel("Order: \(model.ascending ? "oldest first" : "newest first")")
     }
 
-    private var statusLine: some View {
-        HStack(alignment: .firstTextBaseline) {
-            if let oldest = model.oldest {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Oldest shown: \(oldest, format: .relative(presentation: .named))")
-                    Text("\(oldest, format: .dateTime.month(.abbreviated).day().year().hour().minute()) · \(model.events.count) events")
-                        .foregroundStyle(.secondary)
+    /// The last row: loading, or how far back the list goes once there's nothing more.
+    private var endRow: some View {
+        HStack {
+            Spacer()
+            if model.isLoading {
+                ProgressView()
+            } else if let oldest = model.oldest {
+                VStack(spacing: 2) {
+                    Text("\(model.events.count) events back to \(oldest, format: .dateTime.month(.abbreviated).day().year().hour().minute())")
+                    if model.reachedEnd {
+                        Text("That’s everything for these filters.")
+                    }
                 }
-            } else if model.isLoading {
-                Text("Loading…")
-            } else {
-                Text("No events")
+                .multilineTextAlignment(.center)
             }
             Spacer()
-            if model.reachedEnd && !model.events.isEmpty {
-                Text("All loaded")
-                    .foregroundStyle(.secondary)
-            } else if !model.events.isEmpty {
-                Text("Scroll for more")
-                    .foregroundStyle(.secondary)
-            }
         }
         .font(.footnote.monospacedDigit())
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.bar)
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 6)
+        .listRowSeparator(.hidden)
     }
 }
 

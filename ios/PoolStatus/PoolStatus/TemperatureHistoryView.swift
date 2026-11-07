@@ -26,17 +26,25 @@ struct TemperatureHistoryView: View {
     static let airColor = Color.gray
     static let heaterColor = Color.orange
     static let heatPumpColor = Color.pink
+    /// The heating bands and their legend swatches share these, so the legend matches the plot.
+    static let heaterOpacity = 0.28
+    static let heatPumpOpacity = 0.24
 
     let water: WaterBody
 
     @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
     @AppStorage("showAirTemperature") private var showAir = true
+    @AppStorage("historyHelpSeen") private var helpSeen = false
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var model: TemperatureHistoryModel
     @State private var now = Date.now
     @State private var visibleLength: TimeInterval
     @State private var scrollPosition: Date
+    /// Nil once the window has been zoomed away from every preset: shown as Custom.
     @State private var preset: Preset?
     @State private var pinchStartLength: TimeInterval?
+    /// The time under the finger while reading values off the graph.
+    @State private var selectedDate: Date?
 
     init(water: WaterBody, initialPreset: Preset = .day) {
         self.water = water
@@ -67,50 +75,66 @@ struct TemperatureHistoryView: View {
         let heater = model.heatingIntervals(from: TemperatureHistoryModel.heaterName, through: end)
         let heatPump = model.heatingIntervals(from: TemperatureHistoryModel.heatPumpName, through: end)
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Picker("Range", selection: $preset) {
-                    ForEach(Preset.allCases) { preset in
-                        Text(preset.rawValue).tag(Preset?.some(preset))
-                    }
+        // no scroll view around the graph, so dragging it moves through time and never the page
+        VStack(alignment: .leading, spacing: 12) {
+            Picker("Range", selection: $preset) {
+                ForEach(Preset.allCases) { preset in
+                    Text(preset.rawValue).tag(Preset?.some(preset))
                 }
-                .pickerStyle(.segmented)
-                .onChange(of: preset) { _, newValue in
-                    if let newValue {
-                        show(length: newValue.length, endingAt: now)
-                    }
-                }
-
-                HStack {
-                    Text(rangeDescription)
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if model.isLoading {
-                        ProgressView()
-                    }
-                }
-
-                chart(segments: segments, air: air, heater: heater, heatPump: heatPump)
-                    .frame(height: 320)
-
-                legend
-
-                Toggle("Air Temperature", isOn: $showAir)
-
-                if let errorMessage = model.errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-                }
-
-                Text("Drag the graph to move through time; pinch or use the magnifiers to zoom.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Text("Custom").tag(Preset?.none)
             }
-            .padding()
+            .pickerStyle(.segmented)
+            .onChange(of: preset) { _, newValue in
+                if let newValue {
+                    show(length: newValue.length, endingAt: now)
+                }
+            }
+
+            HStack(alignment: .firstTextBaseline) {
+                if let selectedDate {
+                    selectionReadout(at: selectedDate, segments: segments, air: air,
+                                     heating: heater + heatPump)
+                } else {
+                    Text(rangeDescription)
+                        .font(.headline.monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Spacer(minLength: 0)
+                if model.isLoading {
+                    ProgressView()
+                }
+            }
+            .frame(minHeight: 24)
+
+            chart(segments: segments, air: air, heater: heater, heatPump: heatPump)
+                .frame(minHeight: 160, maxHeight: .infinity)
+
+            legend
+
+            if let errorMessage = model.errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+
+            if verticalSizeClass != .compact {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Gaps in the line are times the pump was off, when the sensor can’t read the water.")
+                    if !helpSeen {
+                        Text("Drag the graph to move through time, pinch to zoom, and touch and hold to read a temperature.")
+                    }
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
         }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemGroupedBackground))
+        .onDisappear {
+            helpSeen = true
+        }
         .navigationTitle("\(water.title) Temperature")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -157,12 +181,12 @@ struct TemperatureHistoryView: View {
             ForEach(heater) { interval in
                 RectangleMark(xStart: .value("Heater starts", interval.start),
                               xEnd: .value("Heater stops", interval.end))
-                    .foregroundStyle(Self.heaterColor.opacity(0.18))
+                    .foregroundStyle(Self.heaterColor.opacity(Self.heaterOpacity))
             }
             ForEach(heatPump) { interval in
                 RectangleMark(xStart: .value("Heat pump starts", interval.start),
                               xEnd: .value("Heat pump stops", interval.end))
-                    .foregroundStyle(Self.heatPumpColor.opacity(0.16))
+                    .foregroundStyle(Self.heatPumpColor.opacity(Self.heatPumpOpacity))
             }
             ForEach(air) { sample in
                 LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
@@ -180,7 +204,18 @@ struct TemperatureHistoryView: View {
                         .interpolationMethod(.stepEnd)
                 }
             }
+            if let selectedDate {
+                RuleMark(x: .value("Selected", selectedDate))
+                    .foregroundStyle(Color.secondary.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                if let value = waterValue(at: selectedDate, segments: segments) {
+                    PointMark(x: .value("Selected", selectedDate), y: .value("Temperature", value))
+                        .foregroundStyle(Self.waterColor)
+                        .symbolSize(70)
+                }
+            }
         }
+        .chartXSelection(value: $selectedDate)
         .chartXScale(domain: domain)
         .chartYScale(domain: yDomain(segments: segments, air: air))
         .chartScrollableAxes(.horizontal)
@@ -191,7 +226,7 @@ struct TemperatureHistoryView: View {
                 AxisGridLine()
                 AxisValueLabel {
                     if let degrees = value.as(Double.self) {
-                        Text("\(Int(degrees))°")
+                        Text("\(Int(degrees))°F")
                     }
                 }
             }
@@ -227,24 +262,119 @@ struct TemperatureHistoryView: View {
         .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
     }
 
+    /// One row where it fits, otherwise two, so no entry is cut short on a narrow phone.
     private var legend: some View {
-        HStack(spacing: 16) {
-            legendItem(water.title) {
-                Capsule().fill(Self.waterColor).frame(width: 18, height: 3)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                waterLegend
+                airLegend
+                heaterLegend
+                heatPumpLegend
             }
-            if showAir {
-                legendItem("Air") {
-                    Capsule().fill(Self.airColor).frame(width: 18, height: 2)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 14) {
+                    waterLegend
+                    airLegend
                 }
-            }
-            legendItem("Heater") {
-                RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(0.35)).frame(width: 14, height: 12)
-            }
-            legendItem("Heat Pump") {
-                RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(0.3)).frame(width: 14, height: 12)
+                HStack(spacing: 14) {
+                    heaterLegend
+                    heatPumpLegend
+                }
             }
         }
         .font(.footnote)
+    }
+
+    private var waterLegend: some View {
+        legendItem(water.title) {
+            Capsule().fill(Self.waterColor).frame(width: 18, height: 3)
+        }
+    }
+
+    private var heaterLegend: some View {
+        legendItem("Heater") {
+            RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(Self.heaterOpacity)).frame(width: 14, height: 12)
+        }
+    }
+
+    private var heatPumpLegend: some View {
+        legendItem("Heat Pump") {
+            RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(Self.heatPumpOpacity)).frame(width: 14, height: 12)
+        }
+    }
+
+    private var airLegend: some View {
+        // the air entry doubles as its show/hide switch, which keeps the page short enough
+        // to fit without scrolling
+        Button {
+                showAir.toggle()
+            } label: {
+                HStack(spacing: 6) {
+                    Capsule().fill(Self.airColor.opacity(showAir ? 1 : 0.35)).frame(width: 18, height: 2)
+                    Text("Air")
+                    Image(systemName: showAir ? "eye" : "eye.slash")
+                        .font(.caption2)
+                }
+                .foregroundStyle(showAir ? Color.primary : Color.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(.tertiarySystemFill), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("Air temperature")
+            .accessibilityValue(showAir ? "Shown" : "Hidden")
+            .accessibilityHint("Shows or hides air temperature on the graph")
+    }
+
+    /// The values under the finger, in place of the date range while reading the graph.
+    private func selectionReadout(at date: Date, segments: [TemperatureHistoryModel.Segment],
+                                  air: [TemperatureHistoryModel.Sample],
+                                  heating: [TemperatureHistoryModel.Interval]) -> some View {
+        let water = waterValue(at: date, segments: segments)
+        let airValue = air.last { $0.date <= date }?.value
+        let heated = heating.contains { $0.start <= date && date <= $0.end }
+        let when = Text(date, format: .dateTime.month(.abbreviated).day().hour().minute())
+            .foregroundStyle(.secondary)
+        let values = HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(water.map { "\(self.water.title) \(Int($0))°F" } ?? "\(self.water.title) pump off")
+                .foregroundStyle(Self.waterColor)
+            if let airValue {
+                Text("Air \(Int(airValue))°F")
+                    .foregroundStyle(.secondary)
+            }
+            if heated {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(Self.heaterColor)
+                    .accessibilityLabel("Heating")
+            }
+        }
+        // the time beside the values where they fit, above them where they don't
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                when
+                values
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                when
+                    .font(.subheadline)
+                values
+            }
+        }
+        .font(.headline.monospacedDigit())
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The water temperature at `date`, or nil when the pump was off and the line has a gap.
+    private func waterValue(at date: Date, segments: [TemperatureHistoryModel.Segment]) -> Double? {
+        for segment in segments {
+            guard let first = segment.samples.first, let last = segment.samples.last,
+                  first.date <= date, date <= last.date else {
+                continue
+            }
+            return segment.samples.last { $0.date <= date }?.value
+        }
+        return nil
     }
 
     private func legendItem(_ title: String, @ViewBuilder swatch: () -> some View) -> some View {
@@ -252,6 +382,7 @@ struct TemperatureHistoryView: View {
             swatch()
             Text(title)
         }
+        .fixedSize()
     }
 
     private var rangeDescription: String {

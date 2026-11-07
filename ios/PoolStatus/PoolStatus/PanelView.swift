@@ -1,6 +1,8 @@
 import SwiftUI
+import UIKit
 
-/// Mirrors the controller's display and sends its menu and arrow keys.
+/// Mirrors the controller's display and sends its menu and arrow keys: the way to every
+/// setting on the controller, not only the ones the app shows itself.
 struct PanelView: View {
     let store: StatusStore
 
@@ -8,41 +10,55 @@ struct PanelView: View {
     @State private var model = PanelModel()
     @State private var showingSettings = false
 
-    private var canPress: Bool {
-        store.canControl && model.isReachable
+    private static let margin: CGFloat = 16
+    private static let spacing: CGFloat = 24
+    private static let maximumPad: CGFloat = 320
+    private static let minimumPad: CGFloat = 180
+    private static let maximumDisplayWidth: CGFloat = 600
+    /// The panel shows two lines of 20 characters.
+    private static let displayColumns: CGFloat = 20
+
+    private enum Access {
+        case signedOut, viewOnly, unreachable, ready
     }
 
-    /// Signed in, but the role can't press keys: the pad isn't shown at all.
-    private var viewOnly: Bool {
-        store.credentials != nil && !store.canControl
+    private var access: Access {
+        if store.credentials == nil {
+            return .signedOut
+        }
+        if !store.canControl {
+            return .viewOnly
+        }
+        return model.isReachable ? .ready : .unreachable
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                PanelDisplayView(display: model.display, message: model.errorMessage)
+        // a fixed layout, so the display never scrolls away from the keys
+        GeometryReader { geometry in
+            let size = geometry.size
+            let wide = size.width > size.height
+            let pad = Self.padDiameter(for: size, wide: wide)
+            let displayWidth = wide
+                ? size.width - 2 * Self.margin - Self.spacing - pad
+                : min(size.width - 2 * Self.margin, Self.maximumDisplayWidth)
 
-                if viewOnly {
-                    Label("View only. Your account can watch the panel but not press its keys.", systemImage: "eye")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+            Group {
+                if wide {
+                    HStack(alignment: .center, spacing: Self.spacing) {
+                        display(width: displayWidth)
+                        controls(diameter: pad)
+                    }
                 } else {
-                    DirectionPad(isEnabled: canPress) { key in
-                        press(key)
+                    VStack(spacing: 0) {
+                        display(width: displayWidth)
+                        Spacer(minLength: Self.spacing)
+                        controls(diameter: pad)
+                        Spacer(minLength: Self.margin)
                     }
-                }
-
-                if store.credentials == nil {
-                    SignInPrompt(text: "Sign in to use the panel keys") {
-                        showingSettings = true
-                    }
-                } else if !viewOnly && !model.isReachable {
-                    Text("Reconnect to the server to use the panel keys.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
             }
-            .padding()
+            .padding(Self.margin)
+            .frame(width: size.width, height: size.height)
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Panel Control")
@@ -51,8 +67,66 @@ struct PanelView: View {
             await model.poll(serverAddress: serverAddress)
         }
         .sensoryFeedback(.impact(weight: .light), trigger: model.pressCount)
+        .onAppear {
+            // a session in the controller's menus shouldn't end because the phone dimmed
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
         .sheet(isPresented: $showingSettings) {
             SettingsView(serverAddress: $serverAddress, store: store)
+        }
+    }
+
+    private static func padDiameter(for size: CGSize, wide: Bool) -> CGFloat {
+        let available = wide
+            ? min(size.height - 2 * margin, (size.width - 2 * margin - spacing) * 0.45)
+            : min(size.width - 2 * margin, size.height - 260)
+        return min(max(available, minimumPad), maximumPad)
+    }
+
+    private func display(width: CGFloat) -> some View {
+        // the LCD's padding and border take about 30 points; a monospaced character is about 0.62 em
+        let fontSize = min((width - 30) / (Self.displayColumns * 0.62), 34)
+        return PanelDisplayView(display: model.display, message: model.errorMessage,
+                                presses: model.recentPresses, fontSize: fontSize)
+            .frame(width: width)
+    }
+
+    @ViewBuilder
+    private func controls(diameter: CGFloat) -> some View {
+        switch access {
+        case .ready:
+            VStack(spacing: 12) {
+                DirectionPad(diameter: diameter) { key in
+                    press(key)
+                }
+                Text("Hold + or − to repeat.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .signedOut:
+            VStack(spacing: 12) {
+                Text("Sign in to press the panel keys and change the controller’s settings.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                SignInPrompt(text: "Sign In") {
+                    showingSettings = true
+                }
+            }
+            .frame(maxWidth: diameter)
+        case .viewOnly:
+            Label("View only. Your account can watch the panel but not press its keys.", systemImage: "eye")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: diameter)
+        case .unreachable:
+            Label("Can’t reach the server. The keys come back when it answers.", systemImage: "wifi.exclamationmark")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: diameter)
         }
     }
 
@@ -67,35 +141,38 @@ struct PanelView: View {
 private struct PanelDisplayView: View {
     let display: PanelDisplay?
     let message: String?
+    let presses: [KeyPress]
+    let fontSize: CGFloat
 
     private static let background = Color(red: 0.07, green: 0.14, blue: 0.09)
     private static let lit = Color(red: 0.55, green: 1.0, blue: 0.6)
     private static let blinkPeriod = 0.5
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Group {
                 if let display {
                     TimelineView(.periodic(from: .now, by: Self.blinkPeriod)) { context in
                         let blinkVisible = Int(context.date.timeIntervalSinceReferenceDate / Self.blinkPeriod) % 2 == 0
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: fontSize * 0.25) {
                             ForEach(display.lines.indices, id: \.self) { index in
                                 line(index, of: display, blinkVisible: blinkVisible)
                             }
                         }
+                        .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
                     }
                 } else {
                     Text(message ?? "Waiting for the panel…")
+                        .font(.headline)
                         .foregroundStyle(Self.lit.opacity(0.8))
-                        .frame(maxWidth: .infinity, minHeight: 60)
                         .multilineTextAlignment(.center)
                 }
             }
-            .font(.system(size: 22, weight: .medium, design: .monospaced))
-            .lineLimit(1)
-            .minimumScaleFactor(0.4)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
+            // two lines tall either way, so the box doesn't jump when the display arrives
+            .frame(maxWidth: .infinity, minHeight: fontSize * 2.6)
+            .padding(.vertical, 16)
             .padding(.horizontal, 12)
             .background(Self.background, in: .rect(cornerRadius: 14))
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.black.opacity(0.4), lineWidth: 3))
@@ -113,6 +190,8 @@ private struct PanelDisplayView: View {
                         .foregroundStyle(.orange)
                 }
             }
+
+            KeyTrail(presses: presses)
         }
     }
 
@@ -126,13 +205,74 @@ private struct PanelDisplayView: View {
     }
 }
 
+/// The last few keys pressed, so a display that lags behind the finger isn't mistaken for a
+/// press that didn't take.
+private struct KeyTrail: View {
+    let presses: [KeyPress]
+
+    var body: some View {
+        if !presses.isEmpty {
+            // as many of the newest presses as fit on one line, rather than squeezing them all
+            ViewThatFits(in: .horizontal) {
+                ForEach((1...presses.count).reversed(), id: \.self) { count in
+                    row(Array(presses.suffix(count)))
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Recent keys: " + presses.map(description).joined(separator: ", "))
+        }
+    }
+
+    private func row(_ shown: [KeyPress]) -> some View {
+        HStack(spacing: 6) {
+            Text("Keys")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            ForEach(shown) { press in
+                chip(press)
+            }
+        }
+    }
+
+    private func chip(_ press: KeyPress) -> some View {
+        let failed = press.delivery == .failed
+        return HStack(spacing: 2) {
+            Text(press.key.label)
+            switch press.delivery {
+            case .sending:
+                Image(systemName: "clock")
+                    .font(.caption2)
+            case .failed:
+                Image(systemName: "xmark")
+                    .font(.caption2)
+            case .queued:
+                EmptyView()
+            }
+        }
+        .font(.footnote.monospaced().weight(.semibold))
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .foregroundStyle(failed ? Color.red : press.delivery == .sending ? Color.secondary : Color.primary)
+        .background(failed ? Color.red.opacity(0.12) : Color(.tertiarySystemFill), in: .capsule)
+        .fixedSize()
+    }
+
+    private func description(_ press: KeyPress) -> String {
+        switch press.delivery {
+        case .sending: "\(press.key.title), sending"
+        case .queued: press.key.title
+        case .failed: "\(press.key.title), failed"
+        }
+    }
+}
+
 private struct DirectionPad: View {
-    let isEnabled: Bool
+    let diameter: CGFloat
     let press: (PanelKey) -> Void
 
-    private static let diameter: CGFloat = 280
-    private static let centerDiameter: CGFloat = 112
-    private static let arrowDistance: CGFloat = 96
+    private var centerDiameter: CGFloat { diameter * 0.4 }
+    private var arrowDistance: CGFloat { diameter * 0.343 }
+    private var keySize: CGFloat { diameter * 0.27 }
 
     var body: some View {
         ZStack {
@@ -140,40 +280,107 @@ private struct DirectionPad: View {
                 .fill(Color(.secondarySystemGroupedBackground))
                 .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
 
-            arrow(.plus, systemImage: "chevron.up", offset: CGSize(width: 0, height: -Self.arrowDistance))
-            arrow(.minus, systemImage: "chevron.down", offset: CGSize(width: 0, height: Self.arrowDistance))
-            arrow(.left, systemImage: "chevron.left", offset: CGSize(width: -Self.arrowDistance, height: 0))
-            arrow(.right, systemImage: "chevron.right", offset: CGSize(width: Self.arrowDistance, height: 0))
+            RepeatingKey(key: .plus, systemImage: "plus", size: keySize, press: press)
+                .offset(y: -arrowDistance)
+            RepeatingKey(key: .minus, systemImage: "minus", size: keySize, press: press)
+                .offset(y: arrowDistance)
+            key(.left, systemImage: "lessthan")
+                .offset(x: -arrowDistance)
+            key(.right, systemImage: "greaterthan")
+                .offset(x: arrowDistance)
 
             Button {
                 press(.menu)
             } label: {
-                Text("MENU")
+                Text(PanelKey.menu.label.uppercased())
                     .font(.headline)
                     .foregroundStyle(.white)
-                    .frame(width: Self.centerDiameter, height: Self.centerDiameter)
+                    .frame(width: centerDiameter, height: centerDiameter)
                     .background(Color.accentColor, in: .circle)
             }
+            .buttonStyle(PadButtonStyle())
             .accessibilityLabel(PanelKey.menu.title)
         }
-        .frame(width: Self.diameter, height: Self.diameter)
-        .buttonStyle(PadButtonStyle())
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.4)
+        .frame(width: diameter, height: diameter)
     }
 
-    private func arrow(_ key: PanelKey, systemImage: String, offset: CGSize) -> some View {
+    private func key(_ key: PanelKey, systemImage: String) -> some View {
         Button {
             press(key)
         } label: {
-            Image(systemName: systemImage)
-                .font(.title.weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 76, height: 76)
-                .contentShape(.circle)
+            KeyLabel(systemImage: systemImage, size: keySize)
         }
-        .offset(offset)
+        .buttonStyle(PadButtonStyle())
         .accessibilityLabel(key.title)
+    }
+}
+
+private struct KeyLabel: View {
+    let systemImage: String
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size * 0.36, weight: .semibold))
+            .foregroundStyle(.primary)
+            .frame(width: size, height: size)
+            .contentShape(.circle)
+    }
+}
+
+/// A key that presses once on touch, then repeats while held, as when stepping a value.
+private struct RepeatingKey: View {
+    static let initialDelay: Duration = .milliseconds(500)
+    static let repeatInterval: Duration = .milliseconds(300)
+
+    let key: PanelKey
+    let systemImage: String
+    let size: CGFloat
+    let press: (PanelKey) -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isPressed = false
+    @State private var repeater: Task<Void, Never>?
+
+    var body: some View {
+        KeyLabel(systemImage: systemImage, size: size)
+            .scaleEffect(isPressed ? 0.9 : 1)
+            .opacity(isPressed ? 0.7 : 1)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard isEnabled, !isPressed else {
+                            return
+                        }
+                        isPressed = true
+                        press(key)
+                        repeater = Task {
+                            try? await Task.sleep(for: Self.initialDelay)
+                            while !Task.isCancelled {
+                                press(key)
+                                try? await Task.sleep(for: Self.repeatInterval)
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        stop()
+                    }
+            )
+            .onDisappear(perform: stop)
+            .accessibilityElement()
+            .accessibilityLabel(key.title)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Touch and hold to repeat")
+            .accessibilityAction {
+                press(key)
+            }
+    }
+
+    private func stop() {
+        isPressed = false
+        repeater?.cancel()
+        repeater = nil
     }
 }
 

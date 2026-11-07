@@ -42,9 +42,9 @@ enum EventKind: String, CaseIterable, Identifiable {
         switch self {
         case .equipment: "Equipment"
         case .readings: "Readings"
-        case .keypad: "Keypad"
+        case .keypad: "Panel Keys"
         case .actions: "User Actions"
-        case .protocolErrors: "Protocol"
+        case .protocolErrors: "Communication Errors"
         }
     }
 
@@ -106,7 +106,11 @@ final class EventLogModel {
     /// The server has no more events for these filters.
     private(set) var reachedEnd = false
 
-    var kinds = Set(EventKind.allCases)
+    /// Starts on what people did and what the equipment did; readings change often enough to
+    /// bury those, and communication errors are for diagnosing the connection.
+    static let defaultKinds: Set<EventKind> = [.equipment, .actions]
+
+    var kinds = EventLogModel.defaultKinds
     var user = EventUserFilter.everyone
     /// Oldest first rather than newest first.
     var ascending = false

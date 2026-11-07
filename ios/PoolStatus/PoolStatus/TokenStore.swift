@@ -6,7 +6,24 @@ enum AccountRole: String, Codable, CaseIterable, Identifiable {
     case viewer, user, admin
 
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+
+    /// The server's `user` role is shown as Operator, so the word doesn't also mean "an account".
+    var title: String {
+        switch self {
+        case .viewer: "Viewer"
+        case .user: "Operator"
+        case .admin: "Admin"
+        }
+    }
+
+    /// The title after "a" or "an", as in "is now an operator".
+    var titleWithArticle: String {
+        switch self {
+        case .viewer: "a viewer"
+        case .user: "an operator"
+        case .admin: "an admin"
+        }
+    }
 
     /// Turn equipment on and off and press panel keys.
     var canControl: Bool { self != .viewer }
@@ -15,9 +32,9 @@ enum AccountRole: String, Codable, CaseIterable, Identifiable {
 
     var summary: String {
         switch self {
-        case .viewer: "Can see everything and change their own password."
-        case .user: "Can also turn equipment on and off and use the panel keys."
-        case .admin: "Can also manage accounts, restart the server and factory reset."
+        case .viewer: "Viewers can see everything and change their own password."
+        case .user: "Operators can also change equipment, water flow and panel settings."
+        case .admin: "Admins can also manage accounts, restart the server and factory reset."
         }
     }
 }

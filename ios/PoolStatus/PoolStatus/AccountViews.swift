@@ -26,6 +26,7 @@ struct ChangePasswordView: View {
     let serverAddress: String
 
     @Environment(\.dismiss) private var dismiss
+    @State private var current = ""
     @State private var password = ""
     @State private var confirmation = ""
     @State private var isSaving = false
@@ -33,6 +34,11 @@ struct ChangePasswordView: View {
 
     var body: some View {
         Form {
+            Section {
+                SecureField("Current Password", text: $current)
+                    .textContentType(.password)
+            }
+
             Section {
                 SecureField("New Password", text: $password)
                     .textContentType(.newPassword)
@@ -54,7 +60,7 @@ struct ChangePasswordView: View {
                     ProgressView()
                 } else {
                     Button("Save") { save() }
-                        .disabled(!PasswordRules.acceptable(password, confirmation: confirmation))
+                        .disabled(current.isEmpty || !PasswordRules.acceptable(password, confirmation: confirmation))
                 }
             }
         }
@@ -66,7 +72,7 @@ struct ChangePasswordView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await store.changePassword(password, serverAddress: serverAddress)
+                try await store.changePassword(current: current, new: password, serverAddress: serverAddress)
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription
@@ -117,7 +123,7 @@ struct AccountsView: View {
                     }
                 }
             } footer: {
-                Text("Swipe left on an account to remove it. Viewers can only look; users can also change equipment; admins can also manage accounts and the server.")
+                Text("Swipe left on an account to remove it. Viewers can only look; operators can also change equipment, water flow and panel settings; admins can also manage accounts and the server.")
             }
         }
         .overlay {
@@ -218,6 +224,7 @@ private struct AccountDetailView: View {
     @State private var isSaving = false
     @State private var message: String?
     @State private var failed = false
+    @State private var confirmingReset = false
 
     init(account: AccountInfo, store: StatusStore, serverAddress: String, updated: @escaping (AccountInfo) -> Void) {
         self.account = account
@@ -252,7 +259,7 @@ private struct AccountDetailView: View {
                 SecureField("Confirm Password", text: $confirmation)
                     .textContentType(.newPassword)
                 Button("Reset Password") {
-                    save(role: nil, password: password)
+                    confirmingReset = true
                 }
                 .disabled(!PasswordRules.acceptable(password, confirmation: confirmation) || isSaving)
             } header: {
@@ -274,6 +281,15 @@ private struct AccountDetailView: View {
         }
         .navigationTitle(account.email)
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Reset \(account.email)’s password?", isPresented: $confirmingReset,
+                            titleVisibility: .visible) {
+            Button("Reset Password", role: .destructive) {
+                save(role: nil, password: password)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("\(account.email) is signed out on every device and must sign in with the new password.")
+        }
     }
 
     private func save(role: AccountRole?, password: String?) {
@@ -285,7 +301,7 @@ private struct AccountDetailView: View {
                 let result = try await client.updateAccount(account.email, role: role, password: password, token: token)
                 updated(result)
                 failed = false
-                message = password == nil ? "\(account.email) is now a \(result.role.title.lowercased())." : "Password reset."
+                message = password == nil ? "\(account.email) is now \(result.role.titleWithArticle)." : "Password reset."
                 self.password = ""
                 confirmation = ""
                 if account.email == store.credentials?.email {

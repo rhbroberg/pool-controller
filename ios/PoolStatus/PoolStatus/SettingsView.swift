@@ -23,18 +23,22 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Pool Name") {
-                    TextField(StatusView.defaultPoolName, text: $draftPoolName)
-                        .textInputAutocapitalization(.words)
-                        .submitLabel(.done)
-                }
-
+                // kept to few sections so Administration stays on screen without scrolling
                 Section {
-                    TextField("http://192.168.1.20:8080", text: $draftAddress)
-                        .keyboardType(.URL)
-                        .textContentType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    LabeledContent("Name") {
+                        TextField(StatusView.defaultPoolName, text: $draftPoolName)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.words)
+                            .submitLabel(.done)
+                    }
+                    LabeledContent("Server") {
+                        TextField("192.168.1.20:8080", text: $draftAddress)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.URL)
+                            .textContentType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
                     Picker("Retry Every", selection: $reconnectSeconds) {
                         ForEach(Self.reconnectChoices, id: \.self) { seconds in
                             Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
@@ -42,9 +46,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Server")
+                    Text("Pool")
                 } footer: {
-                    Text("Include the port, or use https with no port through the reverse proxy.")
+                    Text("The server attached to your pool controller, with its port.")
                 }
 
                 Section {
@@ -88,12 +92,15 @@ struct SettingsView: View {
                     if let signInError {
                         Text(signInError).foregroundStyle(.red)
                     } else if store.credentials == nil {
-                        Text("Signing in lets the app turn equipment on and off. Status is visible without an account.")
+                        Text("Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.")
                     }
                 }
 
-                if store.isAdmin {
-                    Section("Administration") {
+                Section(store.isAdmin ? "History & Administration" : "History") {
+                    NavigationLink("Event Log") {
+                        EventLogView()
+                    }
+                    if store.isAdmin {
                         NavigationLink("Accounts") {
                             AccountsView(store: store, serverAddress: serverAddress)
                         }
@@ -104,23 +111,16 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: Binding(get: { store.commissioning != nil },
-                                        set: { if !$0 { store.cancelCommissioning() } })) {
+            .fullScreenCover(isPresented: Binding(get: { store.commissioning != nil },
+                                                  set: { if !$0 { store.cancelCommissioning() } })) {
                 CommissioningView(store: store, serverAddress: trimmedAddress)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                // every change applies: the picker and sign-in at once, the text fields on Done
+                // or when the sheet is swiped away, so there's nothing for a Cancel to undo
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        serverAddress = trimmedAddress
-                        let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        poolName = name.isEmpty ? StatusView.defaultPoolName : name
-                        dismiss()
-                    }
-                    .disabled(trimmedAddress.isEmpty)
+                    Button("Done") { dismiss() }
                 }
             }
             .onAppear {
@@ -128,6 +128,15 @@ struct SettingsView: View {
                 draftPoolName = poolName
             }
         }
+        .onDisappear(perform: commitDrafts)
+    }
+
+    private func commitDrafts() {
+        if !trimmedAddress.isEmpty {
+            serverAddress = trimmedAddress
+        }
+        let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
+        poolName = name.isEmpty ? StatusView.defaultPoolName : name
     }
 
     private func signIn() {
@@ -154,6 +163,7 @@ struct ServerMaintenanceView: View {
     let store: StatusStore
     let serverAddress: String
 
+    @State private var confirmingRestart = false
     @State private var confirmingReset = false
     @State private var isWorking = false
     @State private var message: String?
@@ -162,7 +172,7 @@ struct ServerMaintenanceView: View {
         Form {
             Section {
                 Button("Restart Server") {
-                    restartServer()
+                    confirmingRestart = true
                 }
             } footer: {
                 Text("The server stops and its container starts it again. The app reconnects when it’s back.")
@@ -191,6 +201,14 @@ struct ServerMaintenanceView: View {
         .disabled(!store.isAdmin || isWorking)
         .navigationTitle("Server Maintenance")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Restart the server?", isPresented: $confirmingRestart, titleVisibility: .visible) {
+            Button("Restart Server") {
+                restartServer()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Status, equipment changes and panel keys stop for everyone until it’s back, usually within a minute.")
+        }
         .confirmationDialog("Are you sure?", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Factory Reset", role: .destructive) {
                 factoryReset()
