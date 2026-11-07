@@ -28,7 +28,9 @@ struct EquipmentControl: Identifiable {
         EquipmentControl(name: "superchlorinate", systemImage: "bubbles.and.sparkles", tint: .teal),
         // the heater key switches between Manual Off and Auto Control on the panel display
         EquipmentControl(name: "heater1", systemImage: "flame", tint: .orange,
-                         stateReading: "heater1 mode", onText: "Auto")
+                         stateReading: "heater1 mode", onText: "Auto"),
+        // valve4 runs the heat pump at this installation
+        EquipmentControl(name: "valve4", systemImage: "heat.waves", tint: .pink)
     ]
 }
 

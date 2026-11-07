@@ -49,7 +49,7 @@ var event = (eventType, timestamp, status, raw) => ({
 var generate = (start, end) => {
     const events = [];
     const lastInfo = {};
-    const switches = { pool: true, 'check system': false, filter: false, heater1: false, aux14: false, valve3: false, aux1: false };
+    const switches = { pool: true, 'check system': false, filter: false, heater1: false, valve4: false, aux14: false, valve3: false, aux1: false };
     let pool = 78;
     let spa;
 
@@ -72,6 +72,8 @@ var generate = (start, end) => {
         const air = 62 + 12 * Math.sin(2 * Math.PI * (hour - 9) / 24) + 4 * Math.sin(2 * Math.PI * day / 9);
         const spaSession = day % 2 === 0 && hour >= 18 && hour < 20.5;
         const poolHeating = !spaSession && hour >= 7 && hour < 10 && pool < 84;
+        // the heat pump tops up the pool through the warm afternoon
+        const heatPumping = !spaSession && hour >= 12 && hour < 16 && pool < 84;
         if (spaSession && typeof spa === 'undefined') {
             spa = pool;
         }
@@ -80,6 +82,7 @@ var generate = (start, end) => {
         const next = Object.assign({}, switches, {
             filter: (hour >= 6 && hour < 22) || spaSession,
             heater1: poolHeating || spaHeating,
+            valve4: heatPumping,
             aux14: spaSession,
             valve3: spaSession,
             aux1: spaSession
@@ -90,7 +93,7 @@ var generate = (start, end) => {
             events.push(event('status', timestamp, changed.map((name) => ({ name: name, value: next[name] ? 1 : 0 })), statusFrame(switches)));
         }
 
-        pool += poolHeating ? 0.4 : (air - pool) * 0.006;
+        pool += poolHeating ? 0.4 : heatPumping ? 0.2 : (air - pool) * 0.006;
         recordInfo(timestamp, 'ambient', air);
         recordInfo(timestamp, 'pool temp', pool);
         if (spaSession) {

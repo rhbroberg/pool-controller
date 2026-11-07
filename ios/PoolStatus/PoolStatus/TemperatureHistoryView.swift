@@ -24,7 +24,8 @@ struct TemperatureHistoryView: View {
     static let refreshInterval: Duration = .seconds(60)
     static let waterColor = Color.blue
     static let airColor = Color.gray
-    static let heatingColor = Color.orange
+    static let heaterColor = Color.orange
+    static let heatPumpColor = Color.pink
 
     let water: WaterBody
 
@@ -63,7 +64,8 @@ struct TemperatureHistoryView: View {
         let end = model.loadedThrough.map { min($0, now) } ?? now
         let segments = model.waterSegments(through: end)
         let air = showAir ? model.airSegment(through: end) : []
-        let heating = model.heatingIntervals(through: end)
+        let heater = model.heatingIntervals(from: TemperatureHistoryModel.heaterName, through: end)
+        let heatPump = model.heatingIntervals(from: TemperatureHistoryModel.heatPumpName, through: end)
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -89,7 +91,7 @@ struct TemperatureHistoryView: View {
                     }
                 }
 
-                chart(segments: segments, air: air, heating: heating)
+                chart(segments: segments, air: air, heater: heater, heatPump: heatPump)
                     .frame(height: 320)
 
                 legend
@@ -149,12 +151,18 @@ struct TemperatureHistoryView: View {
     }
 
     private func chart(segments: [TemperatureHistoryModel.Segment], air: [TemperatureHistoryModel.Sample],
-                       heating: [TemperatureHistoryModel.Interval]) -> some View {
+                       heater: [TemperatureHistoryModel.Interval],
+                       heatPump: [TemperatureHistoryModel.Interval]) -> some View {
         Chart {
-            ForEach(heating) { interval in
-                RectangleMark(xStart: .value("Heating starts", interval.start),
-                              xEnd: .value("Heating ends", interval.end))
-                    .foregroundStyle(Self.heatingColor.opacity(0.18))
+            ForEach(heater) { interval in
+                RectangleMark(xStart: .value("Heater starts", interval.start),
+                              xEnd: .value("Heater stops", interval.end))
+                    .foregroundStyle(Self.heaterColor.opacity(0.18))
+            }
+            ForEach(heatPump) { interval in
+                RectangleMark(xStart: .value("Heat pump starts", interval.start),
+                              xEnd: .value("Heat pump stops", interval.end))
+                    .foregroundStyle(Self.heatPumpColor.opacity(0.16))
             }
             ForEach(air) { sample in
                 LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
@@ -229,8 +237,11 @@ struct TemperatureHistoryView: View {
                     Capsule().fill(Self.airColor).frame(width: 18, height: 2)
                 }
             }
-            legendItem("Heating") {
-                RoundedRectangle(cornerRadius: 2).fill(Self.heatingColor.opacity(0.35)).frame(width: 14, height: 12)
+            legendItem("Heater") {
+                RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(0.35)).frame(width: 14, height: 12)
+            }
+            legendItem("Heat Pump") {
+                RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(0.3)).frame(width: 14, height: 12)
             }
         }
         .font(.footnote)

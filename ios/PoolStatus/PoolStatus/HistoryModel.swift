@@ -55,6 +55,7 @@ final class TemperatureHistoryModel {
 
     static let airName = "ambient"
     static let heaterName = "heater1"
+    static let heatPumpName = "valve4"
     static let spaFilterName = "aux14"
 
     let water: WaterBody
@@ -74,7 +75,7 @@ final class TemperatureHistoryModel {
     }
 
     private var names: [String] {
-        [water.temperatureName, Self.airName, Self.heaterName, Self.spaFilterName]
+        [water.temperatureName, Self.airName, Self.heaterName, Self.heatPumpName, Self.spaFilterName]
     }
 
     func samples(_ name: String) -> [Sample] {
@@ -165,9 +166,10 @@ final class TemperatureHistoryModel {
 
     // MARK: - Chart data
 
-    /// Times the heater was firing for this body of water, ending no later than `end`.
-    func heatingIntervals(through end: Date) -> [Interval] {
-        let heater = samples(Self.heaterName).map { (date: $0.date, heater: Optional($0.value != 0), spa: Bool?.none) }
+    /// Times `source` (the heater or the heat pump) was running for this body of water,
+    /// ending no later than `end`.
+    func heatingIntervals(from source: String, through end: Date) -> [Interval] {
+        let heater = samples(source).map { (date: $0.date, heater: Optional($0.value != 0), spa: Bool?.none) }
         let spaFilter = samples(Self.spaFilterName).map { (date: $0.date, heater: Bool?.none, spa: Optional($0.value != 0)) }
         let changes = (heater + spaFilter).sorted { $0.date < $1.date }
 

@@ -13,19 +13,17 @@ const RESPONSE_DELAY_MS = 100;
 const KEY_ECHO_MS = 4000;
 const panelKeyLabels = { menu: 'MENU', left: '< LEFT', right: 'RIGHT >', minus: '- DOWN', plus: '+ UP' };
 
-// control buttons whose name differs from the status bit they drive
-const statusNameForControl = {
-    'valve4/heater2': 'valve4'
-};
 // in sample-various-bin, the aux14 (spa filter) key brings valve3 and aux1 on and off with it
 const linkedSwitches = {
     aux14: ['valve3', 'aux1']
 };
-// the captures never show a spa temperature; one is shown while the spa filter runs
+// the captures never show a spa temperature and rarely the pool's; the simulator shows the spa
+// temperature while the spa filter runs and the pool temperature otherwise, this often
 const SPA_TEMP_EVERY_MS = 5000;
 // while the heater is in auto it fires, warming the spa if the spa filter runs and the pool
-// otherwise; with it off, both cool slowly
+// otherwise; the heat pump (valve4) does the same at half the rate. With both off, the water cools.
 const TEMP_STEP_MS = 30 * 1000;
+const HEAT_PUMP_STEPS_PER_DEGREE = 2;
 const POOL_MAX_F = 88;
 const SPA_MAX_F = 104;
 const SPA_COOLS_TO_F = 90;
@@ -128,11 +126,13 @@ var setSwitch = (name, on) => {
 var stepTemperatures = () => {
     tempSteps++;
     const spaRunning = isOn('aux14');
-    if (heaterAuto) {
+    const heatPumpRunning = isOn('valve4');
+    if (heaterAuto || heatPumpRunning) {
+        const gain = heaterAuto || tempSteps % HEAT_PUMP_STEPS_PER_DEGREE === 0 ? 1 : 0;
         if (spaRunning) {
-            spaTempF = Math.min(SPA_MAX_F, spaTempF + 1);
+            spaTempF = Math.min(SPA_MAX_F, spaTempF + gain);
         } else {
-            poolTempF = Math.min(POOL_MAX_F, poolTempF + 1);
+            poolTempF = Math.min(POOL_MAX_F, poolTempF + gain);
         }
     } else {
         if (spaTempF > SPA_COOLS_TO_F) {
@@ -173,9 +173,11 @@ var listen = ((filename, cb) => {
             emit(heaterFrame());
         } else if (pool) {
             emit(displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
-        } else if (kind === 'DisplayUpdateEvent' && isOn('aux14') && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
+        } else if (kind === 'DisplayUpdateEvent' && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
             spaTempShownAt = Date.now();
-            emit(displayFrame(`Spa Temp   ${spaTempF}_F`, ''));
+            emit(isOn('aux14')
+                ? displayFrame(`Spa Temp   ${spaTempF}_F`, '')
+                : displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
         } else {
             emit(frame);
         }
@@ -203,7 +205,7 @@ var writeEvent = ((message) => {
         }
 
         pressed.filter((name) => !panelKeyLabels[name] && name !== 'heater1').forEach((name) => {
-            const statusName = statusNameForControl[name] || name;
+            const statusName = name;
             const bit = StatusEvent.bitPosition(statusName);
             if (typeof bit === 'undefined') {
                 logger.debug(`simulator: '${name}' has no status bit to change`);

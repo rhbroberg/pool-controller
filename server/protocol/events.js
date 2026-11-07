@@ -37,7 +37,9 @@ const controlMap = new TwoWayMap({
     // bits 8-15 follow test-data/pool-decode.txt; valve3 and valve4 are confirmed by
     // presses in sample-various-bin, heater1 is not
     '8': 'valve3', // 0x00 00 01 00: 'valve3',
-    '9': 'valve4/heater2', // 0x00 00 02 00: 'valve4/heater2',
+    // pool-decode.txt calls this valve4/heater2; named for the status bit it drives so requests
+    // can be checked against it
+    '9': 'valve4', // 0x00 00 02 00: 'valve4',
     '10': 'heater1', // 0x00 00 04 00: 'heater1',
     '11': 'aux8', // 0x00 00 08 00: 'aux8',
 
@@ -73,7 +75,8 @@ const controlMap = new TwoWayMap({
 const panelLabels = {
     aux3: 'Yard Lights', // key 00 08 00 00, status byte 1 bit 0x04; the 2019 capture shows "Yard Light"
     aux5: 'Blower', // key 00 20 00 00, status byte 1 bit 0x10
-    aux14: 'Spa Filter' // key 00 00 00 02, status byte 3 bit 0x01; also brings valve3 and aux1 on
+    aux14: 'Spa Filter', // key 00 00 00 02, status byte 3 bit 0x01; also brings valve3 and aux1 on
+    valve4: 'Heat Pump' // key 00 00 02 00, status byte 1 bit 0x40; the capture's panel shows "Valve4"
 };
 
 class Event {
