@@ -160,6 +160,18 @@ struct StatusClient {
         _ = try await send(request)
     }
 
+    func fetchHeating() async throws -> HeatingStatus {
+        try JSONDecoder().decode(HeatingStatus.self, from: try await send(URLRequest(url: try url(for: "heating"))))
+    }
+
+    /// Sets the temperature `device` drives `body` toward.
+    func setSetpoint(_ degrees: Int, device: HeatingDevice, body: WaterBody, token: String) async throws {
+        var request = URLRequest(url: try url(for: "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)"))
+        request.httpMethod = "PUT"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
+    }
+
     /// Asks the server to press the device's button if it isn't already in `on` state.
     /// The controller confirms the change on a later status frame.
     func setDevice(_ name: String, on: Bool, token: String) async throws {

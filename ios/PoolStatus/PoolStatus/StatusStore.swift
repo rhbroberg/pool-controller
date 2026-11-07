@@ -125,6 +125,8 @@ final class StatusStore {
     static let confirmationTimeout: Duration = .seconds(15)
 
     private(set) var readings: [StatusReading] = []
+    /// Setpoints and what the heater and heat pump are doing; nil from a server without them.
+    private(set) var heating: HeatingStatus?
     private(set) var lastRefresh: Date?
     private(set) var errorMessage: String?
     private(set) var isLoading = false
@@ -212,6 +214,31 @@ final class StatusStore {
         pending[name]
     }
 
+    /// What the heater or heat pump behind `control` is doing; nil for other equipment.
+    func heating(for control: EquipmentControl) -> HeatingStatus.Device? {
+        HeatingDevice(controlName: control.name).flatMap { heating?.device($0) }
+    }
+
+    /// Saves each changed setpoint for `device`, then refreshes so the tiles show the new targets.
+    func setSetpoints(_ setpoints: [WaterBody: Int], device: HeatingDevice, serverAddress: String) async throws {
+        guard let credentials else {
+            throw StatusClientError.unauthorized(message: nil)
+        }
+        let client = StatusClient(serverAddress: serverAddress)
+        do {
+            for (body, degrees) in setpoints where heating?.setpoint(device, for: body) != degrees {
+                try await client.setSetpoint(degrees, device: device, body: body, token: credentials.token)
+            }
+        } catch StatusClientError.unauthorized {
+            signOut()
+            throw StatusClientError.unauthorized(message: "Your sign-in is no longer valid. Sign in again to change setpoints.")
+        } catch StatusClientError.server(code: 403, message: _) {
+            await refreshAccount(serverAddress: serverAddress)
+            throw StatusClientError.server(code: 403, message: "Your account can’t change setpoints.")
+        }
+        await refresh(from: serverAddress)
+    }
+
     /// Refreshes while connected; after losing the server, retries every `reconnectSeconds`.
     /// Runs until the calling task is cancelled.
     func poll(serverAddress: String, reconnectSeconds: Int) async {
@@ -237,7 +264,11 @@ final class StatusStore {
         defer { isLoading = false }
 
         do {
-            readings = try await StatusClient(serverAddress: serverAddress).fetchStatus()
+            let client = StatusClient(serverAddress: serverAddress)
+            // heating is extra detail; a server that doesn't offer it still counts as connected
+            async let heatingStatus = try? client.fetchHeating()
+            readings = try await client.fetchStatus()
+            heating = await heatingStatus
             lastRefresh = .now
             errorMessage = nil
             markConnected()

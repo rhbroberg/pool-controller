@@ -17,6 +17,8 @@ struct StatusView: View {
     @State private var pollGeneration = 0
     /// A change waiting for the user to confirm it.
     @State private var confirming: ChangeRequest?
+    /// The heater or heat pump whose setpoints are open.
+    @State private var setpointDevice: HeatingDevice?
 
     private struct PollKey: Equatable {
         let serverAddress: String
@@ -121,6 +123,9 @@ struct StatusView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView(serverAddress: $serverAddress, store: store)
             }
+            .sheet(item: $setpointDevice) { device in
+                SetpointView(device: device, store: store, serverAddress: serverAddress)
+            }
             .fullScreenCover(isPresented: Binding(get: { serverAddress.isEmpty }, set: { _ in })) {
                 ServerSetupView { address in
                     serverAddress = address
@@ -180,12 +185,14 @@ struct StatusView: View {
     private func equipmentGrid(_ group: EquipmentControl.Group) -> some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
             ForEach(EquipmentControl.controls(in: group)) { control in
+                let device = HeatingDevice(controlName: control.name)
                 EquipmentTile(control: control,
                               isOn: store.isOn(control),
                               pending: store.pendingState(control.name),
-                              isLocked: !store.canControl) {
-                    request(control)
-                }
+                              heating: store.heating(for: control),
+                              isLocked: !store.canControl,
+                              action: { request(control) },
+                              showSetpoints: device != nil && store.heating != nil ? { setpointDevice = device } : nil)
             }
         }
     }
@@ -490,68 +497,137 @@ private struct WaterFlowControl: View {
     }
 }
 
-/// One piece of equipment: filled with its colour while the controller reports it on.
+/// One piece of equipment: outlined in its colour while the controller reports it on, and filled
+/// while it's running. For the heater and heat pump those differ: on is enabled, running is
+/// producing heat, and a thermometer opens their setpoints.
 private struct EquipmentTile: View {
     let control: EquipmentControl
     /// The state the controller last reported.
     let isOn: Bool
     /// The state requested and not yet confirmed.
     let pending: Bool?
+    /// What the heater or heat pump is doing, for those two.
+    let heating: HeatingStatus.Device?
     /// Shows the state but can't be changed by this account.
     let isLocked: Bool
     let action: () -> Void
+    /// Opens the setpoints, for the heater and heat pump.
+    let showSetpoints: (() -> Void)?
+
+    private var isRunning: Bool {
+        heating.map { isOn && $0.heating } ?? isOn
+    }
 
     private var stateText: String {
-        pending.map(control.pendingText) ?? control.stateText(isOn)
+        if let pending {
+            return control.pendingText(pending)
+        }
+        guard isOn, let heating else {
+            return control.stateText(isOn)
+        }
+        // with no pump running, no water reaches the heaters
+        guard let body = heating.body else {
+            return "\(control.stateText(true)) · pump off"
+        }
+        let water = body.title.lowercased()
+        if heating.heating {
+            return "Heating \(water)"
+        }
+        if heating.callingForHeat {
+            return "Waiting · \(water)"
+        }
+        if heating.temperature == nil {
+            return "\(control.stateText(true)) · \(water)"
+        }
+        return "\(body.title) at setpoint"
+    }
+
+    /// The setpoint being driven toward, while enabled and water is flowing to the heaters.
+    private var targetSetpoint: Int? {
+        isOn && pending == nil ? heating?.setpoint : nil
+    }
+
+    private var accessibilityState: String {
+        guard let targetSetpoint, let body = heating?.body else {
+            return stateText
+        }
+        return "\(stateText), \(body.title.lowercased()) setpoint \(targetSetpoint) degrees"
     }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: control.systemImage)
-                    .symbolVariant(isOn ? .fill : .none)
-                    .font(.title3)
+        HStack(spacing: 0) {
+            Button(action: action) {
+                HStack(spacing: 10) {
+                    Image(systemName: control.systemImage)
+                        .symbolVariant(isRunning ? .fill : .none)
+                        .font(.title3)
+                        .foregroundStyle(isOn ? control.tint : Color.secondary)
+                        // icons differ in size; a fixed frame keeps the names lined up
+                        .frame(width: 26, height: 26)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(control.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text(stateText)
+                            .font(.caption.weight(isOn ? .semibold : .regular))
+                            .foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    Spacer(minLength: 0)
+                    if pending != nil {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, showSetpoints == nil ? 10 : 2)
+                .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(TileButtonStyle())
+            .disabled(pending != nil)
+            .sensoryFeedback(.impact(weight: .light), trigger: pending != nil) { _, isPending in isPending }
+            .accessibilityLabel(control.title)
+            .accessibilityValue(accessibilityState)
+            .accessibilityHint(isLocked ? "Locked" : "")
+            .accessibilityAddTraits(.isToggle)
+
+            if let showSetpoints {
+                Button(action: showSetpoints) {
+                    VStack(spacing: 0) {
+                        Image(systemName: "thermometer.medium")
+                            .font(targetSetpoint == nil ? .subheadline.weight(.semibold) : .caption2.weight(.semibold))
+                        if let targetSetpoint {
+                            Text("\(targetSetpoint)°")
+                                .font(.caption2.weight(.bold))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
                     .foregroundStyle(isOn ? control.tint : Color.secondary)
-                    // icons differ in size; a fixed frame keeps the names lined up
-                    .frame(width: 26, height: 26)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(control.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(stateText)
-                        .font(.caption.weight(isOn ? .semibold : .regular))
-                        .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
+                    .frame(width: 44, height: 50)
+                    .contentShape(.rect)
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                Spacer(minLength: 0)
-                if pending != nil {
-                    ProgressView()
-                        .controlSize(.small)
-                } else if isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                .buttonStyle(TileButtonStyle())
+                .accessibilityLabel("\(control.title) Setpoints")
             }
-            .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
-            .background(isOn ? control.tint.opacity(0.16) : Color(.secondarySystemGroupedBackground),
-                        in: .rect(cornerRadius: 14))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(isOn ? control.tint.opacity(0.55) : Color.clear, lineWidth: 1.5)
-            }
-            .contentShape(.rect)
         }
-        .buttonStyle(TileButtonStyle())
-        .disabled(pending != nil)
+        .background(isRunning ? control.tint.opacity(0.16) : Color(.secondarySystemGroupedBackground),
+                    in: .rect(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(isOn ? control.tint.opacity(0.55) : Color.clear, lineWidth: 1.5)
+        }
         .animation(.default, value: isOn)
-        .sensoryFeedback(.impact(weight: .light), trigger: pending != nil) { _, isPending in isPending }
-        .accessibilityLabel(control.title)
-        .accessibilityValue(stateText)
-        .accessibilityHint(isLocked ? "Locked" : "")
-        .accessibilityAddTraits(.isToggle)
+        .animation(.default, value: isRunning)
     }
 }
 
