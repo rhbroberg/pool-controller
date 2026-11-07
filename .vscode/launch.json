@@ -9,7 +9,7 @@
         "request": "launch",
         "name": "Tail dash-eff",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "/tmp/in", "-d", "tail"]
+        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "tail", "--from-start"]
     },
     {
         "type": "node",

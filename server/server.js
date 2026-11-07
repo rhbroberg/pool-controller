@@ -25,6 +25,7 @@ const express = require('express');
 const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
 var io;
+var replayStarted = false;
 var controlRequests = [];
 var controlVerification = [];
 var driver;
@@ -33,6 +34,8 @@ var argv = yargs
     .default('f', __dirname + '/../test-data/sample-various-bin')
     .default('l', 'info')
     .default('d', 'file')
+    .boolean('from-start')
+    .default('from-start', false)
     .argv;
 
 var logger = log4js.getLogger();
@@ -66,6 +69,11 @@ if (argv.d !== 'file') {
 
         io.on('connection', (socket) => { // eslint-disable-line no-unused-vars// eslint-disable-line no-unused-vars
             logger.debug('connecting from client', socket);
+            if (argv.fromStart && argv.d === 'tail' && !replayStarted) {
+                replayStarted = true;
+                logger.info('browser connected, replaying', argv.f);
+                driver.listen(argv.f, handleHunk, { fromStart: true });
+            }
             socket.on('join', (params, callback) => {
                 socket.join('datastream');
 
@@ -314,4 +322,8 @@ if (argv.d === 'file') {
 
 environmentService.registerControlListener(controlListener);
 deviceService.registerControlListener(controlListener);
-driver.listen(argv.f, handleHunk);
+if (argv.d === 'tail' && argv.fromStart) {
+    logger.info('replay waits for a browser connection');
+} else if (driver) {
+    driver.listen(argv.f, handleHunk);
+}

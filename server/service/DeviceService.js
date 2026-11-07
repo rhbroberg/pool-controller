@@ -18,37 +18,33 @@ exports.getDeviceState = function(deviceId) {
         var examples = {};
         var current;
 
-        await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 }).exec((err, presentValue) => {
-            current = presentValue;
-        });
+        current = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 });
+        if (!current) {
+            resolve();
+            return;
+        }
 
         const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId; });
         const deviceCurrentValue = deviceCurrent ? deviceCurrent.value : 0;
 
-        await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 }).exec((err, lastChanged) => {
-            if (lastChanged) {
-                const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
-                examples['application/json'] = {
-                    'id': devicePrevious._id,
-                    'previousUpdate': lastChanged.timestamp,
-                    'timestamp': current.timestamp,
-                    'name': devicePrevious.name,
-                    'value': deviceCurrentValue
-                };
-            } else {
-                if (deviceCurrent) {
-                    examples['application/json'] = {
-                        'id': deviceCurrent._id,
-                        'timestamp': current.timestamp,
-                        'name': deviceCurrent.name,
-                        'value': deviceCurrentValue
-                    };
-                } else {
-                    // should return not found
-                }
-
-            }
-        });
+        const lastChanged = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 });
+        if (lastChanged) {
+            const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
+            examples['application/json'] = {
+                'id': devicePrevious._id,
+                'previousUpdate': lastChanged.timestamp,
+                'timestamp': current.timestamp,
+                'name': devicePrevious.name,
+                'value': deviceCurrentValue
+            };
+        } else if (deviceCurrent) {
+            examples['application/json'] = {
+                'id': deviceCurrent._id,
+                'timestamp': current.timestamp,
+                'name': deviceCurrent.name,
+                'value': deviceCurrentValue
+            };
+        }
 
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
@@ -71,14 +67,13 @@ exports.getDevices = function(skip, limit) { // eslint-disable-line no-unused-va
         var examples = {};
         var indicators = [];
 
-        await Event.findOne({ 'eventType': 'status' }).sort({ timestamp: -1 }).exec((err, doc) => {
-            if (doc) {
-                logger.trace('found most recent status', doc);
-                doc.status.forEach(function(indicator) {
-                    indicators.push(indicator.name);
-                });
-            }
-        });
+        const doc = await Event.findOne({ 'eventType': 'status' }).sort({ timestamp: -1 });
+        if (doc) {
+            logger.trace('found most recent status', doc);
+            doc.status.forEach(function(indicator) {
+                indicators.push(indicator.name);
+            });
+        }
 
         examples['application/json'] = indicators;
         if (Object.keys(examples).length > 0) {

@@ -12,7 +12,7 @@ class FrameParser {
         this.subParser;
         this.parseErrors = 0;
 
-        this.payload = new Buffer.allocUnsafe(128);
+        this.payload = Buffer.allocUnsafe(128);
     }
 
     toHexString() {

@@ -24,17 +24,16 @@ exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-var
     return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples = {};
 
-        await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 }).exec((err, doc) => {
-            if (doc) {
-                examples['application/json'] = {
-                    'id': doc.status[0]._id,
-                    'units': 'fahrenheit',
-                    'timestamp': doc.timestamp,
-                    'state': doc.status[0].value ? 'on' : 'off',
-                    'setpoint': '42'
-                };
-            }
-        });
+        const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 });
+        if (doc) {
+            examples['application/json'] = {
+                'id': doc.status[0]._id,
+                'units': 'fahrenheit',
+                'timestamp': doc.timestamp,
+                'state': doc.status[0].value ? 'on' : 'off',
+                'setpoint': '42'
+            };
+        }
 
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
@@ -124,18 +123,17 @@ exports.setHeaterState = function(poolId, state) { // eslint-disable-line no-unu
 };
 
 async function getMostRecentInfo(name, statuses) {
-    await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': name } } }).sort({ timestamp: -1 }).exec((err, doc) => {
-        logger.debug('found newest env for ', name, doc, err);
-        if (doc) {
-            statuses.push({
-                'name': doc.status[0].name,
-                'id': doc.status[0]._id,
-                'units': 'fahrenheit',
-                'value': doc.status[0].value,
-                'timestamp': doc.timestamp
-            });
-        }
-    });
+    const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': name } } }).sort({ timestamp: -1 });
+    logger.debug('found newest env for ', name, doc);
+    if (doc) {
+        statuses.push({
+            'name': doc.status[0].name,
+            'id': doc.status[0]._id,
+            'units': 'fahrenheit',
+            'value': doc.status[0].value,
+            'timestamp': doc.timestamp
+        });
+    }
 }
 
 var controlCB; // eslint-disable-line no-unused-vars

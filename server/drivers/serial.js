@@ -1,11 +1,11 @@
 const log4js = require('log4js');
-var SerialPort = require('serialport');
+const { SerialPort } = require('serialport');
 var logger = log4js.getLogger();
 var port;
 
 var writeEvent = ((message) => {
     logger.trace('writing message', message.length, JSON.stringify(message));
-    var result = port.write(message, 'binary', function(err) {
+    var result = port.write(message, function(err) {
         if (err) {
             return logger.error('Error on write: ', err.message);
         }
@@ -21,7 +21,7 @@ var writeEvent = ((message) => {
 });
 
 var listen = ((filename, cb) => {
-    port = new SerialPort(filename, { baudRate: 19200, autoOpen: false });
+    port = new SerialPort({ path: filename, baudRate: 19200, autoOpen: false });
 
     port.open(function(err) {
         if (err) {
