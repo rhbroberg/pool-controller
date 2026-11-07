@@ -260,6 +260,63 @@ paths:
       - OAuth2:
         - "control"
       x-swagger-router-controller: "Water"
+  /heating:
+    get:
+      tags:
+      - "Heating"
+      description: "every setpoint, and what the heater and heat pump are doing. They are in series, so both drive toward the setpoint of the same body of water: the spa while the spa filter (aux14) runs; otherwise, while the filter runs, the spa in spa flow and the pool in pool or spillover flow. A device that is enabled calls for heat only while that water is below its setpoint, and calls again once it cools. The heater's heating comes from the controller's firing signal; the heat pump has none, so it counts as heating while it is enabled and calling for heat. Until the server can read the controller's setpoints, setpointsReachController is false: each starts at 80°F and a change is kept by the server only."
+      operationId: "getHeating"
+      parameters: []
+      responses:
+        200:
+          description: "setpoints and heating state"
+          schema:
+            $ref: "#/definitions/Heating"
+      x-swagger-router-controller: "Heating"
+  /heating/setpoints/{body}/{device}:
+    get:
+      tags:
+      - "Heating"
+      description: "the setpoint one heating device uses for one body of water"
+      operationId: "getSetpoint"
+      parameters:
+      - $ref: "#/parameters/heatedBody"
+      - $ref: "#/parameters/heatingDevice"
+      responses:
+        200:
+          description: "the setpoint"
+          schema:
+            $ref: "#/definitions/Setpoint"
+      x-swagger-router-controller: "Heating"
+  /heating/setpoints/{body}/{device}/{degrees}:
+    put:
+      tags:
+      - "Heating"
+      description: "sets the temperature one heating device drives one body of water toward"
+      operationId: "setSetpoint"
+      parameters:
+      - $ref: "#/parameters/heatedBody"
+      - $ref: "#/parameters/heatingDevice"
+      - name: "degrees"
+        in: "path"
+        required: true
+        type: "integer"
+        minimum: 65
+        maximum: 104
+        description: "the setpoint in °F"
+      responses:
+        200:
+          description: "the setpoint is changed"
+          schema:
+            $ref: "#/definitions/SetpointChange"
+        400:
+          description: "not a body, device or setpoint the controller has"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "control"
+      x-swagger-router-controller: "Heating"
   /panel/display:
     get:
       tags:
@@ -751,6 +808,25 @@ paths:
       - OAuth2:
         - "admin"
       x-swagger-router-controller: "System"
+parameters:
+  heatedBody:
+    name: "body"
+    in: "path"
+    required: true
+    type: "string"
+    enum:
+    - "pool"
+    - "spa"
+    description: "the body of water"
+  heatingDevice:
+    name: "device"
+    in: "path"
+    required: true
+    type: "string"
+    enum:
+    - "heater1"
+    - "heatpump"
+    description: "the heater (heater1) or the heat pump (valve4)"
 securityDefinitions:
   BasicAuth:
     type: "basic"
@@ -1035,6 +1111,90 @@ definitions:
       requestedAt:
         type: "string"
         format: "date-time"
+  Heating:
+    type: "object"
+    properties:
+      units:
+        type: "string"
+        enum:
+        - "fahrenheit"
+      target:
+        type: "string"
+        description: "the body the heaters drive toward now: pool, spa, or null while neither pump runs"
+      minimum:
+        type: "integer"
+      maximum:
+        type: "integer"
+      setpointsReachController:
+        type: "boolean"
+        description: "false while the server keeps the setpoints itself rather than reading and setting the controller's"
+      setpoints:
+        type: "object"
+        description: "each body's setpoint for each device"
+        properties:
+          pool:
+            $ref: "#/definitions/DeviceSetpoints"
+          spa:
+            $ref: "#/definitions/DeviceSetpoints"
+      devices:
+        type: "object"
+        properties:
+          heater1:
+            $ref: "#/definitions/HeatingDevice"
+          heatpump:
+            $ref: "#/definitions/HeatingDevice"
+  DeviceSetpoints:
+    type: "object"
+    properties:
+      heater1:
+        type: "integer"
+      heatpump:
+        type: "integer"
+  HeatingDevice:
+    type: "object"
+    properties:
+      enabled:
+        type: "boolean"
+        description: "switched on (the heater in Auto); null until the controller has reported it"
+      heating:
+        type: "boolean"
+        description: "actually producing heat"
+      callingForHeat:
+        type: "boolean"
+        description: "enabled, and its water is below the setpoint"
+      body:
+        type: "string"
+        description: "the body it drives toward, as target"
+      setpoint:
+        type: "integer"
+        description: "its setpoint for that body"
+      temperature:
+        type: "number"
+        description: "that body's latest temperature"
+  Setpoint:
+    type: "object"
+    properties:
+      body:
+        type: "string"
+      device:
+        type: "string"
+      setpoint:
+        type: "integer"
+      units:
+        type: "string"
+  SetpointChange:
+    type: "object"
+    properties:
+      body:
+        type: "string"
+      device:
+        type: "string"
+      setpoint:
+        type: "integer"
+      previousSetpoint:
+        type: "integer"
+      units:
+        type: "string"
   SystemInfo:
     type: "object"
     properties:

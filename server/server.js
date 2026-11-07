@@ -17,6 +17,7 @@ const deviceService = require('./service/DeviceService');
 const panelService = require('./service/PanelService');
 const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
+const heatingService = require('./service/HeatingService');
 
 var { mongoose } = require('./mongoose');
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -467,6 +468,26 @@ deviceService.registerControlListener(controlListener);
 panelService.registerKeyListener(panelKeyListener);
 panelService.registerDisplaySource(() => latestDisplay);
 waterService.registerModeListener(waterModeListener);
+
+var knownTemp = (name) => {
+    const value = Number(presentTemp[name]);
+    return value > 0 ? value : undefined;
+};
+// the heater1 status bit is the heater firing; whether it is enabled is its Auto/Off mode
+heatingService.registerStateSource(() => ({
+    filter: isSwitchOn('filter'),
+    spaFilter: isSwitchOn('aux14'),
+    waterMode: currentWaterMode(),
+    enabled: {
+        heater1: typeof heaterAuto === 'undefined' ? undefined : heaterAuto === 1,
+        heatpump: currentStatusMask === 0 ? undefined : isSwitchOn('valve4')
+    },
+    heaterFiring: currentEnabledSwitches.includes('heater1'),
+    temperatures: { pool: knownTemp('pool temp'), spa: knownTemp('spa temp') }
+}));
+if (driver && driver.setpoints) {
+    heatingService.registerSetpoints(driver.setpoints);
+}
 
 // after a factory reset, forget what has been seen so the next frames are stored as new history
 systemService.registerResetListener(() => {

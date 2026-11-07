@@ -4,6 +4,7 @@ require('../config/config');
 var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
+const heatingService = require('./HeatingService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -19,23 +20,15 @@ const tempNames = {
  * poolId String 
  * returns HeaterState
  **/
-exports.getHeaterState = async function(poolId) { // eslint-disable-line no-unused-vars
-    var examples = {};
-
-    const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 });
-    if (doc) {
-        examples['application/json'] = {
-            'id': doc.status[0]._id,
-            'units': 'fahrenheit',
-            'timestamp': doc.timestamp,
-            'state': doc.status[0].value ? 'on' : 'off',
-            'setpoint': '42'
-        };
-    }
-
-    if (Object.keys(examples).length > 0) {
-        return examples[Object.keys(examples)[0]];
-    }
+exports.getHeaterState = async function(poolId) {
+    const heater = (await heatingService.getHeating()).devices.heater1;
+    return {
+        'id': 'heater1',
+        'units': 'fahrenheit',
+        'timestamp': new Date().toISOString(),
+        'state': heater.enabled ? 'on' : 'off',
+        'setPoint': heatingService.setpoint(poolId, 'heater1')
+    };
 };
 
 
