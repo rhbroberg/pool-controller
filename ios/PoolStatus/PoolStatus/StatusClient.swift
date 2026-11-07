@@ -164,6 +164,34 @@ struct StatusClient {
         return try Self.decoder.decode(HistoryResponse.self, from: data)
     }
 
+    /// One page of the event log; pass the previous page's `next` as `cursor` for the following one.
+    func fetchEvents(types: [String], user: String?, cursor: String?, ascending: Bool, limit: Int) async throws -> EventPage {
+        guard var components = URLComponents(url: try url(for: "events"), resolvingAgainstBaseURL: false) else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        var query = [
+            URLQueryItem(name: "types", value: types.joined(separator: ",")),
+            URLQueryItem(name: "order", value: ascending ? "asc" : "desc"),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let user {
+            query.append(URLQueryItem(name: "user", value: user))
+        }
+        if let cursor {
+            query.append(URLQueryItem(name: "cursor", value: cursor))
+        }
+        components.queryItems = query
+        guard let url = components.url else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        return try Self.decoder.decode(EventPage.self, from: try await send(URLRequest(url: url)))
+    }
+
+    /// Every account with a recorded action.
+    func fetchEventUsers() async throws -> [String] {
+        try JSONDecoder().decode([String].self, from: try await send(URLRequest(url: try url(for: "events/users"))))
+    }
+
     func fetchPanelDisplay() async throws -> PanelDisplay {
         let data = try await send(URLRequest(url: try url(for: "panel/display")))
         return try Self.decoder.decode(PanelDisplay.self, from: data)

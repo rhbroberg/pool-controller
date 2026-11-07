@@ -24,7 +24,7 @@ struct StatusView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
                     if store.connection == .disconnected {
                         DisconnectedBanner(reason: store.connectionFailure,
                                            lastRefresh: store.lastRefresh,
@@ -46,6 +46,20 @@ struct StatusView: View {
                     if !store.readings.isEmpty {
                         StatusCard(measurements: store.measurements)
                             .opacity(store.isConnected ? 1 : 0.5)
+
+                        HStack(spacing: 12) {
+                            NavigationLink {
+                                PanelView(store: store)
+                            } label: {
+                                PageButton(title: "Panel Control", systemImage: "dpad")
+                            }
+                            NavigationLink {
+                                EventLogView()
+                            } label: {
+                                PageButton(title: "Event Log", systemImage: "list.bullet.rectangle")
+                            }
+                        }
+                        .buttonStyle(.plain)
 
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Equipment")
@@ -74,22 +88,6 @@ struct StatusView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-
-                        NavigationLink {
-                            PanelView(store: store)
-                        } label: {
-                            HStack {
-                                Label("Panel Control", systemImage: "dpad")
-                                    .font(.headline)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding()
-                            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
-                        }
-                        .buttonStyle(.plain)
 
                         UpdateFooter(lastChange: store.lastSwitchChange, lastRefresh: store.lastRefresh)
                     }
@@ -148,6 +146,32 @@ struct StatusView: View {
         }
         let turnOn = !store.isOn(control)
         Task { await store.setControl(control, on: turnOn, serverAddress: serverAddress) }
+    }
+}
+
+/// A button on the main page that opens another page.
+private struct PageButton: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .foregroundStyle(Color.accentColor)
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .font(.subheadline.weight(.semibold))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+        .contentShape(.rect)
     }
 }
 
@@ -317,11 +341,11 @@ private struct ControlTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: control.systemImage)
                         .symbolVariant(isOn ? .fill : .none)
-                        .font(.title2)
+                        .font(.title3)
                         .foregroundStyle(isOn ? control.tint : Color.secondary)
                     Spacer()
                     if isPending {
@@ -332,6 +356,8 @@ private struct ControlTile: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                // icons differ in height; a fixed row keeps tiles side by side the same size
+                .frame(height: 26)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(control.title)
                         .font(.headline)
@@ -341,8 +367,9 @@ private struct ControlTile: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding()
-            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(isOn ? Color(.secondarySystemGroupedBackground) : Color(.tertiarySystemFill),
                         in: .rect(cornerRadius: 18))
             .shadow(color: .black.opacity(isOn ? 0.08 : 0), radius: 6, y: 2)
