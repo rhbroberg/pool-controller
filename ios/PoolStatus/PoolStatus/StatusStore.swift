@@ -70,10 +70,17 @@ final class StatusStore {
     private(set) var commissioning: Credentials?
     /// Requested state for controls the controller hasn't confirmed yet.
     private(set) var pending: [String: Bool] = [:]
+    /// Whether the saved account's role has been checked with the server since launch.
+    private var accountChecked = false
 
     private static let measurementOrder = ["pool temp", "spa temp", "ambient", "salt"]
 
     var isConnected: Bool { connection == .connected }
+
+    var role: AccountRole? { credentials?.role }
+    /// Signed in with a role that may change equipment and press panel keys.
+    var canControl: Bool { role?.canControl ?? false }
+    var isAdmin: Bool { role?.isAdmin ?? false }
 
     /// The spa filter runs on aux14 at this installation.
     var spaFilterOn: Bool {
@@ -121,6 +128,9 @@ final class StatusStore {
         while !Task.isCancelled {
             nextAttempt = nil
             await refresh(from: serverAddress)
+            if isConnected && credentials != nil && !accountChecked {
+                await refreshAccount(serverAddress: serverAddress)
+            }
 
             let wait = isConnected ? Self.refreshSeconds : reconnectSeconds
             if connection == .disconnected {
@@ -148,14 +158,13 @@ final class StatusStore {
 
     func signIn(email: String, password: String, serverAddress: String) async throws {
         let result = try await StatusClient(serverAddress: serverAddress).signIn(email: email, password: password)
-        let signedIn = Credentials(email: result.email, token: result.token)
+        let signedIn = Credentials(email: result.email, token: result.token, role: result.role)
         markConnected()
         if result.mustChangeCredentials == true {
             commissioning = signedIn
             return
         }
-        TokenStore.save(signedIn)
-        credentials = signedIn
+        save(signedIn)
     }
 
     /// Renames the default admin account and sets its password, then signs in as the new account.
@@ -165,9 +174,7 @@ final class StatusStore {
         }
         let result = try await StatusClient(serverAddress: serverAddress)
             .changeCredentials(name: name, password: password, token: commissioning.token)
-        let signedIn = Credentials(email: result.email, token: result.token)
-        TokenStore.save(signedIn)
-        credentials = signedIn
+        save(Credentials(email: result.email, token: result.token, role: result.role))
         self.commissioning = nil
     }
 
@@ -175,9 +182,46 @@ final class StatusStore {
         commissioning = nil
     }
 
-    func signOut() {
+    /// Sets a new password for the signed-in account. The server signs the account out
+    /// everywhere else, so this keeps the new token it returns.
+    func changePassword(_ password: String, serverAddress: String) async throws {
+        guard let credentials else {
+            throw StatusClientError.unauthorized(message: nil)
+        }
+        let result = try await StatusClient(serverAddress: serverAddress)
+            .changeCredentials(name: credentials.email, password: password, token: credentials.token)
+        save(Credentials(email: result.email, token: result.token, role: result.role ?? credentials.role))
+    }
+
+    /// Asks the server for the signed-in account's current role, which an admin may have changed.
+    func refreshAccount(serverAddress: String) async {
+        guard let credentials else {
+            return
+        }
+        do {
+            let account = try await StatusClient(serverAddress: serverAddress).fetchAccount(token: credentials.token)
+            save(Credentials(email: account.email, token: credentials.token, role: account.role))
+        } catch StatusClientError.unauthorized {
+            signOut()
+        } catch {
+            return
+        }
+    }
+
+    /// Forgets the sign-in; with a server address, also ends the session on the server.
+    func signOut(serverAddress: String? = nil) {
+        if let token = credentials?.token, let serverAddress {
+            Task { try? await StatusClient(serverAddress: serverAddress).signOut(token: token) }
+        }
         TokenStore.delete()
         credentials = nil
+        accountChecked = false
+    }
+
+    private func save(_ signedIn: Credentials) {
+        TokenStore.save(signedIn)
+        credentials = signedIn
+        accountChecked = signedIn.role != nil
     }
 
     /// Erases the server's history and accounts. Every account is gone afterwards, so this
@@ -226,6 +270,10 @@ final class StatusStore {
         } catch StatusClientError.unauthorized {
             signOut()
             errorMessage = "Your sign-in is no longer valid. Sign in again to control equipment."
+        } catch StatusClientError.server(code: 403, message: _) {
+            // an admin may have changed this account's role
+            await refreshAccount(serverAddress: serverAddress)
+            errorMessage = "Your account can’t change equipment."
         } catch {
             handle(error)
         }

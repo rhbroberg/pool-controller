@@ -22,6 +22,10 @@ var nameOf = (user) => user && user.email ? user.email : 'unknown user';
  * creates the default admin account if there are no accounts; run at startup
  **/
 exports.commissionIfEmpty = async function() {
+    const upgraded = await User.assignLegacyRoles();
+    if (upgraded > 0) {
+        logger.warn(`gave the admin role to ${upgraded} account(s) created before roles existed`);
+    }
     if (await User.ensureDefaultAdmin()) {
         logger.warn(`no accounts exist; created ${DEFAULT_ADMIN_NAME} / ${DEFAULT_ADMIN_PASSWORD}, which must be renamed before it can change anything`);
     }

@@ -9,7 +9,12 @@ struct PanelView: View {
     @State private var showingSettings = false
 
     private var canPress: Bool {
-        store.credentials != nil && model.isReachable
+        store.canControl && model.isReachable
+    }
+
+    /// Signed in, but the role can't press keys: the pad isn't shown at all.
+    private var viewOnly: Bool {
+        store.credentials != nil && !store.canControl
     }
 
     var body: some View {
@@ -17,15 +22,21 @@ struct PanelView: View {
             VStack(spacing: 32) {
                 PanelDisplayView(display: model.display, message: model.errorMessage)
 
-                DirectionPad(isEnabled: canPress) { key in
-                    press(key)
+                if viewOnly {
+                    Label("View only. Your account can watch the panel but not press its keys.", systemImage: "eye")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    DirectionPad(isEnabled: canPress) { key in
+                        press(key)
+                    }
                 }
 
                 if store.credentials == nil {
                     SignInPrompt(text: "Sign in to use the panel keys") {
                         showingSettings = true
                     }
-                } else if !model.isReachable {
+                } else if !viewOnly && !model.isReachable {
                     Text("Reconnect to the server to use the panel keys.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)

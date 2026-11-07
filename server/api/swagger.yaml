@@ -59,7 +59,7 @@ paths:
             $ref: "#/definitions/DeviceRegistrationInfo"
       security:
       - OAuth2:
-        - "write"
+        - "admin"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}/{state}:
     put:
@@ -87,7 +87,7 @@ paths:
             $ref: "#/definitions/DeviceState"
       security:
       - OAuth2:
-        - "write"
+        - "control"
       x-swagger-router-controller: "Device"
   /devices/{deviceId}:
     get:
@@ -202,7 +202,7 @@ paths:
             $ref: "#/definitions/PanelKeyPress"
       security:
       - OAuth2:
-        - "write"
+        - "control"
       x-swagger-router-controller: "Panel"
   /filtration:
     get:
@@ -245,7 +245,7 @@ paths:
             $ref: "#/definitions/ApiResponse"
       security:
       - OAuth2:
-        - "write"
+        - "control"
       x-swagger-router-controller: "Filtration"
   /filtration/{pumpId}:
     get:
@@ -353,7 +353,7 @@ paths:
             $ref: "#/definitions/HeaterState"
       security:
       - OAuth2:
-        - "write"
+        - "control"
       x-swagger-router-controller: "Environment"
   /lighting:
     get:
@@ -412,84 +412,181 @@ paths:
             $ref: "#/definitions/LightingZoneStatus"
       security:
       - OAuth2:
-        - "write"
+        - "control"
       x-swagger-router-controller: "Lighting"
   /users:
+    get:
+      tags:
+      - "User management"
+      description: "admin: every account and its role"
+      operationId: "listUsers"
+      parameters: []
+      responses:
+        200:
+          description: "the accounts, by name"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Account"
+      security:
+      - OAuth2:
+        - "admin"
+      x-swagger-router-controller: "UserManagement"
     post:
       tags:
       - "User management"
+      description: "admin: adds an account; role defaults to user"
       operationId: "createUser"
       parameters:
       - in: "body"
-        name: "credentials"
-        description: "user credentials"
+        name: "account"
+        description: "the account name (in email), password and role"
         required: true
         schema:
           $ref: "#/definitions/User"
       responses:
         200:
-          description: "Status of user creation"
-          headers:
-            x-auth:
-              type: "string"
-              description: "authorization token"
+          description: "the new account"
           schema:
-            $ref: "#/definitions/User"
+            $ref: "#/definitions/Account"
+        400:
+          description: "the name, password or role is not acceptable"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        409:
+          description: "another account already has that name"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "admin"
       x-swagger-router-controller: "UserManagement"
-    x-swagger-router-controller: "UserManagement"
   /users/login:
     post:
       tags:
       - "User management"
+      description: "signs in; send the returned token as the x-auth header"
       operationId: "loginUser"
       parameters:
       - in: "body"
         name: "credentials"
-        description: "user credentials"
+        description: "the account name (in email) and password"
         required: true
         schema:
           $ref: "#/definitions/User"
       responses:
         200:
-          description: "Status of login"
+          description: "the account, its role and a token"
           schema:
             $ref: "#/definitions/User"
+        401:
+          description: "the name or password is wrong"
+          schema:
+            $ref: "#/definitions/ApiResponse"
       x-swagger-router-controller: "UserManagement"
   /users/me:
     get:
       tags:
       - "User management"
+      description: "the signed-in account and its role"
       operationId: "getUser"
       parameters: []
       responses:
         200:
-          description: "Current user id"
+          description: "the signed-in account"
           schema:
-            $ref: "#/definitions/User"
+            $ref: "#/definitions/Account"
+      security:
+      - OAuth2:
+        - "account"
       x-swagger-router-controller: "UserManagement"
   /users/me/token:
     delete:
       tags:
       - "User management"
+      description: "signs this token out"
       operationId: "logoutUser"
       parameters: []
       responses:
         200:
-          description: "Logs out user"
+          description: "signed out"
+          schema:
+            $ref: "#/definitions/ApiResponse"
       security:
       - OAuth2:
-        - "write"
+        - "account"
+      x-swagger-router-controller: "UserManagement"
+  /users/{name}:
+    put:
+      tags:
+      - "User management"
+      description: "admin: changes an account's role, or resets its password and signs it out everywhere. The last admin cannot be demoted."
+      operationId: "updateUser"
+      parameters:
+      - name: "name"
+        in: "path"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "changes"
+        description: "a new role, a new password, or both"
+        required: true
+        schema:
+          $ref: "#/definitions/AccountUpdate"
+      responses:
+        200:
+          description: "the updated account"
+          schema:
+            $ref: "#/definitions/Account"
+        404:
+          description: "there is no account with that name"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        409:
+          description: "the change would leave no admin"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "admin"
+      x-swagger-router-controller: "UserManagement"
+    delete:
+      tags:
+      - "User management"
+      description: "admin: removes an account. The last admin cannot be removed."
+      operationId: "deleteUser"
+      parameters:
+      - name: "name"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "the account is gone"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        404:
+          description: "there is no account with that name"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        409:
+          description: "it is the only admin"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "admin"
       x-swagger-router-controller: "UserManagement"
   /users/me/credentials:
     put:
       tags:
       - "User management"
-      description: "renames the signed-in account and sets its password; commissions the default admin account. Earlier tokens for the account stop working."
+      description: "renames the signed-in account and sets its password: how any account changes its own password, and how the default admin account is commissioned. Earlier tokens for the account stop working."
       operationId: "changeCredentials"
       parameters:
       - in: "body"
         name: "credentials"
-        description: "the new account name (in email) and password"
+        description: "the account name (in email) and new password"
         required: true
         schema:
           $ref: "#/definitions/User"
@@ -508,7 +605,7 @@ paths:
             $ref: "#/definitions/ApiResponse"
       security:
       - OAuth2:
-        - "write"
+        - "account"
       x-swagger-router-controller: "UserManagement"
   /system/factory-reset:
     post:
@@ -524,7 +621,7 @@ paths:
             $ref: "#/definitions/ApiResponse"
       security:
       - OAuth2:
-        - "write"
+        - "admin"
       x-swagger-router-controller: "System"
   /system/restart:
     post:
@@ -540,7 +637,7 @@ paths:
             $ref: "#/definitions/ApiResponse"
       security:
       - OAuth2:
-        - "write"
+        - "admin"
       x-swagger-router-controller: "System"
 securityDefinitions:
   BasicAuth:
@@ -551,30 +648,71 @@ securityDefinitions:
     in: "header"
   OAuth2:
     type: "oauth2"
+    description: "Sign in with POST /users/login and send the returned token as the x-auth header. Reads need no token. Each account's role grants scopes: viewer has account; user has account and control; admin has all three. An operation's listed scopes must all be granted, or it is refused with 403."
     authorizationUrl: "http://localhost:8080"
     tokenUrl: "https://localhost:8080/oauth/redirect"
     flow: "accessCode"
     scopes:
-      read: "Grants read access"
-      write: "Grants write access"
-      admin: "Grants read and write access to administrative information"
+      account: "your own account: change its name and password, see it, sign out (viewer, user, admin)"
+      control: "change equipment and press panel keys (user, admin)"
+      admin: "manage accounts, restart the server, factory reset (admin)"
 definitions:
   User:
     type: "object"
     properties:
       email:
         type: "string"
+        description: "the account name; historically an email address"
       password:
         type: "string"
+      role:
+        type: "string"
+        description: "viewer, user or admin; only used when an admin creates an account"
+        enum:
+        - "viewer"
+        - "user"
+        - "admin"
       token:
         type: "string"
-        description: "returned by login and user creation; send it as the x-auth header"
+        description: "returned by login and changeCredentials; send it as the x-auth header"
       mustChangeCredentials:
         type: "boolean"
         description: "true for the default admin account, whose token only works for changeCredentials until it is renamed"
     example:
       password: "password"
       email: "email"
+  Account:
+    type: "object"
+    properties:
+      email:
+        type: "string"
+        description: "the account name"
+      role:
+        type: "string"
+        enum:
+        - "viewer"
+        - "user"
+        - "admin"
+      mustChangeCredentials:
+        type: "boolean"
+    example:
+      email: "rick"
+      role: "admin"
+      mustChangeCredentials: false
+  AccountUpdate:
+    type: "object"
+    properties:
+      role:
+        type: "string"
+        enum:
+        - "viewer"
+        - "user"
+        - "admin"
+      password:
+        type: "string"
+        description: "a new password; the account is signed out everywhere"
+    example:
+      role: "viewer"
   LightingZone:
     type: "object"
     properties:

@@ -35,9 +35,6 @@ struct SettingsView: View {
                         .textContentType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    Button("Use Default (\(StatusView.defaultServerAddress))") {
-                        draftAddress = StatusView.defaultServerAddress
-                    }
                     Picker("Retry Every", selection: $reconnectSeconds) {
                         ForEach(Self.reconnectChoices, id: \.self) { seconds in
                             Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
@@ -47,14 +44,23 @@ struct SettingsView: View {
                 } header: {
                     Text("Server")
                 } footer: {
-                    Text("The pool controller’s web server, with its port; use https and no port through the reverse proxy. Retry Every is how often the app tries to reach it after losing the connection.")
+                    Text("Include the port, or use https with no port through the reverse proxy.")
                 }
 
                 Section {
                     if let credentials = store.credentials {
-                        LabeledContent("Signed In", value: credentials.email)
+                        LabeledContent("Signed In") {
+                            if let role = credentials.role {
+                                Text("\(credentials.email) · \(role.title)")
+                            } else {
+                                Text(credentials.email)
+                            }
+                        }
+                        NavigationLink("Change Password") {
+                            ChangePasswordView(store: store, serverAddress: serverAddress)
+                        }
                         Button("Sign Out", role: .destructive) {
-                            store.signOut()
+                            store.signOut(serverAddress: serverAddress)
                         }
                     } else {
                         TextField("Account Name", text: $email)
@@ -81,17 +87,20 @@ struct SettingsView: View {
                 } footer: {
                     if let signInError {
                         Text(signInError).foregroundStyle(.red)
-                    } else {
+                    } else if store.credentials == nil {
                         Text("Signing in lets the app turn equipment on and off. Status is visible without an account.")
                     }
                 }
 
-                Section {
-                    NavigationLink("Server Maintenance") {
-                        ServerMaintenanceView(store: store, serverAddress: serverAddress)
+                if store.isAdmin {
+                    Section("Administration") {
+                        NavigationLink("Accounts") {
+                            AccountsView(store: store, serverAddress: serverAddress)
+                        }
+                        NavigationLink("Server Maintenance") {
+                            ServerMaintenanceView(store: store, serverAddress: serverAddress)
+                        }
                     }
-                } footer: {
-                    Text("Restart the server or reset it to factory settings.")
                 }
             }
             .navigationTitle("Settings")
@@ -179,7 +188,7 @@ struct ServerMaintenanceView: View {
                 }
             }
         }
-        .disabled(store.credentials == nil || isWorking)
+        .disabled(!store.isAdmin || isWorking)
         .navigationTitle("Server Maintenance")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Are you sure?", isPresented: $confirmingReset, titleVisibility: .visible) {

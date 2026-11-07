@@ -61,13 +61,17 @@ struct StatusView: View {
                                     }
                                 }
                             }
-                            .disabled(!store.isConnected || store.credentials == nil)
+                            .disabled(!store.isConnected || !store.canControl)
                             .opacity(store.isConnected ? 1 : 0.5)
 
                             if store.credentials == nil {
                                 SignInPrompt(text: "Sign in to turn equipment on and off") {
                                     showingSettings = true
                                 }
+                            } else if !store.canControl {
+                                Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
                         }
 
@@ -139,7 +143,7 @@ struct StatusView: View {
     }
 
     private func toggle(_ control: EquipmentControl) {
-        guard store.credentials != nil else {
+        guard store.canControl else {
             return
         }
         let turnOn = !store.isOn(control)

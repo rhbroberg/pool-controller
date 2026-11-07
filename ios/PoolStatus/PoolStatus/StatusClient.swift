@@ -19,8 +19,18 @@ enum StatusClientError: LocalizedError {
 struct SignInResult: Decodable {
     let email: String
     let token: String
+    let role: AccountRole?
     /// The default admin account, whose token only works for renaming it.
     let mustChangeCredentials: Bool?
+}
+
+/// An account as the server describes it, without a token.
+struct AccountInfo: Decodable, Identifiable, Hashable {
+    let email: String
+    let role: AccountRole
+    let mustChangeCredentials: Bool?
+
+    var id: String { email }
 }
 
 struct StatusClient {
@@ -51,6 +61,62 @@ struct StatusClient {
         request.httpBody = try JSONEncoder().encode(["email": name, "password": password])
         let data = try await send(request)
         return try JSONDecoder().decode(SignInResult.self, from: data)
+    }
+
+    /// The signed-in account and its current role.
+    func fetchAccount(token: String) async throws -> AccountInfo {
+        var request = URLRequest(url: try url(for: "users/me"))
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
+    }
+
+    /// Ends this token's session on the server.
+    func signOut(token: String) async throws {
+        var request = URLRequest(url: try url(for: "users/me/token"))
+        request.httpMethod = "DELETE"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
+    }
+
+    // MARK: Account management (admin)
+
+    func listAccounts(token: String) async throws -> [AccountInfo] {
+        var request = URLRequest(url: try url(for: "users"))
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        return try JSONDecoder().decode([AccountInfo].self, from: try await send(request))
+    }
+
+    func createAccount(name: String, password: String, role: AccountRole, token: String) async throws -> AccountInfo {
+        var request = URLRequest(url: try url(for: "users"))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        request.httpBody = try JSONEncoder().encode(["email": name, "password": password, "role": role.rawValue])
+        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
+    }
+
+    /// Changes another account's role, resets its password, or both.
+    func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil, token: String) async throws -> AccountInfo {
+        var request = URLRequest(url: try url(for: "users/\(Self.pathComponent(name))"))
+        request.httpMethod = "PUT"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        var changes: [String: String] = [:]
+        changes["role"] = role?.rawValue
+        changes["password"] = password
+        request.httpBody = try JSONEncoder().encode(changes)
+        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
+    }
+
+    func deleteAccount(_ name: String, token: String) async throws {
+        var request = URLRequest(url: try url(for: "users/\(Self.pathComponent(name))"))
+        request.httpMethod = "DELETE"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
+    }
+
+    private static func pathComponent(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     /// Erases the server's history and accounts; returns the server's description of the result.

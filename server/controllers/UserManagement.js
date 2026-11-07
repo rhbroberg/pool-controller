@@ -3,55 +3,42 @@
 var utils = require('../utils/writer.js');
 var UserManagement = require('../service/UserManagementService');
 
+var respond = (res, promise) => promise
+    .then(function(response) {
+        utils.writeJson(res, response);
+    })
+    .catch(function(response) {
+        utils.writeJson(res, response);
+    });
+
 module.exports.createUser = function createUser(req, res, next) {
-    var credentials = req.swagger.params['credentials'].value;
-    UserManagement.createUser(credentials, req.headers['x-auth'])
-        .then(function(response) {
-            utils.writeJson(res, response);
-        })
-        .catch(function(response) {
-            utils.writeJson(res, response);
-        });
+    respond(res, UserManagement.createUser(req.user, req.swagger.params['account'].value));
+};
+
+module.exports.listUsers = function listUsers(req, res, next) {
+    respond(res, UserManagement.listUsers());
+};
+
+module.exports.updateUser = function updateUser(req, res, next) {
+    respond(res, UserManagement.updateUser(req.user, req.swagger.params['name'].value, req.swagger.params['changes'].value));
+};
+
+module.exports.deleteUser = function deleteUser(req, res, next) {
+    respond(res, UserManagement.deleteUser(req.user, req.swagger.params['name'].value));
 };
 
 module.exports.getUser = function getUser(req, res, next) {
-    UserManagement.getUser()
-        .then(function(response) {
-            utils.writeJson(res, response);
-        })
-        .catch(function(response) {
-            utils.writeJson(res, response);
-        });
+    respond(res, UserManagement.getUser(req.user));
 };
 
 module.exports.loginUser = function loginUser(req, res, next) {
-    var credentials = req.swagger.params['credentials'].value;
-    UserManagement.loginUser(credentials)
-        .then(function(response) {
-            utils.writeJson(res, response);
-        })
-        .catch(function(response) {
-            utils.writeJson(res, response);
-        });
+    respond(res, UserManagement.loginUser(req.swagger.params['credentials'].value));
 };
 
 module.exports.changeCredentials = function changeCredentials(req, res, next) {
-    var credentials = req.swagger.params['credentials'].value;
-    UserManagement.changeCredentials(req.user, credentials)
-        .then(function(response) {
-            utils.writeJson(res, response);
-        })
-        .catch(function(response) {
-            utils.writeJson(res, response);
-        });
+    respond(res, UserManagement.changeCredentials(req.user, req.swagger.params['credentials'].value));
 };
 
 module.exports.logoutUser = function logoutUser(req, res, next) {
-    UserManagement.logoutUser()
-        .then(function(response) {
-            utils.writeJson(res, response);
-        })
-        .catch(function(response) {
-            utils.writeJson(res, response);
-        });
+    respond(res, UserManagement.logoutUser(req.user, req.token));
 };

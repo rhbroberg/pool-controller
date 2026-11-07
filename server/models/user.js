@@ -8,6 +8,14 @@ const bcrypt = require('bcryptjs');
 const DEFAULT_ADMIN_NAME = 'admin';
 const DEFAULT_ADMIN_PASSWORD = 'admin';
 
+// each role holds every OAuth2 scope of the roles before it
+const ROLES = ['viewer', 'user', 'admin'];
+const ROLE_SCOPES = {
+    viewer: ['account'],
+    user: ['account', 'control'],
+    admin: ['account', 'control', 'admin']
+};
+
 var UserSchema = new mongoose.Schema({
     // historically an email address; any account name is accepted
     email: {
@@ -26,6 +34,11 @@ var UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    role: {
+        type: String,
+        enum: ROLES,
+        default: 'user'
+    },
     tokens: [{
         access: {
             type: String,
@@ -42,7 +55,11 @@ UserSchema.methods.toJSON = function() {
     var user = this;
     var userObject = user.toObject();
 
-    return _.pick(userObject, ['_id', 'email', 'mustChangeCredentials']);
+    return _.pick(userObject, ['_id', 'email', 'role', 'mustChangeCredentials']);
+};
+
+UserSchema.methods.hasScope = function(scope) {
+    return (ROLE_SCOPES[this.role] || []).includes(scope);
 };
 
 UserSchema.methods.generateAuthToken = function() {
@@ -113,9 +130,17 @@ UserSchema.statics.ensureDefaultAdmin = async function() {
         email: DEFAULT_ADMIN_NAME,
         password: await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10),
         mustChangeCredentials: true,
+        role: 'admin',
         tokens: []
     });
     return true;
+};
+
+// accounts from before roles existed had every privilege, so they become admins; resolves
+// with how many were changed
+UserSchema.statics.assignLegacyRoles = async function() {
+    const { modifiedCount } = await this.updateMany({ role: { $exists: false } }, { $set: { role: 'admin' } });
+    return modifiedCount;
 };
 
 UserSchema.pre('save', function(next) {
@@ -135,4 +160,4 @@ UserSchema.pre('save', function(next) {
 
 var User = mongoose.model('User', UserSchema);
 
-module.exports = { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD };
+module.exports = { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES, ROLE_SCOPES };
