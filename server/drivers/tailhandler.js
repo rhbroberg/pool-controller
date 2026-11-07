@@ -57,7 +57,7 @@ var listen = ((filename, cb, options) => {
 
 var writeEvent = ((message) => {
     const myControl = new ControlEvent(message);
-    logger.info('writing control event: ', myControl.asString());
+    logger.debug('writing control event: ', myControl.asString());
 });
 
 module.exports = { listen, writeEvent };

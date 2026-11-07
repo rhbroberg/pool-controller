@@ -2,20 +2,37 @@ import SwiftUI
 
 struct StatusView: View {
     static let defaultServerAddress = "http://localhost:8080"
-    static let refreshInterval: Duration = .seconds(15)
 
     @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
+    @AppStorage("reconnectSeconds") private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @Environment(\.scenePhase) private var scenePhase
     @State private var store = StatusStore()
     @State private var showingSettings = false
+    /// Bumped to restart polling immediately, as from Retry Now.
+    @State private var pollGeneration = 0
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    private struct PollKey: Equatable {
+        let serverAddress: String
+        let reconnectSeconds: Int
+        let generation: Int
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    if let errorMessage = store.errorMessage {
+                    if store.connection == .disconnected {
+                        DisconnectedBanner(reason: store.connectionFailure,
+                                           lastRefresh: store.lastRefresh,
+                                           nextAttempt: store.nextAttempt,
+                                           isRetrying: store.isLoading) {
+                            pollGeneration += 1
+                        }
+                    }
+
+                    if let errorMessage = store.errorMessage, store.isConnected {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline)
                             .foregroundStyle(.orange)
@@ -26,6 +43,7 @@ struct StatusView: View {
 
                     if !store.readings.isEmpty {
                         StatusCard(measurements: store.measurements, switches: store.statusSwitches)
+                            .opacity(store.isConnected ? 1 : 0.5)
 
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Equipment")
@@ -40,8 +58,10 @@ struct StatusView: View {
                                     }
                                 }
                             }
+                            .disabled(!store.isConnected)
+                            .opacity(store.isConnected ? 1 : 0.5)
 
-                            if store.credentials == nil {
+                            if store.credentials == nil && store.isConnected {
                                 Button("Sign in to turn equipment on and off") {
                                     showingSettings = true
                                 }
@@ -63,9 +83,9 @@ struct StatusView: View {
             .animation(.default, value: store.needsAttention)
             .overlay {
                 if store.readings.isEmpty {
-                    if store.isLoading {
-                        ProgressView("Loading…")
-                    } else if store.errorMessage == nil {
+                    if store.connection == .connecting {
+                        ProgressView("Connecting…")
+                    } else if store.isConnected && store.errorMessage == nil {
                         ContentUnavailableView("No Readings", systemImage: "drop",
                                                description: Text("The server hasn’t recorded any status yet."))
                     }
@@ -73,6 +93,9 @@ struct StatusView: View {
             }
             .navigationTitle("Pool")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    ConnectionIndicator(connection: store.connection)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Settings", systemImage: "gearshape") {
                         showingSettings = true
@@ -82,15 +105,13 @@ struct StatusView: View {
             .refreshable {
                 await store.refresh(from: serverAddress)
             }
-            .task(id: serverAddress) {
-                while !Task.isCancelled {
-                    await store.refresh(from: serverAddress)
-                    try? await Task.sleep(for: Self.refreshInterval)
-                }
+            .task(id: PollKey(serverAddress: serverAddress, reconnectSeconds: reconnectSeconds,
+                              generation: pollGeneration)) {
+                await store.poll(serverAddress: serverAddress, reconnectSeconds: reconnectSeconds)
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
-                    Task { await store.refresh(from: serverAddress) }
+                    pollGeneration += 1
                 }
             }
             .sheet(isPresented: $showingSettings) {
@@ -106,6 +127,85 @@ struct StatusView: View {
         }
         let turnOn = !store.isOn(control.name)
         Task { await store.setControl(control, on: turnOn, serverAddress: serverAddress) }
+    }
+}
+
+private struct ConnectionIndicator: View {
+    let connection: StatusStore.Connection
+
+    private var title: String {
+        switch connection {
+        case .connecting: "Connecting"
+        case .connected: "Connected"
+        case .disconnected: "Offline"
+        }
+    }
+
+    private var color: Color {
+        switch connection {
+        case .connecting: .gray
+        case .connected: .green
+        case .disconnected: .red
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(title)
+                .font(.subheadline)
+                .fixedSize()
+        }
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Server \(title)")
+    }
+}
+
+private struct DisconnectedBanner: View {
+    let reason: String?
+    let lastRefresh: Date?
+    let nextAttempt: Date?
+    let isRetrying: Bool
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Can’t reach the server", systemImage: "wifi.exclamationmark")
+                .font(.headline)
+                .foregroundStyle(.red)
+
+            if let reason {
+                Text(reason)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            if let lastRefresh {
+                Text("Showing readings from \(lastRefresh, format: .dateTime.hour().minute().second())")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                if isRetrying {
+                    ProgressView()
+                    Text("Reconnecting…")
+                } else if let nextAttempt, nextAttempt > .now {
+                    Text("Retrying in \(Text(timerInterval: Date.now...nextAttempt, countsDown: true))")
+                        .monospacedDigit()
+                }
+                Spacer()
+                Button("Retry Now", action: retry)
+                    .buttonStyle(.bordered)
+                    .disabled(isRetrying)
+            }
+            .font(.subheadline)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
     }
 }
 

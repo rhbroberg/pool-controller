@@ -40,7 +40,7 @@ module.exports.registerDevice = function registerDevice (req, res, next) {
 module.exports.setDeviceState = function setDeviceState (req, res, next) {
   var deviceId = req.swagger.params['deviceId'].value;
   var state = req.swagger.params['state'].value;
-  Device.setDeviceState(deviceId,state)
+  Device.setDeviceState(deviceId, state, req.user)
     .then(function (response) {
       utils.writeJson(res, response);
     })

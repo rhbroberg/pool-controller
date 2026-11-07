@@ -236,6 +236,17 @@ class StatusEvent extends ChecksummedEvent {
         return [0x01, 0x02];
     }
 
+    // bit position of a named switch within rawMask(), or undefined
+    static bitPosition(name) {
+        for (let byte = 0; byte < statusMap.length; byte++) {
+            const bit = statusMap[byte].indexOf(name);
+            if (bit !== -1) {
+                return byte * 8 + bit;
+            }
+        }
+        return undefined;
+    }
+
     textBitMaskFromByte(byte) {
         let mask = `${this.bitToInt(byte, 0x01)}${this.bitToInt(byte, 0x02)}${this.bitToInt(byte, 0x04)}${this.bitToInt(byte, 0x08)}`;
         mask += `.${this.bitToInt(byte, 0x10)}${this.bitToInt(byte, 0x20)}${this.bitToInt(byte, 0x40)}${this.bitToInt(byte, 0x80)}`;

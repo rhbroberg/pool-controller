@@ -21,6 +21,14 @@ struct EquipmentControl: Identifiable {
 
 @Observable
 final class StatusStore {
+    enum Connection {
+        case connecting
+        case connected
+        case disconnected
+    }
+
+    static let refreshSeconds = 15
+    static let defaultReconnectSeconds = 30
     /// How long to keep polling for the controller to report a requested change.
     static let confirmationTimeout: Duration = .seconds(15)
 
@@ -28,11 +36,18 @@ final class StatusStore {
     private(set) var lastRefresh: Date?
     private(set) var errorMessage: String?
     private(set) var isLoading = false
+    private(set) var connection = Connection.connecting
+    /// Why the last attempt to reach the server failed.
+    private(set) var connectionFailure: String?
+    /// When the next reconnection attempt is due, while disconnected.
+    private(set) var nextAttempt: Date?
     private(set) var credentials = TokenStore.load()
     /// Requested state for controls the controller hasn't confirmed yet.
     private(set) var pending: [String: Bool] = [:]
 
     private static let measurementOrder = ["pool temp", "spa temp", "ambient", "salt"]
+
+    var isConnected: Bool { connection == .connected }
 
     var measurements: [StatusReading] {
         readings
@@ -68,8 +83,23 @@ final class StatusStore {
         pending[name] != nil
     }
 
+    /// Refreshes while connected; after losing the server, retries every `reconnectSeconds`.
+    /// Runs until the calling task is cancelled.
+    func poll(serverAddress: String, reconnectSeconds: Int) async {
+        while !Task.isCancelled {
+            nextAttempt = nil
+            await refresh(from: serverAddress)
+
+            let wait = isConnected ? Self.refreshSeconds : reconnectSeconds
+            if connection == .disconnected {
+                nextAttempt = .now.addingTimeInterval(TimeInterval(wait))
+            }
+            try? await Task.sleep(for: .seconds(wait))
+        }
+    }
+
     /// Replaces every reading with the server's current values. On failure the previous
-    /// readings stay on screen and `errorMessage` explains why they may be stale.
+    /// readings stay on screen, marked stale by `connection` or `errorMessage`.
     func refresh(from serverAddress: String) async {
         isLoading = true
         defer { isLoading = false }
@@ -78,12 +108,9 @@ final class StatusStore {
             readings = try await StatusClient(serverAddress: serverAddress).fetchStatus()
             lastRefresh = .now
             errorMessage = nil
-        } catch is CancellationError {
-            return
-        } catch let error as URLError where error.code == .cancelled {
-            return
+            markConnected()
         } catch {
-            errorMessage = error.localizedDescription
+            handle(error)
         }
     }
 
@@ -92,6 +119,7 @@ final class StatusStore {
         let signedIn = Credentials(email: result.email, token: result.token)
         TokenStore.save(signedIn)
         credentials = signedIn
+        markConnected()
     }
 
     func signOut() {
@@ -118,7 +146,7 @@ final class StatusStore {
             while ContinuousClock.now < deadline {
                 try await Task.sleep(for: .seconds(1))
                 await refresh(from: serverAddress)
-                if reading(named: control.name)?.isOn == on {
+                if reading(named: control.name)?.isOn == on || !isConnected {
                     return
                 }
             }
@@ -126,9 +154,35 @@ final class StatusStore {
         } catch StatusClientError.unauthorized {
             signOut()
             errorMessage = "Your sign-in is no longer valid. Sign in again to control equipment."
-        } catch is CancellationError {
-            return
         } catch {
+            handle(error)
+        }
+    }
+
+    private func markConnected() {
+        connection = .connected
+        connectionFailure = nil
+    }
+
+    private func handle(_ error: Error) {
+        if error is CancellationError {
+            return
+        }
+        if let urlError = error as? URLError {
+            if urlError.code == .cancelled {
+                return
+            }
+            connection = .disconnected
+            connectionFailure = urlError.localizedDescription
+            return
+        }
+        switch error as? StatusClientError {
+        case .invalidAddress, .badResponse:
+            connection = .disconnected
+            connectionFailure = error.localizedDescription
+        default:
+            // the server answered, so the connection is fine even though the request failed
+            markConnected()
             errorMessage = error.localizedDescription
         }
     }

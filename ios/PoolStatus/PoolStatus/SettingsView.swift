@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct SettingsView: View {
+    static let reconnectChoices = [10, 30, 60, 120, 300]
+
     @Binding var serverAddress: String
     let store: StatusStore
 
+    @AppStorage("reconnectSeconds") private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @Environment(\.dismiss) private var dismiss
     @State private var draftAddress = ""
     @State private var email = ""
@@ -31,6 +34,19 @@ struct SettingsView: View {
                     Text("Server Address")
                 } footer: {
                     Text("The pool controller’s web server, with its port. Use https and no port when going through the reverse proxy.")
+                }
+
+                Section {
+                    Picker("Retry Every", selection: $reconnectSeconds) {
+                        ForEach(Self.reconnectChoices, id: \.self) { seconds in
+                            Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
+                                .tag(seconds)
+                        }
+                    }
+                } header: {
+                    Text("Connection")
+                } footer: {
+                    Text("How often the app tries to reach the server after losing the connection.")
                 }
 
                 Section {

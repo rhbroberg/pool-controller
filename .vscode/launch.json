@@ -21,6 +21,20 @@
     {
         "type": "node",
         "request": "launch",
+        "name": "Simulated controller",
+        "program": "${workspaceFolder}/server/server.js",
+        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim"]
+    },
+    {
+        "type": "node",
+        "request": "launch",
+        "name": "Simulated controller (verbose)",
+        "program": "${workspaceFolder}/server/server.js",
+        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim", "-v"]
+    },
+    {
+        "type": "node",
+        "request": "launch",
         "name": "Single File",
         "program": "${workspaceFolder}/server/server.js"
     },

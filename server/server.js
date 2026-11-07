@@ -21,6 +21,7 @@ var { Event } = require('./models/event');
 var serial = require('./drivers/serial');
 var fileHandler = require('./drivers/filehandler');
 var tailHandler = require('./drivers/tailhandler');
+var simulator = require('./drivers/simulator');
 const express = require('express');
 const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
@@ -38,10 +39,13 @@ var argv = yargs
     .default('d', 'file')
     .boolean('from-start')
     .default('from-start', false)
+    .boolean('v')
+    .alias('v', 'verbose')
     .argv;
 
+// info shows startup, REST changes and controller confirmations; -v adds every frame
 var logger = log4js.getLogger();
-logger.level = argv.l;
+logger.level = argv.v ? 'debug' : argv.l;
 var parser = new FrameParser();
 var processingErrors = 0;
 // create factory and register all (currently) known events
@@ -107,7 +111,7 @@ var saveStatus = (switchesEnabled, buf, category, timestamp) => {
     dbStatusEvent.save().then((doc) => {
         logger.trace('saved ', doc);
     }, (e) => {
-        logger.info(`failed saving ${category} Event: ${e}`);
+        logger.error(`failed saving ${category} Event: ${e}`);
     });
 };
 
@@ -135,7 +139,7 @@ var addIfChanged = (statusChanges, newValue, statusName) => {
     if (newValue) {
         if (presentTemp[statusName] !== newValue) {
             if ((typeof previousTemp[statusName] !== 'undefined') && (newValue === previousTemp[statusName]) && (Math.abs(presentTemp[statusName] - newValue) === 1)) {
-                logger.info(`hystereses prevention for ${statusName} : ${newValue}, ${previousTemp[statusName]}, ${presentTemp[statusName]} `);
+                logger.debug(`hystereses prevention for ${statusName} : ${newValue}, ${previousTemp[statusName]}, ${presentTemp[statusName]} `);
             } else {
                 statusChanges.push({
                     name: statusName,
@@ -180,7 +184,7 @@ var dispatchEvent = (buf) => {
                 const poolTemp = event.getPoolTemp();
                 var statusChanges = [];
 
-                logger.info('info: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
+                logger.debug('info: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
 
                 addIfChanged(statusChanges, poolTemp, 'pool temp');
                 addIfChanged(statusChanges, salt, 'salt');
@@ -197,7 +201,7 @@ var dispatchEvent = (buf) => {
             break;
         case 'StatusEvent':
             const eventDiffs = event.diff(currentStatusMask);
-            logger.info('status: ', event.asString(), ';', event.prettyBits(1));
+            logger.debug('status: ', event.asString(), ';', event.prettyBits(1));
             currentStatusMask = event.rawMask();
             currentEnabledSwitches = event.enabledSwitches();
 
@@ -225,7 +229,7 @@ var dispatchEvent = (buf) => {
             if (controlRequests.length > 0) {
                 const request = controlRequests.shift();
                 if (isSwitchOn(request.requestedChange) === request.desiredOn) {
-                    logger.info(`${request.requestedChange} is already ${request.desiredOn ? 'on' : 'off'}; not sending`);
+                    logger.info(`${request.requestedChange} reached ${request.desiredOn ? 'on' : 'off'} before it was sent for ${request.requestedBy}; not sending`);
                 } else {
                     request.statusFramesWaited = 0;
                     controlVerification.push(request);
@@ -236,13 +240,13 @@ var dispatchEvent = (buf) => {
             }
             break;
         case 'MotorTelemetryEvent':
-            logger.info('motor: ', buf.toString('ascii', 4, buf.length - 2));
+            logger.debug('motor: ', buf.toString('ascii', 4, buf.length - 2));
             break;
         case 'ControlEvent':
             if (event.enabledSwitches().length === 0) {
-                logger.info('control: zeroed out all bits');
+                logger.debug('control: zeroed out all bits');
             } else {
-                logger.info('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
+                logger.debug('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
                 const toggleBits = switchStates(event.enabledSwitches(), 1);
                 saveSwitchState(toggleBits, buf, 'control', timestamp);
                 streamEvent('control', event.enabledSwitches(), timestamp);
@@ -292,37 +296,37 @@ var isSwitchOn = (name) => currentEnabledSwitches.includes(name);
 var verifyControlRequests = () => {
     controlVerification = controlVerification.filter((request) => {
         if (isSwitchOn(request.requestedChange) === request.desiredOn) {
-            logger.info('verified control change: ', request.requestedChange, request.desiredOn ? 'on' : 'off');
+            logger.info(`controller confirmed ${request.requestedChange} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
             // half duplex means we won't actually receive this event we just sent, so fake it
             dispatchEvent(request.payload);
             return false;
         }
         if (++request.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
-            logger.warn('control change not confirmed by the controller: ', request.requestedChange, request.desiredOn ? 'on' : 'off');
+            logger.warn(`controller did not confirm ${request.requestedChange} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
             return false;
         }
         return true;
     });
 };
 
-var controlListener = ((whatChange, desiredOn) => {
+var controlListener = ((whatChange, desiredOn, requestedBy) => {
     if (!ControlEvent.isControl(whatChange)) {
         throw new Error(`'${whatChange}' is not a controller button`);
     }
 
     const isOn = isSwitchOn(whatChange);
     if (isOn === desiredOn) {
-        logger.info(`${whatChange} is already ${isOn ? 'on' : 'off'}`);
         return isOn;
     }
 
-    logger.info(`scheduling ${whatChange} ${desiredOn ? 'on' : 'off'}`);
+    logger.debug(`scheduling ${whatChange} ${desiredOn ? 'on' : 'off'}`);
     var updateIt = new ControlEvent();
     updateIt.toggleControls([whatChange]);
 
     controlRequests.push({
         requestedChange: whatChange,
         desiredOn: desiredOn,
+        requestedBy: requestedBy,
         payload: updateIt.payload()
     });
 
@@ -336,6 +340,9 @@ if (argv.d === 'file') {
 } else if (argv.d === 'tail') {
     driver = tailHandler;
     logger.info('starting tail listening on', argv.f);
+} else if (argv.d === 'sim') {
+    driver = simulator;
+    logger.info('starting simulated controller from', argv.f);
 } else if (argv.d === 'serial') {
     driver = serial;
     logger.info('starting serial port listening to ', argv.f);

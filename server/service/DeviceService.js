@@ -118,17 +118,26 @@ exports.registerControlListener = function(cb) {
  * state String 
  * returns DeviceState
  **/
-exports.setDeviceState = function(deviceId, state) {
+var onOff = (isOn) => isOn ? 'on' : 'off';
+
+exports.setDeviceState = function(deviceId, state, user) {
     return new Promise(function(resolve, reject) {
         const desiredOn = state === 'true';
-        logger.info(`setting ${deviceId} to ${state}`);
+        const who = user && user.email ? user.email : 'unknown user';
 
         let wasOn;
         try {
-            wasOn = controlCB(deviceId, desiredOn);
+            wasOn = controlCB(deviceId, desiredOn, who);
         } catch (e) {
+            logger.warn(`REST ${who}: rejected ${deviceId} ${onOff(desiredOn)}: ${e.message}`);
             reject(utils.respondWithCode(400, { code: 400, message: e.message }));
             return;
+        }
+
+        if (wasOn === desiredOn) {
+            logger.info(`REST ${who}: ${deviceId} already ${onOff(wasOn)}, nothing sent`);
+        } else {
+            logger.info(`REST ${who}: ${deviceId} ${onOff(wasOn)} -> ${onOff(desiredOn)}`);
         }
 
         // the controller confirms the change on a later status frame; GET /status reports it
