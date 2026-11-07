@@ -232,6 +232,34 @@ paths:
             items:
               type: "string"
       x-swagger-router-controller: "EventLog"
+  /water/mode/{mode}:
+    put:
+      tags:
+      - "Water flow"
+      description: "sets the water flow to pool, spa or spillover. The controller's spillover key steps through those modes in that order, so the server presses it, one press per status change, until the mode is reached; nothing is sent if it already is. GET /status reports the current mode through the pool, spa and spillover switches: spillover if it is on, otherwise spa if it is on, otherwise pool."
+      operationId: "setWaterMode"
+      parameters:
+      - name: "mode"
+        in: "path"
+        required: true
+        type: "string"
+        enum:
+        - "pool"
+        - "spa"
+        - "spillover"
+      responses:
+        200:
+          description: "the change is under way"
+          schema:
+            $ref: "#/definitions/WaterMode"
+        400:
+          description: "the controller has not reported its mode yet"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "control"
+      x-swagger-router-controller: "Water"
   /panel/display:
     get:
       tags:
@@ -980,6 +1008,20 @@ definitions:
       name: "name"
       id: "id"
       value: "value"
+  WaterMode:
+    type: "object"
+    properties:
+      mode:
+        type: "string"
+        enum:
+        - "pool"
+        - "spa"
+        - "spillover"
+      previousMode:
+        type: "string"
+      requestedAt:
+        type: "string"
+        format: "date-time"
   EventEntry:
     type: "object"
     properties:

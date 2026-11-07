@@ -7,7 +7,8 @@ var logger = log4js.getLogger();
 
 const statusMap = [
     ['heater1', 'valve3', 'check system', 'pool', 'spa', 'filter', 'lights', 'aux1'],
-    ['unknown2.1', 'unknown2.2', 'aux3', 'aux4', 'aux5', 'unknown2.6', 'valve4', 'unknown2.8'],
+    // bit 15 is named from another AquaLogic implementation; the captures never set it
+    ['unknown2.1', 'unknown2.2', 'aux3', 'aux4', 'aux5', 'unknown2.6', 'valve4', 'spillover'],
     ['unknown3.1', 'unknown3.2', 'unknown3.3', 'unknown3.4', 'unknown3.5', 'unknown3.6', 'unknown3.7', 'unknown3.8'],
     ['aux14', 'superchlorinate', 'unknown4.3', 'unknown4.4', 'unknown4.5', 'unknown4.6', 'unknown4.7', 'unknown4.8']
 ];

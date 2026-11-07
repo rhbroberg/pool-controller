@@ -16,6 +16,7 @@ const environmentService = require('./service/EnvironmentService');
 const deviceService = require('./service/DeviceService');
 const panelService = require('./service/PanelService');
 const systemService = require('./service/SystemService');
+const waterService = require('./service/WaterService');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -237,6 +238,7 @@ var dispatchEvent = (buf) => {
             // always update the lastUpdated timestamp
             // maybe update streamers with 'last updated'
             verifyControlRequests();
+            advanceWaterMode();
             break;
         case 'PingEvent':
             logger.debug('heartbeat');
@@ -336,6 +338,9 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
     if (!ControlEvent.isControl(whatChange)) {
         throw new Error(`'${whatChange}' is not a controller button`);
     }
+    if (whatChange === 'spillover') {
+        throw new Error('the spillover key cycles the water flow mode; set the mode with PUT /water/mode/{mode}');
+    }
     if (whatChange === 'heater1' && typeof heaterAuto === 'undefined') {
         throw new Error('the panel has not shown the heater mode yet; try again shortly');
     }
@@ -357,6 +362,68 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
     });
 
     return isOn;
+});
+
+// The spillover key steps the water flow through pool, spa and spillover in that order. A
+// request presses it once, waits for the status bits to show the next mode, and presses
+// again until the requested mode is reached.
+const WATER_MODES = ['pool', 'spa', 'spillover'];
+var waterModeRequest;
+
+var currentWaterMode = () => {
+    if (isSwitchOn('spillover')) {
+        return 'spillover';
+    }
+    if (isSwitchOn('spa')) {
+        return 'spa';
+    }
+    return isSwitchOn('pool') ? 'pool' : undefined;
+};
+
+var pressSpillover = (requestedBy) => {
+    var press = new ControlEvent();
+    press.toggleControls(['spillover']);
+    controlRequests.push({
+        requestedChange: 'spillover',
+        requestedBy: requestedBy,
+        momentary: true,
+        payload: press.payload()
+    });
+};
+
+var advanceWaterMode = () => {
+    if (!waterModeRequest) {
+        return;
+    }
+    const mode = currentWaterMode();
+    if (mode === waterModeRequest.target) {
+        logger.info(`controller confirmed water flow ${mode} for ${waterModeRequest.requestedBy}`);
+        waterModeRequest = undefined;
+    } else if (mode !== waterModeRequest.lastMode) {
+        waterModeRequest.lastMode = mode;
+        waterModeRequest.statusFramesWaited = 0;
+        pressSpillover(waterModeRequest.requestedBy);
+    } else if (++waterModeRequest.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
+        logger.warn(`controller did not reach water flow ${waterModeRequest.target} for ${waterModeRequest.requestedBy}; it is ${mode}`);
+        waterModeRequest = undefined;
+    }
+};
+
+var waterModeListener = ((target, requestedBy) => {
+    if (!WATER_MODES.includes(target)) {
+        throw new Error(`water flow mode must be one of ${WATER_MODES.join(', ')}`);
+    }
+    const mode = currentWaterMode();
+    if (typeof mode === 'undefined') {
+        throw new Error('the controller has not reported the water flow mode yet; try again shortly');
+    }
+    if (mode === target) {
+        waterModeRequest = undefined;
+        return mode;
+    }
+    waterModeRequest = { target: target, requestedBy: requestedBy, lastMode: mode, statusFramesWaited: 0 };
+    pressSpillover(requestedBy);
+    return mode;
 });
 
 const panelKeys = ['menu', 'left', 'right', 'minus', 'plus'];
@@ -399,6 +466,7 @@ environmentService.registerControlListener(controlListener);
 deviceService.registerControlListener(controlListener);
 panelService.registerKeyListener(panelKeyListener);
 panelService.registerDisplaySource(() => latestDisplay);
+waterService.registerModeListener(waterModeListener);
 
 // after a factory reset, forget what has been seen so the next frames are stored as new history
 systemService.registerResetListener(() => {
@@ -409,6 +477,7 @@ systemService.registerResetListener(() => {
     heaterAuto = undefined;
     controlRequests = [];
     controlVerification = [];
+    waterModeRequest = undefined;
 });
 
 mongoose.connection.asPromise()
