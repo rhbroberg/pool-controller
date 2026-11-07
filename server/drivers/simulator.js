@@ -220,13 +220,17 @@ var listen = ((filename, cb) => {
             emit(displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
         } else if (kind === 'DisplayUpdateEvent' && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
             spaTempShownAt = Date.now();
-            // the spa's sensor is just downstream of the spa filter pump, so its temperature is
-            // only known while that runs; the display takes turns when both are known
-            const known = isOn('aux14') ? ['pool', 'spa'] : ['pool'];
-            const body = known[temperaturesShown++ % known.length];
-            emit(body === 'spa'
-                ? displayFrame(`Spa Temp   ${spaTempF}_F`, '')
-                : displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
+            // the panel cycles through the heater's mode and the temperatures; the spa's sensor is
+            // just downstream of the spa filter pump, so its temperature only shows while that runs
+            const shown = isOn('aux14') ? ['pool', 'heater', 'spa'] : ['pool', 'heater'];
+            const line = shown[temperaturesShown++ % shown.length];
+            if (line === 'heater') {
+                emit(heaterFrame());
+            } else {
+                emit(line === 'spa'
+                    ? displayFrame(`Spa Temp   ${spaTempF}_F`, '')
+                    : displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
+            }
         } else {
             emit(frame);
         }
