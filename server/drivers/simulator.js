@@ -5,6 +5,7 @@ const log4js = require('log4js');
 const { FrameParser } = require('../protocol/parse');
 const { EventFactory } = require('../protocol/eventfactory');
 const { StatusEvent, ControlEvent, panelLabels } = require('../protocol/events');
+const heating = require('../protocol/heating');
 var logger = log4js.getLogger();
 
 const FRAME_INTERVAL_MS = 25;
@@ -20,12 +21,10 @@ const linkedSwitches = {
 // the captures never show a spa temperature and rarely the pool's; the simulator shows the pool
 // temperature, and the spa's while the spa filter runs, this often
 const SPA_TEMP_EVERY_MS = 5000;
-// while the heater is in auto it fires, warming the spa if the spa filter runs and the pool
-// otherwise; the heat pump (valve4) does the same at half the rate. With both off, the water cools.
+// the heater in auto fires, and the heat pump (valve4) runs at half its rate, while the water they
+// drive toward is below their setpoint for it; with neither heating, the water cools
 const TEMP_STEP_MS = 30 * 1000;
 const HEAT_PUMP_STEPS_PER_DEGREE = 2;
-const POOL_MAX_F = 88;
-const SPA_MAX_F = 104;
 const SPA_COOLS_TO_F = 90;
 const POOL_COOLING_STEPS = 4;
 // the panel announces a labelled output changing as "<label> / Turned On"
@@ -43,6 +42,11 @@ var poolTempF;
 var spaTempF = 98;
 var tempSteps = 0;
 var emit;
+// the controller keeps a setpoint per body for each device; these are the simulator's
+var setpointValues = {
+    pool: { heater1: 84, heatpump: 82 },
+    spa: { heater1: 102, heatpump: 100 }
+};
 
 var isOn = (name) => ((switchMask >>> StatusEvent.bitPosition(name)) & 1) === 1;
 
@@ -99,6 +103,7 @@ var writeChecksum = (frame) => {
 };
 
 var statusFrame = () => {
+    updateHeaters();
     const frame = Buffer.from(statusTemplate);
     frame.writeUInt32LE(switchMask >>> 0, 4);
     return writeChecksum(frame);
@@ -146,17 +151,33 @@ var heatedBodies = () => {
     return mode === 'spa' || isOn('aux14') ? ['spa'] : ['pool'];
 };
 
+var targetBody = () => heating.targetBody({ filter: isOn('filter'), spaFilter: isOn('aux14'), waterMode: waterMode() });
+
+var callsForHeat = (device) => {
+    const body = targetBody();
+    return Boolean(body) && heating.callsForHeat(body === 'spa' ? spaTempF : poolTempF, setpointValues[body][device]);
+};
+
+// the heater1 status bit is the heater firing, which it does in auto while its water is below the
+// setpoint; the heat pump has no bit of its own, so only its heat shows
+var updateHeaters = () => {
+    const heaterFiring = heaterAuto && callsForHeat('heater1');
+    const heatPumpRunning = isOn('valve4') && callsForHeat('heatpump');
+    setSwitch('heater1', heaterFiring);
+    return { heaterFiring, heatPumpRunning };
+};
+
 var stepTemperatures = () => {
     tempSteps++;
-    const heatPumpRunning = isOn('valve4');
-    if (heaterAuto || heatPumpRunning) {
-        const gain = heaterAuto || tempSteps % HEAT_PUMP_STEPS_PER_DEGREE === 0 ? 1 : 0;
+    const { heaterFiring, heatPumpRunning } = updateHeaters();
+    if (heaterFiring || heatPumpRunning) {
+        const gain = heaterFiring || tempSteps % HEAT_PUMP_STEPS_PER_DEGREE === 0 ? 1 : 0;
         const heated = heatedBodies();
         if (heated.includes('spa')) {
-            spaTempF = Math.min(SPA_MAX_F, spaTempF + gain);
+            spaTempF = Math.min(heating.SETPOINT_MAX_F, spaTempF + gain);
         }
         if (heated.includes('pool')) {
-            poolTempF = Math.min(POOL_MAX_F, poolTempF + gain);
+            poolTempF = Math.min(heating.SETPOINT_MAX_F, poolTempF + gain);
         }
     } else {
         if (spaTempF > SPA_COOLS_TO_F) {
@@ -226,7 +247,6 @@ var writeEvent = ((message) => {
 
         if (pressed.includes('heater1') && displayTemplate) {
             heaterAuto = !heaterAuto;
-            setSwitch('heater1', heaterAuto);
             echoUntil = Date.now() + KEY_ECHO_MS;
             emit(heaterFrame());
             logger.debug(`simulator: heater1 is now ${heaterAuto ? 'auto' : 'off'}`);
@@ -262,4 +282,13 @@ var writeEvent = ((message) => {
     }, RESPONSE_DELAY_MS);
 });
 
-module.exports = { listen, writeEvent };
+var setpoints = {
+    reachesController: true,
+    get: (body, device) => setpointValues[body][device],
+    set: (body, device, degrees) => {
+        setpointValues[body][device] = degrees;
+        logger.debug(`simulator: ${body} ${device} setpoint is now ${degrees}°F`);
+    }
+};
+
+module.exports = { listen, writeEvent, setpoints };
