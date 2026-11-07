@@ -12,6 +12,25 @@ http://localhost:3000/docs
 
 Under docker-compose the service is only reachable through the reverse proxy, which serves it as https on port 443 (and answers LetsEncrypt on port 80).
 
+## Tests
+
+The REST API tests start the real server with the simulated controller, each test file on its
+own port and its own database (PoolRestTest-*, dropped afterwards), and drive it over HTTP.
+They need MongoDB running on localhost.
+
+    npm test              # run them
+    npm run coverage      # run them and write coverage/lcov.info and coverage/index.html
+
+The iOS unit tests run on a simulator of their own, "PoolStatus Tests", created on first use,
+so your everyday simulator and its sign-in are left alone. A stub network layer stands in for
+the server.
+
+    ../ios/scripts/test.sh    # writes ../ios/coverage/lcov.info
+
+In Cursor, run the "Test everything with coverage" task (Tasks: Run Test Task), then click
+Watch in the status bar; the Coverage Gutters extension marks covered and missed lines in
+the editor and updates whenever a test run rewrites lcov.info.
+
 To find servers on your local network:
 
     npm run find-servers                  # port 3000

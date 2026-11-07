@@ -9,6 +9,39 @@
             "problemMatcher": "$eslint-stylish",
             "presentation": { "reveal": "never" },
             "runOptions": { "runOn": "folderOpen" }
+        },
+        {
+            "label": "Test REST API",
+            "detail": "starts simulated servers on their own ports and databases; needs MongoDB",
+            "type": "shell",
+            "command": "npm test",
+            "options": { "cwd": "${workspaceFolder}/server" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test REST API with coverage",
+            "detail": "writes server/coverage/lcov.info and an HTML report in server/coverage",
+            "type": "shell",
+            "command": "npm run coverage",
+            "options": { "cwd": "${workspaceFolder}/server" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test iOS app with coverage",
+            "detail": "runs on the \"PoolStatus Tests\" simulator; writes ios/coverage/lcov.info",
+            "type": "shell",
+            "command": "./scripts/test.sh",
+            "options": { "cwd": "${workspaceFolder}/ios" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test everything with coverage",
+            "dependsOn": ["Test REST API with coverage", "Test iOS app with coverage"],
+            "group": { "kind": "test", "isDefault": true },
+            "problemMatcher": []
         }
     ]
 }

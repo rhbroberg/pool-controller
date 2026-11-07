@@ -46,6 +46,14 @@
     },
     {
         "type": "node",
+        "request": "launch",
+        "name": "REST API tests",
+        "cwd": "${workspaceFolder}/server",
+        "runtimeArgs": ["--test", "--test-concurrency=1", "test/**/*.test.js"],
+        "outputCapture": "std"
+    },
+    {
+        "type": "node",
         "request": "attach",
         "name": "Attach To Process",
         "port": 5858

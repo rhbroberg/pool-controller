@@ -4,5 +4,9 @@
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "explicit"
-    }
+    },
+    "coverage-gutters.coverageBaseDir": "{server,ios}/coverage",
+    "coverage-gutters.coverageFileNames": ["lcov.info"],
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showRulerCoverage": true
 }
