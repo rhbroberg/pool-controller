@@ -106,7 +106,7 @@ struct FoundServer: Identifiable, Hashable {
 /// Asks every address in a subnet for the server's identity and collects the pool servers.
 @Observable
 final class NetworkScanner {
-    static let defaultPort = 8080
+    static let defaultPort = 3000
     static let defaultTimeoutSeconds = 1.5
     static let concurrency = 128
 

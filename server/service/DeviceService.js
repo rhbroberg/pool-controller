@@ -103,7 +103,7 @@ exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-v
         var examples = {};
         examples['application/json'] = {
             'id': '0729a580-2240-11e6-9eb5-0002a5d5c51b',
-            'uri': 'http://10.0.0.220:8080'
+            'uri': 'http://10.0.0.220:3000'
         };
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);

@@ -5,7 +5,7 @@ struct NetworkScanView: View {
     let choose: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("scanPort") private var savedPort = NetworkScanner.defaultPort
+    @AppStorage("networkScanPort") private var savedPort = NetworkScanner.defaultPort
     @AppStorage("scanTimeoutSeconds") private var timeoutSeconds = NetworkScanner.defaultTimeoutSeconds
     @State private var network = IPv4Network.device()?.description ?? ""
     // text rather than a formatted number, which only updates once the field loses focus

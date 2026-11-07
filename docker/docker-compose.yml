@@ -7,6 +7,7 @@ services:
     restart: always
     depends_on:
       - pool
+    # 443 is the service; 80 answers LetsEncrypt's challenges and redirects to https
     ports:
       - "80:80"
       - "443:443"
@@ -55,13 +56,15 @@ services:
       - VIRTUAL_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_EMAIL=rhbroberg@yahoo.com
+      # the proxy serves https on 443 and forwards it to the REST service here
+      - VIRTUAL_PORT=3000
       - NODE_ENV=docker-test
       # signs login tokens; export POOL_JWT_SECRET on the host, never commit it
       - JWT_SECRET=${POOL_JWT_SECRET}
     depends_on:
       - mongo
     expose:
-      - "80"
+      - "3000"
     devices:
     - "/dev/ttyUSB0:/dev/ttyUSB0"
     logging:

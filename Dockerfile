@@ -8,4 +8,6 @@ RUN npm install && npm cache clean --force
 
 COPY server /opt/pool-controller
 
+EXPOSE 3000
+
 CMD [ "node", "server.js", "-d", "serial", "-f", "/dev/ttyUSB0" ]

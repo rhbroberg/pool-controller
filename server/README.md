@@ -6,9 +6,16 @@ A raspberry pi zero is not quite fast enough to reliably send the control signal
 
 Hayward command documentation is here: https://commerce.hayward-pool-assets.com/magento/2025/AQ-CO-SERIAL/092329C_RevB_6861.pdf
 
-A REST api is generated/maintained by swagger; the api is present at
+A REST api is generated/maintained by swagger. The server listens on port 3000; the api is present at
 
-http://localhost:80/docs
+http://localhost:3000/docs
+
+Under docker-compose the service is only reachable through the reverse proxy, which serves it as https on port 443 (and answers LetsEncrypt on port 80).
+
+To find servers on your local network:
+
+    npm run find-servers                  # port 3000
+    npm run find-servers -- --port 8080   # another port
 
 This project is still in its infancy.  Some features I intend to add are:
 

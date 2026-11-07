@@ -837,8 +837,8 @@ securityDefinitions:
   OAuth2:
     type: "oauth2"
     description: "Sign in with POST /users/login and send the returned token as the x-auth header. Reads need no token. Each account's role grants scopes: viewer has account; user has account and control; admin has all three. An operation's listed scopes must all be granted, or it is refused with 403."
-    authorizationUrl: "http://localhost:8080"
-    tokenUrl: "https://localhost:8080/oauth/redirect"
+    authorizationUrl: "http://localhost:3000"
+    tokenUrl: "https://localhost:3000/oauth/redirect"
     flow: "accessCode"
     scopes:
       account: "your own account: change its name and password, see it, sign out (viewer, user, admin)"
@@ -1356,11 +1356,11 @@ definitions:
       uri:
         type: "string"
         format: "uri"
-        example: "http://10.0.0.220:8080"
+        example: "http://10.0.0.220:3000"
       id:
         type: "string"
         format: "uuid"
         example: "0729a580-2240-11e6-9eb5-0002a5d5c51b"
     example:
       id: "0729a580-2240-11e6-9eb5-0002a5d5c51b"
-      uri: "http://10.0.0.220:8080"
+      uri: "http://10.0.0.220:3000"

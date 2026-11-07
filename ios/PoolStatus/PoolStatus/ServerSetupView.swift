@@ -44,7 +44,7 @@ struct ServerSetupView: View {
                 }
 
                 Section {
-                    TextField("192.168.1.20:8080", text: $address)
+                    TextField("192.168.1.20:3000", text: $address)
                         .keyboardType(.URL)
                         .textContentType(.URL)
                         .textInputAutocapitalization(.never)

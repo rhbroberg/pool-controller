@@ -2,8 +2,8 @@
 // Finds pool controller servers on this machine and the local network by asking
 // localhost and every address in each attached IPv4 subnet for GET /system/info.
 //
-//   node tools/find-servers.js                          scan the local subnets on port 8080
-//   node tools/find-servers.js --port 80                scan another port
+//   node tools/find-servers.js                          scan the local subnets on port 3000
+//   node tools/find-servers.js --port 8080              scan another port
 //   node tools/find-servers.js --subnet 10.0.1.0/24     scan just a given subnet instead
 //   node tools/find-servers.js --timeout 3000           wait longer for slow hosts (milliseconds)
 //
@@ -20,7 +20,7 @@ var argValue = (flag, fallback) => {
     return index === -1 ? fallback : process.argv[index + 1];
 };
 
-const port = Number(argValue('--port', 8080));
+const port = Number(argValue('--port', 3000));
 const timeoutMs = Number(argValue('--timeout', 1500));
 const concurrency = Number(argValue('--concurrency', 128));
 
