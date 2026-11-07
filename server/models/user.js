@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
@@ -65,7 +66,9 @@ UserSchema.methods.hasScope = function(scope) {
 UserSchema.methods.generateAuthToken = function() {
     var user = this;
     var access = 'auth';
-    var token = jwt.sign({ _id: user._id.toHexString(), access }, process.env.JWT_SECRET).toString();
+    // the random id keeps two sign-ins in the same second from sharing a token, so signing one
+    // out leaves the other signed in
+    var token = jwt.sign({ _id: user._id.toHexString(), access, jti: crypto.randomUUID() }, process.env.JWT_SECRET).toString();
 
     user.tokens = user.tokens.concat({ access, token });
     return user.save().then(() => {
