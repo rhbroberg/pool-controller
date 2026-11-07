@@ -19,6 +19,8 @@ enum StatusClientError: LocalizedError {
 struct SignInResult: Decodable {
     let email: String
     let token: String
+    /// The default admin account, whose token only works for renaming it.
+    let mustChangeCredentials: Bool?
 }
 
 struct StatusClient {
@@ -38,6 +40,34 @@ struct StatusClient {
         request.httpBody = try JSONEncoder().encode(["email": email, "password": password])
         let data = try await send(request)
         return try JSONDecoder().decode(SignInResult.self, from: data)
+    }
+
+    /// Renames the signed-in account and sets its password; returns a new token, since the
+    /// old one stops working.
+    func changeCredentials(name: String, password: String, token: String) async throws -> SignInResult {
+        var request = URLRequest(url: try url(for: "users/me/credentials"))
+        request.httpMethod = "PUT"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        request.httpBody = try JSONEncoder().encode(["email": name, "password": password])
+        let data = try await send(request)
+        return try JSONDecoder().decode(SignInResult.self, from: data)
+    }
+
+    /// Erases the server's history and accounts; returns the server's description of the result.
+    func factoryReset(token: String) async throws -> String {
+        var request = URLRequest(url: try url(for: "system/factory-reset"))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        let data = try await send(request)
+        return (try? JSONDecoder().decode(ServerMessage.self, from: data))?.message ?? "Factory reset complete."
+    }
+
+    /// Asks the server to exit; its container restart policy starts it again.
+    func restartServer(token: String) async throws {
+        var request = URLRequest(url: try url(for: "system/restart"))
+        request.httpMethod = "POST"
+        request.setValue(token, forHTTPHeaderField: "x-auth")
+        _ = try await send(request)
     }
 
     /// Asks the server to press the device's button if it isn't already in `on` state.

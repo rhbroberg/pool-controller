@@ -440,6 +440,68 @@ paths:
       - OAuth2:
         - "write"
       x-swagger-router-controller: "UserManagement"
+  /users/me/credentials:
+    put:
+      tags:
+      - "User management"
+      description: "renames the signed-in account and sets its password; commissions the default admin account. Earlier tokens for the account stop working."
+      operationId: "changeCredentials"
+      parameters:
+      - in: "body"
+        name: "credentials"
+        description: "the new account name (in email) and password"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
+      responses:
+        200:
+          description: "the account's new name and a new token"
+          schema:
+            $ref: "#/definitions/User"
+        400:
+          description: "the name or password is not acceptable"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        409:
+          description: "another account already has that name"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "write"
+      x-swagger-router-controller: "UserManagement"
+  /system/factory-reset:
+    post:
+      tags:
+      - "System"
+      description: "erases all history and accounts, then recreates the admin / admin account"
+      operationId: "factoryReset"
+      parameters: []
+      responses:
+        200:
+          description: "the reset is complete"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "write"
+      x-swagger-router-controller: "System"
+  /system/restart:
+    post:
+      tags:
+      - "System"
+      description: "exits the server so its container restart policy starts it again"
+      operationId: "restartServer"
+      parameters: []
+      responses:
+        200:
+          description: "the server is about to exit"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - OAuth2:
+        - "write"
+      x-swagger-router-controller: "System"
 securityDefinitions:
   BasicAuth:
     type: "basic"
@@ -467,6 +529,9 @@ definitions:
       token:
         type: "string"
         description: "returned by login and user creation; send it as the x-auth header"
+      mustChangeCredentials:
+        type: "boolean"
+        description: "true for the default admin account, whose token only works for changeCredentials until it is renamed"
     example:
       password: "password"
       email: "email"

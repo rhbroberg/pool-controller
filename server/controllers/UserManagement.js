@@ -35,6 +35,17 @@ module.exports.loginUser = function loginUser(req, res, next) {
         });
 };
 
+module.exports.changeCredentials = function changeCredentials(req, res, next) {
+    var credentials = req.swagger.params['credentials'].value;
+    UserManagement.changeCredentials(req.user, credentials)
+        .then(function(response) {
+            utils.writeJson(res, response);
+        })
+        .catch(function(response) {
+            utils.writeJson(res, response);
+        });
+};
+
 module.exports.logoutUser = function logoutUser(req, res, next) {
     UserManagement.logoutUser()
         .then(function(response) {

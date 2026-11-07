@@ -23,14 +23,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                Section("Pool Name") {
                     TextField(StatusView.defaultPoolName, text: $draftPoolName)
                         .textInputAutocapitalization(.words)
                         .submitLabel(.done)
-                } header: {
-                    Text("Pool Name")
-                } footer: {
-                    Text("Shown as the title of the main screen.")
                 }
 
                 Section {
@@ -42,13 +38,6 @@ struct SettingsView: View {
                     Button("Use Default (\(StatusView.defaultServerAddress))") {
                         draftAddress = StatusView.defaultServerAddress
                     }
-                } header: {
-                    Text("Server Address")
-                } footer: {
-                    Text("The pool controller’s web server, with its port. Use https and no port when going through the reverse proxy.")
-                }
-
-                Section {
                     Picker("Retry Every", selection: $reconnectSeconds) {
                         ForEach(Self.reconnectChoices, id: \.self) { seconds in
                             Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
@@ -56,9 +45,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Connection")
+                    Text("Server")
                 } footer: {
-                    Text("How often the app tries to reach the server after losing the connection.")
+                    Text("The pool controller’s web server, with its port; use https and no port through the reverse proxy. Retry Every is how often the app tries to reach it after losing the connection.")
                 }
 
                 Section {
@@ -68,8 +57,7 @@ struct SettingsView: View {
                             store.signOut()
                         }
                     } else {
-                        TextField("Email", text: $email)
-                            .keyboardType(.emailAddress)
+                        TextField("Account Name", text: $email)
                             .textContentType(.username)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
@@ -97,8 +85,20 @@ struct SettingsView: View {
                         Text("Signing in lets the app turn equipment on and off. Status is visible without an account.")
                     }
                 }
+
+                Section {
+                    NavigationLink("Server Maintenance") {
+                        ServerMaintenanceView(store: store, serverAddress: serverAddress)
+                    }
+                } footer: {
+                    Text("Restart the server or reset it to factory settings.")
+                }
             }
             .navigationTitle("Settings")
+            .sheet(isPresented: Binding(get: { store.commissioning != nil },
+                                        set: { if !$0 { store.cancelCommissioning() } })) {
+                CommissioningView(store: store, serverAddress: trimmedAddress)
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -134,6 +134,88 @@ struct SettingsView: View {
                 password = ""
             } catch {
                 signInError = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// Restart and factory reset, kept off the main Settings page because they affect the server
+/// rather than this app.
+struct ServerMaintenanceView: View {
+    let store: StatusStore
+    let serverAddress: String
+
+    @State private var confirmingReset = false
+    @State private var isWorking = false
+    @State private var message: String?
+
+    var body: some View {
+        Form {
+            Section {
+                Button("Restart Server") {
+                    restartServer()
+                }
+            } footer: {
+                Text("The server stops and its container starts it again. The app reconnects when it’s back.")
+            }
+
+            Section {
+                Button("Factory Reset", role: .destructive) {
+                    confirmingReset = true
+                }
+                .foregroundStyle(.red)
+            } footer: {
+                Text("Erases all history and accounts on the server and recreates the \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) account.")
+            }
+
+            if let message {
+                Section {
+                    Text(message)
+                }
+            } else if store.credentials == nil {
+                Section {
+                    Text("Sign in to restart or reset the server.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .disabled(store.credentials == nil || isWorking)
+        .navigationTitle("Server Maintenance")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Are you sure?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Factory Reset", role: .destructive) {
+                factoryReset()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This erases all history and accounts on the server and recreates the \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) account. It can’t be undone.")
+        }
+    }
+
+    private func restartServer() {
+        isWorking = true
+        message = nil
+        Task {
+            defer { isWorking = false }
+            do {
+                try await store.restartServer(serverAddress: serverAddress)
+                message = "The server is restarting. The app reconnects when it’s back."
+            } catch {
+                message = error.localizedDescription
+            }
+        }
+    }
+
+    private func factoryReset() {
+        isWorking = true
+        message = nil
+        Task {
+            defer { isWorking = false }
+            do {
+                _ = try await store.factoryReset(serverAddress: serverAddress)
+                message = "Factory reset complete. Sign in as \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) to set up the server."
+            } catch {
+                message = error.localizedDescription
             }
         }
     }

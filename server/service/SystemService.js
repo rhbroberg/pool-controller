@@ -1,0 +1,63 @@
+'use strict';
+
+var { mongoose } = require('../mongoose');
+var { Event } = require('../models/event');
+var { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD } = require('../models/user');
+var utils = require('../utils/writer.js');
+const log4js = require('log4js');
+var logger = log4js.getLogger();
+
+// long enough for the response to reach the client before the process goes away
+const RESTART_DELAY_MS = 500;
+
+var resetListener = () => {};
+
+exports.registerResetListener = function(listener) {
+    resetListener = listener;
+};
+
+var nameOf = (user) => user && user.email ? user.email : 'unknown user';
+
+/**
+ * creates the default admin account if there are no accounts; run at startup
+ **/
+exports.commissionIfEmpty = async function() {
+    if (await User.ensureDefaultAdmin()) {
+        logger.warn(`no accounts exist; created ${DEFAULT_ADMIN_NAME} / ${DEFAULT_ADMIN_PASSWORD}, which must be renamed before it can change anything`);
+    }
+};
+
+/**
+ * erases all history and accounts, then recreates the default admin account
+ *
+ * returns ApiResponse
+ **/
+exports.factoryReset = async function(user) {
+    const who = nameOf(user);
+    logger.warn(`REST ${who}: factory reset; erasing all history and accounts`);
+    try {
+        await mongoose.connection.dropDatabase();
+        await Promise.all([Event.createIndexes(), User.createIndexes()]);
+        await exports.commissionIfEmpty();
+    } catch (e) {
+        logger.error(`factory reset failed: ${e}`);
+        throw utils.respondWithCode(500, { code: 500, message: `factory reset failed: ${e.message}` });
+    }
+    resetListener();
+    return { code: 200, message: `factory reset complete; sign in as ${DEFAULT_ADMIN_NAME} / ${DEFAULT_ADMIN_PASSWORD} to commission the server` };
+};
+
+/**
+ * exits the process so the container's restart policy starts a fresh one
+ *
+ * returns ApiResponse
+ **/
+exports.restart = async function(user) {
+    logger.warn(`REST ${nameOf(user)}: restart requested; exiting`);
+    setTimeout(() => {
+        mongoose.disconnect()
+            .catch(() => {})
+            .then(() => process.exit(0));
+    }, RESTART_DELAY_MS);
+    return { code: 200, message: 'the server is restarting' };
+};

@@ -15,6 +15,7 @@ const path = require('path');
 const environmentService = require('./service/EnvironmentService');
 const deviceService = require('./service/DeviceService');
 const panelService = require('./service/PanelService');
+const systemService = require('./service/SystemService');
 
 var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -398,6 +399,21 @@ environmentService.registerControlListener(controlListener);
 deviceService.registerControlListener(controlListener);
 panelService.registerKeyListener(panelKeyListener);
 panelService.registerDisplaySource(() => latestDisplay);
+
+// after a factory reset, forget what has been seen so the next frames are stored as new history
+systemService.registerResetListener(() => {
+    Object.keys(presentTemp).forEach((name) => { presentTemp[name] = -1; previousTemp[name] = -1; });
+    currentStatusMask = 0;
+    currentEnabledSwitches = [];
+    latestDisplay = undefined;
+    heaterAuto = undefined;
+    controlRequests = [];
+    controlVerification = [];
+});
+
+mongoose.connection.asPromise()
+    .then(() => systemService.commissionIfEmpty())
+    .catch((e) => logger.error(`could not check for accounts: ${e}`));
 if (argv.d === 'tail' && argv.fromStart) {
     logger.info('replay waits for a browser connection');
 } else if (driver) {

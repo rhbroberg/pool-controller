@@ -1,25 +1,30 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
 const bcrypt = require('bcryptjs');
 
+// a fresh or factory-reset server has only this account, and it must be renamed and given a
+// new password before it can change anything
+const DEFAULT_ADMIN_NAME = 'admin';
+const DEFAULT_ADMIN_PASSWORD = 'admin';
+
 var UserSchema = new mongoose.Schema({
+    // historically an email address; any account name is accepted
     email: {
         type: String,
         minlength: 1,
         required: true,
         trim: true,
-        unique: true,
-        validate: {
-            validator: value => validator.isEmail(value),
-            message: '{VALUE} is not a valid email'
-        },
+        unique: true
     },
     password: {
         type: String,
         required: true,
         minlength: 6
+    },
+    mustChangeCredentials: {
+        type: Boolean,
+        default: false
     },
     tokens: [{
         access: {
@@ -37,7 +42,7 @@ UserSchema.methods.toJSON = function() {
     var user = this;
     var userObject = user.toObject();
 
-    return _.pick(userObject, ['_id', 'email']);
+    return _.pick(userObject, ['_id', 'email', 'mustChangeCredentials']);
 };
 
 UserSchema.methods.generateAuthToken = function() {
@@ -98,6 +103,21 @@ UserSchema.statics.findByCredentials = function(email, password) {
     });
 };
 
+// creates admin/admin when no accounts exist; resolves true if it did. The default password is
+// shorter than the schema allows, so the account is inserted directly rather than validated.
+UserSchema.statics.ensureDefaultAdmin = async function() {
+    if (await this.countDocuments({}) > 0) {
+        return false;
+    }
+    await this.collection.insertOne({
+        email: DEFAULT_ADMIN_NAME,
+        password: await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10),
+        mustChangeCredentials: true,
+        tokens: []
+    });
+    return true;
+};
+
 UserSchema.pre('save', function(next) {
     var user = this;
 
@@ -115,4 +135,4 @@ UserSchema.pre('save', function(next) {
 
 var User = mongoose.model('User', UserSchema);
 
-module.exports = { User };
+module.exports = { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD };

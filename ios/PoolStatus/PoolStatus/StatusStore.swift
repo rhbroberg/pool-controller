@@ -65,6 +65,9 @@ final class StatusStore {
     /// When the next reconnection attempt is due, while disconnected.
     private(set) var nextAttempt: Date?
     private(set) var credentials = TokenStore.load()
+    /// The default admin account, signed in but not yet renamed. Its token only works for
+    /// commissioning, so it isn't saved.
+    private(set) var commissioning: Credentials?
     /// Requested state for controls the controller hasn't confirmed yet.
     private(set) var pending: [String: Bool] = [:]
 
@@ -146,14 +149,54 @@ final class StatusStore {
     func signIn(email: String, password: String, serverAddress: String) async throws {
         let result = try await StatusClient(serverAddress: serverAddress).signIn(email: email, password: password)
         let signedIn = Credentials(email: result.email, token: result.token)
+        markConnected()
+        if result.mustChangeCredentials == true {
+            commissioning = signedIn
+            return
+        }
         TokenStore.save(signedIn)
         credentials = signedIn
-        markConnected()
+    }
+
+    /// Renames the default admin account and sets its password, then signs in as the new account.
+    func commission(name: String, password: String, serverAddress: String) async throws {
+        guard let commissioning else {
+            return
+        }
+        let result = try await StatusClient(serverAddress: serverAddress)
+            .changeCredentials(name: name, password: password, token: commissioning.token)
+        let signedIn = Credentials(email: result.email, token: result.token)
+        TokenStore.save(signedIn)
+        credentials = signedIn
+        self.commissioning = nil
+    }
+
+    func cancelCommissioning() {
+        commissioning = nil
     }
 
     func signOut() {
         TokenStore.delete()
         credentials = nil
+    }
+
+    /// Erases the server's history and accounts. Every account is gone afterwards, so this
+    /// signs out; returns the server's description of the result.
+    func factoryReset(serverAddress: String) async throws -> String {
+        guard let credentials else {
+            throw StatusClientError.unauthorized(message: nil)
+        }
+        let message = try await StatusClient(serverAddress: serverAddress).factoryReset(token: credentials.token)
+        signOut()
+        readings = []
+        return message
+    }
+
+    func restartServer(serverAddress: String) async throws {
+        guard let credentials else {
+            throw StatusClientError.unauthorized(message: nil)
+        }
+        try await StatusClient(serverAddress: serverAddress).restartServer(token: credentials.token)
     }
 
     /// Requests the change, then polls status until the controller reports it or the
