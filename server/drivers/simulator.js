@@ -17,8 +17,8 @@ const panelKeyLabels = { menu: 'MENU', left: '< LEFT', right: 'RIGHT >', minus: 
 const linkedSwitches = {
     aux14: ['valve3', 'aux1']
 };
-// the captures never show a spa temperature and rarely the pool's; the simulator shows the spa
-// temperature while the spa filter runs and the pool temperature otherwise, this often
+// the captures never show a spa temperature and rarely the pool's; the simulator shows the pool
+// temperature, and the spa's while the spa filter runs, this often
 const SPA_TEMP_EVERY_MS = 5000;
 // while the heater is in auto it fires, warming the spa if the spa filter runs and the pool
 // otherwise; the heat pump (valve4) does the same at half the rate. With both off, the water cools.
@@ -38,6 +38,7 @@ var switchMask = 0;
 var heaterAuto = false;
 var echoUntil = 0;
 var spaTempShownAt = 0;
+var temperaturesShown = 0;
 var poolTempF;
 var spaTempF = 98;
 var tempSteps = 0;
@@ -123,15 +124,38 @@ var setSwitch = (name, on) => {
     switchMask = on ? (switchMask | bit) >>> 0 : (switchMask & ~bit) >>> 0;
 };
 
+// the spillover key steps the water flow through these, setting the matching status bit
+const WATER_MODES = ['pool', 'spa', 'spillover'];
+
+var waterMode = () => WATER_MODES.find((mode) => mode !== 'pool' && isOn(mode)) || 'pool';
+
+var stepWaterMode = () => {
+    const next = WATER_MODES[(WATER_MODES.indexOf(waterMode()) + 1) % WATER_MODES.length];
+    WATER_MODES.forEach((mode) => setSwitch(mode, mode === next));
+    logger.debug(`simulator: water flow is now ${next}`);
+    return next;
+};
+
+// the heater and heat pump are in series, so both warm the same water: both bodies in
+// spillover, the spa in spa mode, and in pool mode the spa if its filter runs, else the pool
+var heatedBodies = () => {
+    const mode = waterMode();
+    if (mode === 'spillover') {
+        return ['pool', 'spa'];
+    }
+    return mode === 'spa' || isOn('aux14') ? ['spa'] : ['pool'];
+};
+
 var stepTemperatures = () => {
     tempSteps++;
-    const spaRunning = isOn('aux14');
     const heatPumpRunning = isOn('valve4');
     if (heaterAuto || heatPumpRunning) {
         const gain = heaterAuto || tempSteps % HEAT_PUMP_STEPS_PER_DEGREE === 0 ? 1 : 0;
-        if (spaRunning) {
+        const heated = heatedBodies();
+        if (heated.includes('spa')) {
             spaTempF = Math.min(SPA_MAX_F, spaTempF + gain);
-        } else {
+        }
+        if (heated.includes('pool')) {
             poolTempF = Math.min(POOL_MAX_F, poolTempF + gain);
         }
     } else {
@@ -175,7 +199,11 @@ var listen = ((filename, cb) => {
             emit(displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
         } else if (kind === 'DisplayUpdateEvent' && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
             spaTempShownAt = Date.now();
-            emit(isOn('aux14')
+            // the spa's sensor is just downstream of the spa filter pump, so its temperature is
+            // only known while that runs; the display takes turns when both are known
+            const known = isOn('aux14') ? ['pool', 'spa'] : ['pool'];
+            const body = known[temperaturesShown++ % known.length];
+            emit(body === 'spa'
                 ? displayFrame(`Spa Temp   ${spaTempF}_F`, '')
                 : displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
         } else {
@@ -204,7 +232,13 @@ var writeEvent = ((message) => {
             logger.debug(`simulator: heater1 is now ${heaterAuto ? 'auto' : 'off'}`);
         }
 
-        pressed.filter((name) => !panelKeyLabels[name] && name !== 'heater1').forEach((name) => {
+        if (pressed.includes('spillover') && displayTemplate) {
+            const mode = stepWaterMode();
+            echoUntil = Date.now() + KEY_ECHO_MS;
+            emit(displayFrame('SIMULATOR', `${mode.toUpperCase()} MODE`));
+        }
+
+        pressed.filter((name) => !panelKeyLabels[name] && name !== 'heater1' && name !== 'spillover').forEach((name) => {
             const statusName = name;
             const bit = StatusEvent.bitPosition(statusName);
             if (typeof bit === 'undefined') {
