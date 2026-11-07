@@ -7,6 +7,7 @@ var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
 var utils = require('../utils/writer.js');
 const { panelLabels } = require('../protocol/events');
+const activity = require('./ActivityService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -151,10 +152,13 @@ exports.setDeviceState = function(requestedId, state, user) {
             return;
         }
 
+        const details = [{ name: deviceId, value: desiredOn ? 1 : 0 }];
         if (wasOn === desiredOn) {
             logger.info(`REST ${who}: ${label} already ${onOff(wasOn)}, nothing sent`);
+            activity.record(user, `Asked to turn ${activity.label(deviceId)} ${onOff(desiredOn)}; it already was`, details);
         } else {
             logger.info(`REST ${who}: ${label} ${onOff(wasOn)} -> ${onOff(desiredOn)}`);
+            activity.record(user, `Turned ${activity.label(deviceId)} ${onOff(desiredOn)}`, details);
         }
 
         // the controller confirms the change on a later status frame; GET /status reports it

@@ -4,6 +4,7 @@ var { mongoose } = require('../mongoose');
 var { Event } = require('../models/event');
 var { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD } = require('../models/user');
 var utils = require('../utils/writer.js');
+const activity = require('./ActivityService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -48,6 +49,8 @@ exports.factoryReset = async function(user) {
         throw utils.respondWithCode(500, { code: 500, message: `factory reset failed: ${e.message}` });
     }
     resetListener();
+    // the first entry in the fresh history says who wiped the old one
+    await activity.record(user, 'Factory reset: erased all history and accounts');
     return { code: 200, message: `factory reset complete; sign in as ${DEFAULT_ADMIN_NAME} / ${DEFAULT_ADMIN_PASSWORD} to commission the server` };
 };
 
@@ -58,6 +61,7 @@ exports.factoryReset = async function(user) {
  **/
 exports.restart = async function(user) {
     logger.warn(`REST ${nameOf(user)}: restart requested; exiting`);
+    await activity.record(user, 'Restarted the server');
     setTimeout(() => {
         mongoose.disconnect()
             .catch(() => {})

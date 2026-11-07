@@ -1,6 +1,7 @@
 'use strict';
 
 var utils = require('../utils/writer.js');
+const activity = require('./ActivityService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -48,6 +49,7 @@ exports.pressPanelKey = function(key, user) {
             return;
         }
         logger.info(`REST ${who}: pressed panel key ${key}`);
+        activity.record(user, `Pressed the panel's ${key} key`, [{ name: key, value: 1 }]);
         resolve({ key: key, requestedAt: new Date().toISOString() });
     });
 };

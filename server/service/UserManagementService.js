@@ -2,6 +2,7 @@
 
 const { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } = require('./../models/user');
 var utils = require('../utils/writer.js');
+const activity = require('./ActivityService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -77,6 +78,7 @@ exports.createUser = async function(admin, credentials) {
     const account = new User({ email: name, password: credentials.password, role: role });
     await account.save();
     logger.info(`REST ${admin.email}: created ${role} account ${name}`);
+    activity.record(admin, `Created ${role} account ${name}`);
     return describe(account);
 };
 
@@ -99,6 +101,7 @@ exports.listUsers = async function() {
 exports.updateUser = async function(admin, name, changes) {
     const account = await findAccount(name);
     const updated = [];
+    const described = [];
 
     if (typeof changes.role !== 'undefined' && changes.role !== account.role) {
         checkRole(changes.role);
@@ -106,6 +109,7 @@ exports.updateUser = async function(admin, name, changes) {
             await requireAnotherAdmin(account);
         }
         updated.push(`role ${account.role} -> ${changes.role}`);
+        described.push(`changed ${name}'s role from ${account.role} to ${changes.role}`);
         account.role = changes.role;
     }
     if (typeof changes.password !== 'undefined') {
@@ -113,6 +117,7 @@ exports.updateUser = async function(admin, name, changes) {
         account.password = changes.password;
         account.tokens = [];
         updated.push('password reset');
+        described.push(`reset ${name}'s password`);
     }
     if (updated.length === 0) {
         throw fail(400, 'give a role or a password to change');
@@ -120,6 +125,8 @@ exports.updateUser = async function(admin, name, changes) {
 
     await account.save();
     logger.info(`REST ${admin.email}: account ${name}: ${updated.join(', ')}`);
+    const sentence = described.join(' and ');
+    activity.record(admin, sentence.charAt(0).toUpperCase() + sentence.slice(1));
     return describe(account);
 };
 
@@ -133,6 +140,7 @@ exports.deleteUser = async function(admin, name) {
     await requireAnotherAdmin(account);
     await account.deleteOne();
     logger.info(`REST ${admin.email}: removed account ${name}`);
+    activity.record(admin, `Removed account ${name}`);
     return { code: 200, message: `removed ${name}` };
 };
 
@@ -163,6 +171,7 @@ exports.loginUser = async function(credentials) {
 
     const token = await user.generateAuthToken();
     logger.info(user.mustChangeCredentials ? `signed in ${user.email}; the account must be commissioned` : `signed in ${user.email} (${user.role})`);
+    activity.record(user, 'Signed in');
     return Object.assign(describe(user), { token: token });
 };
 
@@ -198,6 +207,7 @@ exports.changeCredentials = async function(user, credentials) {
     logger.info(previousName === name
         ? `REST ${name}: changed password`
         : `REST ${previousName}: account renamed to ${name} with a new password`);
+    activity.record(user, previousName === name ? 'Changed own password' : `Renamed account ${previousName} to ${name} and set its password`);
     return Object.assign(describe(user), { token: token });
 };
 
@@ -210,5 +220,6 @@ exports.changeCredentials = async function(user, credentials) {
 exports.logoutUser = async function(user, token) {
     await user.removeToken(token);
     logger.info(`REST ${user.email}: signed out`);
+    activity.record(user, 'Signed out');
     return { code: 200, message: 'signed out' };
 };

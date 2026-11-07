@@ -19,7 +19,10 @@ var EventSchema = new Schema({
     status: [{
         name: String,
         value: Number
-    }]
+    }],
+    // set on 'action' events: the signed-in account that acted, and what it did
+    user: String,
+    message: String
 });
 
 // auto-create mongo indexes; idempotent
@@ -28,6 +31,8 @@ EventSchema.index({ eventType: 1, timestamp: -1, status: 1, 'status.0.name': 1, 
 EventSchema.index({ timestamp: -1, eventType: 1, status: 1, 'status.0.name': 1, 'status.0.value': 1, 'status.1.name': 1, 'status.1.value': 1, 'status.2.name': 1, 'status.2.value': 1 }, { name: 'eventType_other' });
 // newest value of one named reading without walking past readings that change more often
 EventSchema.index({ eventType: 1, 'status.name': 1, timestamp: -1 }, { name: 'eventType_statusName_timestamp' });
+// one account's actions, newest first, without walking past the controller's own events
+EventSchema.index({ user: 1, timestamp: -1 }, { name: 'user_timestamp', sparse: true });
 var Event = mongoose.model('events', EventSchema);
 
 module.exports = { Event };
