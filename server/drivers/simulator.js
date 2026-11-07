@@ -54,7 +54,7 @@ var loadCapture = (filename) => {
         let event;
         try {
             event = factory.create(frame);
-        } catch (e) {
+        } catch {
             return; // drop frames that fail their checksum
         }
         if (!event) {

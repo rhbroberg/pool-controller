@@ -3,7 +3,7 @@
 var utils = require('../utils/writer.js');
 var Water = require('../service/WaterService');
 
-module.exports.setWaterMode = function setWaterMode (req, res, next) {
+module.exports.setWaterMode = function setWaterMode (req, res) {
   Water.setWaterMode(req.swagger.params['mode'].value, req.user)
     .then(function (response) {
       utils.writeJson(res, response);

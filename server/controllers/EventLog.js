@@ -3,7 +3,7 @@
 var utils = require('../utils/writer.js');
 var EventLog = require('../service/EventLogService');
 
-module.exports.getEvents = function getEvents (req, res, next) {
+module.exports.getEvents = function getEvents (req, res) {
   var params = req.swagger.params;
   EventLog.getEvents(params['types'].value, params['user'].value, params['cursor'].value, params['order'].value, params['limit'].value)
     .then(function (response) {
@@ -14,7 +14,7 @@ module.exports.getEvents = function getEvents (req, res, next) {
     });
 };
 
-module.exports.getEventUsers = function getEventUsers (req, res, next) {
+module.exports.getEventUsers = function getEventUsers (req, res) {
   EventLog.getEventUsers()
     .then(function (response) {
       utils.writeJson(res, response);

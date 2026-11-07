@@ -3,7 +3,7 @@
 var utils = require('../utils/writer.js');
 var Environment = require('../service/EnvironmentService');
 
-module.exports.getHeaterState = function getHeaterState (req, res, next) {
+module.exports.getHeaterState = function getHeaterState (req, res) {
   var poolId = req.swagger.params['poolId'].value;
   Environment.getHeaterState(poolId)
     .then(function (response) {
@@ -14,7 +14,7 @@ module.exports.getHeaterState = function getHeaterState (req, res, next) {
     });
 };
 
-module.exports.getPoolTemperature = function getPoolTemperature (req, res, next) {
+module.exports.getPoolTemperature = function getPoolTemperature (req, res) {
   var poolId = req.swagger.params['poolId'].value;
   var date = req.swagger.params['date'].value;
   var limit = req.swagger.params['limit'].value;
@@ -27,7 +27,7 @@ module.exports.getPoolTemperature = function getPoolTemperature (req, res, next)
     });
 };
 
-module.exports.setHeaterState = function setHeaterState (req, res, next) {
+module.exports.setHeaterState = function setHeaterState (req, res) {
   var poolId = req.swagger.params['poolId'].value;
   var state = req.swagger.params['state'].value;
   Environment.setHeaterState(poolId,state)
@@ -39,7 +39,7 @@ module.exports.setHeaterState = function setHeaterState (req, res, next) {
     });
 };
 
-module.exports.temperatureSummary = function temperatureSummary (req, res, next) {
+module.exports.temperatureSummary = function temperatureSummary (req, res) {
   Environment.temperatureSummary()
     .then(function (response) {
       utils.writeJson(res, response);

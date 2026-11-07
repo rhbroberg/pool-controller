@@ -18,7 +18,7 @@ const panelService = require('./service/PanelService');
 const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
 
-var { mongoose } = require('./mongoose'); // eslint-disable-line no-unused-vars
+var { mongoose } = require('./mongoose');
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('./models/event');
 var serial = require('./drivers/serial');
@@ -79,7 +79,7 @@ if (argv.d !== 'file') {
         app.use(express.static(publicPath));
         io = socketIO(server);
 
-        io.on('connection', (socket) => { // eslint-disable-line no-unused-vars// eslint-disable-line no-unused-vars
+        io.on('connection', (socket) => {
             logger.debug('connecting from client', socket);
             if (argv.fromStart && argv.d === 'tail' && !replayStarted) {
                 replayStarted = true;

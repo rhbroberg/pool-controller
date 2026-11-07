@@ -89,7 +89,7 @@ UserSchema.statics.findByToken = function(token) {
 
     try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
+    } catch {
         return Promise.reject();
     }
 
@@ -109,7 +109,7 @@ UserSchema.statics.findByCredentials = function(email, password) {
         }
 
         return new Promise((resolve, reject) => {
-            bcrypt.compare(password, user.password, (err, result) => { // eslint-disable-line no-unused-vars
+            bcrypt.compare(password, user.password, (err, result) => {
                 if (result) {
                     resolve(user);
                 } else {

@@ -1,4 +1,4 @@
-/* global google document fetch window */
+/* global google */
 
 google.charts.load('current', { packages: ['corechart', 'line'] });
 google.charts.setOnLoadCallback(drawBasic);

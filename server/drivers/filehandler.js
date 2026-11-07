@@ -1,7 +1,7 @@
 const fs = require('fs');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
-var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
+var { mongoose } = require('../mongoose');
 
 var listen = ((filename, cb) => {
     fs.readFile(filename, async (err, data) => {

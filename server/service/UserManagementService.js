@@ -165,7 +165,7 @@ exports.loginUser = async function(credentials) {
     let user;
     try {
         user = await User.findByCredentials(credentials.email, credentials.password);
-    } catch (e) {
+    } catch {
         throw fail(401, 'incorrect name or password');
     }
 

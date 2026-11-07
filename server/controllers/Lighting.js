@@ -3,7 +3,7 @@
 var utils = require('../utils/writer.js');
 var Lighting = require('../service/LightingService');
 
-module.exports.getLightingState = function getLightingState (req, res, next) {
+module.exports.getLightingState = function getLightingState (req, res) {
   var lightId = req.swagger.params['lightId'].value;
   Lighting.getLightingState(lightId)
     .then(function (response) {
@@ -14,7 +14,7 @@ module.exports.getLightingState = function getLightingState (req, res, next) {
     });
 };
 
-module.exports.getLights = function getLights (req, res, next) {
+module.exports.getLights = function getLights (req, res) {
   Lighting.getLights()
     .then(function (response) {
       utils.writeJson(res, response);
@@ -24,7 +24,7 @@ module.exports.getLights = function getLights (req, res, next) {
     });
 };
 
-module.exports.setLightingState = function setLightingState (req, res, next) {
+module.exports.setLightingState = function setLightingState (req, res) {
   var lightId = req.swagger.params['lightId'].value;
   var state = req.swagger.params['state'].value;
   Lighting.setLightingState(lightId,state)

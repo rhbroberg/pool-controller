@@ -3,7 +3,7 @@
 var utils = require('../utils/writer.js');
 var Device = require('../service/DeviceService');
 
-module.exports.getDeviceState = function getDeviceState (req, res, next) {
+module.exports.getDeviceState = function getDeviceState (req, res) {
   var deviceId = req.swagger.params['deviceId'].value;
   Device.getDeviceState(deviceId)
     .then(function (response) {
@@ -14,7 +14,7 @@ module.exports.getDeviceState = function getDeviceState (req, res, next) {
     });
 };
 
-module.exports.getDevices = function getDevices (req, res, next) {
+module.exports.getDevices = function getDevices (req, res) {
   var skip = req.swagger.params['skip'].value;
   var limit = req.swagger.params['limit'].value;
   Device.getDevices(skip,limit)
@@ -26,7 +26,7 @@ module.exports.getDevices = function getDevices (req, res, next) {
     });
 };
 
-module.exports.registerDevice = function registerDevice (req, res, next) {
+module.exports.registerDevice = function registerDevice (req, res) {
   var deviceId = req.swagger.params['deviceId'].value;
   Device.registerDevice(deviceId)
     .then(function (response) {
@@ -37,7 +37,7 @@ module.exports.registerDevice = function registerDevice (req, res, next) {
     });
 };
 
-module.exports.setDeviceState = function setDeviceState (req, res, next) {
+module.exports.setDeviceState = function setDeviceState (req, res) {
   var deviceId = req.swagger.params['deviceId'].value;
   var state = req.swagger.params['state'].value;
   Device.setDeviceState(deviceId, state, req.user)

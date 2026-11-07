@@ -6,7 +6,6 @@ var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
-const { authenticate } = require('../utils/authenticate');
 
 // lines up with strings in db storage
 const tempNames = {
@@ -20,27 +19,23 @@ const tempNames = {
  * poolId String 
  * returns HeaterState
  **/
-exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-vars
-    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
-        var examples = {};
+exports.getHeaterState = async function(poolId) { // eslint-disable-line no-unused-vars
+    var examples = {};
 
-        const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 });
-        if (doc) {
-            examples['application/json'] = {
-                'id': doc.status[0]._id,
-                'units': 'fahrenheit',
-                'timestamp': doc.timestamp,
-                'state': doc.status[0].value ? 'on' : 'off',
-                'setpoint': '42'
-            };
-        }
+    const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': 'heater1' } } }).sort({ timestamp: -1 });
+    if (doc) {
+        examples['application/json'] = {
+            'id': doc.status[0]._id,
+            'units': 'fahrenheit',
+            'timestamp': doc.timestamp,
+            'state': doc.status[0].value ? 'on' : 'off',
+            'setpoint': '42'
+        };
+    }
 
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
-        }
-    });
+    if (Object.keys(examples).length > 0) {
+        return examples[Object.keys(examples)[0]];
+    }
 };
 
 
@@ -49,54 +44,50 @@ exports.getHeaterState = function(poolId) { // eslint-disable-line no-unused-var
  * poolId String 
  * returns TemperatueZoneStatus
  **/
-exports.getPoolTemperature = function(poolId, date, limit) { // eslint-disable-line no-unused-vars
-    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
-        var statuses = [];
-        var examples = {};
+exports.getPoolTemperature = async function(poolId, date, limit) {
+    var statuses = [];
+    var examples = {};
 
-        if (typeof date === 'undefined') {
-            await getMostRecentInfo(tempNames[poolId], statuses);
-        } else {
-            var temperatures = [];
-            const events = await Event.find({
-                'eventType': 'info',
-                'status': { $elemMatch: { 'name': 'pool temp' } },
-                timestamp: { $gte: date }
-            }).select('timestamp').select('status').sort('timestamp').limit(typeof limit !== 'undefined' ? limit : 0);
+    if (typeof date === 'undefined') {
+        await getMostRecentInfo(tempNames[poolId], statuses);
+    } else {
+        var temperatures = [];
+        const events = await Event.find({
+            'eventType': 'info',
+            'status': { $elemMatch: { 'name': 'pool temp' } },
+            timestamp: { $gte: date }
+        }).select('timestamp').select('status').sort('timestamp').limit(typeof limit !== 'undefined' ? limit : 0);
 
-            let lastTime;
-            events.forEach(function(event) {
-                logger.trace('event: ', event.timestamp, event.status[0].value);
-                if (limit === -1 /* code disabled for now; option to fill in time slots*/ ) {
-                    const nextTime = new Date(event.timestamp).getTime();
-                    if (typeof lastTime !== 'undefined') {
-                        logger.trace('comparing old ', lastTime, ' to new ', nextTime);
-                        for (let makeup = lastTime + 60 * 60 * 1000; makeup < nextTime + 60 * 60 * 1000; makeup += 60 * 60 * 1000) {
-                            logger.trace('making up time', new Date(makeup));
-                            temperatures.push([new Date(makeup), event.status[0].value]);
-                        }
+        let lastTime;
+        events.forEach(function(event) {
+            logger.trace('event: ', event.timestamp, event.status[0].value);
+            if (limit === -1 /* code disabled for now; option to fill in time slots*/ ) {
+                const nextTime = new Date(event.timestamp).getTime();
+                if (typeof lastTime !== 'undefined') {
+                    logger.trace('comparing old ', lastTime, ' to new ', nextTime);
+                    for (let makeup = lastTime + 60 * 60 * 1000; makeup < nextTime + 60 * 60 * 1000; makeup += 60 * 60 * 1000) {
+                        logger.trace('making up time', new Date(makeup));
+                        temperatures.push([new Date(makeup), event.status[0].value]);
                     }
-                    lastTime = nextTime;
                 }
-                temperatures.push([event.timestamp, event.status[0].value]);
-            });
-            statuses.push({
-                'name': tempNames[poolId],
-                'units': 'fahrenheit',
-                'values': temperatures
-            });
-        }
+                lastTime = nextTime;
+            }
+            temperatures.push([event.timestamp, event.status[0].value]);
+        });
+        statuses.push({
+            'name': tempNames[poolId],
+            'units': 'fahrenheit',
+            'values': temperatures
+        });
+    }
 
-        examples['application/json'] = {
-            'zoneStatus': statuses
-        };
+    examples['application/json'] = {
+        'zoneStatus': statuses
+    };
 
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
-        }
-    });
+    if (Object.keys(examples).length > 0) {
+        return examples[Object.keys(examples)[0]];
+    }
 };
 
 
@@ -146,25 +137,19 @@ exports.registerControlListener = function(cb) {
  *
  * returns TemperatureSummary
  **/
-exports.temperatureSummary = function() {
-    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
-        var examples = {};
-        var statuses = [];
+exports.temperatureSummary = async function() {
+    var examples = {};
+    var statuses = [];
 
-        authenticate
+    await getMostRecentInfo('ambient', statuses);
+    await getMostRecentInfo('pool temp', statuses);
+    await getMostRecentInfo('spa temp', statuses);
 
-        await getMostRecentInfo('ambient', statuses);
-        await getMostRecentInfo('pool temp', statuses);
-        await getMostRecentInfo('spa temp', statuses);
+    examples['application/json'] = {
+        'zoneStatus': statuses
+    };
 
-        examples['application/json'] = {
-            'zoneStatus': statuses
-        };
-
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
-        }
-    });
+    if (Object.keys(examples).length > 0) {
+        return examples[Object.keys(examples)[0]];
+    }
 };

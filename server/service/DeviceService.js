@@ -29,46 +29,41 @@ var describeDevice = (requested, device) => requested === device ? device : `${r
  * deviceId String 
  * no response value expected for this operation
  **/
-exports.getDeviceState = function(requestedId) {
+exports.getDeviceState = async function(requestedId) {
     const deviceId = resolveDevice(requestedId);
-    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
-        var examples = {};
-        var current;
+    var examples = {};
+    var current;
 
-        current = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 });
-        if (!current) {
-            resolve();
-            return;
-        }
+    current = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId } } }).sort({ timestamp: -1 });
+    if (!current) {
+        return;
+    }
 
-        const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId; });
-        const deviceCurrentValue = deviceCurrent ? deviceCurrent.value : 0;
+    const deviceCurrent = current.status.find((mystatus) => { return mystatus.name === deviceId; });
+    const deviceCurrentValue = deviceCurrent ? deviceCurrent.value : 0;
 
-        const lastChanged = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 });
-        if (lastChanged) {
-            const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
-            examples['application/json'] = {
-                'id': devicePrevious._id,
-                'previousUpdate': lastChanged.timestamp,
-                'timestamp': current.timestamp,
-                'name': devicePrevious.name,
-                'value': deviceCurrentValue
-            };
-        } else if (deviceCurrent) {
-            examples['application/json'] = {
-                'id': deviceCurrent._id,
-                'timestamp': current.timestamp,
-                'name': deviceCurrent.name,
-                'value': deviceCurrentValue
-            };
-        }
+    const lastChanged = await Event.findOne({ 'eventType': 'status', 'status': { $elemMatch: { 'name': deviceId, 'value': deviceCurrentValue ? 0 : 1 } } }).sort({ timestamp: -1 });
+    if (lastChanged) {
+        const devicePrevious = lastChanged.status.find((mystatus) => { return mystatus.name === deviceId; });
+        examples['application/json'] = {
+            'id': devicePrevious._id,
+            'previousUpdate': lastChanged.timestamp,
+            'timestamp': current.timestamp,
+            'name': devicePrevious.name,
+            'value': deviceCurrentValue
+        };
+    } else if (deviceCurrent) {
+        examples['application/json'] = {
+            'id': deviceCurrent._id,
+            'timestamp': current.timestamp,
+            'name': deviceCurrent.name,
+            'value': deviceCurrentValue
+        };
+    }
 
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
-        }
-    });
+    if (Object.keys(examples).length > 0) {
+        return examples[Object.keys(examples)[0]];
+    }
 };
 
 
@@ -79,26 +74,22 @@ exports.getDeviceState = function(requestedId) {
  * limit Integer max number of records to return (optional)
  * returns List
  **/
-exports.getDevices = function(skip, limit) { // eslint-disable-line no-unused-vars
-    return new Promise(async function(resolve, reject) { // eslint-disable-line no-unused-vars
-        var examples = {};
-        var indicators = [];
+exports.getDevices = async function(skip, limit) { // eslint-disable-line no-unused-vars
+    var examples = {};
+    var indicators = [];
 
-        const doc = await Event.findOne({ 'eventType': 'status' }).sort({ timestamp: -1 });
-        if (doc) {
-            logger.trace('found most recent status', doc);
-            doc.status.forEach(function(indicator) {
-                indicators.push(indicator.name);
-            });
-        }
+    const doc = await Event.findOne({ 'eventType': 'status' }).sort({ timestamp: -1 });
+    if (doc) {
+        logger.trace('found most recent status', doc);
+        doc.status.forEach(function(indicator) {
+            indicators.push(indicator.name);
+        });
+    }
 
-        examples['application/json'] = indicators;
-        if (Object.keys(examples).length > 0) {
-            resolve(examples[Object.keys(examples)[0]]);
-        } else {
-            resolve();
-        }
-    });
+    examples['application/json'] = indicators;
+    if (Object.keys(examples).length > 0) {
+        return examples[Object.keys(examples)[0]];
+    }
 };
 
 

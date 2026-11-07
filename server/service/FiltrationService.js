@@ -4,7 +4,7 @@ require('../config/config');
 var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event'); // eslint-disable-line no-unused-vars
-const log4js = require('log4js'); // eslint-disable-line no-unused-vars
+const log4js = require('log4js');
 var logger = log4js.getLogger(); // eslint-disable-line no-unused-vars
 
 
