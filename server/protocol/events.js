@@ -67,6 +67,15 @@ const controlMap = new TwoWayMap({
     '31': 'filter' // 0x80 00 00 00: 'filter',
 });
 
+// what this installation's panel calls its generic outputs, as it displays them ("Blower /
+// Turned On"); each was confirmed in mystic-pool-rs485-various by one keypress turning the
+// output's status bit on and a second turning it off
+const panelLabels = {
+    aux3: 'Yard Lights', // key 00 08 00 00, status byte 1 bit 0x04; the 2019 capture shows "Yard Light"
+    aux5: 'Blower', // key 00 20 00 00, status byte 1 bit 0x10
+    aux14: 'Spa Filter' // key 00 00 00 02, status byte 3 bit 0x01; also brings valve3 and aux1 on
+};
+
 class Event {
     constructor(frame, header) {
         this.now = moment().valueOf();
@@ -542,4 +551,4 @@ Waterfall
 
 */
 
-module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent };
+module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels };

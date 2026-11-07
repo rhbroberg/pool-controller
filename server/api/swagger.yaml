@@ -70,7 +70,7 @@ paths:
       parameters:
       - name: "deviceId"
         in: "path"
-        description: "a controller button such as filter, lights, heater1, superchlorinate or aux14; spafilter is accepted for aux14"
+        description: "a controller button such as filter, lights, heater1, superchlorinate, aux3, aux5 or aux14; the panel's names spafilter (aux14), yardlights (aux3) and blower (aux5) are also accepted"
         required: true
         type: "string"
       - name: "state"
@@ -97,7 +97,7 @@ paths:
       parameters:
       - name: "deviceId"
         in: "path"
-        description: "a status switch name; spafilter is accepted for aux14"
+        description: "a status switch name; spafilter, yardlights and blower are accepted for aux14, aux3 and aux5"
         required: true
         type: "string"
       responses:

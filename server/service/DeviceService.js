@@ -6,16 +6,20 @@ var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('../models/event');
 var utils = require('../utils/writer.js');
+const { panelLabels } = require('../protocol/events');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
-// names this installation's panel shows for generic outputs; keys are lowercase letters and
-// digits only, so "spa filter", "spa-filter" and "spaFilter" all match
-const deviceAliases = {
-    spafilter: 'aux14'
-};
+// letters and digits only, without a plural s, so "Yard Lights", "yard-lights" and "yardlight" match
+var normalized = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/s$/, '');
 
-var resolveDevice = (deviceId) => deviceAliases[deviceId.toLowerCase().replace(/[^a-z0-9]/g, '')] || deviceId;
+// the panel's names for generic outputs are accepted in place of aux3, aux5, ...
+const deviceAliases = Object.keys(panelLabels).reduce((aliases, device) => {
+    aliases[normalized(panelLabels[device])] = device;
+    return aliases;
+}, {});
+
+var resolveDevice = (deviceId) => deviceAliases[normalized(deviceId)] || deviceId;
 
 var describeDevice = (requested, device) => requested === device ? device : `${requested} (${device})`;
 

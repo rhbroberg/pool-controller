@@ -36,6 +36,8 @@ struct StatusReading: Decodable, Identifiable, Hashable {
         case "heater1": "Heater"
         case "superchlorinate": "Super Chlorinate"
         case "aux14": "Spa Filter"
+        case "aux3": "Yard Lights"
+        case "aux5": "Blower"
         default: name.capitalized
         }
     }

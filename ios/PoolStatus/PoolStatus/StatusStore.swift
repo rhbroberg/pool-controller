@@ -22,6 +22,9 @@ struct EquipmentControl: Identifiable {
         // aux14 is labelled Spa Filter on this panel; it brings valve3 and aux1 with it
         EquipmentControl(name: "aux14", systemImage: "bathtub", tint: .cyan),
         EquipmentControl(name: "lights", systemImage: "lightbulb", tint: .yellow),
+        // aux3 and aux5 are labelled Yard Lights and Blower on this panel
+        EquipmentControl(name: "aux3", systemImage: "lamp.floor", tint: .yellow),
+        EquipmentControl(name: "aux5", systemImage: "wind", tint: .mint),
         EquipmentControl(name: "superchlorinate", systemImage: "bubbles.and.sparkles", tint: .teal),
         // the heater key switches between Manual Off and Auto Control on the panel display
         EquipmentControl(name: "heater1", systemImage: "flame", tint: .orange,

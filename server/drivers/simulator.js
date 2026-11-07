@@ -4,7 +4,7 @@ const fs = require('fs');
 const log4js = require('log4js');
 const { FrameParser } = require('../protocol/parse');
 const { EventFactory } = require('../protocol/eventfactory');
-const { StatusEvent, ControlEvent } = require('../protocol/events');
+const { StatusEvent, ControlEvent, panelLabels } = require('../protocol/events');
 var logger = log4js.getLogger();
 
 const FRAME_INTERVAL_MS = 25;
@@ -24,10 +24,8 @@ const linkedSwitches = {
 // the captures never show a spa temperature; this is shown while the spa filter runs
 const SPA_TEMP_F = 98;
 const SPA_TEMP_EVERY_MS = 5000;
-// what the panel displays when these switches change, as seen in sample-various-bin
-const switchMessages = {
-    aux14: 'Spa Filter'
-};
+// the panel announces a labelled output changing as "<label> / Turned On"
+const switchMessages = panelLabels;
 
 var frames = [];
 var statusTemplate;

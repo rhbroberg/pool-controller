@@ -8,7 +8,7 @@ var socketIO = require('socket.io');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
 const yargs = require('yargs');
-const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./protocol/events'); // eslint-disable-line no-unused-vars
+const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels } = require('./protocol/events'); // eslint-disable-line no-unused-vars
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
 const path = require('path');
@@ -309,6 +309,8 @@ var handleHunk = (data) => {
 };
 
 // the heater's on/off is its mode from the display, not its status bit
+var labelled = (name) => panelLabels[name] ? `${name} (${panelLabels[name]})` : name;
+
 var isSwitchOn = (name) => name === 'heater1' ? heaterAuto === 1 : currentEnabledSwitches.includes(name);
 
 // a keypress only toggles, so a request is confirmed by watching status frames rather than
@@ -316,13 +318,13 @@ var isSwitchOn = (name) => name === 'heater1' ? heaterAuto === 1 : currentEnable
 var verifyControlRequests = () => {
     controlVerification = controlVerification.filter((request) => {
         if (isSwitchOn(request.requestedChange) === request.desiredOn) {
-            logger.info(`controller confirmed ${request.requestedChange} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
+            logger.info(`controller confirmed ${labelled(request.requestedChange)} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
             // half duplex means we won't actually receive this event we just sent, so fake it
             dispatchEvent(request.payload);
             return false;
         }
         if (++request.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
-            logger.warn(`controller did not confirm ${request.requestedChange} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
+            logger.warn(`controller did not confirm ${labelled(request.requestedChange)} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
             return false;
         }
         return true;
