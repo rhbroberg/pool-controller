@@ -96,19 +96,6 @@ struct StubServer {
     private static let defaults = UserDefaults(suiteName: "PoolStatusTests")!
 }
 
-/// Keeps a sign-in for the length of a test instead of in the keychain.
-final class InMemoryCredentialStore: CredentialStore {
-    private(set) var saved: Credentials?
-
-    init(_ saved: Credentials? = nil) {
-        self.saved = saved
-    }
-
-    func load() -> Credentials? { saved }
-    func save(_ credentials: Credentials) { saved = credentials }
-    func delete() { saved = nil }
-}
-
 /// State a stub's handler can change between requests.
 nonisolated final class Shared<Value>: @unchecked Sendable {
     private let lock = NSLock()

@@ -65,25 +65,31 @@ struct CommissioningView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") { save() }
-                            .disabled(!canSave)
+                        Button("Save") {
+                            errorMessage = nil
+                            isSaving = true
+                        }
+                        .disabled(!canSave)
                     }
                 }
             }
             .interactiveDismissDisabled(isSaving)
         }
+        .task(id: isSaving) {
+            if isSaving {
+                await save()
+            }
+        }
     }
 
-    private func save() {
-        isSaving = true
-        errorMessage = nil
-        Task {
-            defer { isSaving = false }
-            do {
-                try await store.auth.commission(name: trimmedName, password: password)
-            } catch {
+    private func save() async {
+        do {
+            try await store.auth.commission(name: trimmedName, password: password)
+        } catch {
+            if !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }
+        isSaving = false
     }
 }

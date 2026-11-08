@@ -3,6 +3,10 @@ import SwiftUI
 struct SettingsView: View {
     static let reconnectChoices = [10, 30, 60, 120, 300]
 
+    private enum Route: Hashable {
+        case changePassword, eventLog, accounts, serverMaintenance
+    }
+
     @Environment(StatusStore.self) private var store
     @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
@@ -72,9 +76,7 @@ struct SettingsView: View {
                                 Text(credentials.name)
                             }
                         }
-                        NavigationLink("Change Password") {
-                            ChangePasswordView()
-                        }
+                        NavigationLink("Change Password", value: Route.changePassword)
                         Button("Sign Out", role: .destructive) {
                             auth.signOut()
                         }
@@ -86,7 +88,11 @@ struct SettingsView: View {
                         SecureField("Password", text: $password)
                             .textContentType(.password)
                         Button {
-                            signIn()
+                            signInError = nil
+                            // signing in is to the server being typed, so it takes effect now
+                            // rather than on Done
+                            store.serverAddress = trimmedAddress
+                            isSigningIn = true
                         } label: {
                             HStack {
                                 Text("Sign In")
@@ -109,20 +115,22 @@ struct SettingsView: View {
                 }
 
                 Section(auth.isAdmin ? "History & Administration" : "History") {
-                    NavigationLink("Event Log") {
-                        EventLogView()
-                    }
+                    NavigationLink("Event Log", value: Route.eventLog)
                     if auth.isAdmin {
-                        NavigationLink("Accounts") {
-                            AccountsView()
-                        }
-                        NavigationLink("Server Maintenance") {
-                            ServerMaintenanceView()
-                        }
+                        NavigationLink("Accounts", value: Route.accounts)
+                        NavigationLink("Server Maintenance", value: Route.serverMaintenance)
                     }
                 }
             }
             .navigationTitle("Settings")
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .changePassword: ChangePasswordView()
+                case .eventLog: EventLogView()
+                case .accounts: AccountsView()
+                case .serverMaintenance: ServerMaintenanceView()
+                }
+            }
             .fullScreenCover(isPresented: Binding(get: { auth.commissioning != nil },
                                                   set: { if !$0 { auth.cancelCommissioning() } })) {
                 CommissioningView()
@@ -143,6 +151,11 @@ struct SettingsView: View {
                 draftPoolName = poolName
             }
         }
+        .task(id: isSigningIn) {
+            if isSigningIn {
+                await signIn()
+            }
+        }
         .onDisappear(perform: commitDrafts)
     }
 
@@ -154,31 +167,32 @@ struct SettingsView: View {
         poolName = name.isEmpty ? StatusView.defaultPoolName : name
     }
 
-    private func signIn() {
-        isSigningIn = true
-        signInError = nil
-        // signing in is to the server being typed, so it takes effect now rather than on Done
-        store.serverAddress = trimmedAddress
-        Task {
-            defer { isSigningIn = false }
-            do {
-                try await auth.signIn(name: accountName.trimmingCharacters(in: .whitespacesAndNewlines),
-                                      password: password)
-                password = ""
-            } catch {
+    private func signIn() async {
+        do {
+            try await auth.signIn(name: accountName.trimmingCharacters(in: .whitespacesAndNewlines),
+                                  password: password)
+            password = ""
+        } catch {
+            if !error.isCancellation {
                 signInError = error.localizedDescription
             }
         }
+        isSigningIn = false
     }
 }
 
 /// Restart and factory reset, kept off the main Settings page because they affect the server
 /// rather than this app.
 struct ServerMaintenanceView: View {
+    private enum Operation {
+        case restart, factoryReset
+    }
+
     @Environment(StatusStore.self) private var store
     @State private var confirmingRestart = false
     @State private var confirmingReset = false
-    @State private var isWorking = false
+    /// The operation under way; leaving the page cancels it.
+    @State private var operation: Operation?
     @State private var message: String?
 
     var body: some View {
@@ -211,12 +225,12 @@ struct ServerMaintenanceView: View {
                 }
             }
         }
-        .disabled(!store.auth.isAdmin || isWorking)
+        .disabled(!store.auth.isAdmin || operation != nil)
         .navigationTitle("Server Maintenance")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Restart the server?", isPresented: $confirmingRestart, titleVisibility: .visible) {
             Button("Restart Server") {
-                restartServer()
+                start(.restart)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -224,39 +238,39 @@ struct ServerMaintenanceView: View {
         }
         .confirmationDialog("Are you sure?", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Factory Reset", role: .destructive) {
-                factoryReset()
+                start(.factoryReset)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This erases all history and accounts on the server and recreates the \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) account. It can’t be undone.")
         }
+        .task(id: operation) {
+            if let operation {
+                await perform(operation)
+            }
+        }
     }
 
-    private func restartServer() {
-        isWorking = true
+    private func start(_ operation: Operation) {
         message = nil
-        Task {
-            defer { isWorking = false }
-            do {
+        self.operation = operation
+    }
+
+    private func perform(_ operation: Operation) async {
+        do {
+            switch operation {
+            case .restart:
                 try await store.restartServer()
                 message = "The server is restarting. The app reconnects when it’s back."
-            } catch {
-                message = error.localizedDescription
-            }
-        }
-    }
-
-    private func factoryReset() {
-        isWorking = true
-        message = nil
-        Task {
-            defer { isWorking = false }
-            do {
+            case .factoryReset:
                 _ = try await store.factoryReset()
                 message = "Factory reset complete. Sign in as \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) to set up the server."
-            } catch {
+            }
+        } catch {
+            if !error.isCancellation {
                 message = error.localizedDescription
             }
         }
+        self.operation = nil
     }
 }

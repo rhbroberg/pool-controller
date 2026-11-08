@@ -59,8 +59,11 @@ struct SetpointView: View {
                         if isSaving {
                             ProgressView()
                         } else {
-                            Button("Save", action: save)
-                                .disabled(!hasChanges)
+                            Button("Save") {
+                                errorMessage = nil
+                                isSaving = true
+                            }
+                            .disabled(!hasChanges)
                         }
                     }
                 }
@@ -68,6 +71,11 @@ struct SetpointView: View {
             .onAppear(perform: loadDrafts)
         }
         .presentationDetents([.medium, .large])
+        .task(id: isSaving) {
+            if isSaving {
+                await save()
+            }
+        }
     }
 
     private var explanation: String {
@@ -94,17 +102,15 @@ struct SetpointView: View {
         }
     }
 
-    private func save() {
-        isSaving = true
-        errorMessage = nil
-        Task {
-            defer { isSaving = false }
-            do {
-                try await store.setSetpoints(drafts, device: device)
-                dismiss()
-            } catch {
+    private func save() async {
+        do {
+            try await store.setSetpoints(drafts, device: device)
+            dismiss()
+        } catch {
+            if !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }
+        isSaving = false
     }
 }

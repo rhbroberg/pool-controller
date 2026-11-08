@@ -18,7 +18,8 @@ enum ServerAddress {
 struct ServerSetupView: View {
     @Environment(StatusStore.self) private var store
     @State private var address = ""
-    @State private var isTesting = false
+    /// The address being tried; leaving the page cancels it.
+    @State private var testing: String?
     @State private var errorMessage: String?
     @State private var isScanningNetwork = false
 
@@ -49,7 +50,7 @@ struct ServerSetupView: View {
                     } label: {
                         Label("Search My Network", systemImage: "magnifyingglass")
                     }
-                    .disabled(isTesting)
+                    .disabled(testing != nil)
                 } footer: {
                     Text("Looks for pool servers on the network this phone is connected to.")
                 }
@@ -76,13 +77,13 @@ struct ServerSetupView: View {
                     Button(action: connect) {
                         HStack {
                             Text("Connect")
-                            if isTesting {
+                            if testing != nil {
                                 Spacer()
                                 ProgressView()
                             }
                         }
                     }
-                    .disabled(trimmedAddress.isEmpty || isTesting)
+                    .disabled(trimmedAddress.isEmpty || testing != nil)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -94,6 +95,11 @@ struct ServerSetupView: View {
                 }
             }
         }
+        .task(id: testing) {
+            if let testing {
+                await test(testing)
+            }
+        }
     }
 
     private func connect() {
@@ -101,23 +107,28 @@ struct ServerSetupView: View {
     }
 
     private func connect(to candidate: String) {
-        guard !candidate.isEmpty, !isTesting else {
+        guard !candidate.isEmpty, testing == nil else {
             return
         }
-        isTesting = true
         errorMessage = nil
-        Task {
-            defer { isTesting = false }
-            do {
-                try await store.connect(to: candidate)
-            } catch {
+        testing = candidate
+    }
+
+    private func test(_ candidate: String) async {
+        do {
+            try await store.connect(to: candidate)
+        } catch {
+            if !error.isCancellation {
                 errorMessage = "Couldn’t reach \(ServerAddress.display(candidate)). \(error.localizedDescription)"
             }
         }
+        testing = nil
     }
 }
 
+#if DEBUG
 #Preview {
     ServerSetupView()
-        .environment(StatusStore())
+        .environment(StatusStore.preview())
 }
+#endif

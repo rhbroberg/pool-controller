@@ -194,10 +194,13 @@ private struct PanelDisplayView: View {
     /// One display line, with the panel's blinking characters hidden on alternate beats.
     private func line(_ index: Int, of display: PanelDisplay, blinkVisible: Bool) -> Text {
         let blinking = index < display.blinking.count ? Set(display.blinking[index]) : []
-        return display.lines[index].enumerated().reduce(Text("")) { text, character in
-            let hidden = !blinkVisible && blinking.contains(character.offset)
-            return text + Text(String(character.element)).foregroundStyle(hidden ? Color.clear : Self.lit)
+        var text = AttributedString()
+        for (offset, character) in display.lines[index].enumerated() {
+            var piece = AttributedString(String(character))
+            piece.foregroundColor = !blinkVisible && blinking.contains(offset) ? .clear : Self.lit
+            text += piece
         }
+        return Text(text)
     }
 }
 
@@ -389,9 +392,11 @@ private struct PadButtonStyle: ButtonStyle {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         PanelView()
-            .environment(StatusStore())
+            .environment(StatusStore.preview())
     }
 }
+#endif

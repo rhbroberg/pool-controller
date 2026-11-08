@@ -16,9 +16,9 @@ struct EventLogView: View {
         List {
             ForEach(model.events) { event in
                 EventRow(event: event)
-                    .onAppear {
+                    .task {
                         if event.id == model.events.last?.id {
-                            Task { await model.loadMore(client: store.client) }
+                            await model.loadMore(client: store.client)
                         }
                     }
             }
@@ -242,9 +242,9 @@ private struct WrappingLayout: Layout {
 }
 
 private struct EventRow: View {
-    static let timeWidth: CGFloat = 78
-
     let event: EventEntry
+
+    @ScaledMetric(relativeTo: .caption) private var timeWidth: CGFloat = 78
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -255,7 +255,7 @@ private struct EventRow: View {
                 Text(event.timestamp, format: .dateTime.hour().minute().second())
                     .font(.caption.monospacedDigit())
             }
-            .frame(width: Self.timeWidth, alignment: .leading)
+            .frame(width: timeWidth, alignment: .leading)
 
             Image(systemName: event.kind?.systemImage ?? "circle.dashed")
                 .font(.subheadline)
@@ -277,9 +277,11 @@ private struct EventRow: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         EventLogView()
     }
-    .environment(StatusStore())
+    .environment(StatusStore.preview())
 }
+#endif

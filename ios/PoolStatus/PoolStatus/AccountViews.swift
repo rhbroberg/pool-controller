@@ -37,25 +37,31 @@ struct ChangePasswordView: View {
                 if isSaving {
                     ProgressView()
                 } else {
-                    Button("Save") { save() }
-                        .disabled(current.isEmpty || !PasswordRules.acceptable(password, confirmation: confirmation))
+                    Button("Save") {
+                        errorMessage = nil
+                        isSaving = true
+                    }
+                    .disabled(current.isEmpty || !PasswordRules.acceptable(password, confirmation: confirmation))
                 }
+            }
+        }
+        .task(id: isSaving) {
+            if isSaving {
+                await save()
             }
         }
     }
 
-    private func save() {
-        isSaving = true
-        errorMessage = nil
-        Task {
-            defer { isSaving = false }
-            do {
-                try await store.auth.changePassword(current: current, new: password)
-                dismiss()
-            } catch {
+    private func save() async {
+        do {
+            try await store.auth.changePassword(current: current, new: password)
+            dismiss()
+        } catch {
+            if !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }
+        isSaving = false
     }
 }
 
@@ -66,7 +72,10 @@ struct AccountsView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var addingAccount = false
+    /// Asked about before it's removed.
     @State private var removing: AccountInfo?
+    /// Being removed; leaving the page cancels it.
+    @State private var deleting: AccountInfo?
 
     private var auth: AuthSession { store.auth }
 
@@ -80,13 +89,7 @@ struct AccountsView: View {
             }
             Section {
                 ForEach(accounts) { account in
-                    NavigationLink {
-                        AccountDetailView(account: account) { updated in
-                            if let index = accounts.firstIndex(where: { $0.name == updated.name }) {
-                                accounts[index] = updated
-                            }
-                        }
-                    } label: {
+                    NavigationLink(value: account) {
                         AccountRow(account: account, isYou: account.name == auth.credentials?.name)
                     }
                     .swipeActions {
@@ -108,6 +111,13 @@ struct AccountsView: View {
         }
         .navigationTitle("Accounts")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: AccountInfo.self) { account in
+            AccountDetailView(account: account) { updated in
+                if let index = accounts.firstIndex(where: { $0.name == updated.name }) {
+                    accounts[index] = updated
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Add Account", systemImage: "plus") {
@@ -123,17 +133,19 @@ struct AccountsView: View {
                 accounts.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             }
         }
-        .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil },
-                                                                                       set: { if !$0 { removing = nil } }),
+        .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(isPresent: $removing),
                             titleVisibility: .visible) {
             Button("Remove Account", role: .destructive) {
-                if let removing {
-                    remove(removing)
-                }
+                deleting = removing
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The account is deleted and signed out everywhere.")
+        }
+        .task(id: deleting) {
+            if let deleting {
+                await remove(deleting)
+            }
         }
     }
 
@@ -144,20 +156,23 @@ struct AccountsView: View {
             accounts = try await auth.listAccounts()
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func remove(_ account: AccountInfo) {
-        Task {
-            do {
-                try await auth.deleteAccount(account.name)
-                accounts.removeAll { $0.name == account.name }
-                errorMessage = nil
-            } catch {
+            if !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    private func remove(_ account: AccountInfo) async {
+        do {
+            try await auth.deleteAccount(account.name)
+            accounts.removeAll { $0.name == account.name }
+            errorMessage = nil
+        } catch {
+            if !error.isCancellation {
+                errorMessage = error.localizedDescription
+            }
+        }
+        deleting = nil
     }
 }
 
@@ -188,6 +203,11 @@ private struct AccountRow: View {
 
 /// Admin: change one account's role or reset its password.
 private struct AccountDetailView: View {
+    private enum Change: Equatable {
+        case role(AccountRole)
+        case password(String)
+    }
+
     let account: AccountInfo
     let updated: (AccountInfo) -> Void
 
@@ -195,7 +215,8 @@ private struct AccountDetailView: View {
     @State private var role: AccountRole
     @State private var password = ""
     @State private var confirmation = ""
-    @State private var isSaving = false
+    /// The change being saved; leaving the page cancels it.
+    @State private var saving: Change?
     @State private var message: String?
     @State private var failed = false
     @State private var confirmingReset = false
@@ -215,9 +236,9 @@ private struct AccountDetailView: View {
                     }
                 }
                 Button("Save Role") {
-                    save(role: role, password: nil)
+                    start(.role(role))
                 }
-                .disabled(role == account.role || isSaving)
+                .disabled(role == account.role || saving != nil)
             } footer: {
                 Text(role.summary)
             }
@@ -230,7 +251,7 @@ private struct AccountDetailView: View {
                 Button("Reset Password") {
                     confirmingReset = true
                 }
-                .disabled(!PasswordRules.acceptable(password, confirmation: confirmation) || isSaving)
+                .disabled(!PasswordRules.acceptable(password, confirmation: confirmation) || saving != nil)
             } header: {
                 Text("Reset Password")
             } footer: {
@@ -253,31 +274,45 @@ private struct AccountDetailView: View {
         .confirmationDialog("Reset \(account.name)’s password?", isPresented: $confirmingReset,
                             titleVisibility: .visible) {
             Button("Reset Password", role: .destructive) {
-                save(role: nil, password: password)
+                start(.password(password))
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("\(account.name) is signed out on every device and must sign in with the new password.")
         }
+        .task(id: saving) {
+            if let saving {
+                await save(saving)
+            }
+        }
     }
 
-    private func save(role: AccountRole?, password: String?) {
-        isSaving = true
+    private func start(_ change: Change) {
         message = nil
-        Task {
-            defer { isSaving = false }
-            do {
-                let result = try await store.auth.updateAccount(account.name, role: role, password: password)
+        saving = change
+    }
+
+    private func save(_ change: Change) async {
+        do {
+            switch change {
+            case .role(let role):
+                let result = try await store.auth.updateAccount(account.name, role: role)
                 updated(result)
-                failed = false
-                message = password == nil ? "\(account.name) is now \(result.role.titleWithArticle)." : "Password reset."
+                message = "\(account.name) is now \(result.role.titleWithArticle)."
+            case .password(let password):
+                updated(try await store.auth.updateAccount(account.name, password: password))
+                message = "Password reset."
                 self.password = ""
                 confirmation = ""
-            } catch {
+            }
+            failed = false
+        } catch {
+            if !error.isCancellation {
                 failed = true
                 message = error.localizedDescription
             }
         }
+        saving = nil
     }
 }
 
@@ -333,26 +368,32 @@ private struct NewAccountView: View {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Add") { add() }
-                            .disabled(trimmedName.isEmpty || !PasswordRules.acceptable(password, confirmation: confirmation))
+                        Button("Add") {
+                            errorMessage = nil
+                            isSaving = true
+                        }
+                        .disabled(trimmedName.isEmpty || !PasswordRules.acceptable(password, confirmation: confirmation))
                     }
                 }
             }
         }
+        .task(id: isSaving) {
+            if isSaving {
+                await add()
+            }
+        }
     }
 
-    private func add() {
-        isSaving = true
-        errorMessage = nil
-        Task {
-            defer { isSaving = false }
-            do {
-                let account = try await store.auth.createAccount(name: trimmedName, password: password, role: role)
-                created(account)
-                dismiss()
-            } catch {
+    private func add() async {
+        do {
+            let account = try await store.auth.createAccount(name: trimmedName, password: password, role: role)
+            created(account)
+            dismiss()
+        } catch {
+            if !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }
+        isSaving = false
     }
 }

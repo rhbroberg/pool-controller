@@ -122,7 +122,7 @@ struct SaltHistoryView: View {
             }
         }
         .padding()
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .cardBackground()
     }
 
     /// Fits the readings, with room above and below.
@@ -139,9 +139,11 @@ struct SaltHistoryView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         SaltHistoryView()
     }
-    .environment(StatusStore())
+    .environment(StatusStore.preview())
 }
+#endif

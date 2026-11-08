@@ -260,7 +260,7 @@ struct TemperatureHistoryView: View {
                 }
         )
         .padding()
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .cardBackground()
     }
 
     /// One row where it fits, otherwise two, so no entry is cut short on a narrow phone.
@@ -429,9 +429,11 @@ struct TemperatureHistoryView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         TemperatureHistoryView(water: .pool)
     }
-    .environment(StatusStore())
+    .environment(StatusStore.preview())
 }
+#endif

@@ -43,7 +43,7 @@ struct StatusView: View {
                             .foregroundStyle(.orange)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding()
-                            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+                            .cardBackground()
                     }
 
                     if !store.readings.isEmpty {
@@ -100,8 +100,7 @@ struct StatusView: View {
             }
             .sensoryFeedback(.success, trigger: store.confirmedChanges)
             .confirmationDialog(confirming?.title ?? "",
-                                isPresented: Binding(get: { confirming != nil },
-                                                     set: { if !$0 { confirming = nil } }),
+                                isPresented: Binding(isPresent: $confirming),
                                 titleVisibility: .visible,
                                 presenting: confirming) { request in
                 Button(request.action) {
@@ -116,6 +115,13 @@ struct StatusView: View {
             }
             .sheet(item: $setpointDevice) { device in
                 SetpointView(device: device)
+            }
+            .navigationDestination(for: DashboardRoute.self) { route in
+                switch route {
+                case .temperatureHistory(let water): TemperatureHistoryView(water: water)
+                case .saltHistory: SaltHistoryView()
+                case .panel: PanelView()
+                }
             }
         }
     }
@@ -215,6 +221,13 @@ struct StatusView: View {
     }
 }
 
+/// The pages the dashboard links to.
+private enum DashboardRoute: Hashable {
+    case temperatureHistory(WaterBody)
+    case saltHistory
+    case panel
+}
+
 /// A change the user confirms before it's sent.
 private enum ChangeRequest {
     case control(EquipmentControl, on: Bool, EquipmentControl.Confirmation)
@@ -261,11 +274,11 @@ private struct TemperatureCard: View {
     let lastRefresh: Date?
     let isConnected: Bool
 
+    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 50
+
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            NavigationLink {
-                TemperatureHistoryView(water: .pool)
-            } label: {
+            NavigationLink(value: DashboardRoute.temperatureHistory(.pool)) {
                 hero
             }
             .buttonStyle(.plain)
@@ -282,7 +295,7 @@ private struct TemperatureCard: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .cardBackground()
     }
 
     private var hero: some View {
@@ -303,7 +316,7 @@ private struct TemperatureCard: View {
             }
             .font(.subheadline.weight(.semibold))
             Text(pool.value)
-                .font(.system(size: 50, weight: .semibold, design: .rounded))
+                .font(.system(size: heroSize, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -319,16 +332,12 @@ private struct TemperatureCard: View {
     private func secondaryRow(_ measurement: DashboardReading) -> some View {
         switch measurement.name {
         case .spaTemperature:
-            NavigationLink {
-                TemperatureHistoryView(water: .spa)
-            } label: {
+            NavigationLink(value: DashboardRoute.temperatureHistory(.spa)) {
                 row(measurement, linked: true)
             }
             .buttonStyle(.plain)
         case .salt:
-            NavigationLink {
-                SaltHistoryView()
-            } label: {
+            NavigationLink(value: DashboardRoute.saltHistory) {
                 row(measurement, linked: true)
             }
             .buttonStyle(.plain)
@@ -479,7 +488,7 @@ private struct WaterFlowControl: View {
             .disabled(isLocked || pending != nil || current == nil)
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+        .cardBackground(cornerRadius: Card.tileCornerRadius)
         .accessibilityElement(children: .contain)
         .accessibilityHint("Spillover pumps pool water through the spa so it spills back into the pool.")
     }
@@ -501,6 +510,12 @@ private struct EquipmentTile: View {
     let action: () -> Void
     /// Opens the setpoints, for the heater and heat pump.
     let showSetpoints: (() -> Void)?
+
+    // icons differ in size; a fixed frame keeps the names lined up
+    @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 26
+    @ScaledMetric(relativeTo: .subheadline) private var tileHeight: CGFloat = 50
+    @ScaledMetric(relativeTo: .caption2) private var setpointSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .caption2) private var setpointTapWidth: CGFloat = 44
 
     private var isRunning: Bool {
         heating.map { isOn && $0.heating } ?? isOn
@@ -536,10 +551,14 @@ private struct EquipmentTile: View {
     }
 
     private var accessibilityState: String {
-        guard let targetSetpoint, let body = heating?.body else {
-            return stateText
+        var parts = [stateText]
+        if let targetSetpoint, let body = heating?.body {
+            parts.append("\(body.title.lowercased()) setpoint \(targetSetpoint) degrees")
         }
-        return "\(stateText), \(body.title.lowercased()) setpoint \(targetSetpoint) degrees"
+        if isLocked {
+            parts.append("locked")
+        }
+        return parts.joined(separator: ", ")
     }
 
     var body: some View {
@@ -550,8 +569,7 @@ private struct EquipmentTile: View {
                         .symbolVariant(isRunning ? .fill : .none)
                         .font(.title3)
                         .foregroundStyle(isOn ? control.tint.color : Color.secondary)
-                        // icons differ in size; a fixed frame keeps the names lined up
-                        .frame(width: 26, height: 26)
+                        .frame(width: iconSize, height: iconSize)
                     VStack(alignment: .leading, spacing: 0) {
                         Text(control.title)
                             .font(.subheadline.weight(.semibold))
@@ -574,7 +592,7 @@ private struct EquipmentTile: View {
                 }
                 .padding(.leading, 10)
                 .padding(.trailing, showSetpoints == nil ? 10 : 2)
-                .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: tileHeight, alignment: .leading)
                 .contentShape(.rect)
             }
             .buttonStyle(TileButtonStyle())
@@ -582,7 +600,6 @@ private struct EquipmentTile: View {
             .sensoryFeedback(.impact(weight: .light), trigger: pending != nil) { _, isPending in isPending }
             .accessibilityLabel(control.title)
             .accessibilityValue(accessibilityState)
-            .accessibilityHint(isLocked ? "Locked" : "")
             .accessibilityAddTraits(.isToggle)
 
             if let showSetpoints {
@@ -599,9 +616,9 @@ private struct EquipmentTile: View {
                         }
                     }
                     .foregroundStyle(isOn ? control.tint.color : Color.secondary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: setpointSize, height: setpointSize)
                     .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
-                    .frame(width: 44, height: 50)
+                    .frame(width: setpointTapWidth, height: tileHeight)
                     .contentShape(.rect)
                 }
                 .buttonStyle(TileButtonStyle())
@@ -609,9 +626,9 @@ private struct EquipmentTile: View {
             }
         }
         .background(isRunning ? control.tint.color.opacity(0.16) : Color(.secondarySystemGroupedBackground),
-                    in: .rect(cornerRadius: 14))
+                    in: .rect(cornerRadius: Card.tileCornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: Card.tileCornerRadius)
                 .strokeBorder(isOn ? control.tint.color.opacity(0.55) : Color.clear, lineWidth: 1.5)
         }
         .animation(.default, value: isOn)
@@ -630,15 +647,15 @@ private struct TileButtonStyle: ButtonStyle {
 
 /// The way into the controller's own menus, for everything the app doesn't show itself.
 private struct PanelControlLink: View {
+    @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 36
+
     var body: some View {
-        NavigationLink {
-            PanelView()
-        } label: {
+        NavigationLink(value: DashboardRoute.panel) {
             HStack(spacing: 12) {
                 Image(systemName: "dpad.fill")
                     .font(.title3)
                     .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
+                    .frame(width: iconSize, height: iconSize)
                     .background(Color.accentColor, in: .rect(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Panel Control")
@@ -656,7 +673,7 @@ private struct PanelControlLink: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+            .cardBackground(cornerRadius: Card.tileCornerRadius)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -726,7 +743,7 @@ private struct OfflineBanner: View {
             }
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .cardBackground()
     }
 
     private var message: some View {
@@ -800,7 +817,9 @@ private struct UpdateFooter: View {
     }
 }
 
+#if DEBUG
 #Preview {
     StatusView()
-        .environment(StatusStore())
+        .environment(StatusStore.preview())
 }
+#endif
