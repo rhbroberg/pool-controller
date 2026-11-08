@@ -19,10 +19,15 @@ const panelService = require('./service/PanelService');
 const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
 const heatingService = require('./service/HeatingService');
+const settingsService = require('./service/SettingsService');
+const scheduler = require('./jobs/scheduler');
+const rollupsJob = require('./jobs/rollups');
+const retentionJob = require('./jobs/retention');
 
 var { mongoose } = require('./mongoose');
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('./models/event');
+var { Rollup } = require('./models/rollup');
 var serial = require('./drivers/serial');
 var fileHandler = require('./drivers/filehandler');
 var tailHandler = require('./drivers/tailhandler');
@@ -46,6 +51,11 @@ var argv = yargs(hideBin(process.argv))
     .default('from-start', false)
     .boolean('v')
     .alias('v', 'verbose')
+    // --no-jobs leaves maintenance to another process; --jobs-only is that process
+    .boolean('jobs')
+    .default('jobs', true)
+    .boolean('jobs-only')
+    .default('jobs-only', false)
     .argv;
 
 // info shows startup, REST changes and controller confirmations; -v adds every frame
@@ -73,16 +83,34 @@ var latestDisplay;
 // 1 for auto, 0 for off, undefined until the panel displays the heater line
 var heaterAuto;
 
-// the API waits for this so the default admin account exists before the first sign-in
-const accountsChecked = mongoose.connection.asPromise()
-    .then(() => systemService.commissionIfEmpty())
-    .catch((e) => logger.error(`could not check for accounts: ${e}`));
+// drops indexes the models no longer list, such as the old status.0.name ones, and builds new ones
+var syncIndexes = () => Promise.all([Event, Rollup].map((model) => model.syncIndexes().then((dropped) => {
+    if (dropped.length > 0) {
+        logger.info(`dropped unused ${model.collection.name} indexes: ${dropped.join(', ')}`);
+    }
+})));
+
+// the API waits for this, so the default admin account exists before the first sign-in and
+// history uses the configured time zone
+const startupChecked = mongoose.connection.asPromise()
+    .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), syncIndexes()]))
+    .catch((e) => logger.error(`startup checks failed: ${e}`));
+
+scheduler.register(rollupsJob);
+scheduler.register(retentionJob);
+startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
+// days begin at a different time in a new zone, so the daily rollups are redone right away
+settingsService.onChange((changes) => {
+    if (changes.timeZone) {
+        scheduler.runNow(rollupsJob.name, 'time zone change').catch((e) => logger.error(`rollups after a time zone change: ${e.message}`));
+    }
+});
 
 // if webserver is run app will not exit in 'file' mode (which is only used for testing)
-if (argv.d !== 'file') {
+if (argv.d !== 'file' && !argv.jobsOnly) {
     logger.info('web server is active');
 
-    accountsChecked.then(() => initializeServer((app, server) => {
+    startupChecked.then(() => initializeServer((app, server) => {
         app.use(express.static(publicPath));
         io = socketIO(server);
 
@@ -506,19 +534,24 @@ systemService.registerResetListener(() => {
     controlRequests = [];
     controlVerification = [];
     waterModeRequest = undefined;
+    // the reset erased the settings along with everything else
+    settingsService.load().catch((e) => logger.error(`could not reload settings: ${e.message}`));
 });
 
 // docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish
 ['SIGTERM', 'SIGINT'].forEach((signal) => {
     process.once(signal, () => {
         logger.info(`${signal} received; shutting down`);
+        scheduler.stop();
         mongoose.disconnect()
             .catch(() => {})
             .then(() => process.exit(0));
     });
 });
 
-if (argv.d === 'tail' && argv.fromStart) {
+if (argv.jobsOnly) {
+    logger.info('running maintenance jobs only; no web server or controller');
+} else if (argv.d === 'tail' && argv.fromStart) {
     logger.info('replay waits for a browser connection');
 } else if (driver) {
     driver.listen(argv.f, handleHunk);

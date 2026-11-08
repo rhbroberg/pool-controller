@@ -11,6 +11,7 @@ log4js.getLogger().level = 'off';
 var { mongoose } = require('../mongoose');
 var { Event } = require('../models/event');
 const { StatusEvent } = require('../protocol/events');
+const { invalidateFrom } = require('../service/RollupService');
 
 const STEP_MS = 10 * 60 * 1000;
 const SOURCE = 'seed';
@@ -111,8 +112,12 @@ var generate = (start, end) => {
     const database = mongoose.connection.name;
 
     if (process.argv.includes('--remove')) {
+        const first = await Event.findOne({ source: SOURCE }).sort({ timestamp: 1 }).select({ timestamp: 1 }).lean();
         const { deletedCount } = await Event.deleteMany({ source: SOURCE });
-        console.log(`removed ${deletedCount} seeded events from ${database}`);
+        if (first) {
+            await invalidateFrom(first.timestamp);
+        }
+        console.log(`removed ${deletedCount} seeded events from ${database}; the rollups job redoes that span on its next run`);
         return;
     }
 
@@ -129,7 +134,8 @@ var generate = (start, end) => {
     for (let i = 0; i < events.length; i += 5000) {
         await Event.insertMany(events.slice(i, i + 5000), { lean: true });
     }
-    console.log(`added ${events.length} events to ${database}: ${new Date(start).toISOString()} to ${new Date(end).toISOString()}`);
+    await invalidateFrom(new Date(start));
+    console.log(`added ${events.length} events to ${database}: ${new Date(start).toISOString()} to ${new Date(end).toISOString()}; the rollups job summarizes them on its next run`);
 })()
     .catch((e) => {
         console.error(e.message);

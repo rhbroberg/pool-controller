@@ -13,6 +13,7 @@
         "simulate-verbose": "node server.js -f ../test-data/sample-various-bin -d sim -v",
         "seed-history": "node tools/seed-history.js --days 30",
         "remove-seeded-history": "node tools/seed-history.js --remove",
+        "rollup-history": "node tools/rollup-history.js",
         "find-servers": "node tools/find-servers.js",
         "start": "node server.js -d serial",
         "linter": "eslint .",
