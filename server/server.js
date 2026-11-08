@@ -91,7 +91,8 @@ if (argv.d !== 'file') {
                 socket.join('datastream');
 
                 socket.emit('catchup', 'here is where i would stream the data up to this point');
-                socket.broadcast.emit('datastream').emit('peers', 'hey everybody, another streamer attached');
+                socket.broadcast.emit('datastream');
+                socket.emit('peers', 'hey everybody, another streamer attached');
 
                 if (callback) {
                     callback();
