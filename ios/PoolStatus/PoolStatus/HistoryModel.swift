@@ -100,12 +100,10 @@ final class TemperatureHistoryModel {
                 merge(response)
                 record(gap)
                 errorMessage = nil
-            } catch is CancellationError {
-                return
-            } catch let error as URLError where error.code == .cancelled {
-                return
             } catch {
-                errorMessage = error.localizedDescription
+                if !error.isCancellation {
+                    errorMessage = error.localizedDescription
+                }
                 return
             }
         }
@@ -262,12 +260,10 @@ final class SaltHistoryModel {
             }
             samples = loaded
             errorMessage = nil
-        } catch is CancellationError {
-            return
-        } catch let error as URLError where error.code == .cancelled {
-            return
         } catch {
-            errorMessage = error.localizedDescription
+            if !error.isCancellation {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

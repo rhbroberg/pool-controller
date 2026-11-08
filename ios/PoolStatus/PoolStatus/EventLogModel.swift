@@ -161,12 +161,8 @@ final class EventLogModel {
             cursor = page.next
             reachedEnd = page.next == nil
             errorMessage = nil
-        } catch is CancellationError {
-            return
-        } catch let error as URLError where error.code == .cancelled {
-            return
         } catch {
-            if started == generation {
+            if started == generation && !error.isCancellation {
                 errorMessage = error.localizedDescription
             }
         }

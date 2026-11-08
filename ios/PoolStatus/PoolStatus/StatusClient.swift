@@ -16,6 +16,13 @@ enum StatusClientError: LocalizedError {
     }
 }
 
+extension Error {
+    /// The request was cancelled, as when the view that asked went away; not worth reporting.
+    var isCancellation: Bool {
+        self is CancellationError || (self as? URLError)?.code == .cancelled
+    }
+}
+
 /// How a server identifies itself; only a pool controller server says `poolService`.
 struct SystemInfo: Decodable {
     static let poolService = "pool-controller"
@@ -25,169 +32,64 @@ struct SystemInfo: Decodable {
     let startedAt: Date
 }
 
+/// The pool server's REST API.
 struct StatusClient {
     /// The server mounts every route under the Swagger `basePath`.
     static let apiPath = "rhbroberg/pool-api/1.0.0"
+    nonisolated static let defaultTimeout: TimeInterval = 10
+
+    /// Reads the server's ISO 8601 dates, with or without fractional seconds.
+    static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let text = try decoder.singleValueContainer().decode(String.self)
+            if let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text) {
+                return date
+            }
+            return try Date.ISO8601FormatStyle().parse(text)
+        }
+        return decoder
+    }()
 
     let serverAddress: String
+    let session: URLSession
+
+    init(serverAddress: String, session: URLSession = .shared) {
+        self.serverAddress = serverAddress
+        self.session = session
+    }
+
+    // MARK: Status
 
     func fetchStatus() async throws -> [StatusReading] {
-        let data = try await send(URLRequest(url: try url(for: "status")))
-        return try Self.decoder.decode([StatusReading].self, from: data)
+        try await send(.get, "status")
     }
 
     /// Answers without the database or the pool controller, so it works whenever the server is up.
     func fetchSystemInfo(timeout: TimeInterval) async throws -> SystemInfo {
-        let data = try await send(URLRequest(url: try url(for: "system/info")), timeout: timeout)
-        return try Self.decoder.decode(SystemInfo.self, from: data)
-    }
-
-    func signIn(name: String, password: String) async throws -> SignInResult {
-        var request = URLRequest(url: try url(for: "users/login"))
-        request.httpMethod = "POST"
-        request.httpBody = try JSONEncoder().encode(["email": name, "password": password])
-        let data = try await send(request)
-        return try JSONDecoder().decode(SignInResult.self, from: data)
-    }
-
-    /// Renames the signed-in account and sets its password; returns a new token, since the
-    /// old one stops working.
-    func changeCredentials(name: String, password: String, token: String) async throws -> SignInResult {
-        var request = URLRequest(url: try url(for: "users/me/credentials"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        request.httpBody = try JSONEncoder().encode(["email": name, "password": password])
-        let data = try await send(request)
-        return try JSONDecoder().decode(SignInResult.self, from: data)
-    }
-
-    /// The signed-in account and its current role.
-    func fetchAccount(token: String) async throws -> AccountInfo {
-        var request = URLRequest(url: try url(for: "users/me"))
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
-    }
-
-    /// Ends this token's session on the server.
-    func signOut(token: String) async throws {
-        var request = URLRequest(url: try url(for: "users/me/token"))
-        request.httpMethod = "DELETE"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
-    }
-
-    // MARK: Account management (admin)
-
-    func listAccounts(token: String) async throws -> [AccountInfo] {
-        var request = URLRequest(url: try url(for: "users"))
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        return try JSONDecoder().decode([AccountInfo].self, from: try await send(request))
-    }
-
-    func createAccount(name: String, password: String, role: AccountRole, token: String) async throws -> AccountInfo {
-        var request = URLRequest(url: try url(for: "users"))
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        request.httpBody = try JSONEncoder().encode(["email": name, "password": password, "role": role.rawValue])
-        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
-    }
-
-    /// Changes another account's role, resets its password, or both.
-    func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil, token: String) async throws -> AccountInfo {
-        var request = URLRequest(url: try url(for: "users/\(Self.pathComponent(name))"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        var changes: [String: String] = [:]
-        changes["role"] = role?.rawValue
-        changes["password"] = password
-        request.httpBody = try JSONEncoder().encode(changes)
-        return try JSONDecoder().decode(AccountInfo.self, from: try await send(request))
-    }
-
-    func deleteAccount(_ name: String, token: String) async throws {
-        var request = URLRequest(url: try url(for: "users/\(Self.pathComponent(name))"))
-        request.httpMethod = "DELETE"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
-    }
-
-    private static func pathComponent(_ value: String) -> String {
-        var allowed = CharacterSet.urlPathAllowed
-        allowed.remove("/")
-        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
-    }
-
-    /// Erases the server's history and accounts; returns the server's description of the result.
-    func factoryReset(token: String) async throws -> String {
-        var request = URLRequest(url: try url(for: "system/factory-reset"))
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        let data = try await send(request)
-        return (try? JSONDecoder().decode(ServerMessage.self, from: data))?.message ?? "Factory reset complete."
-    }
-
-    /// Asks the server to exit; its container restart policy starts it again.
-    func restartServer(token: String) async throws {
-        var request = URLRequest(url: try url(for: "system/restart"))
-        request.httpMethod = "POST"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
-    }
-
-    /// Asks the server to step the water flow to `mode`; it presses the spillover key until the
-    /// controller reports that mode.
-    func setWaterMode(_ mode: WaterMode, token: String) async throws {
-        var request = URLRequest(url: try url(for: "water/mode/\(mode.rawValue)"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
+        try await send(.get, "system/info", timeout: timeout)
     }
 
     func fetchHeating() async throws -> HeatingStatus {
-        try JSONDecoder().decode(HeatingStatus.self, from: try await send(URLRequest(url: try url(for: "heating"))))
+        try await send(.get, "heating")
     }
 
-    /// Sets the temperature `device` drives `body` toward.
-    func setSetpoint(_ degrees: Int, device: HeatingDevice, body: WaterBody, token: String) async throws {
-        var request = URLRequest(url: try url(for: "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
-    }
-
-    /// Asks the server to press the device's button if it isn't already in `on` state.
-    /// The controller confirms the change on a later status frame.
-    func setDevice(_ name: ReadingName, on: Bool, token: String) async throws {
-        let device = name.rawValue.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name.rawValue
-        var request = URLRequest(url: try url(for: "devices/\(device)/\(on)"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
+    func fetchPanelDisplay() async throws -> PanelDisplay {
+        try await send(.get, "panel/display")
     }
 
     /// Readings for each name from `from` up to `to`, plus each one's value as the window opens.
     func fetchHistory(names: [ReadingName], from: Date, to: Date) async throws -> HistoryResponse {
         let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-        guard var components = URLComponents(url: try url(for: "history"), resolvingAgainstBaseURL: false) else {
-            throw StatusClientError.invalidAddress(serverAddress)
-        }
-        components.queryItems = [
+        return try await send(.get, "history", query: [
             URLQueryItem(name: "names", value: names.map(\.rawValue).joined(separator: ",")),
             URLQueryItem(name: "from", value: iso.format(from)),
             URLQueryItem(name: "to", value: iso.format(to))
-        ]
-        guard let url = components.url else {
-            throw StatusClientError.invalidAddress(serverAddress)
-        }
-        let data = try await send(URLRequest(url: url))
-        return try Self.decoder.decode(HistoryResponse.self, from: data)
+        ])
     }
 
     /// One page of the event log; pass the previous page's `next` as `cursor` for the following one.
     func fetchEvents(types: [String], user: String?, cursor: String?, ascending: Bool, limit: Int) async throws -> EventPage {
-        guard var components = URLComponents(url: try url(for: "events"), resolvingAgainstBaseURL: false) else {
-            throw StatusClientError.invalidAddress(serverAddress)
-        }
         var query = [
             URLQueryItem(name: "types", value: types.joined(separator: ",")),
             URLQueryItem(name: "order", value: ascending ? "asc" : "desc"),
@@ -199,53 +101,152 @@ struct StatusClient {
         if let cursor {
             query.append(URLQueryItem(name: "cursor", value: cursor))
         }
-        components.queryItems = query
-        guard let url = components.url else {
-            throw StatusClientError.invalidAddress(serverAddress)
-        }
-        return try Self.decoder.decode(EventPage.self, from: try await send(URLRequest(url: url)))
+        return try await send(.get, "events", query: query)
     }
 
     /// Every account with a recorded action.
     func fetchEventUsers() async throws -> [String] {
-        try JSONDecoder().decode([String].self, from: try await send(URLRequest(url: try url(for: "events/users"))))
+        try await send(.get, "events/users")
     }
 
-    func fetchPanelDisplay() async throws -> PanelDisplay {
-        let data = try await send(URLRequest(url: try url(for: "panel/display")))
-        return try Self.decoder.decode(PanelDisplay.self, from: data)
+    // MARK: Control
+
+    /// Asks the server to press the device's button if it isn't already in `on` state.
+    /// The controller confirms the change on a later status frame.
+    func setDevice(_ name: ReadingName, on: Bool, token: String) async throws {
+        try await perform(.put, "devices/\(Self.pathComponent(name.rawValue))/\(on)", token: token)
+    }
+
+    /// Asks the server to step the water flow to `mode`; it presses the spillover key until the
+    /// controller reports that mode.
+    func setWaterMode(_ mode: WaterMode, token: String) async throws {
+        try await perform(.put, "water/mode/\(mode.rawValue)", token: token)
+    }
+
+    /// Sets the temperature `device` drives `body` toward.
+    func setSetpoint(_ degrees: Int, device: HeatingDevice, body: WaterBody, token: String) async throws {
+        try await perform(.put, "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)", token: token)
     }
 
     /// Queues one press of a panel key; the server sends it on the next controller ping.
     func pressPanelKey(_ key: PanelKey, token: String) async throws {
-        var request = URLRequest(url: try url(for: "panel/keys/\(key.rawValue)"))
-        request.httpMethod = "PUT"
-        request.setValue(token, forHTTPHeaderField: "x-auth")
-        _ = try await send(request)
+        try await perform(.put, "panel/keys/\(key.rawValue)", token: token)
     }
 
-    func url(for path: String) throws -> URL {
+    // MARK: Signing in
+
+    func signIn(name: String, password: String) async throws -> SignInResult {
+        try await send(.post, "users/login", body: CredentialsBody(email: name, password: password))
+    }
+
+    /// Renames the signed-in account and sets its password; returns a new token, since the
+    /// old one stops working.
+    func changeCredentials(name: String, password: String, token: String) async throws -> SignInResult {
+        try await send(.put, "users/me/credentials", token: token, body: CredentialsBody(email: name, password: password))
+    }
+
+    /// The signed-in account and its current role.
+    func fetchAccount(token: String) async throws -> AccountInfo {
+        try await send(.get, "users/me", token: token)
+    }
+
+    /// Ends this token's session on the server.
+    func signOut(token: String) async throws {
+        try await perform(.delete, "users/me/token", token: token)
+    }
+
+    // MARK: Administration
+
+    func listAccounts(token: String) async throws -> [AccountInfo] {
+        try await send(.get, "users", token: token)
+    }
+
+    func createAccount(name: String, password: String, role: AccountRole, token: String) async throws -> AccountInfo {
+        try await send(.post, "users", token: token, body: NewAccountBody(email: name, password: password, role: role))
+    }
+
+    /// Changes another account's role, resets its password, or both.
+    func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil, token: String) async throws -> AccountInfo {
+        try await send(.put, "users/\(Self.pathComponent(name))", token: token,
+                       body: AccountChanges(role: role, password: password))
+    }
+
+    func deleteAccount(_ name: String, token: String) async throws {
+        try await perform(.delete, "users/\(Self.pathComponent(name))", token: token)
+    }
+
+    /// Erases the server's history and accounts; returns the server's description of the result.
+    func factoryReset(token: String) async throws -> String {
+        let data = try await fetchData(.post, "system/factory-reset", token: token)
+        return (try? JSONDecoder().decode(ServerMessage.self, from: data))?.message ?? "Factory reset complete."
+    }
+
+    /// Asks the server to exit; its container restart policy starts it again.
+    func restartServer(token: String) async throws {
+        try await perform(.post, "system/restart", token: token)
+    }
+
+    // MARK: Requests
+
+    func url(for path: String, query: [URLQueryItem]? = nil) throws -> URL {
         var base = serverAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         if !base.contains("://") {
-            base = "http://" + base
+            base = "\(Self.defaultScheme(for: base))://\(base)"
         }
         while base.hasSuffix("/") {
             base.removeLast()
         }
-        guard let url = URL(string: "\(base)/\(Self.apiPath)/\(path)"), url.host() != nil else {
+        guard var components = URLComponents(string: "\(base)/\(Self.apiPath)/\(path)"),
+              components.host?.isEmpty == false else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        components.queryItems = query
+        guard let url = components.url else {
             throw StatusClientError.invalidAddress(serverAddress)
         }
         return url
     }
 
-    private func send(_ request: URLRequest, timeout: TimeInterval = 10) async throws -> Data {
-        var request = request
+    /// App Transport Security allows plain http only on the local network, so an address typed
+    /// without a scheme gets https unless it's an IP address, a `.local` name or unqualified.
+    static func defaultScheme(for address: String) -> String {
+        let host = address.prefix { $0 != "/" && $0 != ":" }.lowercased()
+        let isLocal = IPv4Network.parse(host) != nil || host.hasSuffix(".local") || !host.contains(".")
+        return isLocal ? "http" : "https"
+    }
+
+    private enum Method: String {
+        case get = "GET", post = "POST", put = "PUT", delete = "DELETE"
+    }
+
+    private func send<Response: Decodable>(_ method: Method, _ path: String, query: [URLQueryItem]? = nil,
+                                           token: String? = nil, body: (any Encodable)? = nil,
+                                           timeout: TimeInterval = defaultTimeout) async throws -> Response {
+        let data = try await fetchData(method, path, query: query, token: token, body: body, timeout: timeout)
+        return try Self.decoder.decode(Response.self, from: data)
+    }
+
+    /// For requests whose answer only matters for its status.
+    private func perform(_ method: Method, _ path: String, token: String? = nil) async throws {
+        _ = try await fetchData(method, path, token: token)
+    }
+
+    private func fetchData(_ method: Method, _ path: String, query: [URLQueryItem]? = nil, token: String? = nil,
+                      body: (any Encodable)? = nil, timeout: TimeInterval = defaultTimeout) async throws -> Data {
+        var request = URLRequest(url: try url(for: path, query: query))
+        request.httpMethod = method.rawValue
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        // the server's validator rejects a request body sent without a JSON content type
+        // the server's validator rejects any request without a JSON content type, body or not
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token {
+            request.setValue(token, forHTTPHeaderField: "x-auth")
+        }
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
+        }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw StatusClientError.badResponse
         }
@@ -260,21 +261,34 @@ struct StatusClient {
         }
     }
 
+    /// One path segment, with any `/` in it escaped.
+    private static func pathComponent(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
     private struct ServerMessage: Decodable {
         let message: String
     }
 
-    private static let decoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            if let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text) {
-                return date
-            }
-            return try Date.ISO8601FormatStyle().parse(text)
-        }
-        return decoder
-    }()
+    /// The server calls an account's name its email.
+    private struct CredentialsBody: Encodable {
+        let email: String
+        let password: String
+    }
+
+    private struct NewAccountBody: Encodable {
+        let email: String
+        let password: String
+        let role: AccountRole
+    }
+
+    /// Only the fields being changed are sent.
+    private struct AccountChanges: Encodable {
+        let role: AccountRole?
+        let password: String?
+    }
 }
 
 private extension String {

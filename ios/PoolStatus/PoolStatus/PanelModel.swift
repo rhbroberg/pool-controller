@@ -109,7 +109,7 @@ final class PanelModel {
             mark(id, .failed)
             errorMessage = "Your sign-in is no longer valid. Sign in again to use the panel keys."
         } catch {
-            if !(error is CancellationError) {
+            if !error.isCancellation {
                 mark(id, .failed)
             }
             handle(error)
@@ -123,13 +123,10 @@ final class PanelModel {
     }
 
     private func handle(_ error: Error) {
-        if error is CancellationError {
+        if error.isCancellation {
             return
         }
-        if let urlError = error as? URLError {
-            if urlError.code == .cancelled {
-                return
-            }
+        if error is URLError {
             isReachable = false
         }
         errorMessage = error.localizedDescription

@@ -340,13 +340,10 @@ final class StatusStore {
     }
 
     private func handle(_ error: Error) {
-        if error is CancellationError {
+        if error.isCancellation {
             return
         }
         if let urlError = error as? URLError {
-            if urlError.code == .cancelled {
-                return
-            }
             connection = .disconnected
             connectionFailure = urlError.localizedDescription
             return

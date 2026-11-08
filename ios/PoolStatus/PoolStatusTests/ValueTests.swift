@@ -52,6 +52,10 @@ struct NetworkAndAddressTests {
         #expect(typed.absoluteString == "http://192.168.1.20:3000/rhbroberg/pool-api/1.0.0/status")
         let secure = try StatusClient(serverAddress: "https://pool.example.com").url(for: "heating")
         #expect(secure.absoluteString == "https://pool.example.com/rhbroberg/pool-api/1.0.0/heating")
+        let remote = try StatusClient(serverAddress: "pool.example.com").url(for: "status")
+        #expect(remote.scheme == "https", "plain http only reaches the local network")
+        #expect(try StatusClient(serverAddress: "poolserver.local:3000").url(for: "status").scheme == "http")
+        #expect(try StatusClient(serverAddress: "localhost:3000").url(for: "status").scheme == "http")
         #expect(throws: StatusClientError.self) { try StatusClient(serverAddress: "").url(for: "status") }
     }
 }
@@ -59,7 +63,7 @@ struct NetworkAndAddressTests {
 @Suite("Readings and names")
 struct ReadingTests {
     private func decode(_ json: String) throws -> [StatusReading] {
-        try JSONDecoder.iso.decode([StatusReading].self, from: Data(json.utf8))
+        try StatusClient.decoder.decode([StatusReading].self, from: Data(json.utf8))
     }
 
     @Test("formats temperatures, salt and switches")
@@ -108,23 +112,12 @@ struct ReadingTests {
 
     @Test("decodes the heating status, with no target while no pump runs")
     func heating() throws {
-        let heating = try JSONDecoder.iso.decode(HeatingStatus.self, from: Data(Fixture.heating(target: nil).utf8))
+        let heating = try StatusClient.decoder.decode(HeatingStatus.self, from: Data(Fixture.heating(target: nil).utf8))
         #expect(heating.target == nil)
         #expect(heating.range == 65...104)
         #expect(heating.setpoint(.heatpump, for: .spa) == 100)
         #expect(heating.device(.heater1)?.body == nil)
         #expect(HeatingDevice(controlName: .heatPump) == .heatpump)
         #expect(HeatingDevice(controlName: .filter) == nil)
-    }
-}
-
-extension JSONDecoder {
-    static var iso: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            return try Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text)
-        }
-        return decoder
     }
 }
