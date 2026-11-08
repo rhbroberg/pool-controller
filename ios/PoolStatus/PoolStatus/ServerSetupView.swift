@@ -21,6 +21,7 @@ struct ServerSetupView: View {
     @State private var address = ""
     @State private var isTesting = false
     @State private var errorMessage: String?
+    @State private var isScanningNetwork = false
 
     private var trimmedAddress: String {
         address.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -36,11 +37,22 @@ struct ServerSetupView: View {
                             .foregroundStyle(Color.accentColor)
                         Text("Connect to your pool")
                             .font(.title2.weight(.semibold))
-                        Text("Enter the address of the server attached to your pool controller. You can find it where the server was installed, usually a number like 192.168.1.20 and a port.")
+                        Text("Find the server attached to your pool controller on this phone’s Wi‑Fi network, or enter its address.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
+                }
+
+                Section {
+                    Button {
+                        isScanningNetwork = true
+                    } label: {
+                        Label("Search My Network", systemImage: "magnifyingglass")
+                    }
+                    .disabled(isTesting)
+                } footer: {
+                    Text("Looks for pool servers on the network this phone is connected to.")
                 }
 
                 Section {
@@ -52,7 +64,7 @@ struct ServerSetupView: View {
                         .submitLabel(.go)
                         .onSubmit(connect)
                 } header: {
-                    Text("Server Address")
+                    Text("Or Enter the Address")
                 } footer: {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)
@@ -75,14 +87,24 @@ struct ServerSetupView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $isScanningNetwork) {
+                // a server the scan found has already answered, so connect to it straight away
+                NetworkScanView { found in
+                    address = found
+                    connect(to: found)
+                }
+            }
         }
     }
 
     private func connect() {
-        guard !trimmedAddress.isEmpty, !isTesting else {
+        connect(to: trimmedAddress)
+    }
+
+    private func connect(to candidate: String) {
+        guard !candidate.isEmpty, !isTesting else {
             return
         }
-        let candidate = trimmedAddress
         isTesting = true
         errorMessage = nil
         Task {
