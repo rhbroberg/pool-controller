@@ -1,0 +1,1543 @@
+openapi: 3.0.0
+info:
+  description: The API for the Pool Controller IOT project
+  version: 1.0.0
+  title: pool-iot-api
+paths:
+  /devices:
+    get:
+      tags:
+        - Device
+      description: returns all configured devices
+      operationId: getDevices
+      parameters:
+        - name: skip
+          in: query
+          allowReserved: true
+          description: number of records to skip
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: limit
+          in: query
+          allowReserved: true
+          description: max number of records to return
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: All the devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+                  example: valve4 aux1
+      x-swagger-router-controller: Device
+  "/devices/{deviceId}/register":
+    put:
+      tags:
+        - Device
+      operationId: registerDevice
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successfully registered device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceRegistrationInfo"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Device
+  "/devices/{deviceId}/{state}":
+    put:
+      tags:
+        - Device
+      operationId: setDeviceState
+      description: sets a controller button's device on or off; nothing is sent if it
+        is already in that state
+      parameters:
+        - name: deviceId
+          in: path
+          description: a controller button such as filter, lights, heater1, valve4,
+            superchlorinate, aux3, aux5 or aux14; the panel's names spafilter
+            (aux14), yardlights (aux3), blower (aux5) and heatpump (valve4) are
+            also accepted
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+      responses:
+        "200":
+          description: set device state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceState"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Device
+  "/devices/{deviceId}":
+    get:
+      tags:
+        - Device
+      operationId: getDeviceState
+      parameters:
+        - name: deviceId
+          in: path
+          description: a status switch name; spafilter, yardlights, blower and heatpump
+            are accepted for aux14, aux3, aux5 and valve4
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: get device state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceState"
+      x-swagger-router-controller: Device
+  /status:
+    get:
+      tags:
+        - Status
+      description: returns the most recent recorded value of every status and info reading
+      operationId: getCurrentStatus
+      responses:
+        "200":
+          description: latest value for each reading
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusValue"
+      x-swagger-router-controller: Status
+  /history:
+    get:
+      tags:
+        - History
+      description: recorded readings for each name in a time window. Readings are
+        stored when they change, so each series also has the value in effect
+        when the window opens.
+      operationId: getHistory
+      parameters:
+        - name: names
+          in: query
+          allowReserved: true
+          description: readings to return, such as pool temp, spa temp, ambient, heater1,
+            valve4 (heat pump), aux14
+          required: true
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: from
+          in: query
+          allowReserved: true
+          description: start of the window (ISO 8601); defaults to 24 hours before to
+          required: false
+          schema:
+            type: string
+        - name: to
+          in: query
+          allowReserved: true
+          description: end of the window (ISO 8601), exclusive; defaults to now
+          required: false
+          schema:
+            type: string
+        - name: maxPoints
+          in: query
+          allowReserved: true
+          description: most readings per series; larger windows are thinned to this many
+            (default 2000)
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: readings for each name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/History"
+        "400":
+          description: the names or dates are not usable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: History
+  /events:
+    get:
+      tags:
+        - Event log
+      description: recorded events a page at a time, newest first unless order is asc.
+        Pass the previous page's next as cursor for the following page.
+      operationId: getEvents
+      parameters:
+        - name: types
+          in: query
+          allowReserved: true
+          description: "event types to include (all by default): status (switches
+            changing), info (readings), control (keypad and remote presses),
+            action (signed-in accounts acting), failed and unrecognized (frames
+            the server could not use)"
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - status
+                - info
+                - control
+                - action
+                - failed
+                - unrecognized
+        - name: user
+          in: query
+          allowReserved: true
+          description: only this account's actions, or controller for events no account made
+          required: false
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          allowReserved: true
+          description: next from the previous page
+          required: false
+          schema:
+            type: string
+        - name: order
+          in: query
+          allowReserved: true
+          required: false
+          schema:
+            type: string
+            enum:
+              - desc
+              - asc
+            default: desc
+        - name: limit
+          in: query
+          allowReserved: true
+          description: events per page, at most 200
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: a page of events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventPage"
+        "400":
+          description: an unknown type or an unusable cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: EventLog
+  /events/users:
+    get:
+      tags:
+        - Event log
+      description: every account with a recorded action, for filtering the log
+      operationId: getEventUsers
+      responses:
+        "200":
+          description: account names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+      x-swagger-router-controller: EventLog
+  "/water/mode/{mode}":
+    put:
+      tags:
+        - Water flow
+      description: "sets the water flow to pool, spa or spillover. The controller's
+        spillover key steps through those modes in that order, so the server
+        presses it, one press per status change, until the mode is reached;
+        nothing is sent if it already is. GET /status reports the current mode
+        through the pool, spa and spillover switches: spillover if it is on,
+        otherwise spa if it is on, otherwise pool."
+      operationId: setWaterMode
+      parameters:
+        - name: mode
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - pool
+              - spa
+              - spillover
+      responses:
+        "200":
+          description: the change is under way
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterMode"
+        "400":
+          description: the controller has not reported its mode yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Water
+  /heating:
+    get:
+      tags:
+        - Heating
+      description: "every setpoint, and what the heater and heat pump are doing. They
+        are in series, so both drive toward the setpoint of the same body of
+        water: the spa while the spa filter (aux14) runs; otherwise, while the
+        filter runs, the spa in spa flow and the pool in pool or spillover flow.
+        A device that is enabled calls for heat only while that water is below
+        its setpoint, and calls again once it cools. The heater's heating comes
+        from the controller's firing signal; the heat pump has none, so it
+        counts as heating while it is enabled and calling for heat. Until the
+        server can read the controller's setpoints, setpointsReachController is
+        false: each starts at 80°F and a change is kept by the server only."
+      operationId: getHeating
+      responses:
+        "200":
+          description: setpoints and heating state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Heating"
+      x-swagger-router-controller: Heating
+  "/heating/setpoints/{body}/{device}":
+    get:
+      tags:
+        - Heating
+      description: the setpoint one heating device uses for one body of water
+      operationId: getSetpoint
+      parameters:
+        - $ref: "#/components/parameters/heatedBody"
+        - $ref: "#/components/parameters/heatingDevice"
+      responses:
+        "200":
+          description: the setpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setpoint"
+      x-swagger-router-controller: Heating
+  "/heating/setpoints/{body}/{device}/{degrees}":
+    put:
+      tags:
+        - Heating
+      description: sets the temperature one heating device drives one body of water toward
+      operationId: setSetpoint
+      parameters:
+        - $ref: "#/components/parameters/heatedBody"
+        - $ref: "#/components/parameters/heatingDevice"
+        - name: degrees
+          in: path
+          required: true
+          description: the setpoint in °F
+          schema:
+            type: integer
+            minimum: 65
+            maximum: 104
+      responses:
+        "200":
+          description: the setpoint is changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetpointChange"
+        "400":
+          description: not a body, device or setpoint the controller has
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Heating
+  /panel/display:
+    get:
+      tags:
+        - Panel
+      description: returns the most recent text shown on the panel display
+      operationId: getPanelDisplay
+      responses:
+        "200":
+          description: the panel display
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PanelDisplay"
+        "404":
+          description: the panel has not reported any display text yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: Panel
+  "/panel/keys/{key}":
+    put:
+      tags:
+        - Panel
+      description: presses one panel key, as the wireless remote would
+      operationId: pressPanelKey
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - menu
+              - left
+              - right
+              - minus
+              - plus
+      responses:
+        "200":
+          description: the key press is queued for the next controller ping
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PanelKeyPress"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Panel
+  /filtration:
+    get:
+      tags:
+        - Filtration
+      description: returns all filtration devices
+      operationId: getFiltrationDevices
+      responses:
+        "200":
+          description: All the devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+                  example: pool
+      x-swagger-router-controller: Filtration
+  "/filtration/{pumpId}/{state}":
+    put:
+      tags:
+        - Filtration
+      operationId: setFiltrationState
+      parameters:
+        - name: pumpId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+      responses:
+        "200":
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Filtration
+  "/filtration/{pumpId}":
+    get:
+      tags:
+        - Filtration
+      operationId: getFiltrationState
+      parameters:
+        - name: pumpId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: Filtration
+  /temperature:
+    get:
+      tags:
+        - Environment
+      operationId: temperatureSummary
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemperatureSummary"
+      x-swagger-router-controller: Environment
+  "/temperature/{poolId}":
+    get:
+      tags:
+        - Environment
+      operationId: getPoolTemperature
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - pool
+              - spa
+        - name: date
+          in: query
+          allowReserved: true
+          description: historical date bracket
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          allowReserved: true
+          description: result set maximum size
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Zone temperature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemperatureZoneStatus"
+      x-swagger-router-controller: Environment
+  "/temperature/heater/{poolId}":
+    get:
+      tags:
+        - Environment
+      description: gets the state of the heater
+      operationId: getHeaterState
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - pool
+              - spa
+      responses:
+        "200":
+          description: heater state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeaterState"
+      x-swagger-router-controller: Environment
+  "/temperature/heater/{poolId}/{state}":
+    put:
+      tags:
+        - Environment
+      description: turns the heater on or off
+      operationId: setHeaterState
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - pool
+              - spa
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - off
+              - on
+      responses:
+        "200":
+          description: Status of the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeaterState"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Environment
+  /lighting:
+    get:
+      tags:
+        - Lighting
+      operationId: getLights
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+      x-swagger-router-controller: Lighting
+  "/lighting/{lightId}":
+    get:
+      tags:
+        - Lighting
+      operationId: getLightingState
+      parameters:
+        - name: lightId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - underwater
+              - yard
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LightingZoneStatus"
+      x-swagger-router-controller: Lighting
+  "/lighting/{lightId}/{state}":
+    put:
+      tags:
+        - Lighting
+      operationId: setLightingState
+      parameters:
+        - name: lightId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - "false"
+              - "true"
+      responses:
+        "200":
+          description: Status of the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LightingZoneStatus"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Lighting
+  /users:
+    get:
+      tags:
+        - User management
+      description: "admin: every account and its role"
+      operationId: listUsers
+      responses:
+        "200":
+          description: the accounts, by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+    post:
+      tags:
+        - User management
+      description: "admin: adds an account; role defaults to user"
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+        description: the account name (in email), password and role
+        required: true
+      x-codegen-request-body-name: account
+      responses:
+        "200":
+          description: the new account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: the name, password or role is not acceptable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: another account already has that name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+  /users/login:
+    post:
+      tags:
+        - User management
+      description: signs in; send the returned token as the x-auth header
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+        description: the account name (in email) and password
+        required: true
+      x-codegen-request-body-name: credentials
+      responses:
+        "200":
+          description: the account, its role and a token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: the name or password is wrong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: UserManagement
+  /users/me:
+    get:
+      tags:
+        - User management
+      description: the signed-in account and its role
+      operationId: getUser
+      responses:
+        "200":
+          description: the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+      security:
+        - OAuth2:
+            - account
+      x-swagger-router-controller: UserManagement
+  /users/me/token:
+    delete:
+      tags:
+        - User management
+      description: signs this token out
+      operationId: logoutUser
+      responses:
+        "200":
+          description: signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - account
+      x-swagger-router-controller: UserManagement
+  "/users/{name}":
+    put:
+      tags:
+        - User management
+      description: "admin: changes an account's role, or resets its password and signs
+        it out everywhere. The last admin cannot be demoted."
+      operationId: updateUser
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountUpdate"
+        description: a new role, a new password, or both
+        required: true
+      x-codegen-request-body-name: changes
+      responses:
+        "200":
+          description: the updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: there is no account with that name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: the change would leave no admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+    delete:
+      tags:
+        - User management
+      description: "admin: removes an account. The last admin cannot be removed."
+      operationId: deleteUser
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: the account is gone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: there is no account with that name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: it is the only admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+  /users/me/credentials:
+    put:
+      tags:
+        - User management
+      description: "renames the signed-in account and sets its password: how any
+        account changes its own password, and how the default admin account is
+        commissioned. Earlier tokens for the account stop working."
+      operationId: changeCredentials
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+        description: the account name (in email) and new password
+        required: true
+      x-codegen-request-body-name: credentials
+      responses:
+        "200":
+          description: the account's new name and a new token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: the name or password is not acceptable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: another account already has that name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - account
+      x-swagger-router-controller: UserManagement
+  /system/info:
+    get:
+      tags:
+        - System
+      description: identifies this server as the pool controller service; needs
+        neither the database nor the pool controller, so it answers whenever the
+        server is up
+      operationId: getSystemInfo
+      responses:
+        "200":
+          description: the service identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemInfo"
+      x-swagger-router-controller: System
+  /system/factory-reset:
+    post:
+      tags:
+        - System
+      description: erases all history and accounts, then recreates the admin / admin account
+      operationId: factoryReset
+      responses:
+        "200":
+          description: the reset is complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: System
+  /system/restart:
+    post:
+      tags:
+        - System
+      description: exits the server so its container restart policy starts it again
+      operationId: restartServer
+      responses:
+        "200":
+          description: the server is about to exit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: System
+servers:
+  - url: /rhbroberg/pool-api/1.0.0
+components:
+  parameters:
+    heatedBody:
+      name: body
+      in: path
+      required: true
+      description: the body of water
+      schema:
+        type: string
+        enum:
+          - pool
+          - spa
+    heatingDevice:
+      name: device
+      in: path
+      required: true
+      description: the heater (heater1) or the heat pump (valve4)
+      schema:
+        type: string
+        enum:
+          - heater1
+          - heatpump
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+    ApiKeyAuth:
+      type: apiKey
+      name: X-API-Key
+      in: header
+    OAuth2:
+      type: oauth2
+      description: "Sign in with POST /users/login and send the returned token as the
+        x-auth header. Reads need no token. Each account's role grants scopes:
+        viewer has account; user has account and control; admin has all three.
+        An operation's listed scopes must all be granted, or it is refused with
+        403."
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:3000
+          tokenUrl: https://localhost:3000/oauth/redirect
+          scopes:
+            account: "your own account: change its name and password, see it, sign out
+              (viewer, user, admin)"
+            control: change equipment and press panel keys (user, admin)
+            admin: manage accounts, restart the server, factory reset (admin)
+  schemas:
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          description: the account name; historically an email address
+        password:
+          type: string
+        role:
+          type: string
+          description: viewer, user or admin; only used when an admin creates an account
+          enum:
+            - viewer
+            - user
+            - admin
+        token:
+          type: string
+          description: returned by login and changeCredentials; send it as the x-auth header
+        mustChangeCredentials:
+          type: boolean
+          description: true for the default admin account, whose token only works for
+            changeCredentials until it is renamed
+      example:
+        password: password
+        email: email
+    Account:
+      type: object
+      properties:
+        email:
+          type: string
+          description: the account name
+        role:
+          type: string
+          enum:
+            - viewer
+            - user
+            - admin
+        mustChangeCredentials:
+          type: boolean
+      example:
+        email: rick
+        role: admin
+        mustChangeCredentials: false
+    AccountUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - viewer
+            - user
+            - admin
+        password:
+          type: string
+          description: a new password; the account is signed out everywhere
+      example:
+        role: viewer
+    LightingZone:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        deviceId:
+          type: integer
+          format: int32
+        deviceType:
+          type: string
+          enum:
+            - dimmer
+            - switch
+        zone:
+          type: string
+    LightingZoneStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        lastUpdate:
+          type: string
+          format: date-time
+        level:
+          type: integer
+          format: int32
+      description: the status of the lighting zone.
+      example:
+        level: 0
+        lastUpdate: 2000-01-23T04:56:07.000+00:00
+        name: name
+        id: id
+    TemperatureSummary:
+      type: object
+      properties:
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemperatureZone"
+        zoneStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemperatureZoneStatus"
+      description: ok
+      example:
+        zoneStatus:
+          - name: name
+            id: id
+            units: fahrenheit
+            value: 5
+            timestamp: 2000-01-23T04:56:07.000+00:00
+          - name: name
+            id: id
+            units: fahrenheit
+            value: 5
+            timestamp: 2000-01-23T04:56:07.000+00:00
+        zones:
+          - inputPosition: 6
+            outputPosition: 1
+            zone: zone
+            name: name
+            id: 0
+          - inputPosition: 6
+            outputPosition: 1
+            zone: zone
+            name: name
+            id: 0
+    TemperatureZone:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: the unique identifier for the zone
+        name:
+          type: string
+        inputPosition:
+          type: integer
+          format: int32
+        outputPosition:
+          type: integer
+          format: int32
+        zone:
+          type: string
+      description: a single temperature zone
+      example:
+        inputPosition: 6
+        outputPosition: 1
+        zone: zone
+        name: name
+        id: 0
+    TemperatureZoneStatus:
+      type: object
+      required:
+        - id
+        - timestamp
+        - value
+      properties:
+        id:
+          type: string
+          description: the unique identifier for the zone
+        name:
+          type: string
+          description: the name of the zone
+        value:
+          type: integer
+          format: int32
+          description: the temperature in the zone
+        units:
+          type: string
+          description: the temperature units
+          default: fahrenheit
+          enum:
+            - celcius
+            - fahrenheit
+        timestamp:
+          type: string
+          format: date-time
+          description: the timestamp when the temperature was measured
+      description: status of a single zone
+      example:
+        name: name
+        id: id
+        units: fahrenheit
+        value: 5
+        timestamp: 2000-01-23T04:56:07.000+00:00
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+          example: everything is ok
+      example:
+        code: 0
+        message: everything is ok
+    HeaterState:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+            - on
+            - off
+        setPoint:
+          type: integer
+          format: int32
+          description: goal temperature for heater
+        units:
+          type: string
+          description: the temperature units
+          default: fahrenheit
+          enum:
+            - celcius
+            - fahrenheit
+        timestamp:
+          type: string
+          format: date-time
+          description: the timestamp when the temperature was measured
+      example:
+        setPoint: 0
+        id: id
+        state: on
+        units: fahrenheit
+        timestamp: 2000-01-23T04:56:07.000+00:00
+    DeviceState:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        value:
+          type: string
+        previousValue:
+          type: string
+          description: the state before a set request; the change is confirmed by a later
+            status frame
+        lastUpdate:
+          type: string
+          format: date-time
+      example:
+        lastUpdate: 2000-01-23T04:56:07.000+00:00
+        name: name
+        id: id
+        value: value
+    WaterMode:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - pool
+            - spa
+            - spillover
+        previousMode:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+    Heating:
+      type: object
+      properties:
+        units:
+          type: string
+          enum:
+            - fahrenheit
+        target:
+          type: string
+          description: "the body the heaters drive toward now: pool, spa, or null while
+            neither pump runs"
+        minimum:
+          type: integer
+        maximum:
+          type: integer
+        setpointsReachController:
+          type: boolean
+          description: false while the server keeps the setpoints itself rather than
+            reading and setting the controller's
+        setpoints:
+          type: object
+          description: each body's setpoint for each device
+          properties:
+            pool:
+              $ref: "#/components/schemas/DeviceSetpoints"
+            spa:
+              $ref: "#/components/schemas/DeviceSetpoints"
+        devices:
+          type: object
+          properties:
+            heater1:
+              $ref: "#/components/schemas/HeatingDevice"
+            heatpump:
+              $ref: "#/components/schemas/HeatingDevice"
+    DeviceSetpoints:
+      type: object
+      properties:
+        heater1:
+          type: integer
+        heatpump:
+          type: integer
+    HeatingDevice:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: switched on (the heater in Auto); null until the controller has
+            reported it
+        heating:
+          type: boolean
+          description: actually producing heat
+        callingForHeat:
+          type: boolean
+          description: enabled, and its water is below the setpoint
+        body:
+          type: string
+          description: the body it drives toward, as target
+        setpoint:
+          type: integer
+          description: its setpoint for that body
+        temperature:
+          type: number
+          description: that body's latest temperature
+    Setpoint:
+      type: object
+      properties:
+        body:
+          type: string
+        device:
+          type: string
+        setpoint:
+          type: integer
+        units:
+          type: string
+    SetpointChange:
+      type: object
+      properties:
+        body:
+          type: string
+        device:
+          type: string
+        setpoint:
+          type: integer
+        previousSetpoint:
+          type: integer
+        units:
+          type: string
+    SystemInfo:
+      type: object
+      properties:
+        service:
+          type: string
+          enum:
+            - pool-controller
+        version:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+    EventEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+          description: status, info, control, action, failed or unrecognized
+        user:
+          type: string
+          description: the account that acted; only on action events
+        summary:
+          type: string
+          description: what happened, in a sentence
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: number
+    EventPage:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventEntry"
+        next:
+          type: string
+          description: cursor for the following page; null when there are no more events
+    HistoryPoint:
+      type: object
+      properties:
+        t:
+          type: string
+          format: date-time
+        v:
+          type: number
+    HistorySeries:
+      type: object
+      properties:
+        name:
+          type: string
+        before:
+          $ref: "#/components/schemas/HistoryPoint"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryPoint"
+        downsampled:
+          type: boolean
+          description: true when the window held more readings than maxPoints
+    History:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        earliest:
+          type: string
+          format: date-time
+          description: the oldest recorded reading of any kind
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistorySeries"
+    PanelDisplay:
+      type: object
+      required:
+        - lines
+        - blinking
+        - timestamp
+      properties:
+        lines:
+          type: array
+          description: each line of the display, 20 characters wide
+          items:
+            type: string
+        blinking:
+          type: array
+          description: for each line, the positions of characters the panel is blinking
+          items:
+            type: array
+            items:
+              type: integer
+        timestamp:
+          type: string
+          format: date-time
+          description: when the panel sent this text
+      example:
+        lines:
+          - "      Saturday      "
+          - "        6:42A       "
+        blinking:
+          - []
+          - - 9
+        timestamp: 2000-01-23T04:56:07.000+00:00
+    PanelKeyPress:
+      type: object
+      properties:
+        key:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+    StatusValue:
+      type: object
+      required:
+        - name
+        - category
+        - value
+        - timestamp
+      properties:
+        name:
+          type: string
+          description: the reading name, as stored by the server
+        category:
+          type: string
+          description: status for device switches, info for measurements from the display
+          enum:
+            - status
+            - info
+        value:
+          type: number
+          description: 1 or 0 for switches; the measured value for info readings
+        timestamp:
+          type: string
+          format: date-time
+          description: when this value was recorded
+      example:
+        name: filter
+        category: status
+        value: 1
+        timestamp: 2000-01-23T04:56:07.000+00:00
+    DeviceRegistrationInfo:
+      type: object
+      properties:
+        uri:
+          type: string
+          format: uri
+          example: http://10.0.0.220:3000
+        id:
+          type: string
+          format: uuid
+          example: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+      example:
+        id: 0729a580-2240-11e6-9eb5-0002a5d5c51b
+        uri: http://10.0.0.220:3000

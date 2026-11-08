@@ -259,7 +259,7 @@ struct StatusClient {
         var request = request
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        // the server's validator rejects any request without a JSON content type, body or not
+        // the server's validator rejects a request body sent without a JSON content type
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await URLSession.shared.data(for: request)

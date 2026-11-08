@@ -73,11 +73,16 @@ var latestDisplay;
 // 1 for auto, 0 for off, undefined until the panel displays the heater line
 var heaterAuto;
 
+// the API waits for this so the default admin account exists before the first sign-in
+const accountsChecked = mongoose.connection.asPromise()
+    .then(() => systemService.commissionIfEmpty())
+    .catch((e) => logger.error(`could not check for accounts: ${e}`));
+
 // if webserver is run app will not exit in 'file' mode (which is only used for testing)
 if (argv.d !== 'file') {
     logger.info('web server is active');
 
-    initializeServer((app, server) => {
+    accountsChecked.then(() => initializeServer((app, server) => {
         app.use(express.static(publicPath));
         io = socketIO(server);
 
@@ -104,7 +109,7 @@ if (argv.d !== 'file') {
                 logger.debug('disconnecting');
             });
         });
-    });
+    }));
 }
 
 var saveStatus = (switchesEnabled, buf, category, timestamp) => {
@@ -513,9 +518,6 @@ systemService.registerResetListener(() => {
     });
 });
 
-mongoose.connection.asPromise()
-    .then(() => systemService.commissionIfEmpty())
-    .catch((e) => logger.error(`could not check for accounts: ${e}`));
 if (argv.d === 'tail' && argv.fromStart) {
     logger.info('replay waits for a browser connection');
 } else if (driver) {
