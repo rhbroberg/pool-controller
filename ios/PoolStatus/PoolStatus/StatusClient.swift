@@ -16,14 +16,6 @@ enum StatusClientError: LocalizedError {
     }
 }
 
-struct SignInResult: Decodable {
-    let email: String
-    let token: String
-    let role: AccountRole?
-    /// The default admin account, whose token only works for renaming it.
-    let mustChangeCredentials: Bool?
-}
-
 /// How a server identifies itself; only a pool controller server says `poolService`.
 struct SystemInfo: Decodable {
     static let poolService = "pool-controller"
@@ -31,15 +23,6 @@ struct SystemInfo: Decodable {
     let service: String
     let version: String
     let startedAt: Date
-}
-
-/// An account as the server describes it, without a token.
-struct AccountInfo: Decodable, Identifiable, Hashable {
-    let email: String
-    let role: AccountRole
-    let mustChangeCredentials: Bool?
-
-    var id: String { email }
 }
 
 struct StatusClient {
@@ -59,10 +42,10 @@ struct StatusClient {
         return try Self.decoder.decode(SystemInfo.self, from: data)
     }
 
-    func signIn(email: String, password: String) async throws -> SignInResult {
+    func signIn(name: String, password: String) async throws -> SignInResult {
         var request = URLRequest(url: try url(for: "users/login"))
         request.httpMethod = "POST"
-        request.httpBody = try JSONEncoder().encode(["email": email, "password": password])
+        request.httpBody = try JSONEncoder().encode(["email": name, "password": password])
         let data = try await send(request)
         return try JSONDecoder().decode(SignInResult.self, from: data)
     }

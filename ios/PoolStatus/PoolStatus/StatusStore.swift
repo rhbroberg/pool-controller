@@ -1,111 +1,5 @@
 import Foundation
 import Observation
-import SwiftUI
-
-/// Equipment the app can switch. Only buttons whose control bits are confirmed by
-/// captured presses belong here.
-struct EquipmentControl: Identifiable {
-    /// Where a control sits on the main page.
-    enum Group: CaseIterable {
-        case heating, circulation, features
-
-        var title: String {
-            switch self {
-            case .heating: "Heating"
-            case .circulation: "Circulation"
-            case .features: "Lights & Features"
-            }
-        }
-    }
-
-    /// Asked before a change that is easy to make by accident and costly to get wrong.
-    struct Confirmation {
-        let title: String
-        let message: String
-        let action: String
-    }
-
-    /// The button name sent to `PUT /devices/{name}/{state}`.
-    let name: String
-    let systemImage: String
-    let tint: Color
-    let group: Group
-    /// The reading that reports this control's state, when it isn't the status bit of the same name.
-    var stateReading: String?
-    var onText = "On"
-    var offText = "Off"
-    var confirmOn: Confirmation?
-    var confirmOff: Confirmation?
-
-    var id: String { name }
-    var title: String { StatusReading.displayName(for: name) }
-    var stateName: String { stateReading ?? name }
-
-    func stateText(_ on: Bool) -> String {
-        on ? onText : offText
-    }
-
-    /// Shown while the controller hasn't yet reported the requested state; short enough for a
-    /// half-width tile.
-    func pendingText(_ on: Bool) -> String {
-        onText == "On" ? "Turning \(stateText(on))…" : "To \(stateText(on))…"
-    }
-
-    func confirmation(turningOn on: Bool) -> Confirmation? {
-        on ? confirmOn : confirmOff
-    }
-
-    static let all = [
-        // valve4 runs the heat pump at this installation
-        EquipmentControl(name: "valve4", systemImage: "heat.waves", tint: .pink, group: .heating),
-        // the heater key switches between Manual Off and Auto Control on the panel display
-        EquipmentControl(name: "heater1", systemImage: "flame", tint: .orange, group: .heating,
-                         stateReading: "heater1 mode", onText: "Auto", offText: "Manual Off"),
-        EquipmentControl(name: "filter", systemImage: "fan", tint: .blue, group: .circulation),
-        // aux14 is labelled Spa Filter on this panel; it brings valve3 and aux1 with it
-        EquipmentControl(name: "aux14", systemImage: "bathtub", tint: .cyan, group: .circulation),
-        EquipmentControl(name: "lights", systemImage: "lightbulb", tint: .yellow, group: .features),
-        // aux3 and aux5 are labelled Yard Lights and Blower on this panel
-        EquipmentControl(name: "aux3", systemImage: "lamp.floor", tint: .green, group: .features),
-        EquipmentControl(name: "aux5", systemImage: "wind", tint: .mint, group: .features),
-        EquipmentControl(name: "superchlorinate", systemImage: "bubbles.and.sparkles", tint: .teal, group: .features,
-                         confirmOn: Confirmation(
-                            title: "Start super chlorinating?",
-                            message: "The chlorinator runs at full output until the controller ends the cycle or you turn it off.",
-                            action: "Super Chlorinate"))
-    ]
-
-    static func controls(in group: Group) -> [EquipmentControl] {
-        all.filter { $0.group == group }
-    }
-}
-
-/// Where the water flows. The controller's spillover key steps through these in order.
-enum WaterMode: String, CaseIterable, Identifiable {
-    case pool, spa, spillover
-
-    var id: String { rawValue }
-    var title: String { rawValue.capitalized }
-}
-
-/// One value on the temperature card.
-struct Measurement: Identifiable {
-    let name: String
-    let title: String
-    let value: String
-    /// The pump feeding this sensor is off, so the reading is from when it last ran.
-    let isDimmed: Bool
-
-    var id: String { name }
-}
-
-enum PasswordChangeError: LocalizedError {
-    case wrongCurrentPassword
-
-    var errorDescription: String? {
-        "Your current password isn’t correct."
-    }
-}
 
 @Observable
 final class StatusStore {
@@ -176,13 +70,13 @@ final class StatusStore {
 
     /// Every measurement always has a slot, so the card keeps its shape while readings arrive;
     /// pool and spa are dimmed, as stale readings, while their pumps are off.
-    var measurements: [Measurement] {
+    var measurements: [DashboardReading] {
         Self.measurementOrder.map(measurement(named:))
     }
 
-    func measurement(named name: String) -> Measurement {
+    func measurement(named name: String) -> DashboardReading {
         let reading = reading(named: name)
-        return Measurement(name: name,
+        return DashboardReading(name: name,
                            title: StatusReading.displayName(for: name),
                            value: reading?.formattedValue ?? (name == "salt" ? "-- ppm" : "--°F"),
                            isDimmed: Self.pumpForTemperature[name] != nil && !pumpRunning(for: name))
@@ -273,9 +167,9 @@ final class StatusStore {
         }
     }
 
-    func signIn(email: String, password: String, serverAddress: String) async throws {
-        let result = try await StatusClient(serverAddress: serverAddress).signIn(email: email, password: password)
-        let signedIn = Credentials(email: result.email, token: result.token, role: result.role)
+    func signIn(name: String, password: String, serverAddress: String) async throws {
+        let result = try await StatusClient(serverAddress: serverAddress).signIn(name: name, password: password)
+        let signedIn = Credentials(name: result.name, token: result.token, role: result.role)
         markConnected()
         if result.mustChangeCredentials == true {
             commissioning = signedIn
@@ -291,7 +185,7 @@ final class StatusStore {
         }
         let result = try await StatusClient(serverAddress: serverAddress)
             .changeCredentials(name: name, password: password, token: commissioning.token)
-        save(Credentials(email: result.email, token: result.token, role: result.role))
+        save(Credentials(name: result.name, token: result.token, role: result.role))
         self.commissioning = nil
     }
 
@@ -308,12 +202,12 @@ final class StatusStore {
         let client = StatusClient(serverAddress: serverAddress)
         let verified: SignInResult
         do {
-            verified = try await client.signIn(email: credentials.email, password: current)
+            verified = try await client.signIn(name: credentials.name, password: current)
         } catch StatusClientError.unauthorized {
             throw PasswordChangeError.wrongCurrentPassword
         }
-        let result = try await client.changeCredentials(name: credentials.email, password: password, token: verified.token)
-        save(Credentials(email: result.email, token: result.token, role: result.role ?? credentials.role))
+        let result = try await client.changeCredentials(name: credentials.name, password: password, token: verified.token)
+        save(Credentials(name: result.name, token: result.token, role: result.role ?? credentials.role))
     }
 
     /// Asks the server for the signed-in account's current role, which an admin may have changed.
@@ -323,7 +217,7 @@ final class StatusStore {
         }
         do {
             let account = try await StatusClient(serverAddress: serverAddress).fetchAccount(token: credentials.token)
-            save(Credentials(email: account.email, token: credentials.token, role: account.role))
+            save(Credentials(name: account.name, token: credentials.token, role: account.role))
         } catch StatusClientError.unauthorized {
             signOut()
         } catch {

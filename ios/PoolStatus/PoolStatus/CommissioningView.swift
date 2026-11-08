@@ -4,7 +4,6 @@ import SwiftUI
 /// renamed and given a new password before it can change anything.
 struct CommissioningView: View {
     static let defaultAdmin = "admin"
-    static let minimumPasswordLength = 6
 
     let store: StatusStore
     let serverAddress: String
@@ -24,18 +23,12 @@ struct CommissioningView: View {
         if trimmedName.lowercased() == Self.defaultAdmin {
             return "Choose an account name other than \(Self.defaultAdmin)."
         }
-        if !password.isEmpty && password.count < Self.minimumPasswordLength {
-            return "Use at least \(Self.minimumPasswordLength) characters for the password."
-        }
-        if !confirmation.isEmpty && confirmation != password {
-            return "The passwords don’t match."
-        }
-        return nil
+        return PasswordRules.problem(password, confirmation: confirmation)
     }
 
     private var canSave: Bool {
-        !trimmedName.isEmpty && password.count >= Self.minimumPasswordLength
-            && password == confirmation && problem == nil && !isSaving
+        !trimmedName.isEmpty && PasswordRules.acceptable(password, confirmation: confirmation)
+            && problem == nil && !isSaving
     }
 
     var body: some View {

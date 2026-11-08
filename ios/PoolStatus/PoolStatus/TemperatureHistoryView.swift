@@ -174,7 +174,7 @@ struct TemperatureHistoryView: View {
         }
     }
 
-    private func chart(segments: [TemperatureHistoryModel.Segment], air: [TemperatureHistoryModel.Sample],
+    private func chart(segments: [TemperatureHistoryModel.Segment], air: [HistorySample],
                        heater: [TemperatureHistoryModel.Interval],
                        heatPump: [TemperatureHistoryModel.Interval]) -> some View {
         Chart {
@@ -329,7 +329,7 @@ struct TemperatureHistoryView: View {
 
     /// The values under the finger, in place of the date range while reading the graph.
     private func selectionReadout(at date: Date, segments: [TemperatureHistoryModel.Segment],
-                                  air: [TemperatureHistoryModel.Sample],
+                                  air: [HistorySample],
                                   heating: [TemperatureHistoryModel.Interval]) -> some View {
         let water = waterValue(at: date, segments: segments)
         let airValue = air.last { $0.date <= date }?.value
@@ -391,7 +391,7 @@ struct TemperatureHistoryView: View {
     }
 
     /// Fits the readings in view, with a little room above and below.
-    private func yDomain(segments: [TemperatureHistoryModel.Segment], air: [TemperatureHistoryModel.Sample]) -> ClosedRange<Double> {
+    private func yDomain(segments: [TemperatureHistoryModel.Segment], air: [HistorySample]) -> ClosedRange<Double> {
         let range = visibleRange
         let visible = (segments.flatMap(\.samples) + air).filter { range.contains($0.date) }.map(\.value)
         guard let low = visible.min(), let high = visible.max() else {

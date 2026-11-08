@@ -1,15 +1,47 @@
 import Foundation
 
+/// The pool and the spa.
+enum WaterBody: String, CaseIterable, Identifiable, Decodable {
+    case pool, spa
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .pool: "Pool"
+        case .spa: "Spa"
+        }
+    }
+
+    var temperatureName: String {
+        switch self {
+        case .pool: "pool temp"
+        case .spa: "spa temp"
+        }
+    }
+}
+
 /// The heater and heat pump. They're in series, so both heat whichever body the water flows to,
 /// each toward its own setpoint for that body.
 enum HeatingDevice: String, CaseIterable, Identifiable {
     case heater1, heatpump
 
     var id: String { rawValue }
-    var title: String { self == .heater1 ? "Heater" : "Heat Pump" }
+
+    var title: String {
+        switch self {
+        case .heater1: "Heater"
+        case .heatpump: "Heat Pump"
+        }
+    }
 
     /// The equipment control that enables it.
-    var controlName: String { self == .heater1 ? "heater1" : "valve4" }
+    var controlName: String {
+        switch self {
+        case .heater1: "heater1"
+        case .heatpump: "valve4"
+        }
+    }
 
     init?(controlName: String) {
         guard let device = Self.allCases.first(where: { $0.controlName == controlName }) else {
@@ -17,10 +49,6 @@ enum HeatingDevice: String, CaseIterable, Identifiable {
         }
         self = device
     }
-}
-
-extension WaterBody: Decodable, CaseIterable {
-    static var allCases: [WaterBody] { [.pool, .spa] }
 }
 
 /// `GET /heating`: every setpoint, and what each heating device is doing with them.
@@ -43,8 +71,9 @@ struct HeatingStatus: Decodable {
     let maximum: Int
     /// False while the server keeps the setpoints itself instead of the controller's.
     let setpointsReachController: Bool
-    let setpoints: [String: [String: Int]]
-    let devices: [String: Device]
+    /// Keyed by the server's body and device names; read through `setpoint(_:for:)`.
+    private let setpoints: [String: [String: Int]]
+    private let devices: [String: Device]
 
     var range: ClosedRange<Int> { minimum...maximum }
 

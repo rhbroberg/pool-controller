@@ -1,42 +1,5 @@
 import Charts
-import Observation
 import SwiftUI
-
-/// Salt level for one time window, from `GET /history`.
-@Observable
-final class SaltHistoryModel {
-    static let readingName = "salt"
-
-    private(set) var samples: [TemperatureHistoryModel.Sample] = []
-    private(set) var isLoading = false
-    private(set) var errorMessage: String?
-
-    func load(from start: Date, to end: Date, serverAddress: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let response = try await StatusClient(serverAddress: serverAddress)
-                .fetchHistory(names: [Self.readingName], from: start, to: end)
-            let series = response.series.first { $0.name == Self.readingName }
-            let points = (series?.before.map { [$0] } ?? []) + (series?.points ?? [])
-            var loaded = points.compactMap { point in
-                point.v.map { TemperatureHistoryModel.Sample(date: max(point.t, start), value: $0) }
-            }
-            // readings are stored when they change, so the last one holds until now
-            if let last = loaded.last, last.date < end {
-                loaded.append(TemperatureHistoryModel.Sample(date: end, value: last.value))
-            }
-            samples = loaded
-            errorMessage = nil
-        } catch is CancellationError {
-            return
-        } catch let error as URLError where error.code == .cancelled {
-            return
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
 
 /// Salt level against time; salt changes slowly, so the ranges run longer than temperature's.
 struct SaltHistoryView: View {

@@ -5,8 +5,13 @@ import Observation
 /// as the window opens.
 struct HistoryResponse: Decodable {
     struct Point: Decodable {
-        let t: Date
-        let v: Double?
+        let date: Date
+        /// Nil where the reading was missing.
+        let value: Double?
+
+        private enum CodingKeys: String, CodingKey {
+            case date = "t", value = "v"
+        }
     }
 
     struct Series: Decodable {
@@ -21,24 +26,17 @@ struct HistoryResponse: Decodable {
     let series: [Series]
 }
 
-enum WaterBody: String, Identifiable {
-    case pool, spa
-
-    var id: String { rawValue }
-    var title: String { self == .pool ? "Pool" : "Spa" }
-    var temperatureName: String { self == .pool ? "pool temp" : "spa temp" }
+/// One reading on a history graph.
+struct HistorySample: Identifiable {
+    let date: Date
+    let value: Double
+    var id: Date { date }
 }
 
 /// Temperature, air and heater history for one body of water, fetched a time window at a
 /// time and kept, so only windows that haven't been seen are requested.
 @Observable
 final class TemperatureHistoryModel {
-    struct Sample: Identifiable {
-        let date: Date
-        let value: Double
-        var id: Date { date }
-    }
-
     struct Interval: Identifiable {
         let start: Date
         let end: Date
@@ -48,7 +46,7 @@ final class TemperatureHistoryModel {
     /// A stretch of line drawn without breaks.
     struct Segment: Identifiable {
         let id: Int
-        let samples: [Sample]
+        let samples: [HistorySample]
     }
 
     static let airName = "ambient"
@@ -68,7 +66,7 @@ final class TemperatureHistoryModel {
     private(set) var loadedThrough: Date?
 
     private var values: [String: [Date: Double]] = [:]
-    private var sorted: [String: [Sample]] = [:]
+    private var sorted: [String: [HistorySample]] = [:]
     private var loaded: [ClosedRange<Date>] = []
 
     init(water: WaterBody) {
@@ -79,12 +77,12 @@ final class TemperatureHistoryModel {
         [water.temperatureName, Self.airName, Self.heaterName, Self.heatPumpName, Self.poolPumpName] + Self.circulationNames
     }
 
-    func samples(_ name: String) -> [Sample] {
+    func samples(_ name: String) -> [HistorySample] {
         sorted[name] ?? []
     }
 
-    var waterSamples: [Sample] { samples(water.temperatureName) }
-    var airSamples: [Sample] { samples(Self.airName) }
+    var waterSamples: [HistorySample] { samples(water.temperatureName) }
+    var airSamples: [HistorySample] { samples(Self.airName) }
 
     // MARK: - Loading
 
@@ -156,12 +154,12 @@ final class TemperatureHistoryModel {
         for series in response.series {
             var known = values[series.name] ?? [:]
             for point in series.points + (series.before.map { [$0] } ?? []) {
-                if let value = point.v {
-                    known[point.t] = value
+                if let value = point.value {
+                    known[point.date] = value
                 }
             }
             values[series.name] = known
-            sorted[series.name] = known.map { Sample(date: $0.key, value: $0.value) }.sorted { $0.date < $1.date }
+            sorted[series.name] = known.map { HistorySample(date: $0.key, value: $0.value) }.sorted { $0.date < $1.date }
         }
     }
 
@@ -238,17 +236,52 @@ final class TemperatureHistoryModel {
         return result
     }
 
-    func airSegment(through end: Date) -> [Sample] {
+    func airSegment(through end: Date) -> [HistorySample] {
         let readings = airSamples.filter { $0.date <= end }
         return readings.isEmpty ? [] : extended(readings, to: end)
     }
 
-    private func extended(_ readings: [Sample], to end: Date) -> [Sample] {
+    private func extended(_ readings: [HistorySample], to end: Date) -> [HistorySample] {
         var line = readings
         if let last = line.last, last.date < end {
-            line.append(Sample(date: end, value: last.value))
+            line.append(HistorySample(date: end, value: last.value))
         }
         return line
     }
+}
 
+/// Salt level for one time window, from `GET /history`.
+@Observable
+final class SaltHistoryModel {
+    static let readingName = "salt"
+
+    private(set) var samples: [HistorySample] = []
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
+
+    func load(from start: Date, to end: Date, serverAddress: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let response = try await StatusClient(serverAddress: serverAddress)
+                .fetchHistory(names: [Self.readingName], from: start, to: end)
+            let series = response.series.first { $0.name == Self.readingName }
+            let points = (series?.before.map { [$0] } ?? []) + (series?.points ?? [])
+            var loaded = points.compactMap { point in
+                point.value.map { HistorySample(date: max(point.date, start), value: $0) }
+            }
+            // readings are stored when they change, so the last one holds until now
+            if let last = loaded.last, last.date < end {
+                loaded.append(HistorySample(date: end, value: last.value))
+            }
+            samples = loaded
+            errorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }

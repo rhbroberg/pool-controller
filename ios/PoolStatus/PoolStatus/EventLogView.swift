@@ -114,7 +114,7 @@ struct EventLogView: View {
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
             .foregroundStyle(isOn ? Color.white : Color.secondary)
-            .background(isOn ? kind.tint : Color(.tertiarySystemFill), in: .capsule)
+            .background(isOn ? kind.tint.color : Color(.tertiarySystemFill), in: .capsule)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(kind.title)
@@ -255,9 +255,9 @@ private struct EventRow: View {
             }
             .frame(width: Self.timeWidth, alignment: .leading)
 
-            Image(systemName: event.kind.systemImage)
+            Image(systemName: event.kind?.systemImage ?? "circle.dashed")
                 .font(.subheadline)
-                .foregroundStyle(event.kind.tint)
+                .foregroundStyle(event.kind?.tint.color ?? .secondary)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {

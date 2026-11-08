@@ -83,9 +83,19 @@ struct ReadingTests {
         #expect(EventKind(serverType: "status") == .equipment)
         #expect(EventKind(serverType: "action") == .actions)
         #expect(EventKind(serverType: "failed") == .protocolErrors)
-        #expect(EventKind(serverType: "something new") == .protocolErrors)
+        #expect(EventKind(serverType: "something new") == nil)
         #expect(EventUserFilter.controller.query == "controller")
         #expect(EventUserFilter.everyone.query == nil)
+    }
+
+    @Test("decodes values this app doesn't know yet instead of failing")
+    func unknownValues() throws {
+        let readings = try decode(Fixture.status([("pool temp", "info", 81), ("pressure", "gauge", 12)]))
+        #expect(readings.map(\.category) == [.info, .other])
+
+        let account = try JSONDecoder().decode(AccountInfo.self, from: Data(#"{"email":"guest","role":"auditor"}"#.utf8))
+        #expect(account.name == "guest")
+        #expect(account.role == .viewer, "an unknown role gets the least access")
     }
 
     @Test("decodes the heating status, with no target while no pump runs")

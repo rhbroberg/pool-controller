@@ -113,14 +113,14 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "admin", password: "admin", serverAddress: server.address)
+        try await store.signIn(name: "admin", password: "admin", serverAddress: server.address)
         #expect(store.commissioning != nil)
         #expect(store.credentials == nil)
         #expect(TokenStore.load() == nil, "the default admin's token isn't saved")
 
         try await store.commission(name: "owner", password: "owner-password", serverAddress: server.address)
         #expect(store.commissioning == nil)
-        #expect(store.credentials?.email == "owner")
+        #expect(store.credentials?.name == "owner")
         #expect(store.isAdmin)
         #expect(TokenStore.load()?.token == "token-owner")
         store.signOut()
@@ -142,7 +142,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "operator-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         #expect(store.canControl)
 
         let lights = try #require(EquipmentControl.all.first { $0.name == "lights" })
@@ -166,7 +166,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "operator-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         await store.refresh(from: server.address)
 
         try await store.setSetpoints([.pool: 90, .spa: 102], device: .heater1, serverAddress: server.address)
@@ -185,7 +185,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "old-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "old-password", serverAddress: server.address)
         try await store.changePassword(current: "old-password", new: "new-password", serverAddress: server.address)
         #expect(store.credentials?.token == "token-new", "the server signs out every other token")
         #expect(TokenStore.load()?.token == "token-new")
@@ -203,7 +203,7 @@ struct SignedInTests {
             return attempts.value == 1 ? .ok(Fixture.login("operator")) : .status(401)
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "right-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "right-password", serverAddress: server.address)
         await #expect(throws: PasswordChangeError.self) {
             try await store.changePassword(current: "wrong", new: "new-password", serverAddress: server.address)
         }
@@ -227,7 +227,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "operator-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         await store.refresh(from: server.address)
         #expect(store.waterMode == .pool)
 
@@ -250,7 +250,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "owner", password: "owner-password", serverAddress: server.address)
+        try await store.signIn(name: "owner", password: "owner-password", serverAddress: server.address)
         #expect(store.isAdmin)
         try await store.restartServer(serverAddress: server.address)
         #expect(server.requests.contains("POST system/restart"))
@@ -273,7 +273,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "operator-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         let filter = try #require(EquipmentControl.all.first { $0.name == "filter" })
         await store.setControl(filter, on: false, serverAddress: server.address)
         #expect(store.credentials == nil)
@@ -292,7 +292,7 @@ struct SignedInTests {
             }
         }
         let store = StatusStore()
-        try await store.signIn(email: "operator", password: "operator-password", serverAddress: server.address)
+        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         await store.setWaterMode(.spa, serverAddress: server.address)
         #expect(store.role == .viewer)
         #expect(!store.canControl)

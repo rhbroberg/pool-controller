@@ -7,6 +7,13 @@ struct StatusReading: Decodable, Identifiable, Hashable {
         case info
         /// An on/off switch from the controller status frame.
         case status
+        /// A category this app doesn't know, which shouldn't stop the rest from decoding.
+        case other
+
+        init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Category(rawValue: raw) ?? .other
+        }
     }
 
     let name: String

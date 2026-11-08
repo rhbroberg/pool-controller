@@ -144,11 +144,11 @@ struct StatusView: View {
         Group {
             accessNote
 
-            ControlSection(title: EquipmentControl.Group.heating.title) {
+            ControlSection(title: EquipmentControl.Area.heating.title) {
                 equipmentGrid(.heating)
             }
 
-            ControlSection(title: EquipmentControl.Group.circulation.title) {
+            ControlSection(title: EquipmentControl.Area.circulation.title) {
                 WaterFlowControl(current: store.waterMode,
                                  pending: store.pendingWaterMode,
                                  isLocked: !store.canControl) { mode in
@@ -157,7 +157,7 @@ struct StatusView: View {
                 equipmentGrid(.circulation)
             }
 
-            ControlSection(title: EquipmentControl.Group.features.title) {
+            ControlSection(title: EquipmentControl.Area.features.title) {
                 equipmentGrid(.features)
             }
         }
@@ -182,9 +182,9 @@ struct StatusView: View {
         }
     }
 
-    private func equipmentGrid(_ group: EquipmentControl.Group) -> some View {
+    private func equipmentGrid(_ area: EquipmentControl.Area) -> some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            ForEach(EquipmentControl.controls(in: group)) { control in
+            ForEach(EquipmentControl.controls(in: area)) { control in
                 let device = HeatingDevice(controlName: control.name)
                 EquipmentTile(control: control,
                               isOn: store.isOn(control),
@@ -268,8 +268,8 @@ private extension WaterMode {
 
 /// The pool temperature large on the left; spa, air and salt in a column beside it.
 private struct TemperatureCard: View {
-    let pool: Measurement
-    let secondary: [Measurement]
+    let pool: DashboardReading
+    let secondary: [DashboardReading]
     let lastRefresh: Date?
     let isConnected: Bool
 
@@ -328,7 +328,7 @@ private struct TemperatureCard: View {
     }
 
     @ViewBuilder
-    private func secondaryRow(_ measurement: Measurement) -> some View {
+    private func secondaryRow(_ measurement: DashboardReading) -> some View {
         switch measurement.name {
         case "spa temp":
             NavigationLink {
@@ -349,7 +349,7 @@ private struct TemperatureCard: View {
         }
     }
 
-    private func row(_ measurement: Measurement, linked: Bool) -> some View {
+    private func row(_ measurement: DashboardReading, linked: Bool) -> some View {
         HStack(spacing: 4) {
             Text(measurement.title)
                 .font(.subheadline.weight(linked ? .medium : .regular))
@@ -561,7 +561,7 @@ private struct EquipmentTile: View {
                     Image(systemName: control.systemImage)
                         .symbolVariant(isRunning ? .fill : .none)
                         .font(.title3)
-                        .foregroundStyle(isOn ? control.tint : Color.secondary)
+                        .foregroundStyle(isOn ? control.tint.color : Color.secondary)
                         // icons differ in size; a fixed frame keeps the names lined up
                         .frame(width: 26, height: 26)
                     VStack(alignment: .leading, spacing: 0) {
@@ -610,7 +610,7 @@ private struct EquipmentTile: View {
                                 .fixedSize()
                         }
                     }
-                    .foregroundStyle(isOn ? control.tint : Color.secondary)
+                    .foregroundStyle(isOn ? control.tint.color : Color.secondary)
                     .frame(width: 36, height: 36)
                     .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
                     .frame(width: 44, height: 50)
@@ -620,11 +620,11 @@ private struct EquipmentTile: View {
                 .accessibilityLabel("\(control.title) Setpoints")
             }
         }
-        .background(isRunning ? control.tint.opacity(0.16) : Color(.secondarySystemGroupedBackground),
+        .background(isRunning ? control.tint.color.opacity(0.16) : Color(.secondarySystemGroupedBackground),
                     in: .rect(cornerRadius: 14))
         .overlay {
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(isOn ? control.tint.opacity(0.55) : Color.clear, lineWidth: 1.5)
+                .strokeBorder(isOn ? control.tint.color.opacity(0.55) : Color.clear, lineWidth: 1.5)
         }
         .animation(.default, value: isOn)
         .animation(.default, value: isRunning)

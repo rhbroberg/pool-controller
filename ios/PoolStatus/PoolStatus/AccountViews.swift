@@ -1,25 +1,5 @@
 import SwiftUI
 
-/// Shared rules for new passwords, matching the server's.
-enum PasswordRules {
-    static let minimumLength = 6
-
-    /// Why `password` and `confirmation` can't be used yet, once something has been typed.
-    static func problem(_ password: String, confirmation: String) -> String? {
-        if !password.isEmpty && password.count < minimumLength {
-            return "Use at least \(minimumLength) characters."
-        }
-        if !confirmation.isEmpty && confirmation != password {
-            return "The passwords don’t match."
-        }
-        return nil
-    }
-
-    static func acceptable(_ password: String, confirmation: String) -> Bool {
-        password.count >= minimumLength && password == confirmation
-    }
-}
-
 /// Any signed-in account changing its own password.
 struct ChangePasswordView: View {
     let store: StatusStore
@@ -107,15 +87,15 @@ struct AccountsView: View {
                 ForEach(accounts) { account in
                     NavigationLink {
                         AccountDetailView(account: account, store: store, serverAddress: serverAddress) { updated in
-                            if let index = accounts.firstIndex(where: { $0.email == updated.email }) {
+                            if let index = accounts.firstIndex(where: { $0.name == updated.name }) {
                                 accounts[index] = updated
                             }
                         }
                     } label: {
-                        AccountRow(account: account, isYou: account.email == store.credentials?.email)
+                        AccountRow(account: account, isYou: account.name == store.credentials?.name)
                     }
                     .swipeActions {
-                        if account.email != store.credentials?.email {
+                        if account.name != store.credentials?.name {
                             Button("Remove", role: .destructive) {
                                 removing = account
                             }
@@ -145,10 +125,10 @@ struct AccountsView: View {
         .sheet(isPresented: $addingAccount) {
             NewAccountView(store: store, serverAddress: serverAddress) { created in
                 accounts.append(created)
-                accounts.sort { $0.email.localizedCaseInsensitiveCompare($1.email) == .orderedAscending }
+                accounts.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             }
         }
-        .confirmationDialog("Remove \(removing?.email ?? "")?", isPresented: Binding(get: { removing != nil },
+        .confirmationDialog("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil },
                                                                                        set: { if !$0 { removing = nil } }),
                             titleVisibility: .visible) {
             Button("Remove Account", role: .destructive) {
@@ -176,8 +156,8 @@ struct AccountsView: View {
     private func remove(_ account: AccountInfo) {
         Task {
             do {
-                try await client.deleteAccount(account.email, token: token)
-                accounts.removeAll { $0.email == account.email }
+                try await client.deleteAccount(account.name, token: token)
+                accounts.removeAll { $0.name == account.name }
                 errorMessage = nil
             } catch {
                 errorMessage = error.localizedDescription
@@ -193,7 +173,7 @@ private struct AccountRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(account.email)
+                Text(account.name)
                 if account.mustChangeCredentials == true {
                     Text("Not set up yet")
                         .font(.caption)
@@ -268,7 +248,7 @@ private struct AccountDetailView: View {
                 if let problem = PasswordRules.problem(password, confirmation: confirmation) {
                     Text(problem).foregroundStyle(.red)
                 } else {
-                    Text("\(account.email) is signed out everywhere and must sign in with the new password.")
+                    Text("\(account.name) is signed out everywhere and must sign in with the new password.")
                 }
             }
 
@@ -279,16 +259,16 @@ private struct AccountDetailView: View {
                 }
             }
         }
-        .navigationTitle(account.email)
+        .navigationTitle(account.name)
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Reset \(account.email)’s password?", isPresented: $confirmingReset,
+        .confirmationDialog("Reset \(account.name)’s password?", isPresented: $confirmingReset,
                             titleVisibility: .visible) {
             Button("Reset Password", role: .destructive) {
                 save(role: nil, password: password)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("\(account.email) is signed out on every device and must sign in with the new password.")
+            Text("\(account.name) is signed out on every device and must sign in with the new password.")
         }
     }
 
@@ -298,13 +278,13 @@ private struct AccountDetailView: View {
         Task {
             defer { isSaving = false }
             do {
-                let result = try await client.updateAccount(account.email, role: role, password: password, token: token)
+                let result = try await client.updateAccount(account.name, role: role, password: password, token: token)
                 updated(result)
                 failed = false
-                message = password == nil ? "\(account.email) is now \(result.role.titleWithArticle)." : "Password reset."
+                message = password == nil ? "\(account.name) is now \(result.role.titleWithArticle)." : "Password reset."
                 self.password = ""
                 confirmation = ""
-                if account.email == store.credentials?.email {
+                if account.name == store.credentials?.name {
                     await store.refreshAccount(serverAddress: serverAddress)
                 }
             } catch {

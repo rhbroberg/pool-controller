@@ -11,7 +11,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draftAddress = ""
     @State private var draftPoolName = ""
-    @State private var email = ""
+    @State private var accountName = ""
     @State private var password = ""
     @State private var isSigningIn = false
     @State private var signInError: String?
@@ -67,9 +67,9 @@ struct SettingsView: View {
                     if let credentials = store.credentials {
                         LabeledContent("Signed In") {
                             if let role = credentials.role {
-                                Text("\(credentials.email) · \(role.title)")
+                                Text("\(credentials.name) · \(role.title)")
                             } else {
-                                Text(credentials.email)
+                                Text(credentials.name)
                             }
                         }
                         NavigationLink("Change Password") {
@@ -79,7 +79,7 @@ struct SettingsView: View {
                             store.signOut(serverAddress: serverAddress)
                         }
                     } else {
-                        TextField("Account Name", text: $email)
+                        TextField("Account Name", text: $accountName)
                             .textContentType(.username)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
@@ -96,7 +96,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .disabled(email.isEmpty || password.isEmpty || trimmedAddress.isEmpty || isSigningIn)
+                        .disabled(accountName.isEmpty || password.isEmpty || trimmedAddress.isEmpty || isSigningIn)
                     }
                 } header: {
                     Text("Account")
@@ -160,7 +160,7 @@ struct SettingsView: View {
         Task {
             defer { isSigningIn = false }
             do {
-                try await store.signIn(email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                try await store.signIn(name: accountName.trimmingCharacters(in: .whitespacesAndNewlines),
                                        password: password,
                                        serverAddress: trimmedAddress)
                 serverAddress = trimmedAddress

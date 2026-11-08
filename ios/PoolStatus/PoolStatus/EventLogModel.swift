@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import SwiftUI
 
 /// `GET /events`
 struct EventPage: Decodable {
@@ -15,7 +14,8 @@ struct EventEntry: Decodable, Identifiable, Hashable {
     let user: String?
     let summary: String
 
-    var kind: EventKind { EventKind(serverType: type) }
+    /// Nil for a type this app doesn't know yet.
+    var kind: EventKind? { EventKind(serverType: type) }
 }
 
 /// The event log's filter buttons, each covering one or more of the server's event types.
@@ -24,8 +24,11 @@ enum EventKind: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    init(serverType: String) {
-        self = Self.allCases.first { $0.serverTypes.contains(serverType) } ?? .protocolErrors
+    init?(serverType: String) {
+        guard let kind = Self.allCases.first(where: { $0.serverTypes.contains(serverType) }) else {
+            return nil
+        }
+        self = kind
     }
 
     var serverTypes: [String] {
@@ -58,7 +61,7 @@ enum EventKind: String, CaseIterable, Identifiable {
         }
     }
 
-    var tint: Color {
+    var tint: Tint {
         switch self {
         case .equipment: .blue
         case .readings: .teal
