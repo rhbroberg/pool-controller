@@ -62,6 +62,22 @@ export const timeTicks = (from, to, maxCount) => {
     return { ticks, step };
 };
 
+/** a stepped band from each point's low to its high, holding to the next point */
+const rangePath = (points, x, y) => {
+    if (points.length < 2) {
+        return '';
+    }
+    const top = [];
+    const bottom = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const left = x(points[i].t).toFixed(1);
+        const right = x(points[i + 1].t).toFixed(1);
+        top.push(`${left},${y(points[i].high).toFixed(1)}`, `${right},${y(points[i].high).toFixed(1)}`);
+        bottom.unshift(`${right},${y(points[i].low).toFixed(1)}`, `${left},${y(points[i].low).toFixed(1)}`);
+    }
+    return `M${[...top, ...bottom].join('L')}Z`;
+};
+
 const stepPath = (points, x, y) => {
     if (!points.length) {
         return '';
@@ -128,6 +144,11 @@ export class TimeChart {
         return this.spec.from + Math.min(1, Math.max(0, fraction)) * (this.spec.to - this.spec.from);
     }
 
+    /** the plot's width in device pixels, for asking for about one point per pixel */
+    get devicePixels() {
+        return this.plot.width * (globalThis.devicePixelRatio || 1);
+    }
+
     /** milliseconds one pixel spans */
     get msPerPixel() {
         return this.spec ? (this.spec.to - this.spec.from) / this.plot.width : 0;
@@ -135,6 +156,7 @@ export class TimeChart {
 
     /**
      * spec: { from, to, yMin, yMax, label, bands: [{ start, end, color, opacity }],
+     * ranges: [{ points: [{ t, low, high }], color, opacity }],
      * lines: [{ points: [{ t, v }], color, width, dash }], dots: [{ t, v, color }], rule }
      **/
     set(spec) {
@@ -175,6 +197,13 @@ export class TimeChart {
             const left = Math.max(plot.left - 1, x(band.start));
             const right = Math.min(plot.left + plot.width + 1, x(band.end));
             parts.push(`<rect x="${left.toFixed(1)}" y="${plot.top}" width="${Math.max(1, right - left).toFixed(1)}" height="${plot.height}" style="fill:${band.color};fill-opacity:${band.opacity}"/>`);
+        });
+        (spec.ranges || []).forEach((range) => {
+            const points = visible(range.points, from, to).filter((p) => p.low !== null && p.high !== null);
+            if (points.length < 2) {
+                return;
+            }
+            parts.push(`<path d="${rangePath(points, x, y)}" style="fill:${range.color};fill-opacity:${range.opacity};stroke:none"/>`);
         });
         (spec.lines || []).forEach((line) => {
             const points = visible(line.points, from, to);

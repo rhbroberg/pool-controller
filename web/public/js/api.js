@@ -165,25 +165,36 @@ export class Client {
 
     /**
      * readings for each name from `from` up to `to`, plus each one's value as the window opens;
-     * times come back as milliseconds since the epoch
+     * times come back as milliseconds since the epoch. A series with more than maxPoints
+     * readings comes back as buckets at least resolution seconds long: each point is the
+     * bucket's time-weighted average, with its lowest (low) and highest (high) value.
      **/
-    async fetchHistory(names, from, to, { signal } = {}) {
+    async fetchHistory(names, from, to, { signal, maxPoints, resolution } = {}) {
         const response = await this.send('GET', 'history', {
-            query: { names: names.join(','), from: new Date(from).toISOString(), to: new Date(to).toISOString() },
+            query: { names: names.join(','), from: new Date(from).toISOString(), to: new Date(to).toISOString(), maxPoints, resolution },
             timeout: 30000,
             signal
         });
-        const point = (p) => p ? { t: Date.parse(p.t), v: p.v } : null;
+        const point = (p) => p ? { t: Date.parse(p.t), v: p.v, low: p.min ?? null, high: p.max ?? null } : null;
         return {
             from: Date.parse(response.from),
             to: Date.parse(response.to),
+            timeZone: response.timeZone || null,
             earliest: response.earliest ? Date.parse(response.earliest) : null,
             series: (response.series || []).map((series) => ({
                 name: series.name,
+                resolution: series.resolution || 0,
                 before: point(series.before),
                 points: (series.points || []).map(point)
             }))
         };
+    }
+
+    /** the days (YYYY-MM-DD, in the server's time zone) with water temperature or salt readings */
+    fetchAvailability(from, to) {
+        return this.send('GET', 'history/availability', {
+            query: { from: new Date(from).toISOString(), to: new Date(to).toISOString() }
+        });
     }
 
     async fetchEvents({ types, user, cursor, ascending, limit }) {
@@ -252,4 +263,31 @@ export class Client {
     restartServer(token) {
         return this.send('POST', 'system/restart', { token });
     }
+
+    /** the time zone history days follow and how long raw history is kept */
+    fetchSettings(token) {
+        return this.send('GET', 'system/settings', { token });
+    }
+
+    /** changes: { timeZone } (null for the server's own zone) and/or { rawRetentionDays } */
+    updateSettings(changes, token) {
+        return this.send('PUT', 'system/settings', { token, body: changes });
+    }
+
+    async fetchJobs(token) {
+        const jobs = await this.send('GET', 'system/jobs', { token });
+        return jobs.map(withJobDates);
+    }
+
+    /** runs a maintenance job now; answers once it has finished */
+    async runJob(name, token) {
+        return withJobDates(await this.send('POST', `system/jobs/${encodeURIComponent(name)}/run`, { token, timeout: 120000 }));
+    }
 }
+
+const withJobDates = (job) => ({
+    ...job,
+    nextRunAt: toDate(job.nextRunAt),
+    lastStartedAt: toDate(job.lastStartedAt),
+    lastFinishedAt: toDate(job.lastFinishedAt)
+});

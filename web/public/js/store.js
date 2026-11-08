@@ -311,6 +311,35 @@ export class StatusStore {
         await this.client.restartServer(this.requireCredentials().token);
     }
 
+    serverSettings() {
+        return this.adminRequest((token) => this.client.fetchSettings(token));
+    }
+
+    updateServerSettings(changes) {
+        return this.adminRequest((token) => this.client.updateSettings(changes, token));
+    }
+
+    maintenanceJobs() {
+        return this.adminRequest((token) => this.client.fetchJobs(token));
+    }
+
+    /** runs a maintenance job now; resolves with how the run went */
+    runMaintenanceJob(name) {
+        return this.adminRequest((token) => this.client.runJob(name, token));
+    }
+
+    /** a request needing the admin role; a rejected token signs out */
+    async adminRequest(request) {
+        try {
+            return await request(this.requireCredentials().token);
+        } catch (error) {
+            if (error instanceof ApiError && error.kind === 'unauthorized' && this.credentials) {
+                this.signOut();
+            }
+            throw error;
+        }
+    }
+
     // MARK: control
 
     /**

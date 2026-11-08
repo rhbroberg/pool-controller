@@ -84,6 +84,7 @@ const ICONS = {
     keyboard: [rect(2, 5, 20, 14, 2), path('M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h.01M12 13h.01M16 13h.01M7 16h10')],
     check: [path('M20 6 9 17l-5-5')],
     clock: [circle(12, 12, 9), path('M12 7v5l3 2')],
+    calendar: [rect(3, 5, 18, 16, 2), path('M3 10h18'), path('M8 3v4'), path('M16 3v4'), path('M7 14h.01M12 14h.01M17 14h.01M7 18h.01M12 18h.01')],
     x: [path('M18 6 6 18'), path('m6 6 12 12')],
     pause: [circle(12, 12, 9), path('M10 15V9'), path('M14 15V9')],
     waves: [

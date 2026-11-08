@@ -29,6 +29,7 @@ const monthDayTime = formatter({ month: 'short', day: 'numeric', hour: 'numeric'
 const monthDayYear = formatter({ month: 'short', day: 'numeric', year: 'numeric' });
 const monthDayYearTime = formatter({ month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 const monthDay = formatter({ month: 'short', day: 'numeric' });
+const monthYear = formatter({ month: 'short', year: '2-digit' });
 const hourOnly = formatter({ hour: 'numeric' });
 const timeSeconds = formatter({ hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
@@ -36,6 +37,14 @@ export const formatMonthDayTime = (date) => monthDayTime.format(date);
 export const formatMonthDayYear = (date) => monthDayYear.format(date);
 export const formatMonthDayYearTime = (date) => monthDayYearTime.format(date);
 export const formatMonthDay = (date) => monthDay.format(date);
+export const formatMonthYear = (date) => monthYear.format(date);
+
+/** "30 minutes", "2 hours", "1 day": a bucket length in seconds */
+export const formatSpan = (seconds) => {
+    const [size, unit] = seconds >= 86400 ? [86400, 'day'] : seconds >= 3600 ? [3600, 'hour'] : [60, 'minute'];
+    const count = Math.round(seconds / size);
+    return `${count} ${unit}${count === 1 ? '' : 's'}`;
+};
 export const formatHour = (date) => hourOnly.format(date);
 export const formatTimeSeconds = (date) => timeSeconds.format(date);
 

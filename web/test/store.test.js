@@ -164,4 +164,45 @@ describe('status store', () => {
         assert.deepEqual(waits, [15000, 30000]);
         assert.equal(store.nextAttempt, null);
     });
+
+    it('lets an admin read and change the server’s settings and run its jobs', async () => {
+        const settings = { timeZone: 'America/New_York', timeZoneSource: 'system', rawRetentionDays: 365 };
+        const client = fakeClient({
+            signIn: async (email) => ({ email, token: 'admin-token', role: 'admin' }),
+            fetchSettings: async (token) => {
+                client.calls.push(['fetchSettings', token]);
+                return settings;
+            },
+            updateSettings: async (changes, token) => {
+                client.calls.push(['updateSettings', changes, token]);
+                return { ...settings, ...changes, timeZoneSource: 'configured' };
+            },
+            fetchJobs: async () => [{ name: 'rollups', lastResult: 'ok' }],
+            runJob: async (name, token) => {
+                client.calls.push(['runJob', name, token]);
+                return { name, lastResult: 'ok', more: false };
+            }
+        });
+        const store = newStore(client);
+        await store.signIn('owner', 'secret');
+        assert.equal((await store.serverSettings()).timeZone, 'America/New_York');
+        const changed = await store.updateServerSettings({ timeZone: 'Europe/London' });
+        assert.equal(changed.timeZoneSource, 'configured');
+        assert.deepEqual((await store.maintenanceJobs()).map((job) => job.name), ['rollups']);
+        assert.equal((await store.runMaintenanceJob('rollups')).more, false);
+        assert.deepEqual(client.calls.map((call) => call[0]), ['fetchSettings', 'updateSettings', 'runJob']);
+        assert.ok(client.calls.every((call) => call.at(-1) === 'admin-token'));
+    });
+
+    it('signs out when the server no longer accepts the token for settings', async () => {
+        const store = newStore(fakeClient({ fetchSettings: async () => { throw new ApiError('unauthorized', { status: 401 }); } }));
+        await store.signIn('owner', 'secret');
+        await assert.rejects(() => store.serverSettings());
+        assert.equal(store.credentials, null);
+    });
+
+    it('needs a sign-in for the server’s settings', async () => {
+        const store = newStore(fakeClient());
+        await assert.rejects(() => store.serverSettings(), (error) => error.kind === 'unauthorized');
+    });
 });
