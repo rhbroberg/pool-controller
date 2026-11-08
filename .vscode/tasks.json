@@ -29,6 +29,15 @@
             "problemMatcher": []
         },
         {
+            "label": "Test web front end",
+            "detail": "the web service, its API client and the page's logic; needs nothing running",
+            "type": "shell",
+            "command": "npm test",
+            "options": { "cwd": "${workspaceFolder}/web" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
             "label": "Test iOS app with coverage",
             "detail": "runs on the \"PoolStatus Tests\" simulator; writes ios/coverage/lcov.info",
             "type": "shell",

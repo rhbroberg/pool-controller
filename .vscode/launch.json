@@ -40,6 +40,22 @@
     {
         "type": "node",
         "request": "launch",
+        "name": "Web front end (port 80)",
+        "program": "${workspaceFolder}/web/server.js",
+        "env": { "PORT": "80", "POOL_API_URL": "http://localhost:3000" },
+        "outputCapture": "std"
+    },
+    {
+        "type": "node",
+        "request": "launch",
+        "name": "Web front end (port 8080)",
+        "program": "${workspaceFolder}/web/server.js",
+        "env": { "PORT": "8080", "POOL_API_URL": "http://localhost:3000" },
+        "outputCapture": "std"
+    },
+    {
+        "type": "node",
+        "request": "launch",
         "name": "Single File",
         "program": "${workspaceFolder}/server/server.js",
         "outputCapture": "std"
