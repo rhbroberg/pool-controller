@@ -28,7 +28,8 @@ struct TemperatureHistoryView: View {
     }
 
     static let minimumLength: TimeInterval = 60 * 60
-    static let maximumLength: TimeInterval = 365 * 24 * 60 * 60
+    // years of history are summarized by day, so even the longest view stays light
+    static let maximumLength: TimeInterval = 10 * 365 * 24 * 60 * 60
     static let zoomStep = 2.0
     /// How often to fetch readings newer than the last fetch while the page is open.
     static let refreshInterval: Duration = .seconds(60)
@@ -39,6 +40,8 @@ struct TemperatureHistoryView: View {
     /// The heating bands and their legend swatches share these, so the legend matches the plot.
     static let heaterOpacity = 0.28
     static let heatPumpOpacity = 0.24
+    /// A bucket's range, behind its average.
+    static let bandOpacity = 0.16
 
     let water: WaterBody
 
@@ -46,6 +49,7 @@ struct TemperatureHistoryView: View {
     @AppStorage(SettingsKey.showAirTemperature) private var showAir = true
     @AppStorage(SettingsKey.historyHelpSeen) private var helpSeen = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.displayScale) private var displayScale
     @State private var model: TemperatureHistoryModel
     @State private var now = Date.now
     @State private var visibleLength: TimeInterval
@@ -55,6 +59,9 @@ struct TemperatureHistoryView: View {
     @State private var pinchStartLength: TimeInterval?
     /// The time under the finger while reading values off the graph.
     @State private var selectedDate: Date?
+    @State private var choosingDates = false
+    /// The plot's width, for asking the server for about one point per pixel.
+    @State private var chartWidth: CGFloat = 360
 
     init(water: WaterBody, initialPreset: Preset = .day) {
         self.water = water
@@ -76,11 +83,18 @@ struct TemperatureHistoryView: View {
     private struct LoadKey: Equatable {
         let start: Date
         let length: TimeInterval
+        let level: Int
+    }
+
+    /// The bucket length that gives about one point per pixel at this zoom.
+    private var level: Int {
+        HistoryResolution.level(visibleLength: visibleLength, pixels: chartWidth * displayScale)
     }
 
     var body: some View {
-        let end = model.loadedThrough.map { min($0, now) } ?? now
-        let data = model.chartData(through: end)
+        let drawn = model.displayLevel(for: level, visible: visibleRange)
+        let end = model.loadedThrough(level: drawn).map { min($0, now) } ?? now
+        let data = model.chartData(through: end, level: drawn)
         let segments = data.water
         let air = showAir ? data.air : []
         let heater = data.heater
@@ -132,6 +146,9 @@ struct TemperatureHistoryView: View {
             if verticalSizeClass != .compact {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Gaps in the line are times the pump was off, when the sensor can’t read the water.")
+                    if data.resolution > 0 {
+                        Text("Each step averages \(Duration.seconds(data.resolution), format: .units(allowed: [.days, .hours, .minutes], width: .wide)); the shading behind it spans its lowest to highest reading.")
+                    }
                     if !helpSeen {
                         Text("Drag the graph to move through time, pinch to zoom, and touch and hold to read a temperature.")
                     }
@@ -150,6 +167,9 @@ struct TemperatureHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Choose Dates", systemImage: "calendar") {
+                    choosingDates = true
+                }
                 Button("Zoom Out", systemImage: "minus.magnifyingglass") {
                     zoom(by: Self.zoomStep)
                 }
@@ -160,7 +180,12 @@ struct TemperatureHistoryView: View {
                 .disabled(visibleLength <= Self.minimumLength)
             }
         }
-        .task(id: LoadKey(start: scrollPosition, length: visibleLength)) {
+        .sheet(isPresented: $choosingDates) {
+            HistoryCalendarSheet(initialRange: visibleRange) { range in
+                show(range)
+            }
+        }
+        .task(id: LoadKey(start: scrollPosition, length: visibleLength, level: level)) {
             // let scrolling and pinching settle before asking for more data
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else {
@@ -168,7 +193,7 @@ struct TemperatureHistoryView: View {
             }
             let margin = visibleLength / 2
             let wanted = scrollPosition.addingTimeInterval(-margin)...min(now, scrollPosition.addingTimeInterval(visibleLength + margin))
-            await model.ensureLoaded(wanted, client: store.client)
+            await model.ensureLoaded(wanted, level: level, client: store.client)
         }
         .task {
             while !Task.isCancelled {
@@ -178,26 +203,37 @@ struct TemperatureHistoryView: View {
                 if following {
                     scrollPosition = now.addingTimeInterval(-visibleLength)
                 }
-                if let through = model.loadedThrough {
-                    await model.ensureLoaded(through...now, client: store.client)
+                if let through = model.loadedThrough(level: level) {
+                    await model.ensureLoaded(through...now, level: level, client: store.client)
                 }
             }
         }
     }
 
     private func chart(segments: [TemperatureHistoryModel.Segment], air: [HistorySample],
-                       heater: [TemperatureHistoryModel.Interval],
-                       heatPump: [TemperatureHistoryModel.Interval]) -> some View {
+                       heater: [TemperatureHistoryModel.HeatingSpan],
+                       heatPump: [TemperatureHistoryModel.HeatingSpan]) -> some View {
         Chart {
-            ForEach(heater) { interval in
-                RectangleMark(xStart: .value("Heater starts", interval.start),
-                              xEnd: .value("Heater stops", interval.end))
-                    .foregroundStyle(Self.heaterColor.opacity(Self.heaterOpacity))
+            // a bucket is shaded by how much of it the heat was on
+            ForEach(heater) { span in
+                RectangleMark(xStart: .value("Heater starts", span.start),
+                              xEnd: .value("Heater stops", span.end))
+                    .foregroundStyle(Self.heaterColor.opacity(Self.heaterOpacity * span.intensity))
             }
-            ForEach(heatPump) { interval in
-                RectangleMark(xStart: .value("Heat pump starts", interval.start),
-                              xEnd: .value("Heat pump stops", interval.end))
-                    .foregroundStyle(Self.heatPumpColor.opacity(Self.heatPumpOpacity))
+            ForEach(heatPump) { span in
+                RectangleMark(xStart: .value("Heat pump starts", span.start),
+                              xEnd: .value("Heat pump stops", span.end))
+                    .foregroundStyle(Self.heatPumpColor.opacity(Self.heatPumpOpacity * span.intensity))
+            }
+            ForEach(segments) { segment in
+                ForEach(segment.samples.filter { $0.low != nil }) { sample in
+                    AreaMark(x: .value("Time", sample.date),
+                             yStart: .value("Lowest", sample.low ?? sample.value),
+                             yEnd: .value("Highest", sample.high ?? sample.value),
+                             series: .value("Range", "water range \(segment.id)"))
+                        .foregroundStyle(Self.waterColor.opacity(Self.bandOpacity))
+                        .interpolationMethod(.stepEnd)
+                }
             }
             ForEach(air) { sample in
                 LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
@@ -247,7 +283,9 @@ struct TemperatureHistoryView: View {
                 AxisGridLine()
                 AxisValueLabel(format: visibleLength <= 2 * 24 * 60 * 60
                                ? .dateTime.hour()
-                               : .dateTime.month(.abbreviated).day(),
+                               : visibleLength <= 200 * 24 * 60 * 60
+                               ? .dateTime.month(.abbreviated).day()
+                               : .dateTime.month(.abbreviated).year(.twoDigits),
                                collisionResolution: .greedy)
             }
         }
@@ -257,6 +295,11 @@ struct TemperatureHistoryView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+        }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            chartWidth = width
         }
         .simultaneousGesture(
             MagnifyGesture()
@@ -341,7 +384,7 @@ struct TemperatureHistoryView: View {
     /// The values under the finger, in place of the date range while reading the graph.
     private func selectionReadout(at date: Date, segments: [TemperatureHistoryModel.Segment],
                                   air: [HistorySample],
-                                  heating: [TemperatureHistoryModel.Interval]) -> some View {
+                                  heating: [TemperatureHistoryModel.HeatingSpan]) -> some View {
         let water = waterValue(at: date, segments: segments)
         let airValue = air.last { $0.date <= date }?.value
         let heated = heating.contains { $0.start <= date && date <= $0.end }
@@ -405,7 +448,8 @@ struct TemperatureHistoryView: View {
     /// Fits the readings in view, with a little room above and below.
     private func yDomain(segments: [TemperatureHistoryModel.Segment], air: [HistorySample]) -> ClosedRange<Double> {
         let range = visibleRange
-        let visible = (segments.flatMap(\.samples) + air).filter { range.contains($0.date) }.map(\.value)
+        let visible = (segments.flatMap(\.samples) + air).filter { range.contains($0.date) }
+            .flatMap { [$0.value, $0.low, $0.high].compactMap(\.self) }
         guard let low = visible.min(), let high = visible.max() else {
             return 40...100
         }
@@ -415,6 +459,14 @@ struct TemperatureHistoryView: View {
     private func show(length: TimeInterval, endingAt end: Date) {
         visibleLength = length
         scrollPosition = end.addingTimeInterval(-length)
+    }
+
+    /// Shows the days picked in the calendar, as far as the zoom limits allow.
+    private func show(_ range: ClosedRange<Date>) {
+        preset = nil
+        let end = min(range.upperBound, now)
+        let length = min(max(end.timeIntervalSince(range.lowerBound), Self.minimumLength), Self.maximumLength)
+        show(length: length, endingAt: end)
     }
 
     private func zoom(by factor: Double) {

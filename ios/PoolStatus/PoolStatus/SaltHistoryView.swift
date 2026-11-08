@@ -29,21 +29,47 @@ struct SaltHistoryView: View {
     static let lineColor = Color.teal
 
     @Environment(StatusStore.self) private var store
+    @Environment(\.displayScale) private var displayScale
     @State private var model = SaltHistoryModel()
-    @State private var range = Range.month
+    /// Nil while showing days picked in the calendar.
+    @State private var range: Range? = .month
+    @State private var custom: ClosedRange<Date>?
     @State private var end = Date.now
     @State private var selectedDate: Date?
+    @State private var choosingDates = false
+    /// The plot's width, so a long range comes back as about one point per pixel.
+    @State private var chartWidth: CGFloat = 360
 
-    private var start: Date { end.addingTimeInterval(-range.length) }
+    private var start: Date {
+        custom?.lowerBound ?? end.addingTimeInterval(-(range ?? .month).length)
+    }
+
+    private var maxPoints: Int {
+        min(HistoryResolution.maxPoints, max(50, Int(chartWidth * displayScale)))
+    }
+
+    private struct LoadKey: Equatable {
+        let range: Range?
+        let custom: ClosedRange<Date>?
+        let maxPoints: Int
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Picker("Range", selection: $range) {
                 ForEach(Range.allCases) { range in
-                    Text(range.title).tag(range)
+                    Text(range.title).tag(Range?.some(range))
+                }
+                if custom != nil {
+                    Text("Custom").tag(Range?.none)
                 }
             }
             .pickerStyle(.segmented)
+            .onChange(of: range) { _, newValue in
+                if newValue != nil {
+                    custom = nil
+                }
+            }
 
             HStack(alignment: .firstTextBaseline) {
                 if let selectedDate, let value = value(at: selectedDate) {
@@ -80,14 +106,35 @@ struct SaltHistoryView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Salt Level")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: range) {
-            end = .now
-            await model.load(from: start, to: end, client: store.client)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Choose Dates", systemImage: "calendar") {
+                    choosingDates = true
+                }
+            }
+        }
+        .sheet(isPresented: $choosingDates) {
+            HistoryCalendarSheet(initialRange: start...end) { picked in
+                custom = picked.lowerBound...min(picked.upperBound, .now)
+                range = nil
+            }
+        }
+        .task(id: LoadKey(range: range, custom: custom, maxPoints: maxPoints)) {
+            end = custom?.upperBound ?? .now
+            await model.load(from: start, to: end, maxPoints: maxPoints, client: store.client)
         }
     }
 
     private var chart: some View {
         Chart {
+            // a long range comes back as buckets, each shaded across its lowest to highest level
+            ForEach(model.samples.filter { $0.low != nil }) { sample in
+                AreaMark(x: .value("Time", sample.date),
+                         yStart: .value("Lowest", sample.low ?? sample.value),
+                         yEnd: .value("Highest", sample.high ?? sample.value))
+                    .foregroundStyle(Self.lineColor.opacity(0.16))
+                    .interpolationMethod(.stepEnd)
+            }
             ForEach(model.samples) { sample in
                 LineMark(x: .value("Time", sample.date), y: .value("Salt", sample.value))
                     .foregroundStyle(Self.lineColor)
@@ -124,6 +171,11 @@ struct SaltHistoryView: View {
             }
         }
         .chartYAxisLabel("ppm", position: .topLeading)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            chartWidth = width
+        }
         .overlay {
             if model.samples.isEmpty && !model.isLoading && model.errorMessage == nil {
                 Text("No salt readings in this range")
@@ -137,7 +189,7 @@ struct SaltHistoryView: View {
 
     /// Fits the readings, with room above and below.
     private var yDomain: ClosedRange<Double> {
-        let values = model.samples.map(\.value)
+        let values = model.samples.flatMap { [$0.value, $0.low, $0.high].compactMap(\.self) }
         guard let low = values.min(), let high = values.max() else {
             return 2000...4000
         }

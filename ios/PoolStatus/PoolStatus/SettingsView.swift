@@ -182,8 +182,8 @@ struct SettingsView: View {
     }
 }
 
-/// Restart and factory reset, kept off the main Settings page because they affect the server
-/// rather than this app.
+/// The time zone and history settings, the maintenance jobs, restart and factory reset, kept off
+/// the main Settings page because they affect the server rather than this app.
 struct ServerMaintenanceView: View {
     private enum Operation {
         case restart, factoryReset
@@ -195,9 +195,56 @@ struct ServerMaintenanceView: View {
     /// The operation under way; leaving the page cancels it.
     @State private var operation: Operation?
     @State private var message: String?
+    @State private var settings: ServerSettings?
+    @State private var jobs: [MaintenanceJob] = []
+    /// Settings or jobs that couldn't be read or changed.
+    @State private var settingsError: String?
+    @State private var runningJob: String?
 
     var body: some View {
         Form {
+            if let settings {
+                Section {
+                    NavigationLink {
+                        TimeZonePicker(settings: settings) { choice in
+                            Task { await apply(.init(timeZone: choice)) }
+                        }
+                    } label: {
+                        LabeledContent("Time Zone", value: settings.timeZone)
+                    }
+                    Picker("Keep Raw History", selection: Binding(
+                        get: { settings.rawRetentionDays },
+                        set: { days in Task { await apply(.init(rawRetentionDays: days)) } })) {
+                        ForEach(retentionChoices(settings), id: \.self) { days in
+                            Text(Self.retentionTitle(days)).tag(days)
+                        }
+                    }
+                } header: {
+                    Text("History")
+                } footer: {
+                    Text(historyFooter(settings))
+                }
+            }
+
+            if !jobs.isEmpty {
+                Section {
+                    ForEach(jobs) { job in
+                        jobRow(job)
+                    }
+                } header: {
+                    Text("Maintenance Jobs")
+                } footer: {
+                    Text("These run on their own. Run Now brings them up to date straight away.")
+                }
+            }
+
+            if let settingsError {
+                Section {
+                    Label(settingsError, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+
             Section {
                 Button("Restart Server") {
                     confirmingRestart = true
@@ -248,6 +295,119 @@ struct ServerMaintenanceView: View {
         .task(id: operation) {
             if let operation {
                 await perform(operation)
+            }
+        }
+        .task(id: store.auth.isAdmin) {
+            if store.auth.isAdmin {
+                await loadSettings()
+            }
+        }
+        .refreshable {
+            await loadSettings()
+        }
+    }
+
+    private func jobRow(_ job: MaintenanceJob) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(job.title)
+                if let finished = job.lastFinishedAt {
+                    Text(job.failed
+                         ? String(localized: "Failed \(finished, format: .relative(presentation: .named)): \(job.lastError ?? "")")
+                         : String(localized: "Ran \(finished, format: .relative(presentation: .named))"))
+                        .font(.caption)
+                        .foregroundStyle(job.failed ? Color.orange : .secondary)
+                } else {
+                    Text("Hasn’t run yet")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let summary = job.lastSummary {
+                    Text(summary)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+            }
+            Spacer(minLength: 8)
+            if runningJob == job.name || job.running {
+                ProgressView()
+            } else {
+                Button("Run Now") {
+                    Task { await run(job) }
+                }
+                .buttonStyle(.borderless)
+                .disabled(runningJob != nil)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func historyFooter(_ settings: ServerSettings) -> String {
+        let zone = switch settings.timeZoneSource {
+        case .configured: String(localized: "Days start at midnight in this time zone, which an admin chose.")
+        case .system: String(localized: "Days start at midnight in this time zone, the server’s own.")
+        case .default: String(localized: "The server couldn’t find its time zone, so days start at midnight UTC. Choose the pool’s time zone.")
+        }
+        let retention = String(localized: "Raw history older than this is removed; graphs keep showing it from hourly and daily summaries.")
+        return "\(zone) \(retention)"
+    }
+
+    private func retentionChoices(_ settings: ServerSettings) -> [Int] {
+        let usual = [30, 90, 180, 365, 730, 1095, 1825, 3650]
+            .filter { $0 >= settings.minimumRetentionDays && $0 <= settings.maximumRetentionDays }
+        return Array(Set(usual + [settings.rawRetentionDays])).sorted()
+    }
+
+    static func retentionTitle(_ days: Int) -> String {
+        if days % 365 == 0 {
+            return String(localized: "\(days / 365) years")
+        }
+        if days % 30 == 0 {
+            return String(localized: "\(days / 30) months")
+        }
+        return String(localized: "\(days) days")
+    }
+
+    private func loadSettings() async {
+        do {
+            async let loadedSettings = store.serverSettings()
+            async let loadedJobs = store.maintenanceJobs()
+            settings = try await loadedSettings
+            jobs = try await loadedJobs
+            settingsError = nil
+        } catch {
+            if !error.isCancellation {
+                settingsError = error.localizedDescription
+            }
+        }
+    }
+
+    private func apply(_ changes: ServerSettings.Changes) async {
+        do {
+            settings = try await store.updateServerSettings(changes)
+            settingsError = nil
+            // a new time zone redoes the daily summaries, which shows in the jobs
+            jobs = (try? await store.maintenanceJobs()) ?? jobs
+        } catch {
+            if !error.isCancellation {
+                settingsError = error.localizedDescription
+            }
+        }
+    }
+
+    private func run(_ job: MaintenanceJob) async {
+        runningJob = job.name
+        defer { runningJob = nil }
+        do {
+            let ran = try await store.runMaintenanceJob(job.name)
+            jobs = jobs.map { $0.name == ran.name ? ran : $0 }
+            settingsError = ran.more == true
+                ? String(localized: "\(ran.title) has more to do and carries on by itself.")
+                : nil
+        } catch {
+            if !error.isCancellation {
+                settingsError = error.localizedDescription
             }
         }
     }
