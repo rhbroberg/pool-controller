@@ -141,51 +141,135 @@ struct PanelTests {
 @Suite("Temperature history")
 struct HistoryTests {
     private let start = try! Date.ISO8601FormatStyle().parse("2026-11-07T00:00:00Z")
-    private func at(_ hour: Int) -> Date { start.addingTimeInterval(Double(hour) * 3600) }
-    private func iso(_ hour: Int) -> String { at(hour).formatted(.iso8601) }
+    private func at(_ hour: Double) -> Date { start.addingTimeInterval(hour * 3600) }
+    private func iso(_ hour: Double) -> String { at(hour).formatted(.iso8601) }
+    private let level = 300
 
-    /// The filter runs 1:00-5:00 and the heater fires 2:00-4:00; the pool warms meanwhile.
-    private func history() -> String {
-        func series(_ name: String, _ points: [(Int, Double)]) -> String {
-            let list = points.map { #"{"t":"\#(iso($0.0))","v":\#($0.1)}"# }.joined(separator: ",")
-            return #"{"name":"\#(name)","before":null,"points":[\#(list)]}"#
-        }
-        let all = [
-            series("pool temp", [(1, 78), (3, 80), (5, 82)]),
-            series("filter", [(1, 1), (5, 0)]),
-            series("heater1", [(2, 1), (4, 0)]),
-            series("ambient", [(0, 60)])
-        ]
-        return #"{"from":"\#(iso(0))","to":"\#(iso(6))","earliest":"\#(iso(0))","series":[\#(all.joined(separator: ","))]}"#
+    private func point(_ hour: Double, _ value: Double, low: Double? = nil, high: Double? = nil) -> String {
+        let range = low.map { #","min":\#($0),"max":\#(high ?? $0)"# } ?? ""
+        return #"{"t":"\#(iso(hour))","v":\#(value)\#(range)}"#
+    }
+
+    private func series(_ name: String, resolution: Int = 0, _ points: [String]) -> String {
+        #"{"name":"\#(name)","resolution":\#(resolution),"before":null,"points":[\#(points.joined(separator: ","))]}"#
+    }
+
+    private func response(_ series: [String]) -> String {
+        #"{"from":"\#(iso(0))","to":"\#(iso(6))","timeZone":"UTC","earliest":"\#(iso(0))","series":[\#(series.joined(separator: ","))]}"#
+    }
+
+    /// Every reading as recorded: the filter runs 1:00-5:00 and the heater warms the pool 2:00-4:00.
+    private func readings() -> String {
+        response([
+            series("pool temp", [point(1, 78), point(3, 80), point(5, 82)]),
+            series("filter", [point(1, 1), point(5, 0)]),
+            series("heating:pool:heater1", [point(2, 1), point(4, 0)]),
+            series("ambient", [point(0, 60)])
+        ])
+    }
+
+    /// Hourly buckets: the filter ran all of 1:00 and half of 2:00, the heater a quarter of 1:00.
+    private func buckets() -> String {
+        response([
+            series("pool temp", resolution: 3600, [point(1, 79, low: 78, high: 80), point(2, 81, low: 80, high: 83)]),
+            series("filter", resolution: 3600, [point(1, 1), point(2, 0.5), point(3, 0)]),
+            series("heating:pool:heater1", resolution: 3600, [point(1, 0.25), point(2, 0)])
+        ])
     }
 
     @Test("shades heating and draws the water only while its pump runs")
     func intervals() async {
-        let body = history()
+        let body = readings()
         let server = StubServer { _, path, _ in path == "history" ? .ok(body) : .status(404) }
         let model = TemperatureHistoryModel(water: .pool)
-        await model.ensureLoaded(at(0)...at(6), client: server.client)
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
 
         #expect(model.errorMessage == nil)
         #expect(model.earliest == at(0))
-        let heating = model.heatingIntervals(from: .heater, through: at(6))
+        let heating = model.heatingSpans(from: .heater, through: at(6), level: level)
         #expect(heating.map(\.start) == [at(2)])
         #expect(heating.map(\.end) == [at(4)])
+        #expect(heating.map(\.intensity) == [1])
 
-        let segments = model.waterSegments(through: at(6))
+        let segments = model.waterSegments(through: at(6), level: level)
         #expect(segments.count == 1)
         #expect(segments.first?.samples.first?.date == at(1))
         #expect(segments.first?.samples.last?.date == at(5))
-        #expect(model.airSegment(through: at(6)).last?.date == at(6), "air is carried to the end")
+        #expect(model.airSegment(through: at(6), level: level).last?.date == at(6), "air is carried to the end")
+    }
+
+    @Test("asks for the graph's resolution, the points it needs and the heating series")
+    func request() async {
+        let query = Shared([String: String]())
+        let body = readings()
+        let server = StubServer { _, _, received in
+            query.value = received
+            return .ok(body)
+        }
+        let model = TemperatureHistoryModel(water: .spa)
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        #expect(query.value["resolution"] == "300")
+        #expect(query.value["maxPoints"] == String(HistoryResolution.points(for: 6 * 3600, level: level)))
+        let names = Set((query.value["names"] ?? "").split(separator: ",").map(String.init))
+        #expect(names == ["spa temp", "ambient", "aux14", "heating:spa:heater1", "heating:spa:valve4"])
+    }
+
+    @Test("draws buckets with their range, and heating by how much of each bucket it ran")
+    func bucketed() async {
+        let body = buckets()
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = TemperatureHistoryModel(water: .pool)
+        await model.ensureLoaded(at(0)...at(6), level: 3600, client: server.client)
+
+        let data = model.chartData(through: at(6), level: 3600)
+        #expect(data.resolution == 3600)
+        #expect(data.water.count == 1, "the pump ran through both buckets")
+        let first = data.water.first?.samples.first
+        #expect(first?.low == 78)
+        #expect(first?.high == 80)
+        #expect(first?.isBucket == true)
+        #expect(data.heater.map(\.intensity) == [0.25])
+        #expect(data.heater.first?.end == at(2), "a bucket's share holds for the bucket")
+    }
+
+    @Test("keeps each resolution's readings apart and shows the coarser ones while finer ones load")
+    func levels() async {
+        let coarse = buckets()
+        let fine = readings()
+        let server = StubServer { _, _, query in .ok(query["resolution"] == "3600" ? coarse : fine) }
+        let model = TemperatureHistoryModel(water: .pool)
+        let visible = at(1)...at(5)
+        await model.ensureLoaded(at(0)...at(6), level: 3600, client: server.client)
+        #expect(model.displayLevel(for: level, visible: visible) == 3600, "nothing finer yet")
+
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        #expect(model.displayLevel(for: level, visible: visible) == level)
+        #expect(server.requests.count == 2)
+        #expect(model.chartData(through: at(6), level: level).resolution == 0)
+        #expect(model.chartData(through: at(6), level: 3600).resolution == 3600)
+    }
+
+    @Test("forgets the least recently used resolutions")
+    func eviction() async {
+        let body = readings()
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = TemperatureHistoryModel(water: .pool)
+        for level in [60, 300, 900, 3600, 86400] {
+            await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        }
+        await model.ensureLoaded(at(0)...at(6), level: 86400, client: server.client)
+        #expect(server.requests.count == 5)
+        await model.ensureLoaded(at(0)...at(6), level: 60, client: server.client)
+        #expect(server.requests.count == 6, "the oldest resolution was let go")
     }
 
     @Test("waits for a fetch under way instead of fetching the same window again")
     func overlapping() async {
-        let body = history()
+        let body = readings()
         let server = StubServer { _, _, _ in .ok(body) }
         let model = TemperatureHistoryModel(water: .pool)
-        async let first: Void = model.ensureLoaded(at(0)...at(6), client: server.client)
-        async let second: Void = model.ensureLoaded(at(0)...at(6), client: server.client)
+        async let first: Void = model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        async let second: Void = model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
         _ = await (first, second)
         #expect(server.requests.count == 1)
         #expect(!model.isLoading)
@@ -193,35 +277,125 @@ struct HistoryTests {
 
     @Test("keeps the graph's lines until the data changes")
     func chartCache() async {
-        let body = history()
+        let body = readings()
         let server = StubServer { _, _, _ in .ok(body) }
         let model = TemperatureHistoryModel(water: .pool)
-        let empty = model.chartData(through: at(6))
+        let empty = model.chartData(through: at(6), level: level)
         #expect(empty.water.isEmpty)
-        await model.ensureLoaded(at(0)...at(6), client: server.client)
-        let data = model.chartData(through: at(6))
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        let data = model.chartData(through: at(6), level: level)
         #expect(data.water.count == 1, "new data replaces what was kept")
         #expect(data.heater.map(\.start) == [at(2)])
     }
 
-    @Test("doesn't ask again for a window it already has")
+    @Test("doesn't ask again for a window it already has at that resolution")
     func caches() async {
-        let body = history()
+        let body = readings()
         let server = StubServer { _, _, _ in .ok(body) }
         let model = TemperatureHistoryModel(water: .pool)
-        await model.ensureLoaded(at(0)...at(6), client: server.client)
-        await model.ensureLoaded(at(1)...at(5), client: server.client)
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+        await model.ensureLoaded(at(1)...at(5), level: level, client: server.client)
         #expect(server.requests.count == 1)
-        await model.ensureLoaded(at(0)...at(8), client: server.client)
+        await model.ensureLoaded(at(0)...at(8), level: level, client: server.client)
         #expect(server.requests.count == 2, "only the part after 6:00 is fetched")
+        #expect(model.loadedThrough(level: level) == at(8))
     }
 
     @Test("reports a failed fetch")
     func failure() async {
         let server = StubServer { _, _, _ in .status(400, message: "from must be earlier than to") }
         let model = TemperatureHistoryModel(water: .spa)
-        await model.ensureLoaded(at(0)...at(1), client: server.client)
+        await model.ensureLoaded(at(0)...at(1), level: level, client: server.client)
         #expect(model.errorMessage == "From must be earlier than to")
+    }
+
+    @Test("picks about one point per pixel")
+    func resolution() {
+        #expect(HistoryResolution.level(visibleLength: 24 * 3600, pixels: 1179) == 120)
+        #expect(HistoryResolution.level(visibleLength: 365 * 24 * 3600, pixels: 1179) == 43200)
+        #expect(HistoryResolution.level(visibleLength: 3600, pixels: 1179) == 60)
+        #expect(HistoryResolution.points(for: 24 * 3600, level: 120) == 722)
+        #expect(HistoryResolution.points(for: 10 * 365 * 24 * 3600, level: 60) == HistoryResolution.maxPoints)
+    }
+}
+
+@Suite("Salt history")
+struct SaltHistoryTests {
+    @Test("asks for the graph's width in points and keeps each bucket's range")
+    func buckets() async {
+        let query = Shared([String: String]())
+        let body = #"{"from":"2026-01-01T00:00:00Z","to":"2026-12-31T00:00:00Z","earliest":null,"series":[{"name":"salt","resolution":86400,"before":null,"points":[{"t":"2026-06-01T04:00:00Z","v":3150,"min":3100,"max":3200}]}]}"#
+        let server = StubServer { _, _, received in
+            query.value = received
+            return .ok(body)
+        }
+        let model = SaltHistoryModel()
+        let start = try! Date.ISO8601FormatStyle().parse("2026-01-01T00:00:00Z")
+        let end = try! Date.ISO8601FormatStyle().parse("2026-12-31T00:00:00Z")
+        await model.load(from: start, to: end, maxPoints: 390, client: server.client)
+        #expect(query.value["maxPoints"] == "390")
+        #expect(model.samples.first?.low == 3100)
+        #expect(model.samples.first?.high == 3200)
+        #expect(model.samples.last?.date == end, "the last level holds until the end")
+    }
+}
+
+@Suite("History calendar")
+struct CalendarTests {
+    private let availability = #"{"timeZone":"America/New_York","earliest":"2026-10-02","days":[{"date":"2026-11-07","readings":42},{"date":"2026-10-15","readings":3}]}"#
+
+    @Test("marks the days with water readings, in the server's time zone")
+    func marks() async {
+        let body = availability
+        let server = StubServer { _, path, _ in path == "history/availability" ? .ok(body) : .status(404) }
+        let model = HistoryCalendarModel(timeZone: TimeZone(identifier: "UTC")!)
+        await model.load(around: DateComponents(year: 2026, month: 11), client: server.client)
+        #expect(model.timeZone.identifier == "America/New_York")
+        #expect(model.hasReadings(on: DateComponents(year: 2026, month: 11, day: 7)))
+        #expect(model.readings(on: DateComponents(year: 2026, month: 10, day: 15)) == 3)
+        #expect(!model.hasReadings(on: DateComponents(year: 2026, month: 11, day: 8)))
+        #expect(model.earliest.map { model.calendar.dateComponents([.month, .day], from: $0) } == DateComponents(month: 10, day: 2))
+    }
+
+    @Test("asks for a month and its neighbors only once")
+    func fetchesOnce() async {
+        let body = availability
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = HistoryCalendarModel(timeZone: TimeZone(identifier: "America/New_York")!)
+        await model.load(around: DateComponents(year: 2026, month: 10), client: server.client)
+        await model.load(around: DateComponents(year: 2026, month: 10), client: server.client)
+        #expect(server.requests.count == 1)
+        await model.load(around: DateComponents(year: 2026, month: 6), client: server.client)
+        #expect(server.requests.count == 2)
+    }
+
+    @Test("turns two picked days into the window from the first's midnight to the end of the last")
+    func range() throws {
+        let model = HistoryCalendarModel(timeZone: TimeZone(identifier: "America/New_York")!)
+        let range = try #require(model.range(from: DateComponents(year: 2026, month: 11, day: 9),
+                                             through: DateComponents(year: 2026, month: 11, day: 7)))
+        #expect(range.lowerBound.formatted(.iso8601) == "2026-11-07T05:00:00Z")
+        #expect(range.upperBound.formatted(.iso8601) == "2026-11-10T05:00:00Z")
+        let days = model.days(in: range)
+        #expect(days.map { $0.day } == [7, 8, 9])
+        // a calendar view only matches selected days that carry their calendar and era
+        #expect(days.allSatisfy { $0.calendar?.timeZone.identifier == "America/New_York" && $0.era != nil })
+    }
+}
+
+@Suite("Server settings")
+struct ServerSettingsTests {
+    private func encoded(_ changes: ServerSettings.Changes) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return String(decoding: try encoder.encode(changes), as: UTF8.self)
+    }
+
+    @Test("sends only what changes, and null to follow the host's time zone")
+    func encoding() throws {
+        #expect(try encoded(.init(timeZone: .host)) == #"{"timeZone":null}"#)
+        #expect(try encoded(.init(timeZone: .named("Europe/London"))) == #"{"timeZone":"Europe\/London"}"#)
+        #expect(try encoded(.init(rawRetentionDays: 200)) == #"{"rawRetentionDays":200}"#)
     }
 }
 

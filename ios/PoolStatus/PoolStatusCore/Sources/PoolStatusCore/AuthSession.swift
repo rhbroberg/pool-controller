@@ -25,7 +25,7 @@ public final class AuthSession {
     /// What a signed-in request is for, which its error messages name. Each message is a whole
     /// sentence so it can be translated as one.
     public nonisolated enum Action: Sendable {
-        case changeEquipment, changeWaterFlow, changeSetpoints, usePanelKeys, manageAccounts, maintainServer
+        case changeEquipment, changeWaterFlow, changeSetpoints, usePanelKeys, manageAccounts, maintainServer, configureServer
 
         public var signedOutMessage: String {
             switch self {
@@ -35,6 +35,7 @@ public final class AuthSession {
             case .usePanelKeys: String(localized: "Sign in to use the panel keys.", bundle: .module)
             case .manageAccounts: String(localized: "Sign in to manage accounts.", bundle: .module)
             case .maintainServer: String(localized: "Sign in to restart or reset the server.", bundle: .module)
+            case .configureServer: String(localized: "Sign in to change the server’s settings.", bundle: .module)
             }
         }
 
@@ -46,6 +47,7 @@ public final class AuthSession {
             case .usePanelKeys: String(localized: "Your sign-in is no longer valid. Sign in again to use the panel keys.", bundle: .module)
             case .manageAccounts: String(localized: "Your sign-in is no longer valid. Sign in again to manage accounts.", bundle: .module)
             case .maintainServer: String(localized: "Your sign-in is no longer valid. Sign in again to restart or reset the server.", bundle: .module)
+            case .configureServer: String(localized: "Your sign-in is no longer valid. Sign in again to change the server’s settings.", bundle: .module)
             }
         }
 
@@ -57,6 +59,7 @@ public final class AuthSession {
             case .usePanelKeys: String(localized: "Your account can’t use the panel keys.", bundle: .module)
             case .manageAccounts: String(localized: "Your account can’t manage accounts.", bundle: .module)
             case .maintainServer: String(localized: "Your account can’t restart or reset the server.", bundle: .module)
+            case .configureServer: String(localized: "Your account can’t change the server’s settings.", bundle: .module)
             }
         }
     }

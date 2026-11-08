@@ -89,6 +89,29 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
             return #"{"events":[\#(entries.joined(separator: ","))],"next":null}"#
         case "history":
             return history(query)
+        case "history/availability":
+            // every day of the last two months but a few
+            let calendar = Calendar.current
+            let days = (0..<60).filter { $0 % 9 != 4 }.compactMap { offset -> String? in
+                guard let day = calendar.date(byAdding: .day, value: -offset, to: .now) else {
+                    return nil
+                }
+                let parts = calendar.dateComponents([.year, .month, .day], from: day)
+                return String(format: #"{"date":"%04d-%02d-%02d","readings":40}"#, parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+            }
+            return #"{"timeZone":"\#(TimeZone.current.identifier)","earliest":null,"days":[\#(days.joined(separator: ","))]}"#
+        case "system/settings":
+            return #"{"timeZone":"\#(TimeZone.current.identifier)","timeZoneSource":"system","detectedTimeZone":"\#(TimeZone.current.identifier)","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650}"#
+        case "system/jobs":
+            let finished = iso.format(.now.addingTimeInterval(-240))
+            return """
+            [{"name":"rollups","description":"summarizes history","intervalSeconds":300,"scheduled":true,"running":false,"nextRunAt":null,
+              "lastStartedAt":"\(finished)","lastFinishedAt":"\(finished)","lastDurationMs":412,"lastResult":"ok","lastError":null,
+              "lastSummary":"rolled up 1 hours and 0 days","runs":12},
+             {"name":"retention","description":"removes old raw history","intervalSeconds":21600,"scheduled":true,"running":false,"nextRunAt":null,
+              "lastStartedAt":"\(finished)","lastFinishedAt":"\(finished)","lastDurationMs":38,"lastResult":"ok","lastError":null,
+              "lastSummary":"removed 0 events","runs":2}]
+            """
         default:
             return nil
         }
@@ -114,7 +137,9 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
                 case "ambient": 62 + 8 * wave
                 case "salt": 3200 + 50 * wave
                 case "filter": (8..<20).contains(hour) ? 1 : 0
-                case "heater1": (17..<20).contains(hour) ? 1 : 0
+                case "heater1", "heating:pool:heater1": (17..<20).contains(hour) ? 1 : 0
+                case "heating:pool:valve4": (12..<15).contains(hour) ? 1 : 0
+                case "aux14": (19..<21).contains(hour) ? 1 : 0
                 default: nil
                 }
                 return v.map { #"{"t":"\#(iso.format(time))","v":\#($0)}"# }

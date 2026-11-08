@@ -79,14 +79,33 @@ public nonisolated struct StatusClient: Sendable {
     }
 
     /// Readings for each name from `from` up to `to`, plus each one's value as the window opens.
-    public func fetchHistory(names: [ReadingName], from: Date, to: Date) async throws -> HistoryResponse {
-        let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-        return try await send(.get, "history", query: [
+    /// A series with more than `maxPoints` readings comes back as buckets at least `resolution`
+    /// seconds long.
+    public func fetchHistory(names: [ReadingName], from: Date, to: Date, maxPoints: Int? = nil,
+                             resolution: Int? = nil) async throws -> HistoryResponse {
+        var query = [
             URLQueryItem(name: "names", value: names.map(\.rawValue).joined(separator: ",")),
-            URLQueryItem(name: "from", value: iso.format(from)),
-            URLQueryItem(name: "to", value: iso.format(to))
+            URLQueryItem(name: "from", value: Self.iso.format(from)),
+            URLQueryItem(name: "to", value: Self.iso.format(to))
+        ]
+        if let maxPoints {
+            query.append(URLQueryItem(name: "maxPoints", value: String(maxPoints)))
+        }
+        if let resolution {
+            query.append(URLQueryItem(name: "resolution", value: String(resolution)))
+        }
+        return try await send(.get, "history", query: query)
+    }
+
+    /// Which days between `from` and `to` have water temperature or salt readings.
+    public func fetchAvailability(from: Date, to: Date) async throws -> HistoryAvailability {
+        try await send(.get, "history/availability", query: [
+            URLQueryItem(name: "from", value: Self.iso.format(from)),
+            URLQueryItem(name: "to", value: Self.iso.format(to))
         ])
     }
+
+    private static let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     /// One page of the event log; pass the previous page's `next` as `cursor` for the following one.
     public func fetchEvents(types: [String], user: String?, cursor: String?, ascending: Bool, limit: Int) async throws -> EventPage {
@@ -184,6 +203,23 @@ public nonisolated struct StatusClient: Sendable {
     /// Asks the server to exit; its container restart policy starts it again.
     public func restartServer(token: String) async throws {
         try await perform(.post, "system/restart", token: token)
+    }
+
+    public func fetchSettings(token: String) async throws -> ServerSettings {
+        try await send(.get, "system/settings", token: token)
+    }
+
+    public func updateSettings(_ changes: ServerSettings.Changes, token: String) async throws -> ServerSettings {
+        try await send(.put, "system/settings", token: token, body: changes)
+    }
+
+    public func fetchJobs(token: String) async throws -> [MaintenanceJob] {
+        try await send(.get, "system/jobs", token: token)
+    }
+
+    /// Runs a maintenance job now; answers once it has finished.
+    public func runJob(_ name: String, token: String) async throws -> MaintenanceJob {
+        try await send(.post, "system/jobs/\(Self.pathComponent(name))/run", token: token, timeout: 120)
     }
 
     // MARK: Requests

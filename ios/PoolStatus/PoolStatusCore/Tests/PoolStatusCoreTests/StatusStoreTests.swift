@@ -302,6 +302,56 @@ struct SignedInTests {
         #expect(saved.saved == nil)
     }
 
+    @Test("an admin reads and changes the server's settings and runs its jobs")
+    func serverSettings() async throws {
+        let settings = #"{"timeZone":"America/New_York","timeZoneSource":"system","detectedTimeZone":"America/New_York","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650}"#
+        let changed = #"{"timeZone":"Europe/London","timeZoneSource":"configured","detectedTimeZone":"America/New_York","rawRetentionDays":200,"minimumRetentionDays":7,"maximumRetentionDays":3650}"#
+        let job = #"{"name":"rollups","description":"summarizes","intervalSeconds":300,"scheduled":true,"running":false,"nextRunAt":null,"lastStartedAt":"2026-11-07T22:00:00.000Z","lastFinishedAt":"2026-11-07T22:00:01.000Z","lastDurationMs":1000,"lastResult":"ok","lastError":null,"lastSummary":"rolled up 1 hours","runs":3"#
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): .ok(Fixture.login("owner", role: "admin"))
+            case ("GET", "system/settings"): .ok(settings)
+            case ("PUT", "system/settings"): .ok(changed)
+            case ("GET", "system/jobs"): .ok("[\(job)}]")
+            case ("POST", "system/jobs/rollups/run"): .ok(#"\#(job),"more":false}"#)
+            default: .status(404)
+            }
+        }
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "owner", password: "owner-password")
+
+        let current = try await store.serverSettings()
+        #expect(current.timeZone == "America/New_York")
+        #expect(current.timeZoneSource == .system)
+        let updated = try await store.updateServerSettings(.init(timeZone: .named("Europe/London"), rawRetentionDays: 200))
+        #expect(updated.timeZoneSource == .configured)
+        #expect(updated.rawRetentionDays == 200)
+
+        let jobs = try await store.maintenanceJobs()
+        #expect(jobs.map(\.name) == ["rollups"])
+        #expect(jobs.first?.lastFinishedAt != nil)
+        let run = try await store.runMaintenanceJob("rollups")
+        #expect(run.more == false)
+        #expect(server.requests.contains("POST system/jobs/rollups/run"))
+    }
+
+    @Test("says an operator can't change the server's settings")
+    func settingsForbidden() async throws {
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): .ok(Fixture.login("operator"))
+            case ("GET", "users/me"): .ok(#"{"email":"operator","role":"user"}"#)
+            case ("GET", "system/settings"): .status(403)
+            default: .status(404)
+            }
+        }
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        await #expect(throws: AuthError.forbidden(.configureServer)) {
+            _ = try await store.serverSettings()
+        }
+    }
+
     @Test("signs out when the server no longer accepts the token")
     func expiredToken() async throws {
         let server = StubServer { method, path, _ in

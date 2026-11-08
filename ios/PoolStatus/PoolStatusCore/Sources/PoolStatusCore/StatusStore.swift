@@ -279,6 +279,31 @@ public final class StatusStore {
         }
     }
 
+    public func serverSettings() async throws -> ServerSettings {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.fetchSettings(token: token)
+        }
+    }
+
+    public func updateServerSettings(_ changes: ServerSettings.Changes) async throws -> ServerSettings {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.updateSettings(changes, token: token)
+        }
+    }
+
+    public func maintenanceJobs() async throws -> [MaintenanceJob] {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.fetchJobs(token: token)
+        }
+    }
+
+    /// Runs a maintenance job now; answers with how the run went.
+    public func runMaintenanceJob(_ name: String) async throws -> MaintenanceJob {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.runJob(name, token: token)
+        }
+    }
+
     // MARK: Errors
 
     private func markConnected() {
