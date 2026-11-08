@@ -8,6 +8,6 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Pool Status reads the pool controller’s status from its server on your local network.</string>
+	<string>Pool Status finds your pool controller’s server on your local network and reads its status from it.</string>
 </dict>
 </plist>

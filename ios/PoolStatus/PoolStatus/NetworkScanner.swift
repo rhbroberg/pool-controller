@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// An IPv4 subnet written as an address and prefix, like 192.168.1.0/24.
-struct IPv4Network: Equatable, CustomStringConvertible {
+nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
     /// Larger subnets would take minutes to scan.
     static let maxHosts = 1024
 

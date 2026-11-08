@@ -38,9 +38,10 @@ struct PanelView: View {
             let size = geometry.size
             let wide = size.width > size.height
             let pad = Self.padDiameter(for: size, wide: wide)
-            let displayWidth = wide
+            // the reader can report a zero size before layout settles, so never go negative
+            let displayWidth = max(0, wide
                 ? size.width - 2 * Self.margin - Self.spacing - pad
-                : min(size.width - 2 * Self.margin, Self.maximumDisplayWidth)
+                : min(size.width - 2 * Self.margin, Self.maximumDisplayWidth))
 
             Group {
                 if wide {
@@ -88,7 +89,7 @@ struct PanelView: View {
 
     private func display(width: CGFloat) -> some View {
         // the LCD's padding and border take about 30 points; a monospaced character is about 0.62 em
-        let fontSize = min((width - 30) / (Self.displayColumns * 0.62), 34)
+        let fontSize = min(max((width - 30) / (Self.displayColumns * 0.62), 1), 34)
         return PanelDisplayView(display: model.display, message: model.errorMessage,
                                 presses: model.recentPresses, fontSize: fontSize)
             .frame(width: width)
