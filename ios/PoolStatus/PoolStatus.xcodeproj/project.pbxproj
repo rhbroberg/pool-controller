@@ -17,33 +17,33 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7C0A00000000000000000011 /* PoolStatusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoolStatusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C0A00000000000000000004 /* PoolStatus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PoolStatus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C0A00000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7C0A00000000000000000011 /* PoolStatusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoolStatusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7C0A00000000000000000012 /* PoolStatusTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PoolStatusTests;
-			sourceTree = "<group>";
-		};
 		7C0A00000000000000000005 /* PoolStatus */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PoolStatus;
 			sourceTree = "<group>";
 		};
+		7C0A00000000000000000012 /* PoolStatusTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PoolStatusTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7C0A00000000000000000013 /* Frameworks */ = {
+		7C0A00000000000000000009 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7C0A00000000000000000009 /* Frameworks */ = {
+		7C0A00000000000000000013 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -75,6 +75,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7C0A00000000000000000007 /* PoolStatus */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C0A0000000000000000000E /* Build configuration list for PBXNativeTarget "PoolStatus" */;
+			buildPhases = (
+				7C0A00000000000000000008 /* Sources */,
+				7C0A00000000000000000009 /* Frameworks */,
+				7C0A0000000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7C0A00000000000000000005 /* PoolStatus */,
+			);
+			name = PoolStatus;
+			packageProductDependencies = (
+			);
+			productName = PoolStatus;
+			productReference = 7C0A00000000000000000004 /* PoolStatus.app */;
+			productType = "com.apple.product-type.application";
+		};
 		7C0A00000000000000000016 /* PoolStatusTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7C0A0000000000000000001B /* Build configuration list for PBXNativeTarget "PoolStatusTests" */;
@@ -97,28 +119,6 @@
 			productName = PoolStatusTests;
 			productReference = 7C0A00000000000000000011 /* PoolStatusTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		7C0A00000000000000000007 /* PoolStatus */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7C0A0000000000000000000E /* Build configuration list for PBXNativeTarget "PoolStatus" */;
-			buildPhases = (
-				7C0A00000000000000000008 /* Sources */,
-				7C0A00000000000000000009 /* Frameworks */,
-				7C0A0000000000000000000A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				7C0A00000000000000000005 /* PoolStatus */,
-			);
-			name = PoolStatus;
-			packageProductDependencies = (
-			);
-			productName = PoolStatus;
-			productReference = 7C0A00000000000000000004 /* PoolStatus.app */;
-			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -160,14 +160,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		7C0A00000000000000000015 /* Resources */ = {
+		7C0A0000000000000000000A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7C0A0000000000000000000A /* Resources */ = {
+		7C0A00000000000000000015 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -177,14 +177,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7C0A00000000000000000014 /* Sources */ = {
+		7C0A00000000000000000008 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7C0A00000000000000000008 /* Sources */ = {
+		7C0A00000000000000000014 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -328,6 +328,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J73Y2DMB58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -361,6 +362,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = J73Y2DMB58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
