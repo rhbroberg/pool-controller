@@ -25,6 +25,9 @@ dependencies beyond Node.
     PORT=8080 POOL_API_URL=http://pi.local:3000 npm start
     npm test
 
+Under docker-compose the proxy sends the public hostname to the web service, which forwards the
+API to the pool service.
+
 ## Tests
 
 The REST API tests start the real server with the simulated controller, each test file on its

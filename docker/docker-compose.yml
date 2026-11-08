@@ -6,7 +6,7 @@ services:
     container_name: nginx-reverse-proxy
     restart: always
     depends_on:
-      - pool
+      - web
     # 443 is the service; 80 answers LetsEncrypt's challenges and redirects to https
     ports:
       - "80:80"
@@ -49,15 +49,33 @@ services:
     command: bash -c "rm -f /data/db/mongod.lock && mongod --journal"
     restart: always
 
-  pool:
-    image: rhbroberg/pool-controller
+  # the web page, on port 80; it forwards the REST API to the pool service, so the iOS app and
+  # the page share one address
+  web:
+    image: rhbroberg/pool-web
+    build: ../web
     restart: always
     environment:
       - VIRTUAL_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_HOST=pool.mystic.onthegrid.net
       - LETSENCRYPT_EMAIL=rhbroberg@yahoo.com
-      # the proxy serves https on 443 and forwards it to the REST service here
-      - VIRTUAL_PORT=3000
+      # the proxy serves https on 443 and forwards it here
+      - VIRTUAL_PORT=80
+      - POOL_API_URL=http://pool:3000
+    depends_on:
+      - pool
+    expose:
+      - "80"
+    logging:
+      options:
+        max-size: "4m"
+        max-file: "10"
+
+  pool:
+    image: rhbroberg/pool-controller
+    restart: always
+    environment:
+      # reached through the web service rather than directly through the proxy
       - NODE_ENV=docker-test
       # signs login tokens; export POOL_JWT_SECRET on the host, never commit it
       - JWT_SECRET=${POOL_JWT_SECRET}

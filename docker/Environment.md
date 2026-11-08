@@ -6,7 +6,7 @@ click the 'refresh' icon for each entry (column named DDNS), then 'generate a ke
 
 * configure port forwarding on your router for ipv4 and ipv6 port 443 internally
 	forward 80 and 443 on ipv4, or else LetsEncrypt will not succeed
-	the reverse proxy serves the pool REST service on 443 and forwards it to the pool container's port 3000; nothing else needs forwarding
+	the reverse proxy serves the web page on 443 from the web container's port 80, which forwards the REST API to the pool container's port 3000; nothing else needs forwarding
 
 * tested on raspbian/stretch, last tried 2018-11 baseline
 using default username 'pi', default password 'raspberry'
