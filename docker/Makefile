@@ -1,40 +1,48 @@
+# The Raspberry Pi deployment, and the same stack with a simulated controller for trying it on a
+# development machine. See README.md.
 
-all:	docker-images
+COMPOSE = docker compose
 
-docker-images:	proxy letsencrypt-companion
+# a simulated controller, on ports that leave 80 and 443 to whatever already has them
+SIM_HTTP_PORT ?= 8080
+SIM_HTTPS_PORT ?= 8443
+SIM_ENV = POOL_HTTP_PORT=$(SIM_HTTP_PORT) POOL_HTTPS_PORT=$(SIM_HTTPS_PORT) \
+	POOL_JWT_SECRET=$${POOL_JWT_SECRET:-simulated-controller-only} POOL_HE_DDNS_KEY=$${POOL_HE_DDNS_KEY:-}
+SIM = $(SIM_ENV) $(COMPOSE) -f docker-compose.yml -f docker-compose.sim.yml
+SIM_LOCAL = $(SIM) -f docker-compose.local-certs.yml
 
-prep:
-	git clone https://github.com/rhbroberg/nginx-proxy.git
-	git clone https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion.git
-	@touch $@
+# the name, and the CA, for trying a public certificate on a development machine
+TEST_HOSTNAME ?= pooltest.brobasino.onthegrid.net
+TEST_ACME_CA ?= https://acme-staging-v02.api.letsencrypt.org/directory
 
-proxy:	prep nginx-proxy/docker-gen
-	docker build -t rhbroberg/nginx-proxy nginx-proxy
-	@touch $@
+.PHONY: up down logs sim sim-letsencrypt sim-down sim-logs sim-root-cert
 
-letsencrypt-companion:	prep
-	docker build -t rhbroberg/docker-letsencrypt-nginx-proxy-companion docker-letsencrypt-nginx-proxy-companion 
-	@touch $@
+up:
+	$(COMPOSE) up -d --build
 
-push:	push-proxy push-letsencrypt-companion
-	@touch $@
+down:
+	$(COMPOSE) down
 
-push-proxy:	proxy
-	docker push rhbroberg/nginx-proxy
-	@touch $@
+logs:
+	$(COMPOSE) logs -f
 
-push-letsencrypt-companion:	letsencrypt-companion
-	docker push rhbroberg/docker-letsencrypt-nginx-proxy-companion
-	@touch $@
+# https://localhost:8443 with a certificate from Caddy's own CA
+sim:
+	$(SIM_LOCAL) up -d --build
 
-nginx-proxy/docker-gen:	letsencrypt-companion
-	docker rm -f temp-to-copy > /dev/null 2>&1 || true
-	docker run -d --name temp-to-copy --rm rhbroberg/docker-letsencrypt-nginx-proxy-companion sleep 30
-	docker cp temp-to-copy:/usr/local/bin/docker-gen nginx-proxy
-	@touch nginx-proxy/docker-gen
+# https://$(TEST_HOSTNAME):8443 with a certificate from $(TEST_ACME_CA), Let's Encrypt's staging CA
+# unless told otherwise; needs POOL_HE_DDNS_KEY
+sim-letsencrypt:
+	@test -n "$$POOL_HE_DDNS_KEY" || { echo "export POOL_HE_DDNS_KEY, the dynamic DNS key of _acme-challenge.$(TEST_HOSTNAME)" >&2; exit 1; }
+	POOL_HOSTNAME=$(TEST_HOSTNAME) POOL_ACME_CA=$(TEST_ACME_CA) $(SIM) up -d --build
 
-clean:
-	rm -rf docker-gen push-letsencrypt-companion push-proxy push letsencrypt-companion proxy prep nginx-proxy docker-letsencrypt-nginx-proxy-companion
+sim-down:
+	$(SIM) down
 
-realclean:	clean
-	- docker image rm -f rhbroberg/nginx-proxy rhbroberg/docker-letsencrypt-nginx-proxy-companion > /dev/null 2>&1
+sim-logs:
+	$(SIM) logs -f
+
+# the root of Caddy's own CA, for a browser, the Mac's keychain or a simulator to trust
+sim-root-cert:
+	$(SIM) cp caddy:/data/caddy/pki/authorities/local/root.crt caddy-local-root.crt
+	@echo "wrote caddy-local-root.crt"

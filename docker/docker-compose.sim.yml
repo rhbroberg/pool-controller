@@ -1,0 +1,18 @@
+# Layered over docker-compose.yml on a machine without the RS-485 adapter: the pool server replays
+# recorded controller traffic, and the database lives in a volume of its own. Its own project
+# name keeps it apart from a real deployment on the same host.
+name: pool-controller-sim
+
+services:
+  pool:
+    command: ["node", "server.js", "-d", "sim", "-f", "/opt/test-data/sample-various-bin"]
+    devices: !reset []
+    volumes:
+      - ../test-data:/opt/test-data:ro
+
+  mongo:
+    volumes: !override
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

@@ -10,7 +10,7 @@ A REST api is generated/maintained by swagger. The server listens on port 3000; 
 
 http://localhost:3000/docs
 
-Under docker-compose the service is only reachable through the reverse proxy, which serves it as https on port 443 (and answers LetsEncrypt on port 80).
+Under docker compose the service is only reachable through Caddy, which serves it as https on port 443 through the web service, with a Let's Encrypt certificate proved through DNS; see ../docker/README.md.
 
 ## Web front end
 
@@ -25,8 +25,8 @@ dependencies beyond Node.
     PORT=8080 POOL_API_URL=http://pi.local:3000 npm start
     npm test
 
-Under docker-compose the proxy sends the public hostname to the web service, which forwards the
-API to the pool service.
+Under docker compose Caddy sends the public hostname to the web service, which forwards the API
+to the pool service.
 
 ## Tests
 
@@ -71,12 +71,10 @@ This project is still in its infancy.  Some features I intend to add are:
  + basic web interface to control devices
 
 
-To test using Docker on non-ARM:
+To try the whole stack in Docker on a machine without the controller, with the simulated
+controller and https://localhost:8443:
 
-docker build -f Dockerfile-osx -t rhbroberg/pool-controller-x64 .
-docker-compose up -d
-(optionally)
-    docker push rhbroberg/pool-controller-x64
+    cd ../docker && make sim
 
 
 # Swagger generated server

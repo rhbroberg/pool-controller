@@ -1,0 +1,22 @@
+# Serves the web front end, which forwards the REST API to the pool server, over https. The
+# certificate comes from the ACME CA in POOL_ACME_CA, proved with the TXT record
+# _acme-challenge.$POOL_HOSTNAME at Hurricane Electric; POOL_HE_DDNS_KEY is that record's
+# dynamic DNS key. Caddy renews on the CA's advice (ACME Renewal Information), so shorter
+# certificate lifetimes need no change here.
+{
+	email {$POOL_ACME_EMAIL}
+	acme_ca {$POOL_ACME_CA}
+	http_port {$POOL_HTTP_PORT}
+}
+
+# the port is in the address rather than https_port, so a redirect from http names it
+{$POOL_HOSTNAME}:{$POOL_HTTPS_PORT} {
+	tls {
+		dns he {
+			# quoted, because a key set by hand can contain spaces
+			api_key "{$POOL_HE_DDNS_KEY}"
+		}
+	}
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:80
+}
