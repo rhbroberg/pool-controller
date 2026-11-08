@@ -7,7 +7,8 @@ require('./config/config');
 var socketIO = require('socket.io');
 const { FrameParser } = require('./protocol/parse');
 const log4js = require('log4js');
-const yargs = require('yargs');
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
 const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels } = require('./protocol/events'); // eslint-disable-line no-unused-vars
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 const { EventFactory } = require('./protocol/eventfactory');
@@ -37,7 +38,7 @@ var controlVerification = [];
 const CONTROL_VERIFY_STATUS_FRAMES = 40;
 var driver;
 
-var argv = yargs
+var argv = yargs(hideBin(process.argv))
     .default('f', __dirname + '/../test-data/sample-various-bin')
     .default('l', 'info')
     .default('d', 'file')
