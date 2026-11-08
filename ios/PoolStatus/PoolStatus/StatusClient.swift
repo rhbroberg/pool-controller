@@ -35,7 +35,7 @@ struct SystemInfo: Decodable {
 /// The pool server's REST API.
 struct StatusClient {
     /// The server mounts every route under the Swagger `basePath`.
-    static let apiPath = "rhbroberg/pool-api/1.0.0"
+    nonisolated static let apiPath = "rhbroberg/pool-api/1.0.0"
     nonisolated static let defaultTimeout: TimeInterval = 10
 
     /// Reads the server's ISO 8601 dates, with or without fractional seconds.

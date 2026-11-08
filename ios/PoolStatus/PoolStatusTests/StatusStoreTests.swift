@@ -17,12 +17,13 @@ struct StatusRefreshTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        await store.refresh()
 
         #expect(store.connection == .connected)
         #expect(store.errorMessage == nil)
         #expect(store.lastRefresh != nil)
+        #expect(!store.isLoading)
         #expect(store.waterMode == .pool)
         #expect(store.measurements.map(\.value) == ["81°F", "99°F", "60°F", "3200 ppm"])
         #expect(store.measurement(named: .poolTemperature).isDimmed == false)
@@ -44,8 +45,8 @@ struct StatusRefreshTests {
     func waterMode(_ on: [String], _ mode: WaterMode) async {
         let status = Fixture.status(Fixture.switches(on))
         let server = StubServer { _, path, _ in path == "status" ? .ok(status) : .status(404) }
-        let store = StatusStore()
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        await store.refresh()
         #expect(store.waterMode == mode)
     }
 
@@ -53,8 +54,8 @@ struct StatusRefreshTests {
     func olderServer() async {
         let status = Fixture.status(readings)
         let server = StubServer { _, path, _ in path == "status" ? .ok(status) : .status(404) }
-        let store = StatusStore()
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        await store.refresh()
         #expect(store.connection == .connected)
         #expect(store.heating == nil)
     }
@@ -69,10 +70,10 @@ struct StatusRefreshTests {
             }
             return path == "status" ? .ok(status) : .status(404)
         }
-        let store = StatusStore()
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        await store.refresh()
         reachable.value = false
-        await store.refresh(from: server.address)
+        await store.refresh()
 
         #expect(store.connection == .disconnected)
         #expect(store.connectionFailure != nil)
@@ -82,27 +83,39 @@ struct StatusRefreshTests {
     @Test("stays connected when the server answers with an error")
     func serverError() async {
         let server = StubServer { _, _, _ in .status(500, message: "database unavailable") }
-        let store = StatusStore()
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        await store.refresh()
         #expect(store.connection == .connected)
         #expect(store.errorMessage == "Database unavailable")
     }
 
     @Test("calls an address it can't parse offline")
     func badAddress() async {
-        let store = StatusStore()
-        await store.refresh(from: "")
+        let store = StatusStore(serverAddress: "", session: StubURLProtocol.session,
+                                credentials: InMemoryCredentialStore())
+        await store.refresh()
         #expect(store.connection == .disconnected)
+    }
+
+    @Test("keeps an address only once a server there answers")
+    func connects() async throws {
+        let status = Fixture.status(readings)
+        let server = StubServer { _, path, _ in path == "status" ? .ok(status) : .status(404) }
+        let store = StatusStore(serverAddress: "", defaults: UserDefaults(suiteName: "PoolStatusTests")!,
+                                session: server.session, credentials: InMemoryCredentialStore())
+        await #expect(throws: (any Error).self) {
+            try await store.connect(to: "nowhere-\(UUID().uuidString.prefix(8)).local:3000")
+        }
+        #expect(store.serverAddress.isEmpty)
+
+        try await store.connect(to: server.address)
+        #expect(store.serverAddress == server.address)
+        #expect(store.client.serverAddress == server.address)
     }
 }
 
-/// These sign in, which uses the keychain, so they run one at a time and clear it afterwards.
-@Suite("Signed-in changes", .serialized)
+@Suite("Signed-in changes")
 struct SignedInTests {
-    init() {
-        TokenStore.delete()
-    }
-
     @Test("a default admin must be renamed before its sign-in is kept")
     func commissioning() async throws {
         let server = StubServer { method, path, _ in
@@ -112,19 +125,20 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "admin", password: "admin", serverAddress: server.address)
-        #expect(store.commissioning != nil)
-        #expect(store.credentials == nil)
-        #expect(TokenStore.load() == nil, "the default admin's token isn't saved")
+        let saved = InMemoryCredentialStore()
+        let auth = server.makeStore(credentials: saved).auth
+        try await auth.signIn(name: "admin", password: "admin")
+        #expect(auth.commissioning != nil)
+        #expect(auth.credentials == nil)
+        #expect(saved.saved == nil, "the default admin's token isn't saved")
 
-        try await store.commission(name: "owner", password: "owner-password", serverAddress: server.address)
-        #expect(store.commissioning == nil)
-        #expect(store.credentials?.name == "owner")
-        #expect(store.isAdmin)
-        #expect(TokenStore.load()?.token == "token-owner")
-        store.signOut()
-        #expect(TokenStore.load() == nil)
+        try await auth.commission(name: "owner", password: "owner-password")
+        #expect(auth.commissioning == nil)
+        #expect(auth.credentials?.name == "owner")
+        #expect(auth.isAdmin)
+        #expect(saved.saved?.token == "token-owner")
+        auth.signOut()
+        #expect(saved.saved == nil)
     }
 
     @Test("turns equipment on and waits for the controller to confirm it")
@@ -141,17 +155,44 @@ struct SignedInTests {
             default: return .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
-        #expect(store.canControl)
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        #expect(store.auth.canControl)
 
         let lights = try #require(EquipmentControl.control(named: .lights))
-        await store.setControl(lights, on: true, serverAddress: server.address)
+        await store.setControl(lights, on: true)
         #expect(store.isOn(lights))
         #expect(store.confirmedChanges == 1)
         #expect(store.pendingState(.lights) == nil)
         #expect(server.requests.contains("PUT devices/lights/true"))
-        store.signOut()
+    }
+
+    @Test("says so when the controller doesn't confirm a change in time")
+    func unconfirmed() async throws {
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): .ok(Fixture.login("operator"))
+            case ("PUT", _): .ok("{}")
+            case ("GET", "status"): .ok(Fixture.status(Fixture.switches([], off: ["lights"])))
+            default: .status(404)
+            }
+        }
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        let lights = try #require(EquipmentControl.control(named: .lights))
+        await store.setControl(lights, on: true)
+        #expect(store.errorMessage == "The controller hasn’t switched Lights to On yet.")
+        #expect(store.confirmedChanges == 0)
+    }
+
+    @Test("asks the signed-out user to sign in before changing anything")
+    func signedOut() async throws {
+        let server = StubServer { _, _, _ in .status(404) }
+        let store = server.makeStore()
+        let lights = try #require(EquipmentControl.control(named: .lights))
+        await store.setControl(lights, on: true)
+        #expect(store.errorMessage == "Sign in to change equipment.")
+        #expect(server.requests.isEmpty)
     }
 
     @Test("sends only the setpoints that changed")
@@ -165,14 +206,13 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        await store.refresh()
 
-        try await store.setSetpoints([.pool: 90, .spa: 102], device: .heater1, serverAddress: server.address)
+        try await store.setSetpoints([.pool: 90, .spa: 102], device: .heater1)
         let puts = server.requests.filter { $0.hasPrefix("PUT") }
         #expect(puts == ["PUT heating/setpoints/pool/heater1/90"], "the spa was already 102")
-        store.signOut()
     }
 
     @Test("changes the password once the current one checks out")
@@ -184,12 +224,12 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "old-password", serverAddress: server.address)
-        try await store.changePassword(current: "old-password", new: "new-password", serverAddress: server.address)
-        #expect(store.credentials?.token == "token-new", "the server signs out every other token")
-        #expect(TokenStore.load()?.token == "token-new")
-        store.signOut()
+        let saved = InMemoryCredentialStore()
+        let auth = server.makeStore(credentials: saved).auth
+        try await auth.signIn(name: "operator", password: "old-password")
+        try await auth.changePassword(current: "old-password", new: "new-password")
+        #expect(auth.credentials?.token == "token-new", "the server signs out every other token")
+        #expect(saved.saved?.token == "token-new")
     }
 
     @Test("refuses a password change when the current password is wrong")
@@ -202,13 +242,12 @@ struct SignedInTests {
             attempts.value += 1
             return attempts.value == 1 ? .ok(Fixture.login("operator")) : .status(401)
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "right-password", serverAddress: server.address)
+        let auth = server.makeStore().auth
+        try await auth.signIn(name: "operator", password: "right-password")
         await #expect(throws: PasswordChangeError.self) {
-            try await store.changePassword(current: "wrong", new: "new-password", serverAddress: server.address)
+            try await auth.changePassword(current: "wrong", new: "new-password")
         }
-        #expect(store.credentials?.token == "token-operator", "still signed in as before")
-        store.signOut()
+        #expect(auth.credentials?.token == "token-operator", "still signed in as before")
     }
 
     @Test("switches the water flow and waits for the controller to reach it")
@@ -226,16 +265,15 @@ struct SignedInTests {
             default: return .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
-        await store.refresh(from: server.address)
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        await store.refresh()
         #expect(store.waterMode == .pool)
 
-        await store.setWaterMode(.spa, serverAddress: server.address)
+        await store.setWaterMode(.spa)
         #expect(store.waterMode == .spa)
         #expect(store.pendingWaterMode == nil)
         #expect(store.confirmedChanges == 1)
-        store.signOut()
     }
 
     @Test("an admin restarts the server, and a factory reset signs everyone out")
@@ -249,18 +287,19 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "owner", password: "owner-password", serverAddress: server.address)
-        #expect(store.isAdmin)
-        try await store.restartServer(serverAddress: server.address)
+        let saved = InMemoryCredentialStore()
+        let store = server.makeStore(credentials: saved)
+        try await store.auth.signIn(name: "owner", password: "owner-password")
+        #expect(store.auth.isAdmin)
+        try await store.restartServer()
         #expect(server.requests.contains("POST system/restart"))
 
-        await store.refresh(from: server.address)
-        let message = try await store.factoryReset(serverAddress: server.address)
+        await store.refresh()
+        let message = try await store.factoryReset()
         #expect(message == "factory reset complete")
-        #expect(store.credentials == nil)
+        #expect(store.auth.credentials == nil)
         #expect(store.readings.isEmpty)
-        #expect(TokenStore.load() == nil)
+        #expect(saved.saved == nil)
     }
 
     @Test("signs out when the server no longer accepts the token")
@@ -272,13 +311,14 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
+        let saved = InMemoryCredentialStore()
+        let store = server.makeStore(credentials: saved)
+        try await store.auth.signIn(name: "operator", password: "operator-password")
         let filter = try #require(EquipmentControl.control(named: .filter))
-        await store.setControl(filter, on: false, serverAddress: server.address)
-        #expect(store.credentials == nil)
-        #expect(store.errorMessage?.contains("Sign in again") == true)
-        #expect(TokenStore.load() == nil)
+        await store.setControl(filter, on: false)
+        #expect(store.auth.credentials == nil)
+        #expect(store.errorMessage == "Your sign-in is no longer valid. Sign in again to change equipment.")
+        #expect(saved.saved == nil)
     }
 
     @Test("asks the server again when an admin has changed the account's role")
@@ -291,12 +331,36 @@ struct SignedInTests {
             default: .status(404)
             }
         }
-        let store = StatusStore()
-        try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
-        await store.setWaterMode(.spa, serverAddress: server.address)
-        #expect(store.role == .viewer)
-        #expect(!store.canControl)
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+        await store.setWaterMode(.spa)
+        #expect(store.auth.role == .viewer)
+        #expect(!store.auth.canControl)
         #expect(store.errorMessage == "Your account can’t change the water flow.")
-        store.signOut()
+    }
+
+    @Test("an expired token on the accounts page signs out like anywhere else")
+    func accountsExpired() async throws {
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): .ok(Fixture.login("owner", role: "admin"))
+            case ("GET", "users"): .status(401)
+            default: .status(404)
+            }
+        }
+        let auth = server.makeStore().auth
+        try await auth.signIn(name: "owner", password: "owner-password")
+        await #expect(throws: AuthError.expired(.manageAccounts)) {
+            try await auth.listAccounts()
+        }
+        #expect(auth.credentials == nil)
+    }
+
+    @Test("a saved sign-in is used at launch")
+    func restoresSignIn() {
+        let server = StubServer { _, _, _ in .status(404) }
+        let store = server.makeStore(credentials: InMemoryCredentialStore(Credentials(name: "owner", token: "t", role: .admin)))
+        #expect(store.auth.isAdmin)
+        #expect(store.auth.needsAccountCheck, "an admin may have changed the role since it was saved")
     }
 }

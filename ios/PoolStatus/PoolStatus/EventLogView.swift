@@ -2,10 +2,11 @@ import SwiftUI
 
 /// Every recorded event, newest first, loaded a page at a time as the list scrolls.
 struct EventLogView: View {
-    @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
+    @Environment(StatusStore.self) private var store
     @State private var model = EventLogModel()
 
     private struct FilterKey: Equatable {
+        let serverAddress: String
         let kinds: Set<EventKind>
         let user: EventUserFilter
         let ascending: Bool
@@ -17,7 +18,7 @@ struct EventLogView: View {
                 EventRow(event: event)
                     .onAppear {
                         if event.id == model.events.last?.id {
-                            Task { await model.loadMore(serverAddress: serverAddress) }
+                            Task { await model.loadMore(client: store.client) }
                         }
                     }
             }
@@ -46,14 +47,15 @@ struct EventLogView: View {
         .navigationTitle("Event Log")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable {
-            await model.reload(serverAddress: serverAddress)
-            await model.loadUsers(serverAddress: serverAddress)
+            await model.reload(client: store.client)
+            await model.loadUsers(client: store.client)
         }
-        .task {
-            await model.loadUsers(serverAddress: serverAddress)
+        .task(id: store.serverAddress) {
+            await model.loadUsers(client: store.client)
         }
-        .task(id: FilterKey(kinds: model.kinds, user: model.user, ascending: model.ascending)) {
-            await model.reload(serverAddress: serverAddress)
+        .task(id: FilterKey(serverAddress: store.serverAddress, kinds: model.kinds, user: model.user,
+                            ascending: model.ascending)) {
+            await model.reload(client: store.client)
         }
     }
 
@@ -279,4 +281,5 @@ private struct EventRow: View {
     NavigationStack {
         EventLogView()
     }
+    .environment(StatusStore())
 }

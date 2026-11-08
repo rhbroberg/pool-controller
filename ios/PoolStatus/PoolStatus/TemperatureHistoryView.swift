@@ -32,9 +32,9 @@ struct TemperatureHistoryView: View {
 
     let water: WaterBody
 
-    @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
-    @AppStorage("showAirTemperature") private var showAir = true
-    @AppStorage("historyHelpSeen") private var helpSeen = false
+    @Environment(StatusStore.self) private var store
+    @AppStorage(SettingsKey.showAirTemperature) private var showAir = true
+    @AppStorage(SettingsKey.historyHelpSeen) private var helpSeen = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var model: TemperatureHistoryModel
     @State private var now = Date.now
@@ -157,7 +157,7 @@ struct TemperatureHistoryView: View {
             }
             let margin = visibleLength / 2
             let wanted = scrollPosition.addingTimeInterval(-margin)...min(now, scrollPosition.addingTimeInterval(visibleLength + margin))
-            await model.ensureLoaded(wanted, serverAddress: serverAddress)
+            await model.ensureLoaded(wanted, client: store.client)
         }
         .task {
             while !Task.isCancelled {
@@ -168,7 +168,7 @@ struct TemperatureHistoryView: View {
                     scrollPosition = now.addingTimeInterval(-visibleLength)
                 }
                 if let through = model.loadedThrough {
-                    await model.ensureLoaded(through...now, serverAddress: serverAddress)
+                    await model.ensureLoaded(through...now, client: store.client)
                 }
             }
         }
@@ -432,4 +432,5 @@ struct TemperatureHistoryView: View {
     NavigationStack {
         TemperatureHistoryView(water: .pool)
     }
+    .environment(StatusStore())
 }

@@ -5,9 +5,7 @@ import SwiftUI
 struct CommissioningView: View {
     static let defaultAdmin = "admin"
 
-    let store: StatusStore
-    let serverAddress: String
-
+    @Environment(StatusStore.self) private var store
     @State private var name = ""
     @State private var password = ""
     @State private var confirmation = ""
@@ -60,7 +58,7 @@ struct CommissioningView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { store.cancelCommissioning() }
+                    Button("Cancel") { store.auth.cancelCommissioning() }
                         .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -82,7 +80,7 @@ struct CommissioningView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await store.commission(name: trimmedName, password: password, serverAddress: serverAddress)
+                try await store.auth.commission(name: trimmedName, password: password)
             } catch {
                 errorMessage = error.localizedDescription
             }

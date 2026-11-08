@@ -127,18 +127,18 @@ final class EventLogModel {
     }
 
     /// Starts over from the first page, as after a filter or sort change.
-    func reload(serverAddress: String) async {
+    func reload(client: StatusClient) async {
         generation += 1
         events = []
         cursor = nil
         reachedEnd = kinds.isEmpty
         errorMessage = nil
         isLoading = false
-        await loadMore(serverAddress: serverAddress)
+        await loadMore(client: client)
     }
 
     /// Fetches the next page, unless one is loading or there are no more.
-    func loadMore(serverAddress: String) async {
+    func loadMore(client: StatusClient) async {
         guard !isLoading, !reachedEnd else {
             return
         }
@@ -150,7 +150,7 @@ final class EventLogModel {
             }
         }
         do {
-            let page = try await StatusClient(serverAddress: serverAddress).fetchEvents(
+            let page = try await client.fetchEvents(
                 types: kinds.flatMap(\.serverTypes), user: user.query, cursor: cursor,
                 ascending: ascending, limit: Self.pageSize)
             guard started == generation else {
@@ -168,8 +168,8 @@ final class EventLogModel {
         }
     }
 
-    func loadUsers(serverAddress: String) async {
-        if let fetched = try? await StatusClient(serverAddress: serverAddress).fetchEventUsers() {
+    func loadUsers(client: StatusClient) async {
+        if let fetched = try? await client.fetchEventUsers() {
             users = fetched
         }
     }

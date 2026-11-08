@@ -3,9 +3,8 @@ import SwiftUI
 /// The pool and spa setpoints for the heater or the heat pump.
 struct SetpointView: View {
     let device: HeatingDevice
-    let store: StatusStore
-    let serverAddress: String
 
+    @Environment(StatusStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var drafts: [WaterBody: Int] = [:]
     @State private var isSaving = false
@@ -40,7 +39,7 @@ struct SetpointView: View {
                 } footer: {
                     Text(explanation)
                 }
-                .disabled(!store.canControl || isSaving)
+                .disabled(!store.auth.canControl || isSaving)
 
                 if let errorMessage {
                     Section {
@@ -53,9 +52,9 @@ struct SetpointView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(store.canControl ? "Cancel" : "Done") { dismiss() }
+                    Button(store.auth.canControl ? "Cancel" : "Done") { dismiss() }
                 }
-                if store.canControl {
+                if store.auth.canControl {
                     ToolbarItem(placement: .confirmationAction) {
                         if isSaving {
                             ProgressView()
@@ -76,9 +75,9 @@ struct SetpointView: View {
         if heating?.setpointsReachController == false {
             parts.append("For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet.")
         }
-        if store.credentials == nil {
+        if store.auth.credentials == nil {
             parts.append("Sign in to change them.")
-        } else if !store.canControl {
+        } else if !store.auth.canControl {
             parts.append("Your account can see the setpoints but not change them.")
         }
         return parts.joined(separator: " ")
@@ -101,7 +100,7 @@ struct SetpointView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await store.setSetpoints(drafts, device: device, serverAddress: serverAddress)
+                try await store.setSetpoints(drafts, device: device)
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

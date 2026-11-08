@@ -2,9 +2,7 @@ import SwiftUI
 
 /// Any signed-in account changing its own password.
 struct ChangePasswordView: View {
-    let store: StatusStore
-    let serverAddress: String
-
+    @Environment(StatusStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var current = ""
     @State private var password = ""
@@ -52,7 +50,7 @@ struct ChangePasswordView: View {
         Task {
             defer { isSaving = false }
             do {
-                try await store.changePassword(current: current, new: password, serverAddress: serverAddress)
+                try await store.auth.changePassword(current: current, new: password)
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription
@@ -63,17 +61,14 @@ struct ChangePasswordView: View {
 
 /// Admin: every account on the server, with ways to add, change and remove them.
 struct AccountsView: View {
-    let store: StatusStore
-    let serverAddress: String
-
+    @Environment(StatusStore.self) private var store
     @State private var accounts: [AccountInfo] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var addingAccount = false
     @State private var removing: AccountInfo?
 
-    private var client: StatusClient { StatusClient(serverAddress: serverAddress) }
-    private var token: String { store.credentials?.token ?? "" }
+    private var auth: AuthSession { store.auth }
 
     var body: some View {
         List {
@@ -86,16 +81,16 @@ struct AccountsView: View {
             Section {
                 ForEach(accounts) { account in
                     NavigationLink {
-                        AccountDetailView(account: account, store: store, serverAddress: serverAddress) { updated in
+                        AccountDetailView(account: account) { updated in
                             if let index = accounts.firstIndex(where: { $0.name == updated.name }) {
                                 accounts[index] = updated
                             }
                         }
                     } label: {
-                        AccountRow(account: account, isYou: account.name == store.credentials?.name)
+                        AccountRow(account: account, isYou: account.name == auth.credentials?.name)
                     }
                     .swipeActions {
-                        if account.name != store.credentials?.name {
+                        if account.name != auth.credentials?.name {
                             Button("Remove", role: .destructive) {
                                 removing = account
                             }
@@ -123,7 +118,7 @@ struct AccountsView: View {
         .refreshable { await load() }
         .task { await load() }
         .sheet(isPresented: $addingAccount) {
-            NewAccountView(store: store, serverAddress: serverAddress) { created in
+            NewAccountView { created in
                 accounts.append(created)
                 accounts.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             }
@@ -146,7 +141,7 @@ struct AccountsView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            accounts = try await client.listAccounts(token: token)
+            accounts = try await auth.listAccounts()
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -156,7 +151,7 @@ struct AccountsView: View {
     private func remove(_ account: AccountInfo) {
         Task {
             do {
-                try await client.deleteAccount(account.name, token: token)
+                try await auth.deleteAccount(account.name)
                 accounts.removeAll { $0.name == account.name }
                 errorMessage = nil
             } catch {
@@ -194,10 +189,9 @@ private struct AccountRow: View {
 /// Admin: change one account's role or reset its password.
 private struct AccountDetailView: View {
     let account: AccountInfo
-    let store: StatusStore
-    let serverAddress: String
     let updated: (AccountInfo) -> Void
 
+    @Environment(StatusStore.self) private var store
     @State private var role: AccountRole
     @State private var password = ""
     @State private var confirmation = ""
@@ -206,16 +200,11 @@ private struct AccountDetailView: View {
     @State private var failed = false
     @State private var confirmingReset = false
 
-    init(account: AccountInfo, store: StatusStore, serverAddress: String, updated: @escaping (AccountInfo) -> Void) {
+    init(account: AccountInfo, updated: @escaping (AccountInfo) -> Void) {
         self.account = account
-        self.store = store
-        self.serverAddress = serverAddress
         self.updated = updated
         _role = State(initialValue: account.role)
     }
-
-    private var client: StatusClient { StatusClient(serverAddress: serverAddress) }
-    private var token: String { store.credentials?.token ?? "" }
 
     var body: some View {
         Form {
@@ -278,15 +267,12 @@ private struct AccountDetailView: View {
         Task {
             defer { isSaving = false }
             do {
-                let result = try await client.updateAccount(account.name, role: role, password: password, token: token)
+                let result = try await store.auth.updateAccount(account.name, role: role, password: password)
                 updated(result)
                 failed = false
                 message = password == nil ? "\(account.name) is now \(result.role.titleWithArticle)." : "Password reset."
                 self.password = ""
                 confirmation = ""
-                if account.name == store.credentials?.name {
-                    await store.refreshAccount(serverAddress: serverAddress)
-                }
             } catch {
                 failed = true
                 message = error.localizedDescription
@@ -297,10 +283,9 @@ private struct AccountDetailView: View {
 
 /// Admin: add an account.
 private struct NewAccountView: View {
-    let store: StatusStore
-    let serverAddress: String
     let created: (AccountInfo) -> Void
 
+    @Environment(StatusStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var password = ""
@@ -362,8 +347,7 @@ private struct NewAccountView: View {
         Task {
             defer { isSaving = false }
             do {
-                let account = try await StatusClient(serverAddress: serverAddress)
-                    .createAccount(name: trimmedName, password: password, role: role, token: store.credentials?.token ?? "")
+                let account = try await store.auth.createAccount(name: trimmedName, password: password, role: role)
                 created(account)
                 dismiss()
             } catch {

@@ -70,16 +70,16 @@ final class PanelModel {
     static let recentPressLimit = 8
     private var nextPressID = 0
 
-    func poll(serverAddress: String) async {
+    func poll(client: StatusClient) async {
         while !Task.isCancelled {
-            await refresh(serverAddress: serverAddress)
+            await refresh(client: client)
             try? await Task.sleep(for: Self.refreshInterval)
         }
     }
 
-    func refresh(serverAddress: String) async {
+    func refresh(client: StatusClient) async {
         do {
-            display = try await StatusClient(serverAddress: serverAddress).fetchPanelDisplay()
+            display = try await client.fetchPanelDisplay()
             errorMessage = nil
             isReachable = true
         } catch StatusClientError.server(code: 404, message: _) {
@@ -91,7 +91,8 @@ final class PanelModel {
         }
     }
 
-    func press(_ key: PanelKey, serverAddress: String, token: String) async {
+    /// Sends a key press as the signed-in account, then reads the display again.
+    func press(_ key: PanelKey, auth: AuthSession) async {
         let id = nextPressID
         nextPressID += 1
         recentPresses.append(KeyPress(id: id, key: key, delivery: .sending))
@@ -100,14 +101,16 @@ final class PanelModel {
         }
 
         do {
-            try await StatusClient(serverAddress: serverAddress).pressPanelKey(key, token: token)
+            try await auth.authorized(.usePanelKeys) { client, token in
+                try await client.pressPanelKey(key, token: token)
+            }
             mark(id, .queued)
             pressCount += 1
             try await Task.sleep(for: Self.keyResponseDelay)
-            await refresh(serverAddress: serverAddress)
-        } catch StatusClientError.unauthorized {
+            await refresh(client: auth.client)
+        } catch let error as AuthError {
             mark(id, .failed)
-            errorMessage = "Your sign-in is no longer valid. Sign in again to use the panel keys."
+            errorMessage = error.localizedDescription
         } catch {
             if !error.isCancellation {
                 mark(id, .failed)

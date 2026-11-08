@@ -79,7 +79,7 @@ final class TemperatureHistoryModel {
     // MARK: - Loading
 
     /// Fetches whatever part of `range` hasn't been fetched yet, after any fetch already under way.
-    func ensureLoaded(_ range: ClosedRange<Date>, serverAddress: String) async {
+    func ensureLoaded(_ range: ClosedRange<Date>, client: StatusClient) async {
         while isLoading {
             try? await Task.sleep(for: .milliseconds(100))
             if Task.isCancelled {
@@ -93,7 +93,6 @@ final class TemperatureHistoryModel {
         isLoading = true
         defer { isLoading = false }
 
-        let client = StatusClient(serverAddress: serverAddress)
         for gap in gaps {
             do {
                 let response = try await client.fetchHistory(names: names, from: gap.lowerBound, to: gap.upperBound)
@@ -243,12 +242,11 @@ final class SaltHistoryModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
-    func load(from start: Date, to end: Date, serverAddress: String) async {
+    func load(from start: Date, to end: Date, client: StatusClient) async {
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await StatusClient(serverAddress: serverAddress)
-                .fetchHistory(names: [.salt], from: start, to: end)
+            let response = try await client.fetchHistory(names: [.salt], from: start, to: end)
             let series = response.series.first { $0.name == .salt }
             let points = (series?.before.map { [$0] } ?? []) + (series?.points ?? [])
             var loaded = points.compactMap { point in

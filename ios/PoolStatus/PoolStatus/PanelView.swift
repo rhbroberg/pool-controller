@@ -4,9 +4,7 @@ import UIKit
 /// Mirrors the controller's display and sends its menu and arrow keys: the way to every
 /// setting on the controller, not only the ones the app shows itself.
 struct PanelView: View {
-    let store: StatusStore
-
-    @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
+    @Environment(StatusStore.self) private var store
     @State private var model = PanelModel()
     @State private var showingSettings = false
 
@@ -23,10 +21,10 @@ struct PanelView: View {
     }
 
     private var access: Access {
-        if store.credentials == nil {
+        if store.auth.credentials == nil {
             return .signedOut
         }
-        if !store.canControl {
+        if !store.auth.canControl {
             return .viewOnly
         }
         return model.isReachable ? .ready : .unreachable
@@ -64,8 +62,8 @@ struct PanelView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Panel Control")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: serverAddress) {
-            await model.poll(serverAddress: serverAddress)
+        .task(id: store.serverAddress) {
+            await model.poll(client: store.client)
         }
         .sensoryFeedback(.impact(weight: .light), trigger: model.pressCount)
         .onAppear {
@@ -76,7 +74,7 @@ struct PanelView: View {
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView(serverAddress: $serverAddress, store: store)
+            SettingsView()
         }
     }
 
@@ -132,10 +130,7 @@ struct PanelView: View {
     }
 
     private func press(_ key: PanelKey) {
-        guard let credentials = store.credentials else {
-            return
-        }
-        Task { await model.press(key, serverAddress: serverAddress, token: credentials.token) }
+        Task { await model.press(key, auth: store.auth) }
     }
 }
 
@@ -396,6 +391,7 @@ private struct PadButtonStyle: ButtonStyle {
 
 #Preview {
     NavigationStack {
-        PanelView(store: StatusStore())
+        PanelView()
+            .environment(StatusStore())
     }
 }

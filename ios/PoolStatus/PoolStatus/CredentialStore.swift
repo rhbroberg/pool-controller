@@ -1,8 +1,15 @@
 import Foundation
 import Security
 
+/// Where the signed-in account is kept between launches.
+protocol CredentialStore {
+    func load() -> Credentials?
+    func save(_ credentials: Credentials)
+    func delete()
+}
+
 /// Keeps the signed-in account in the keychain.
-enum TokenStore {
+struct KeychainCredentialStore: CredentialStore {
     private static let service = "com.rhbroberg.PoolStatus.auth"
 
     private struct Stored: Codable {
@@ -10,10 +17,10 @@ enum TokenStore {
         let role: AccountRole?
     }
 
-    static func load() -> Credentials? {
+    func load() -> Credentials? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: Self.service,
             kSecReturnAttributes as String: true,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -35,14 +42,14 @@ enum TokenStore {
         return Credentials(name: name, token: token, role: nil)
     }
 
-    static func save(_ credentials: Credentials) {
+    func save(_ credentials: Credentials) {
         delete()
         guard let data = try? JSONEncoder().encode(Stored(token: credentials.token, role: credentials.role)) else {
             return
         }
         let item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: Self.service,
             kSecAttrAccount as String: credentials.name,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
@@ -50,10 +57,10 @@ enum TokenStore {
         SecItemAdd(item as CFDictionary, nil)
     }
 
-    static func delete() {
+    func delete() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service
+            kSecAttrService as String: Self.service
         ]
         SecItemDelete(query as CFDictionary)
     }

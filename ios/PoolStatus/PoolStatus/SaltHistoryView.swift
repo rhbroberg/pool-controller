@@ -18,7 +18,7 @@ struct SaltHistoryView: View {
 
     static let lineColor = Color.teal
 
-    @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
+    @Environment(StatusStore.self) private var store
     @State private var model = SaltHistoryModel()
     @State private var range = Range.month
     @State private var end = Date.now
@@ -72,7 +72,7 @@ struct SaltHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task(id: range) {
             end = .now
-            await model.load(from: start, to: end, serverAddress: serverAddress)
+            await model.load(from: start, to: end, client: store.client)
         }
     }
 
@@ -143,4 +143,5 @@ struct SaltHistoryView: View {
     NavigationStack {
         SaltHistoryView()
     }
+    .environment(StatusStore())
 }

@@ -118,9 +118,14 @@ final class NetworkScanner {
     private(set) var hasScanned = false
     private(set) var wasStopped = false
 
+    private let session: URLSession
     private var task: Task<Void, Never>?
     /// Lets a stopped scan's last few answers arrive without counting toward it or the next scan.
     private var generation = 0
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     func scan(_ network: IPv4Network, port: Int, timeout: TimeInterval) {
         stop()
@@ -140,13 +145,15 @@ final class NetworkScanner {
         hasScanned = true
         wasStopped = false
 
+        let clients = hosts.map { StatusClient(serverAddress: "\($0):\(port)", session: session) }
         task = Task {
             await withTaskGroup(of: FoundServer?.self) { group in
                 var next = 0
                 func probeNext() {
                     let host = hosts[next]
+                    let client = clients[next]
                     next += 1
-                    group.addTask { await Self.probe(host: host, port: port, timeout: timeout) }
+                    group.addTask { await Self.probe(client, host: host, port: port, timeout: timeout) }
                 }
                 while next < min(Self.concurrency, hosts.count) {
                     probeNext()
@@ -182,8 +189,8 @@ final class NetworkScanner {
         wasStopped = true
     }
 
-    private static func probe(host: String, port: Int, timeout: TimeInterval) async -> FoundServer? {
-        guard let info = try? await StatusClient(serverAddress: "\(host):\(port)").fetchSystemInfo(timeout: timeout),
+    private static func probe(_ client: StatusClient, host: String, port: Int, timeout: TimeInterval) async -> FoundServer? {
+        guard let info = try? await client.fetchSystemInfo(timeout: timeout),
               info.service == SystemInfo.poolService else {
             return nil
         }

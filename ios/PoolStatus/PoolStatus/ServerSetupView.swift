@@ -16,8 +16,7 @@ enum ServerAddress {
 
 /// First launch: asks for the server and keeps the address only once the server answers.
 struct ServerSetupView: View {
-    let connected: (String) -> Void
-
+    @Environment(StatusStore.self) private var store
     @State private var address = ""
     @State private var isTesting = false
     @State private var errorMessage: String?
@@ -110,8 +109,7 @@ struct ServerSetupView: View {
         Task {
             defer { isTesting = false }
             do {
-                _ = try await StatusClient(serverAddress: candidate).fetchStatus()
-                connected(candidate)
+                try await store.connect(to: candidate)
             } catch {
                 errorMessage = "Couldn’t reach \(ServerAddress.display(candidate)). \(error.localizedDescription)"
             }
@@ -120,5 +118,6 @@ struct ServerSetupView: View {
 }
 
 #Preview {
-    ServerSetupView { _ in }
+    ServerSetupView()
+        .environment(StatusStore())
 }

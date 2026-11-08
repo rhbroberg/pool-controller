@@ -20,16 +20,16 @@ struct EventLogTests {
             return .ok(#"{"events":[\#(Self.event("a", minute: 3)),\#(Self.event("b", minute: 2))],"next":"page-2"}"#)
         }
         let model = EventLogModel()
-        await model.reload(serverAddress: server.address)
+        await model.reload(client: server.client)
         #expect(model.events.map(\.id) == ["a", "b"])
         #expect(!model.reachedEnd)
 
-        await model.loadMore(serverAddress: server.address)
+        await model.loadMore(client: server.client)
         #expect(model.events.map(\.id) == ["a", "b", "c"])
         #expect(model.reachedEnd)
         #expect(model.oldest == model.events.last?.timestamp)
 
-        await model.loadMore(serverAddress: server.address)
+        await model.loadMore(client: server.client)
         #expect(server.requests.count == 2, "nothing more is asked for after the last page")
     }
 
@@ -44,7 +44,7 @@ struct EventLogTests {
         model.kinds = [.keypad]
         model.user = .account("owner")
         model.ascending = true
-        await model.reload(serverAddress: server.address)
+        await model.reload(client: server.client)
         #expect(query.value["types"] == "control")
         #expect(query.value["user"] == "owner")
         #expect(query.value["order"] == "asc")
@@ -55,7 +55,7 @@ struct EventLogTests {
         let server = StubServer { _, _, _ in .ok(#"{"events":[],"next":null}"#) }
         let model = EventLogModel()
         model.kinds = []
-        await model.reload(serverAddress: server.address)
+        await model.reload(client: server.client)
         #expect(model.reachedEnd)
         #expect(server.requests.isEmpty)
     }
@@ -66,9 +66,9 @@ struct EventLogTests {
             path == "events/users" ? .ok(#"["owner","operator"]"#) : .status(500, message: "no database")
         }
         let model = EventLogModel()
-        await model.reload(serverAddress: server.address)
+        await model.reload(client: server.client)
         #expect(model.errorMessage == "No database")
-        await model.loadUsers(serverAddress: server.address)
+        await model.loadUsers(client: server.client)
         #expect(model.users == ["owner", "operator"])
     }
 }
@@ -83,13 +83,13 @@ struct PanelTests {
         let text = display
         let server = StubServer { _, _, _ in sent.value ? .ok(text) : .status(404) }
         let model = PanelModel()
-        await model.refresh(serverAddress: server.address)
+        await model.refresh(client: server.client)
         #expect(model.display == nil)
         #expect(model.errorMessage == "The panel hasn’t sent any display text yet.")
         #expect(model.isReachable)
 
         sent.value = true
-        await model.refresh(serverAddress: server.address)
+        await model.refresh(client: server.client)
         #expect(model.display?.lines.first?.contains("Pool Temp") == true)
         #expect(model.errorMessage == nil)
     }
@@ -99,29 +99,35 @@ struct PanelTests {
         let text = display
         let server = StubServer { method, _, _ in method == "PUT" ? .ok(#"{"key":"menu"}"#) : .ok(text) }
         let model = PanelModel()
-        await model.press(.menu, serverAddress: server.address, token: "token")
+        let auth = server.makeStore(credentials: InMemoryCredentialStore(Credentials(name: "operator", token: "token", role: .user))).auth
+        await model.press(.menu, auth: auth)
         #expect(model.recentPresses.map(\.delivery) == [.queued])
         #expect(model.pressCount == 1)
         #expect(server.requests.contains("PUT panel/keys/menu"))
     }
 
-    @Test("marks a key failed when the sign-in has expired, and keeps only the last few")
+    @Test("marks a key failed when the sign-in has expired, signing out, and keeps only the last few")
     func pressFailed() async {
         let server = StubServer { _, _, _ in .status(401) }
         let model = PanelModel()
-        for _ in 0..<(PanelModel.recentPressLimit + 2) {
-            await model.press(.plus, serverAddress: server.address, token: "expired")
+        let auth = server.makeStore(credentials: InMemoryCredentialStore(Credentials(name: "operator", token: "expired", role: .user))).auth
+        await model.press(.plus, auth: auth)
+        #expect(model.errorMessage == "Your sign-in is no longer valid. Sign in again to use the panel keys.")
+        #expect(auth.credentials == nil)
+
+        for _ in 0..<(PanelModel.recentPressLimit + 1) {
+            await model.press(.plus, auth: auth)
         }
         #expect(model.recentPresses.count == PanelModel.recentPressLimit)
         #expect(model.recentPresses.allSatisfy { $0.delivery == .failed })
-        #expect(model.errorMessage?.contains("Sign in again") == true)
+        #expect(server.requests.count == 1, "nothing more is sent once signed out")
     }
 
     @Test("notices the server going away")
     func unreachable() async {
         let server = StubServer { _, _, _ in .fail(.timedOut) }
         let model = PanelModel()
-        await model.refresh(serverAddress: server.address)
+        await model.refresh(client: server.client)
         #expect(!model.isReachable)
     }
 
@@ -158,7 +164,7 @@ struct HistoryTests {
         let body = history()
         let server = StubServer { _, path, _ in path == "history" ? .ok(body) : .status(404) }
         let model = TemperatureHistoryModel(water: .pool)
-        await model.ensureLoaded(at(0)...at(6), serverAddress: server.address)
+        await model.ensureLoaded(at(0)...at(6), client: server.client)
 
         #expect(model.errorMessage == nil)
         #expect(model.earliest == at(0))
@@ -178,10 +184,10 @@ struct HistoryTests {
         let body = history()
         let server = StubServer { _, _, _ in .ok(body) }
         let model = TemperatureHistoryModel(water: .pool)
-        await model.ensureLoaded(at(0)...at(6), serverAddress: server.address)
-        await model.ensureLoaded(at(1)...at(5), serverAddress: server.address)
+        await model.ensureLoaded(at(0)...at(6), client: server.client)
+        await model.ensureLoaded(at(1)...at(5), client: server.client)
         #expect(server.requests.count == 1)
-        await model.ensureLoaded(at(0)...at(8), serverAddress: server.address)
+        await model.ensureLoaded(at(0)...at(8), client: server.client)
         #expect(server.requests.count == 2, "only the part after 6:00 is fetched")
     }
 
@@ -189,7 +195,7 @@ struct HistoryTests {
     func failure() async {
         let server = StubServer { _, _, _ in .status(400, message: "from must be earlier than to") }
         let model = TemperatureHistoryModel(water: .spa)
-        await model.ensureLoaded(at(0)...at(1), serverAddress: server.address)
+        await model.ensureLoaded(at(0)...at(1), client: server.client)
         #expect(model.errorMessage == "From must be earlier than to")
     }
 }
@@ -203,7 +209,7 @@ struct ScanTests {
         StubURLProtocol.register(host: "192.0.2.2") { _, _, _ in .ok(#"{"service":"something-else","version":"1","startedAt":"2026-11-07T22:00:00.000Z"}"#) }
         StubURLProtocol.register(host: "localhost") { _, _, _ in .fail(.cannotConnectToHost) }
 
-        let scanner = NetworkScanner()
+        let scanner = NetworkScanner(session: StubURLProtocol.session)
         scanner.scan(try #require(IPv4Network("192.0.2.0/30")), port: 3000, timeout: 1)
         #expect(scanner.isScanning)
         #expect(await waitUntil { !scanner.isScanning })
@@ -216,7 +222,7 @@ struct ScanTests {
 
     @Test("stops when asked, keeping the count where it was")
     func stops() async throws {
-        let scanner = NetworkScanner()
+        let scanner = NetworkScanner(session: StubURLProtocol.session)
         StubURLProtocol.register(host: "localhost") { _, _, _ in .fail(.cannotConnectToHost) }
         scanner.scan(try #require(IPv4Network("198.51.100.0/24")), port: 3000, timeout: 5)
         scanner.stop()

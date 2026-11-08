@@ -1,17 +1,14 @@
 import SwiftUI
 
 struct StatusView: View {
-    /// Empty until the first server answers, which sends a new install to `ServerSetupView`.
-    static let defaultServerAddress = ""
     static let defaultPoolName = "Pool"
     /// Keeps the page readable on iPad and in landscape.
     static let maximumWidth: CGFloat = 640
 
-    @AppStorage("serverAddress") private var serverAddress = StatusView.defaultServerAddress
-    @AppStorage("poolName") private var poolName = StatusView.defaultPoolName
-    @AppStorage("reconnectSeconds") private var reconnectSeconds = StatusStore.defaultReconnectSeconds
+    @Environment(StatusStore.self) private var store
+    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
+    @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @Environment(\.scenePhase) private var scenePhase
-    @State private var store = StatusStore()
     @State private var showingSettings = false
     /// Bumped to restart polling immediately, as from Retry.
     @State private var pollGeneration = 0
@@ -32,7 +29,7 @@ struct StatusView: View {
                 // sized so the whole dashboard fits on one iPhone screen without scrolling
                 VStack(alignment: .leading, spacing: 14) {
                     if store.connection == .disconnected {
-                        OfflineBanner(host: ServerAddress.display(serverAddress),
+                        OfflineBanner(host: ServerAddress.display(store.serverAddress),
                                       reason: store.connectionFailure,
                                       nextAttempt: store.nextAttempt,
                                       isRetrying: store.isLoading,
@@ -66,7 +63,7 @@ struct StatusView: View {
             }
             .animation(.default, value: store.needsAttention)
             .overlay {
-                if store.readings.isEmpty && !serverAddress.isEmpty {
+                if store.readings.isEmpty {
                     if store.connection == .connecting {
                         ProgressView("Connecting…")
                     } else if store.isConnected && store.errorMessage == nil {
@@ -90,17 +87,11 @@ struct StatusView: View {
                 }
             }
             .refreshable {
-                guard !serverAddress.isEmpty else {
-                    return
-                }
-                await store.refresh(from: serverAddress)
+                await store.refresh()
             }
-            .task(id: PollKey(serverAddress: serverAddress, reconnectSeconds: reconnectSeconds,
+            .task(id: PollKey(serverAddress: store.serverAddress, reconnectSeconds: reconnectSeconds,
                               generation: pollGeneration)) {
-                guard !serverAddress.isEmpty else {
-                    return
-                }
-                await store.poll(serverAddress: serverAddress, reconnectSeconds: reconnectSeconds)
+                await store.poll(reconnectSeconds: reconnectSeconds)
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -121,15 +112,10 @@ struct StatusView: View {
                 Text(request.message)
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView(serverAddress: $serverAddress, store: store)
+                SettingsView()
             }
             .sheet(item: $setpointDevice) { device in
-                SetpointView(device: device, store: store, serverAddress: serverAddress)
-            }
-            .fullScreenCover(isPresented: Binding(get: { serverAddress.isEmpty }, set: { _ in })) {
-                ServerSetupView { address in
-                    serverAddress = address
-                }
+                SetpointView(device: device)
             }
         }
     }
@@ -151,7 +137,7 @@ struct StatusView: View {
             ControlSection(title: EquipmentControl.Area.circulation.title) {
                 WaterFlowControl(current: store.waterMode,
                                  pending: store.pendingWaterMode,
-                                 isLocked: !store.canControl) { mode in
+                                 isLocked: !store.auth.canControl) { mode in
                     confirming = .waterMode(mode)
                 }
                 equipmentGrid(.circulation)
@@ -164,18 +150,18 @@ struct StatusView: View {
         .disabled(!store.isConnected)
         .opacity(store.isConnected ? 1 : 0.5)
 
-        PanelControlLink(store: store)
+        PanelControlLink()
 
         UpdateFooter(lastChange: store.lastSwitchChange)
     }
 
     @ViewBuilder
     private var accessNote: some View {
-        if store.credentials == nil {
+        if store.auth.credentials == nil {
             SignInPrompt(text: "Sign in to change equipment and water flow") {
                 showingSettings = true
             }
-        } else if !store.canControl {
+        } else if !store.auth.canControl {
             Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -190,7 +176,7 @@ struct StatusView: View {
                               isOn: store.isOn(control),
                               pending: store.pendingState(control.name),
                               heating: store.heating(for: control),
-                              isLocked: !store.canControl,
+                              isLocked: !store.auth.canControl,
                               action: { request(control) },
                               showSetpoints: device != nil && store.heating != nil ? { setpointDevice = device } : nil)
             }
@@ -198,11 +184,11 @@ struct StatusView: View {
     }
 
     private func request(_ control: EquipmentControl) {
-        if store.credentials == nil {
+        if store.auth.credentials == nil {
             showingSettings = true
             return
         }
-        guard store.canControl else {
+        guard store.auth.canControl else {
             return
         }
         let turnOn = !store.isOn(control)
@@ -213,17 +199,19 @@ struct StatusView: View {
         }
     }
 
+    // the store's changes outlive this view's tasks: confirming one keeps polling after the
+    // user moves on to another page
     private func perform(_ request: ChangeRequest) {
         switch request {
         case .control(let control, let on, _):
             setControl(control, on: on)
         case .waterMode(let mode):
-            Task { await store.setWaterMode(mode, serverAddress: serverAddress) }
+            Task { await store.setWaterMode(mode) }
         }
     }
 
     private func setControl(_ control: EquipmentControl, on: Bool) {
-        Task { await store.setControl(control, on: on, serverAddress: serverAddress) }
+        Task { await store.setControl(control, on: on) }
     }
 }
 
@@ -642,11 +630,9 @@ private struct TileButtonStyle: ButtonStyle {
 
 /// The way into the controller's own menus, for everything the app doesn't show itself.
 private struct PanelControlLink: View {
-    let store: StatusStore
-
     var body: some View {
         NavigationLink {
-            PanelView(store: store)
+            PanelView()
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "dpad.fill")
@@ -816,4 +802,5 @@ private struct UpdateFooter: View {
 
 #Preview {
     StatusView()
+        .environment(StatusStore())
 }

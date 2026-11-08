@@ -2,7 +2,8 @@ import Foundation
 @testable import PoolStatus
 
 /// Answers requests for registered hosts from inside the process, so tests exercise the real
-/// client code without a server. Each test uses its own host, so tests can run side by side.
+/// client code without a server. It only sees requests made through `session`, and each test
+/// uses its own host, so tests can run side by side.
 nonisolated final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     enum Reply: Sendable {
         case json(Int, String)
@@ -16,35 +17,28 @@ nonisolated final class StubURLProtocol: URLProtocol, @unchecked Sendable {
 
     typealias Handler = @Sendable (_ method: String, _ path: String, _ query: [String: String]) -> Reply
 
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var handlers: [String: Handler] = [:]
-    nonisolated(unsafe) private static var received: [String: [String]] = [:]
-    private static let installed: Void = {
-        URLProtocol.registerClass(StubURLProtocol.self)
+    /// A session whose requests this protocol answers.
+    static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        return URLSession(configuration: configuration)
     }()
 
+    private static let handlers = Shared([String: Handler]())
+    private static let received = Shared([String: [String]]())
+
     static func register(host: String, handler: @escaping Handler) {
-        _ = installed
-        lock.withLock {
-            handlers[host] = handler
-            received[host] = []
-        }
+        handlers.value[host] = handler
+        received.value[host] = []
     }
 
     /// "METHOD path" for each request the host received, oldest first.
     static func requests(to host: String) -> [String] {
-        lock.withLock { received[host] ?? [] }
-    }
-
-    private static func handler(for request: URLRequest) -> Handler? {
-        guard let host = request.url?.host() else {
-            return nil
-        }
-        return lock.withLock { handlers[host] }
+        received.value[host] ?? []
     }
 
     override class func canInit(with request: URLRequest) -> Bool {
-        handler(for: request) != nil
+        true
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
@@ -52,15 +46,15 @@ nonisolated final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func startLoading() {
-        guard let url = request.url, let host = url.host(), let handler = Self.handler(for: request) else {
-            client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
+        guard let url = request.url, let host = url.host(), let handler = Self.handlers.value[host] else {
+            client?.urlProtocol(self, didFailWithError: URLError(.cannotFindHost))
             return
         }
         let method = request.httpMethod ?? "GET"
-        let path = url.path().replacingOccurrences(of: "/rhbroberg/pool-api/1.0.0/", with: "")
+        let path = url.path().replacingOccurrences(of: "/\(StatusClient.apiPath)/", with: "")
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
             .reduce(into: [String: String]()) { $0[$1.name] = $1.value ?? "" } ?? [:]
-        Self.lock.withLock { Self.received[host, default: []].append("\(method) \(path)") }
+        Self.received.modify { $0[host, default: []].append("\(method) \(path)") }
 
         switch handler(method, path, query) {
         case .fail(let code):
@@ -83,14 +77,36 @@ struct StubServer {
     let port = 3000
 
     var address: String { "\(host):\(port)" }
+    var session: URLSession { StubURLProtocol.session }
+    var client: StatusClient { StatusClient(serverAddress: address, session: session) }
 
     init(_ handler: @escaping StubURLProtocol.Handler) {
-        // .local names count as local networking, which the app's transport security allows
         host = "pool-\(UUID().uuidString.prefix(8).lowercased()).local"
         StubURLProtocol.register(host: host, handler: handler)
     }
 
     var requests: [String] { StubURLProtocol.requests(to: host) }
+
+    /// A store for this server that keeps its sign-in in memory and never waits between polls.
+    func makeStore(credentials: InMemoryCredentialStore = InMemoryCredentialStore()) -> StatusStore {
+        StatusStore(serverAddress: address, defaults: Self.defaults, session: session,
+                    credentials: credentials, sleep: { _ in try Task.checkCancellation() })
+    }
+
+    private static let defaults = UserDefaults(suiteName: "PoolStatusTests")!
+}
+
+/// Keeps a sign-in for the length of a test instead of in the keychain.
+final class InMemoryCredentialStore: CredentialStore {
+    private(set) var saved: Credentials?
+
+    init(_ saved: Credentials? = nil) {
+        self.saved = saved
+    }
+
+    func load() -> Credentials? { saved }
+    func save(_ credentials: Credentials) { saved = credentials }
+    func delete() { saved = nil }
 }
 
 /// State a stub's handler can change between requests.
@@ -105,6 +121,10 @@ nonisolated final class Shared<Value>: @unchecked Sendable {
     var value: Value {
         get { lock.withLock { stored } }
         set { lock.withLock { stored = newValue } }
+    }
+
+    func modify(_ change: (inout Value) -> Void) {
+        lock.withLock { change(&stored) }
     }
 }
 
