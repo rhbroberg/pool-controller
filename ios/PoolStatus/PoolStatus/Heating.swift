@@ -8,8 +8,8 @@ enum WaterBody: String, CaseIterable, Identifiable, Decodable {
 
     var title: String {
         switch self {
-        case .pool: "Pool"
-        case .spa: "Spa"
+        case .pool: String(localized: "Pool")
+        case .spa: String(localized: "Spa")
         }
     }
 
@@ -30,8 +30,8 @@ enum HeatingDevice: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .heater1: "Heater"
-        case .heatpump: "Heat Pump"
+        case .heater1: String(localized: "Heater")
+        case .heatpump: String(localized: "Heat Pump")
         }
     }
 

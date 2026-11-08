@@ -130,3 +130,22 @@ struct ReadingTests {
         #expect(HeatingDevice(controlName: .filter) == nil)
     }
 }
+
+@Suite("Keychain")
+struct KeychainTests {
+    @Test("saves, replaces and deletes the sign-in")
+    func roundTrip() {
+        let keychain = KeychainCredentialStore(service: "com.rhbroberg.PoolStatus.tests.\(UUID().uuidString)")
+        defer { keychain.delete() }
+        #expect(keychain.load() == nil)
+
+        keychain.save(Credentials(name: "admin", token: "first", role: .admin))
+        #expect(keychain.load() == Credentials(name: "admin", token: "first", role: .admin))
+
+        keychain.save(Credentials(name: "owner", token: "second", role: nil))
+        #expect(keychain.load() == Credentials(name: "owner", token: "second", role: nil), "renaming replaces the item")
+
+        keychain.delete()
+        #expect(keychain.load() == nil)
+    }
+}

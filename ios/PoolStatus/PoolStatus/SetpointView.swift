@@ -79,14 +79,16 @@ struct SetpointView: View {
     }
 
     private var explanation: String {
-        var parts = ["The \(device.title.lowercased()) heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it."]
+        var parts = [device == .heater1
+            ? String(localized: "The heater heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it.")
+            : String(localized: "The heat pump heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it.")]
         if heating?.setpointsReachController == false {
-            parts.append("For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet.")
+            parts.append(String(localized: "For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet."))
         }
         if store.auth.credentials == nil {
-            parts.append("Sign in to change them.")
+            parts.append(String(localized: "Sign in to change them."))
         } else if !store.auth.canControl {
-            parts.append("Your account can see the setpoints but not change them.")
+            parts.append(String(localized: "Your account can see the setpoints but not change them."))
         }
         return parts.joined(separator: " ")
     }

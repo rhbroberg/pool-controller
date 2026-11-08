@@ -21,13 +21,13 @@ struct NetworkScanView: View {
     private var problem: String? {
         guard let parsedNetwork else {
             return network.trimmingCharacters(in: .whitespaces).isEmpty
-                ? "Enter the network to scan, like 192.168.1.0/24."
-                : "The network is an address and prefix, like 192.168.1.0/24."
+                ? String(localized: "Enter the network to scan, like 192.168.1.0/24.")
+                : String(localized: "The network is an address and prefix, like 192.168.1.0/24.")
         }
         if parsedNetwork.hostCount > IPv4Network.maxHosts {
-            return "That network has \(parsedNetwork.hostCount.formatted()) addresses. Scan a /22 or smaller, which has at most \(IPv4Network.maxHosts.formatted())."
+            return String(localized: "That network has \(parsedNetwork.hostCount.formatted()) addresses. Scan a /22 or smaller, which has at most \(IPv4Network.maxHosts.formatted()).")
         }
-        return port == nil ? "The port is a number from 1 to 65535." : nil
+        return port == nil ? String(localized: "The port is a number from 1 to 65535.") : nil
     }
 
     var body: some View {
@@ -121,15 +121,15 @@ struct NetworkScanView: View {
 
     private var resultsFooter: String {
         if scanner.isScanning {
-            return "Checked \(scanner.checked) of \(scanner.total) addresses."
+            return String(localized: "Checked \(scanner.checked) of \(scanner.total) addresses.")
         }
         if scanner.wasStopped {
-            return "Stopped after checking \(scanner.checked) of \(scanner.total) addresses."
+            return String(localized: "Stopped after checking \(scanner.checked) of \(scanner.total) addresses.")
         }
         if scanner.found.isEmpty {
-            return "No pool server answered on port \(scanner.port) at any of \(scanner.total) addresses. Check the port, or raise the timeout. If iOS just asked to find devices on your local network, allow it and scan again."
+            return String(localized: "No pool server answered on port \(scanner.port) at any of \(scanner.total) addresses. Check the port, or raise the timeout. If iOS just asked to find devices on your local network, allow it and scan again.")
         }
-        return "Tap a server to use it."
+        return String(localized: "Tap a server to use it.")
     }
 
     private func scan() {

@@ -43,11 +43,11 @@ enum EventKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .equipment: "Equipment"
-        case .readings: "Readings"
-        case .keypad: "Panel Keys"
-        case .actions: "User Actions"
-        case .protocolErrors: "Communication Errors"
+        case .equipment: String(localized: "Equipment")
+        case .readings: String(localized: "Readings")
+        case .keypad: String(localized: "Panel Keys")
+        case .actions: String(localized: "User Actions")
+        case .protocolErrors: String(localized: "Communication Errors")
         }
     }
 
@@ -90,8 +90,8 @@ enum EventUserFilter: Hashable {
 
     var title: String {
         switch self {
-        case .everyone: "All Users"
-        case .controller: "Controller"
+        case .everyone: String(localized: "All Users")
+        case .controller: String(localized: "Controller")
         case .account(let name): name
         }
     }

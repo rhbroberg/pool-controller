@@ -203,7 +203,7 @@ final class StatusStore {
         defer { pending[control.name] = nil }
 
         await requestChange(.changeEquipment, timeout: Self.confirmationTimeout,
-                            notConfirmed: "The controller hasn’t switched \(control.title) to \(control.stateText(on)) yet.",
+                            notConfirmed: String(localized: "The controller hasn’t switched \(control.title) to \(control.stateText(on)) yet."),
                             send: { client, token in try await client.setDevice(control.name, on: on, token: token) },
                             confirmed: { reading(named: control.stateName)?.isOn == on })
     }
@@ -217,7 +217,7 @@ final class StatusStore {
         defer { pendingWaterMode = nil }
 
         await requestChange(.changeWaterFlow, timeout: Self.waterModeTimeout,
-                            notConfirmed: "The controller hasn’t switched to \(mode.title) yet.",
+                            notConfirmed: String(localized: "The controller hasn’t switched to \(mode.title) yet."),
                             send: { client, token in try await client.setWaterMode(mode, token: token) },
                             confirmed: { waterMode == mode })
     }

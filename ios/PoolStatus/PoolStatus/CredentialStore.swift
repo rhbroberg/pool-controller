@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 
 /// Where the signed-in account is kept between launches.
@@ -8,26 +9,41 @@ protocol CredentialStore {
     func delete()
 }
 
-/// Keeps the signed-in account in the keychain.
+/// Keeps the signed-in account in the keychain. A keychain failure leaves the app signed in for
+/// this launch only, so it's logged rather than shown.
 struct KeychainCredentialStore: CredentialStore {
-    private static let service = "com.rhbroberg.PoolStatus.auth"
+    private static let logger = Logger(subsystem: "com.rhbroberg.PoolStatus", category: "keychain")
 
     private struct Stored: Codable {
         let token: String
         let role: AccountRole?
     }
 
+    let service: String
+
+    init(service: String = "com.rhbroberg.PoolStatus.auth") {
+        self.service = service
+    }
+
+    private var itemQuery: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: service]
+    }
+
     func load() -> Credentials? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
-            kSecReturnAttributes as String: true,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        var query = itemQuery
+        query[kSecReturnAttributes as String] = true
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let attributes = item as? [String: Any],
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess else {
+            if status != errSecItemNotFound {
+                Self.logger.error("Couldn’t read the saved sign-in: \(status)")
+            }
+            return nil
+        }
+        guard let attributes = item as? [String: Any],
               let data = attributes[kSecValueData as String] as? Data else {
             return nil
         }
@@ -42,26 +58,30 @@ struct KeychainCredentialStore: CredentialStore {
         return Credentials(name: name, token: token, role: nil)
     }
 
+    /// Replaces the saved sign-in, adding one if there's none yet.
     func save(_ credentials: Credentials) {
-        delete()
         guard let data = try? JSONEncoder().encode(Stored(token: credentials.token, role: credentials.role)) else {
+            Self.logger.error("Couldn’t encode the sign-in to save it")
             return
         }
-        let item: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
+        let attributes: [String: Any] = [
             kSecAttrAccount as String: credentials.name,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
-        SecItemAdd(item as CFDictionary, nil)
+        var status = SecItemUpdate(itemQuery as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(itemQuery.merging(attributes) { $1 } as CFDictionary, nil)
+        }
+        if status != errSecSuccess {
+            Self.logger.error("Couldn’t save the sign-in: \(status)")
+        }
     }
 
     func delete() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service
-        ]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(itemQuery as CFDictionary)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            Self.logger.error("Couldn’t delete the saved sign-in: \(status)")
+        }
     }
 }

@@ -7,6 +7,15 @@ struct SaltHistoryView: View {
         case week = "Week", month = "Month", year = "Year"
 
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .week: String(localized: "Week")
+            case .month: String(localized: "Month")
+            case .year: String(localized: "Year")
+            }
+        }
+
         var length: TimeInterval {
             switch self {
             case .week: 7 * 24 * 60 * 60
@@ -30,7 +39,7 @@ struct SaltHistoryView: View {
         VStack(alignment: .leading, spacing: 12) {
             Picker("Range", selection: $range) {
                 ForEach(Range.allCases) { range in
-                    Text(range.rawValue).tag(range)
+                    Text(range.title).tag(range)
                 }
             }
             .pickerStyle(.segmented)

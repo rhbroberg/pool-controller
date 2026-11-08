@@ -119,7 +119,7 @@ struct ServerSetupView: View {
             try await store.connect(to: candidate)
         } catch {
             if !error.isCancellation {
-                errorMessage = "Couldn’t reach \(ServerAddress.display(candidate)). \(error.localizedDescription)"
+                errorMessage = String(localized: "Couldn’t reach \(ServerAddress.display(candidate)). \(error.localizedDescription)")
             }
         }
         testing = nil

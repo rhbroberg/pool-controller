@@ -18,11 +18,11 @@ enum PanelKey: String, CaseIterable, Identifiable {
     /// The spoken name, for VoiceOver.
     var title: String {
         switch self {
-        case .menu: "Menu"
-        case .left: "Left"
-        case .right: "Right"
-        case .minus: "Minus"
-        case .plus: "Plus"
+        case .menu: String(localized: "Menu")
+        case .left: String(localized: "Left")
+        case .right: String(localized: "Right")
+        case .minus: String(localized: "Minus")
+        case .plus: String(localized: "Plus")
         }
     }
 
@@ -84,7 +84,7 @@ final class PanelModel {
             isReachable = true
         } catch StatusClientError.server(code: 404, message: _) {
             display = nil
-            errorMessage = "The panel hasn’t sent any display text yet."
+            errorMessage = String(localized: "The panel hasn’t sent any display text yet.")
             isReachable = true
         } catch {
             handle(error)

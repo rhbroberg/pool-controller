@@ -8,10 +8,10 @@ enum StatusClientError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidAddress(let address): "“\(address)” is not a valid server address."
-        case .badResponse: "The server sent a response that isn’t HTTP."
-        case .unauthorized(let message): message?.capitalizingFirstLetter ?? "Sign in to control equipment."
-        case .server(let code, let message): message?.capitalizingFirstLetter ?? "The server returned HTTP \(code)."
+        case .invalidAddress(let address): String(localized: "“\(address)” is not a valid server address.")
+        case .badResponse: String(localized: "The server sent a response that isn’t HTTP.")
+        case .unauthorized(let message): message?.capitalizingFirstLetter ?? String(localized: "The server wants you to sign in.")
+        case .server(let code, let message): message?.capitalizingFirstLetter ?? String(localized: "The server returned HTTP \(code).")
         }
     }
 }
@@ -178,7 +178,7 @@ struct StatusClient {
     /// Erases the server's history and accounts; returns the server's description of the result.
     func factoryReset(token: String) async throws -> String {
         let data = try await fetchData(.post, "system/factory-reset", token: token)
-        return (try? JSONDecoder().decode(ServerMessage.self, from: data))?.message ?? "Factory reset complete."
+        return (try? JSONDecoder().decode(ServerMessage.self, from: data))?.message ?? String(localized: "Factory reset complete.")
     }
 
     /// Asks the server to exit; its container restart policy starts it again.

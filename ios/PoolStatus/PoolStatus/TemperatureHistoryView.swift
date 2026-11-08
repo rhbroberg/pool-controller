@@ -8,6 +8,15 @@ struct TemperatureHistoryView: View {
         case day = "Day", week = "Week", month = "Month"
 
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .day: String(localized: "Day")
+            case .week: String(localized: "Week")
+            case .month: String(localized: "Month")
+            }
+        }
+
         var length: TimeInterval {
             switch self {
             case .day: 24 * 60 * 60
@@ -80,7 +89,7 @@ struct TemperatureHistoryView: View {
         VStack(alignment: .leading, spacing: 12) {
             Picker("Range", selection: $preset) {
                 ForEach(Preset.allCases) { preset in
-                    Text(preset.rawValue).tag(Preset?.some(preset))
+                    Text(preset.title).tag(Preset?.some(preset))
                 }
                 Text("Custom").tag(Preset?.none)
             }
@@ -338,7 +347,8 @@ struct TemperatureHistoryView: View {
         let when = Text(date, format: .dateTime.month(.abbreviated).day().hour().minute())
             .foregroundStyle(.secondary)
         let values = HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(water.map { "\(self.water.title) \(Int($0))°F" } ?? "\(self.water.title) pump off")
+            Text(water.map { String(localized: "\(self.water.title) \(Int($0))°F") }
+                 ?? String(localized: "\(self.water.title) pump off"))
                 .foregroundStyle(Self.waterColor)
             if let airValue {
                 Text("Air \(Int(airValue))°F")

@@ -14,9 +14,9 @@ struct EquipmentControl: Identifiable {
 
         var title: String {
             switch self {
-            case .heating: "Heating"
-            case .circulation: "Circulation"
-            case .features: "Lights & Features"
+            case .heating: String(localized: "Heating")
+            case .circulation: String(localized: "Circulation")
+            case .features: String(localized: "Lights & Features")
             }
         }
     }
@@ -52,7 +52,7 @@ struct EquipmentControl: Identifiable {
 
     func stateText(_ on: Bool) -> String {
         switch labels {
-        case .onOff: on ? "On" : "Off"
+        case .onOff: on ? String(localized: "On") : String(localized: "Off")
         case .custom(let onText, let offText): on ? onText : offText
         }
     }
@@ -61,8 +61,8 @@ struct EquipmentControl: Identifiable {
     /// half-width tile.
     func pendingText(_ on: Bool) -> String {
         switch labels {
-        case .onOff: "Turning \(stateText(on))…"
-        case .custom: "To \(stateText(on))…"
+        case .onOff: on ? String(localized: "Turning On…") : String(localized: "Turning Off…")
+        case .custom: String(localized: "To \(stateText(on))…", comment: "A mode the controller is switching to")
         }
     }
 
@@ -84,7 +84,14 @@ enum WaterMode: String, CaseIterable, Identifiable {
     case pool, spa, spillover
 
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+
+    var title: String {
+        switch self {
+        case .pool: String(localized: "Pool")
+        case .spa: String(localized: "Spa")
+        case .spillover: String(localized: "Spillover")
+        }
+    }
 }
 
 /// One value on the temperature card.

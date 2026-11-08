@@ -11,9 +11,9 @@ nonisolated enum AuthError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .signedOut(let action): "Sign in to \(action.phrase)."
-        case .expired(let action): "Your sign-in is no longer valid. Sign in again to \(action.phrase)."
-        case .forbidden(let action): "Your account can’t \(action.phrase)."
+        case .signedOut(let action): action.signedOutMessage
+        case .expired(let action): action.expiredMessage
+        case .forbidden(let action): action.forbiddenMessage
         }
     }
 }
@@ -22,18 +22,41 @@ nonisolated enum AuthError: LocalizedError, Equatable {
 /// every request that needs the account's token.
 @Observable
 final class AuthSession {
-    /// What a signed-in request is for, as said in its error messages.
+    /// What a signed-in request is for, which its error messages name. Each message is a whole
+    /// sentence so it can be translated as one.
     nonisolated enum Action: Sendable {
         case changeEquipment, changeWaterFlow, changeSetpoints, usePanelKeys, manageAccounts, maintainServer
 
-        var phrase: String {
+        var signedOutMessage: String {
             switch self {
-            case .changeEquipment: "change equipment"
-            case .changeWaterFlow: "change the water flow"
-            case .changeSetpoints: "change setpoints"
-            case .usePanelKeys: "use the panel keys"
-            case .manageAccounts: "manage accounts"
-            case .maintainServer: "restart or reset the server"
+            case .changeEquipment: String(localized: "Sign in to change equipment.")
+            case .changeWaterFlow: String(localized: "Sign in to change the water flow.")
+            case .changeSetpoints: String(localized: "Sign in to change setpoints.")
+            case .usePanelKeys: String(localized: "Sign in to use the panel keys.")
+            case .manageAccounts: String(localized: "Sign in to manage accounts.")
+            case .maintainServer: String(localized: "Sign in to restart or reset the server.")
+            }
+        }
+
+        var expiredMessage: String {
+            switch self {
+            case .changeEquipment: String(localized: "Your sign-in is no longer valid. Sign in again to change equipment.")
+            case .changeWaterFlow: String(localized: "Your sign-in is no longer valid. Sign in again to change the water flow.")
+            case .changeSetpoints: String(localized: "Your sign-in is no longer valid. Sign in again to change setpoints.")
+            case .usePanelKeys: String(localized: "Your sign-in is no longer valid. Sign in again to use the panel keys.")
+            case .manageAccounts: String(localized: "Your sign-in is no longer valid. Sign in again to manage accounts.")
+            case .maintainServer: String(localized: "Your sign-in is no longer valid. Sign in again to restart or reset the server.")
+            }
+        }
+
+        var forbiddenMessage: String {
+            switch self {
+            case .changeEquipment: String(localized: "Your account can’t change equipment.")
+            case .changeWaterFlow: String(localized: "Your account can’t change the water flow.")
+            case .changeSetpoints: String(localized: "Your account can’t change setpoints.")
+            case .usePanelKeys: String(localized: "Your account can’t use the panel keys.")
+            case .manageAccounts: String(localized: "Your account can’t manage accounts.")
+            case .maintainServer: String(localized: "Your account can’t restart or reset the server.")
             }
         }
     }

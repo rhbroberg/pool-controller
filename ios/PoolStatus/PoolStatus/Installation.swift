@@ -14,15 +14,17 @@ extension ReadingName {
     /// The name the panel shows.
     var displayName: String {
         switch self {
-        case .poolTemperature: "Pool"
-        case .spaTemperature: "Spa"
-        case .airTemperature: "Air"
-        case .heater: "Heater"
-        case .superchlorinate: "Super Chlorinate"
-        case .spaFilter: "Spa Filter"
-        case .yardLights: "Yard Lights"
-        case .blower: "Blower"
-        case .heatPump: "Heat Pump"
+        case .poolTemperature: String(localized: "Pool")
+        case .spaTemperature: String(localized: "Spa")
+        case .airTemperature: String(localized: "Air")
+        case .filter: String(localized: "Filter")
+        case .lights: String(localized: "Lights")
+        case .heater: String(localized: "Heater")
+        case .superchlorinate: String(localized: "Super Chlorinate")
+        case .spaFilter: String(localized: "Spa Filter")
+        case .yardLights: String(localized: "Yard Lights")
+        case .blower: String(localized: "Blower")
+        case .heatPump: String(localized: "Heat Pump")
         default: rawValue.capitalized
         }
     }
@@ -55,7 +57,8 @@ extension EquipmentControl {
         EquipmentControl(name: .heatPump, systemImage: "heat.waves", tint: .pink, area: .heating),
         // the heater key switches between Manual Off and Auto Control on the panel display
         EquipmentControl(name: .heater, systemImage: "flame", tint: .orange, area: .heating,
-                         stateReading: .heaterMode, labels: .custom(on: "Auto", off: "Manual Off")),
+                         stateReading: .heaterMode,
+                         labels: .custom(on: String(localized: "Auto"), off: String(localized: "Manual Off"))),
         EquipmentControl(name: .filter, systemImage: "fan", tint: .blue, area: .circulation),
         EquipmentControl(name: .spaFilter, systemImage: "bathtub", tint: .cyan, area: .circulation),
         EquipmentControl(name: .lights, systemImage: "lightbulb", tint: .yellow, area: .features),
@@ -63,8 +66,8 @@ extension EquipmentControl {
         EquipmentControl(name: .blower, systemImage: "wind", tint: .mint, area: .features),
         EquipmentControl(name: .superchlorinate, systemImage: "bubbles.and.sparkles", tint: .teal, area: .features,
                          confirmOn: Confirmation(
-                            title: "Start super chlorinating?",
-                            message: "The chlorinator runs at full output until the controller ends the cycle or you turn it off.",
-                            action: "Super Chlorinate"))
+                            title: String(localized: "Start super chlorinating?"),
+                            message: String(localized: "The chlorinator runs at full output until the controller ends the cycle or you turn it off."),
+                            action: String(localized: "Super Chlorinate")))
     ]
 }

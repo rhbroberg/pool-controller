@@ -15,18 +15,18 @@ enum AccountRole: String, Codable, CaseIterable, Identifiable {
     /// The server's `user` role is shown as Operator, so the word doesn't also mean "an account".
     var title: String {
         switch self {
-        case .viewer: "Viewer"
-        case .user: "Operator"
-        case .admin: "Admin"
+        case .viewer: String(localized: "Viewer")
+        case .user: String(localized: "Operator")
+        case .admin: String(localized: "Admin")
         }
     }
 
-    /// The title after "a" or "an", as in "is now an operator".
-    var titleWithArticle: String {
+    /// After a change of role, as in "owner is now an operator."
+    func nowDescription(for name: String) -> String {
         switch self {
-        case .viewer: "a viewer"
-        case .user: "an operator"
-        case .admin: "an admin"
+        case .viewer: String(localized: "\(name) is now a viewer.")
+        case .user: String(localized: "\(name) is now an operator.")
+        case .admin: String(localized: "\(name) is now an admin.")
         }
     }
 
@@ -37,9 +37,9 @@ enum AccountRole: String, Codable, CaseIterable, Identifiable {
 
     var summary: String {
         switch self {
-        case .viewer: "Viewers can see everything and change their own password."
-        case .user: "Operators can also change equipment, water flow and panel settings."
-        case .admin: "Admins can also manage accounts, restart the server and factory reset."
+        case .viewer: String(localized: "Viewers can see everything and change their own password.")
+        case .user: String(localized: "Operators can also change equipment, water flow and panel settings.")
+        case .admin: String(localized: "Admins can also manage accounts, restart the server and factory reset.")
         }
     }
 }
@@ -85,10 +85,10 @@ enum PasswordRules {
     /// Why `password` and `confirmation` can't be used yet, once something has been typed.
     static func problem(_ password: String, confirmation: String) -> String? {
         if !password.isEmpty && password.count < minimumLength {
-            return "Use at least \(minimumLength) characters."
+            return String(localized: "Use at least \(minimumLength) characters.")
         }
         if !confirmation.isEmpty && confirmation != password {
-            return "The passwords don’t match."
+            return String(localized: "The passwords don’t match.")
         }
         return nil
     }
@@ -102,6 +102,6 @@ enum PasswordChangeError: LocalizedError {
     case wrongCurrentPassword
 
     var errorDescription: String? {
-        "Your current password isn’t correct."
+        String(localized: "Your current password isn’t correct.")
     }
 }

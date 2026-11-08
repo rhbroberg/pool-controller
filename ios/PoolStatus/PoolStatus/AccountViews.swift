@@ -298,10 +298,10 @@ private struct AccountDetailView: View {
             case .role(let role):
                 let result = try await store.auth.updateAccount(account.name, role: role)
                 updated(result)
-                message = "\(account.name) is now \(result.role.titleWithArticle)."
+                message = result.role.nowDescription(for: account.name)
             case .password(let password):
                 updated(try await store.auth.updateAccount(account.name, password: password))
-                message = "Password reset."
+                message = String(localized: "Password reset.")
                 self.password = ""
                 confirmation = ""
             }

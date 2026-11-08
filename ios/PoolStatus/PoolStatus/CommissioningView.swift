@@ -19,7 +19,7 @@ struct CommissioningView: View {
     /// Why the entries can't be saved yet, once the user has started typing.
     private var problem: String? {
         if trimmedName.lowercased() == Self.defaultAdmin {
-            return "Choose an account name other than \(Self.defaultAdmin)."
+            return String(localized: "Choose an account name other than \(Self.defaultAdmin).")
         }
         return PasswordRules.problem(password, confirmation: confirmation)
     }

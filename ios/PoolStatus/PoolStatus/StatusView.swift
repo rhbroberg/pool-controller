@@ -236,21 +236,21 @@ private enum ChangeRequest {
     var title: String {
         switch self {
         case .control(_, _, let confirmation): confirmation.title
-        case .waterMode(let mode): "Switch water flow to \(mode.title)?"
+        case .waterMode(let mode): String(localized: "Switch water flow to \(mode.title)?")
         }
     }
 
     var message: String {
         switch self {
         case .control(_, _, let confirmation): confirmation.message
-        case .waterMode(let mode): "\(mode.summary) The valves can take up to a minute to turn."
+        case .waterMode(let mode): String(localized: "\(mode.summary) The valves can take up to a minute to turn.")
         }
     }
 
     var action: String {
         switch self {
         case .control(_, _, let confirmation): confirmation.action
-        case .waterMode(let mode): "Switch to \(mode.title)"
+        case .waterMode(let mode): String(localized: "Switch to \(mode.title)")
         }
     }
 }
@@ -258,9 +258,9 @@ private enum ChangeRequest {
 private extension WaterMode {
     var summary: String {
         switch self {
-        case .pool: "Water flows through the pool only."
-        case .spa: "Water flows through the spa only."
-        case .spillover: "Pool water is pumped through the spa and spills back over into the pool."
+        case .pool: String(localized: "Water flows through the pool only.")
+        case .spa: String(localized: "Water flows through the spa only.")
+        case .spillover: String(localized: "Pool water is pumped through the spa and spills back over into the pool.")
         }
     }
 }
@@ -390,7 +390,7 @@ private struct FreshnessLine: View {
         if let lastRefresh {
             TimelineView(.periodic(from: .now, by: 15)) { context in
                 let when = context.date.timeIntervalSince(lastRefresh) < 60
-                    ? "just now"
+                    ? String(localized: "just now")
                     : lastRefresh.formatted(.relative(presentation: .named))
                 Text(isConnected ? "Updated \(when)" : "Last reading \(when)")
                     .font(.caption)
@@ -441,9 +441,9 @@ private struct WaterFlowControl: View {
 
     private var status: String? {
         if let pending {
-            return "Switching to \(pending.title)…"
+            return String(localized: "Switching to \(pending.title)…")
         }
-        return current == nil ? "Waiting for the controller" : nil
+        return current == nil ? String(localized: "Waiting for the controller") : nil
     }
 
     var body: some View {
@@ -530,19 +530,18 @@ private struct EquipmentTile: View {
         }
         // with no pump running, no water reaches the heaters
         guard let body = heating.body else {
-            return "\(control.stateText(true)) · pump off"
+            return String(localized: "\(control.stateText(true)) · pump off")
         }
-        let water = body.title.lowercased()
         if heating.heating {
-            return "Heating \(water)"
+            return body == .pool ? String(localized: "Heating pool") : String(localized: "Heating spa")
         }
         if heating.callingForHeat {
-            return "Waiting · \(water)"
+            return body == .pool ? String(localized: "Waiting · pool") : String(localized: "Waiting · spa")
         }
         if heating.temperature == nil {
-            return "\(control.stateText(true)) · \(water)"
+            return "\(control.stateText(true)) · \(body.title.lowercased())"
         }
-        return "\(body.title) at setpoint"
+        return body == .pool ? String(localized: "Pool at setpoint") : String(localized: "Spa at setpoint")
     }
 
     /// The setpoint being driven toward, while enabled and water is flowing to the heaters.
@@ -553,10 +552,11 @@ private struct EquipmentTile: View {
     private var accessibilityState: String {
         var parts = [stateText]
         if let targetSetpoint, let body = heating?.body {
-            parts.append("\(body.title.lowercased()) setpoint \(targetSetpoint) degrees")
+            parts.append(body == .pool ? String(localized: "pool setpoint \(targetSetpoint) degrees")
+                                       : String(localized: "spa setpoint \(targetSetpoint) degrees"))
         }
         if isLocked {
-            parts.append("locked")
+            parts.append(String(localized: "locked"))
         }
         return parts.joined(separator: ", ")
     }
@@ -687,9 +687,9 @@ private struct ConnectionIndicator: View {
 
     private var title: String {
         switch connection {
-        case .connecting: "Connecting"
-        case .connected: "Connected"
-        case .disconnected: "Offline"
+        case .connecting: String(localized: "Connecting")
+        case .connected: String(localized: "Connected")
+        case .disconnected: String(localized: "Offline")
         }
     }
 
@@ -767,7 +767,8 @@ private struct OfflineBanner: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(["Can’t reach \(host).", reason, "Retries automatically."].compactMap(\.self).joined(separator: " "))
+        .accessibilityLabel([String(localized: "Can’t reach \(host)."), reason, String(localized: "Retries automatically.")]
+            .compactMap(\.self).joined(separator: " "))
     }
 
     @ViewBuilder

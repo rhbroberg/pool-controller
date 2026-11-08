@@ -160,7 +160,7 @@ private struct PanelDisplayView: View {
                         .minimumScaleFactor(0.9)
                     }
                 } else {
-                    Text(message ?? "Waiting for the panel…")
+                    Text(message ?? String(localized: "Waiting for the panel…"))
                         .font(.headline)
                         .foregroundStyle(Self.lit.opacity(0.8))
                         .multilineTextAlignment(.center)
@@ -174,7 +174,7 @@ private struct PanelDisplayView: View {
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.black.opacity(0.4), lineWidth: 3))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(display?.lines.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")
-                                ?? message ?? "Waiting for the panel")
+                                ?? message ?? String(localized: "Waiting for the panel"))
 
             if let display {
                 Text("Updated \(display.timestamp, format: .dateTime.hour().minute().second())")
@@ -258,9 +258,9 @@ private struct KeyTrail: View {
 
     private func description(_ press: KeyPress) -> String {
         switch press.delivery {
-        case .sending: "\(press.key.title), sending"
+        case .sending: String(localized: "\(press.key.title), sending")
         case .queued: press.key.title
-        case .failed: "\(press.key.title), failed"
+        case .failed: String(localized: "\(press.key.title), failed")
         }
     }
 }

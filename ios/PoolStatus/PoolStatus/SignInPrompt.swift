@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Shown under controls that are locked until the user signs in.
 struct SignInPrompt: View {
-    let text: String
+    let text: LocalizedStringKey
     let signIn: () -> Void
 
     var body: some View {

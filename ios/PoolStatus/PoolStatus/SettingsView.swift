@@ -261,10 +261,10 @@ struct ServerMaintenanceView: View {
             switch operation {
             case .restart:
                 try await store.restartServer()
-                message = "The server is restarting. The app reconnects when it’s back."
+                message = String(localized: "The server is restarting. The app reconnects when it’s back.")
             case .factoryReset:
                 _ = try await store.factoryReset()
-                message = "Factory reset complete. Sign in as \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) to set up the server."
+                message = String(localized: "Factory reset complete. Sign in as \(CommissioningView.defaultAdmin) / \(CommissioningView.defaultAdmin) to set up the server.")
             }
         } catch {
             if !error.isCancellation {
