@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 /// Shown after signing in with the default admin / admin account: the account must be

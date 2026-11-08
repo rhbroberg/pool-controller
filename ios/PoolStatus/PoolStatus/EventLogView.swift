@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 /// Every recorded event, newest first, loaded a page at a time as the list scrolls.

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PoolStatus
+@testable import PoolStatusCore
 
 @Suite("Status refresh")
 struct StatusRefreshTests {

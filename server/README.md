@@ -37,11 +37,16 @@ They need MongoDB running on localhost.
     npm test              # run them
     npm run coverage      # run them and write coverage/lcov.info and coverage/index.html
 
-The iOS unit tests run on a simulator of their own, "PoolStatus Tests", created on first use,
-so your everyday simulator and its sign-in are left alone. A stub network layer stands in for
-the server.
+The iOS app's models, stores and API client live in a Swift package, PoolStatusCore, beside the
+app; open ios/PoolStatus/PoolStatus.xcworkspace to work on both. Its unit tests run on a
+simulator of their own, "PoolStatus Tests", created on first use, so your everyday simulator and
+its sign-in are left alone. A stub network layer stands in for the server.
 
     ../ios/scripts/test.sh    # writes ../ios/coverage/lcov.info
+
+The same tests also run on the Mac, without a simulator, which is quicker while working on them:
+
+    cd ../ios/PoolStatus/PoolStatusCore && swift test
 
 In Cursor, run the "Test everything with coverage" task (Tasks: Run Test Task), then click
 Watch in the status bar; the Coverage Gutters extension marks covered and missed lines in

@@ -3,7 +3,7 @@ import os
 import Security
 
 /// Where the signed-in account is kept between launches.
-protocol CredentialStore {
+public protocol CredentialStore {
     func load() -> Credentials?
     func save(_ credentials: Credentials)
     func delete()
@@ -11,7 +11,7 @@ protocol CredentialStore {
 
 /// Keeps the signed-in account in the keychain. A keychain failure leaves the app signed in for
 /// this launch only, so it's logged rather than shown.
-struct KeychainCredentialStore: CredentialStore {
+public struct KeychainCredentialStore: CredentialStore {
     private static let logger = Logger(subsystem: "com.rhbroberg.PoolStatus", category: "keychain")
 
     private struct Stored: Codable {
@@ -19,9 +19,9 @@ struct KeychainCredentialStore: CredentialStore {
         let role: AccountRole?
     }
 
-    let service: String
+    public let service: String
 
-    init(service: String = "com.rhbroberg.PoolStatus.auth") {
+    public init(service: String = "com.rhbroberg.PoolStatus.auth") {
         self.service = service
     }
 
@@ -30,7 +30,7 @@ struct KeychainCredentialStore: CredentialStore {
          kSecAttrService as String: service]
     }
 
-    func load() -> Credentials? {
+    public func load() -> Credentials? {
         var query = itemQuery
         query[kSecReturnAttributes as String] = true
         query[kSecReturnData as String] = true
@@ -59,7 +59,7 @@ struct KeychainCredentialStore: CredentialStore {
     }
 
     /// Replaces the saved sign-in, adding one if there's none yet.
-    func save(_ credentials: Credentials) {
+    public func save(_ credentials: Credentials) {
         guard let data = try? JSONEncoder().encode(Stored(token: credentials.token, role: credentials.role)) else {
             Self.logger.error("Couldn’t encode the sign-in to save it")
             return
@@ -78,7 +78,7 @@ struct KeychainCredentialStore: CredentialStore {
         }
     }
 
-    func delete() {
+    public func delete() {
         let status = SecItemDelete(itemQuery as CFDictionary)
         if status != errSecSuccess && status != errSecItemNotFound {
             Self.logger.error("Couldn’t delete the saved sign-in: \(status)")

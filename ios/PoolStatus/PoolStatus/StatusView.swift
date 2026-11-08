@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 struct StatusView: View {

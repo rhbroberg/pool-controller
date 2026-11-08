@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 /// Any signed-in account changing its own password.

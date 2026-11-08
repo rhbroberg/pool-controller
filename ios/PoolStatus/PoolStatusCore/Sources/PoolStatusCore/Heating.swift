@@ -1,19 +1,19 @@
 import Foundation
 
 /// The pool and the spa.
-nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Sendable {
+public nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Sendable {
     case pool, spa
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var title: String {
+    public var title: String {
         switch self {
-        case .pool: String(localized: "Pool")
-        case .spa: String(localized: "Spa")
+        case .pool: String(localized: "Pool", bundle: .module)
+        case .spa: String(localized: "Spa", bundle: .module)
         }
     }
 
-    var temperatureName: ReadingName {
+    public var temperatureName: ReadingName {
         switch self {
         case .pool: .poolTemperature
         case .spa: .spaTemperature
@@ -23,19 +23,19 @@ nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Senda
 
 /// The heater and heat pump. They're in series, so both heat whichever body the water flows to,
 /// each toward its own setpoint for that body.
-nonisolated enum HeatingDevice: String, CaseIterable, Identifiable, Sendable {
+public nonisolated enum HeatingDevice: String, CaseIterable, Identifiable, Sendable {
     case heater1, heatpump
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var title: String {
+    public var title: String {
         switch self {
-        case .heater1: String(localized: "Heater")
-        case .heatpump: String(localized: "Heat Pump")
+        case .heater1: String(localized: "Heater", bundle: .module)
+        case .heatpump: String(localized: "Heat Pump", bundle: .module)
         }
     }
 
-    init?(controlName: ReadingName) {
+    public init?(controlName: ReadingName) {
         guard let device = Self.allCases.first(where: { $0.controlName == controlName }) else {
             return nil
         }
@@ -44,36 +44,36 @@ nonisolated enum HeatingDevice: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// `GET /heating`: every setpoint, and what each heating device is doing with them.
-nonisolated struct HeatingStatus: Decodable, Sendable {
-    struct Device: Decodable {
+public nonisolated struct HeatingStatus: Decodable, Sendable {
+    public struct Device: Decodable, Sendable {
         /// Switched on (the heater in Auto); nil until the controller reports it.
-        let enabled: Bool?
+        public let enabled: Bool?
         /// Producing heat. An enabled device stops once its water reaches the setpoint and
         /// starts again when the water cools below it.
-        let heating: Bool
-        let callingForHeat: Bool
+        public let heating: Bool
+        public let callingForHeat: Bool
         /// The body it's driving toward; nil while no pump runs, since no water reaches it.
-        let body: WaterBody?
-        let setpoint: Int?
-        let temperature: Double?
+        public let body: WaterBody?
+        public let setpoint: Int?
+        public let temperature: Double?
     }
 
-    let target: WaterBody?
-    let minimum: Int
-    let maximum: Int
+    public let target: WaterBody?
+    public let minimum: Int
+    public let maximum: Int
     /// False while the server keeps the setpoints itself instead of the controller's.
-    let setpointsReachController: Bool
+    public let setpointsReachController: Bool
     /// Keyed by the server's body and device names; read through `setpoint(_:for:)`.
     private let setpoints: [String: [String: Int]]
     private let devices: [String: Device]
 
-    var range: ClosedRange<Int> { minimum...maximum }
+    public var range: ClosedRange<Int> { minimum...maximum }
 
-    func setpoint(_ device: HeatingDevice, for body: WaterBody) -> Int? {
+    public func setpoint(_ device: HeatingDevice, for body: WaterBody) -> Int? {
         setpoints[body.rawValue]?[device.rawValue]
     }
 
-    func device(_ device: HeatingDevice) -> Device? {
+    public func device(_ device: HeatingDevice) -> Device? {
         devices[device.rawValue]
     }
 }

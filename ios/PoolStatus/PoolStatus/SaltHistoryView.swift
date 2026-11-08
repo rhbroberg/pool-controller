@@ -1,4 +1,5 @@
 import Charts
+import PoolStatusCore
 import SwiftUI
 
 /// Salt level against time; salt changes slowly, so the ranges run longer than temperature's.

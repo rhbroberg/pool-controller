@@ -2,36 +2,36 @@ import Foundation
 import Observation
 
 /// `GET /events`
-nonisolated struct EventPage: Decodable, Sendable {
-    let events: [EventEntry]
-    let next: String?
+public nonisolated struct EventPage: Decodable, Sendable {
+    public let events: [EventEntry]
+    public let next: String?
 }
 
-nonisolated struct EventEntry: Decodable, Identifiable, Hashable, Sendable {
-    let id: String
-    let timestamp: Date
-    let type: String
-    let user: String?
-    let summary: String
+public nonisolated struct EventEntry: Decodable, Identifiable, Hashable, Sendable {
+    public let id: String
+    public let timestamp: Date
+    public let type: String
+    public let user: String?
+    public let summary: String
 
     /// Nil for a type this app doesn't know yet.
-    var kind: EventKind? { EventKind(serverType: type) }
+    public var kind: EventKind? { EventKind(serverType: type) }
 }
 
 /// The event log's filter buttons, each covering one or more of the server's event types.
-nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
+public nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
     case equipment, readings, keypad, actions, protocolErrors
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    init?(serverType: String) {
+    public init?(serverType: String) {
         guard let kind = Self.allCases.first(where: { $0.serverTypes.contains(serverType) }) else {
             return nil
         }
         self = kind
     }
 
-    var serverTypes: [String] {
+    public var serverTypes: [String] {
         switch self {
         case .equipment: ["status"]
         case .readings: ["info"]
@@ -41,17 +41,17 @@ nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var title: String {
+    public var title: String {
         switch self {
-        case .equipment: String(localized: "Equipment")
-        case .readings: String(localized: "Readings")
-        case .keypad: String(localized: "Panel Keys")
-        case .actions: String(localized: "User Actions")
-        case .protocolErrors: String(localized: "Communication Errors")
+        case .equipment: String(localized: "Equipment", bundle: .module)
+        case .readings: String(localized: "Readings", bundle: .module)
+        case .keypad: String(localized: "Panel Keys", bundle: .module)
+        case .actions: String(localized: "User Actions", bundle: .module)
+        case .protocolErrors: String(localized: "Communication Errors", bundle: .module)
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .equipment: "switch.2"
         case .readings: "thermometer.medium"
@@ -61,7 +61,7 @@ nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var tint: Tint {
+    public var tint: Tint {
         switch self {
         case .equipment: .blue
         case .readings: .teal
@@ -73,14 +73,14 @@ nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Who an event came from, for the user filter.
-enum EventUserFilter: Hashable {
+public enum EventUserFilter: Hashable {
     case everyone
     /// Events the controller produced on its own, with no account.
     case controller
     case account(String)
 
     /// The server's `user` parameter.
-    var query: String? {
+    public var query: String? {
         switch self {
         case .everyone: nil
         case .controller: "controller"
@@ -88,10 +88,10 @@ enum EventUserFilter: Hashable {
         }
     }
 
-    var title: String {
+    public var title: String {
         switch self {
-        case .everyone: String(localized: "All Users")
-        case .controller: String(localized: "Controller")
+        case .everyone: String(localized: "All Users", bundle: .module)
+        case .controller: String(localized: "Controller", bundle: .module)
         case .account(let name): name
         }
     }
@@ -99,35 +99,37 @@ enum EventUserFilter: Hashable {
 
 /// The event log, fetched a page at a time as the list scrolls.
 @Observable
-final class EventLogModel {
-    static let pageSize = 50
+public final class EventLogModel {
+    public static let pageSize = 50
 
-    private(set) var events: [EventEntry] = []
-    private(set) var users: [String] = []
-    private(set) var isLoading = false
-    private(set) var errorMessage: String?
+    public private(set) var events: [EventEntry] = []
+    public private(set) var users: [String] = []
+    public private(set) var isLoading = false
+    public private(set) var errorMessage: String?
     /// The server has no more events for these filters.
-    private(set) var reachedEnd = false
+    public private(set) var reachedEnd = false
 
     /// Starts on what people did and what the equipment did; readings change often enough to
     /// bury those, and communication errors are for diagnosing the connection.
-    static let defaultKinds: Set<EventKind> = [.equipment, .actions]
+    public static let defaultKinds: Set<EventKind> = [.equipment, .actions]
 
-    var kinds = EventLogModel.defaultKinds
-    var user = EventUserFilter.everyone
+    public var kinds = EventLogModel.defaultKinds
+    public var user = EventUserFilter.everyone
     /// Oldest first rather than newest first.
-    var ascending = false
+    public var ascending = false
 
     private var cursor: String?
     /// Bumped on every reload, so a page that arrives after the filters change is dropped.
     private var generation = 0
 
-    var oldest: Date? {
+    public init() {}
+
+    public var oldest: Date? {
         events.map(\.timestamp).min()
     }
 
     /// Starts over from the first page, as after a filter or sort change.
-    func reload(client: StatusClient) async {
+    public func reload(client: StatusClient) async {
         generation += 1
         events = []
         cursor = nil
@@ -138,7 +140,7 @@ final class EventLogModel {
     }
 
     /// Fetches the next page, unless one is loading or there are no more.
-    func loadMore(client: StatusClient) async {
+    public func loadMore(client: StatusClient) async {
         guard !isLoading, !reachedEnd else {
             return
         }
@@ -168,7 +170,7 @@ final class EventLogModel {
         }
     }
 
-    func loadUsers(client: StatusClient) async {
+    public func loadUsers(client: StatusClient) async {
         if let fetched = try? await client.fetchEventUsers() {
             users = fetched
         }

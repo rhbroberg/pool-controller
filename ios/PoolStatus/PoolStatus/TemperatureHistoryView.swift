@@ -1,4 +1,5 @@
 import Charts
+import PoolStatusCore
 import SwiftUI
 
 /// Temperature against time for the pool or spa, with air temperature and the times the

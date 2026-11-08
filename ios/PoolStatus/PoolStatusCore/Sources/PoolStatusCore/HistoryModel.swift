@@ -3,69 +3,69 @@ import Observation
 
 /// `GET /history`: readings are stored when they change, so `before` is each series' value
 /// as the window opens.
-nonisolated struct HistoryResponse: Decodable, Sendable {
-    struct Point: Decodable {
-        let date: Date
+public nonisolated struct HistoryResponse: Decodable, Sendable {
+    public struct Point: Decodable, Sendable {
+        public let date: Date
         /// Nil where the reading was missing.
-        let value: Double?
+        public let value: Double?
 
         private enum CodingKeys: String, CodingKey {
             case date = "t", value = "v"
         }
     }
 
-    struct Series: Decodable {
-        let name: ReadingName
-        let before: Point?
-        let points: [Point]
+    public struct Series: Decodable, Sendable {
+        public let name: ReadingName
+        public let before: Point?
+        public let points: [Point]
     }
 
-    let from: Date
-    let to: Date
-    let earliest: Date?
-    let series: [Series]
+    public let from: Date
+    public let to: Date
+    public let earliest: Date?
+    public let series: [Series]
 }
 
 /// One reading on a history graph.
-struct HistorySample: Identifiable {
-    let date: Date
-    let value: Double
-    var id: Date { date }
+public struct HistorySample: Identifiable {
+    public let date: Date
+    public let value: Double
+    public var id: Date { date }
 }
 
 /// Temperature, air and heater history for one body of water, fetched a time window at a
 /// time and kept, so only windows that haven't been seen are requested.
 @Observable
-final class TemperatureHistoryModel {
-    struct Interval: Identifiable {
-        let start: Date
-        let end: Date
-        var id: Date { start }
+public final class TemperatureHistoryModel {
+    public struct Interval: Identifiable {
+        public let start: Date
+        public let end: Date
+        public var id: Date { start }
     }
 
     /// A stretch of line drawn without breaks.
-    struct Segment: Identifiable {
-        let id: Int
-        let samples: [HistorySample]
+    public struct Segment: Identifiable {
+        public let id: Int
+        public let samples: [HistorySample]
     }
 
     /// Everything the graph draws, up to one time.
-    struct ChartData {
-        let water: [Segment]
-        let air: [HistorySample]
-        let heater: [Interval]
-        let heatPump: [Interval]
+    public struct ChartData {
+        public let water: [Segment]
+        public let air: [HistorySample]
+        public let heater: [Interval]
+        public let heatPump: [Interval]
     }
 
-    let water: WaterBody
+    public let water: WaterBody
 
-    private(set) var earliest: Date?
-    private(set) var isLoading = false
-    private(set) var errorMessage: String?
+    public private(set) var earliest: Date?
+    public private(set) var isLoading = false
+    public private(set) var errorMessage: String?
     /// The latest time covered by fetched data.
-    private(set) var loadedThrough: Date?
+    public private(set) var loadedThrough: Date?
     /// Counts merged responses, so the graph is redrawn from new data.
-    private(set) var revision = 0
+    public private(set) var revision = 0
 
     private var values: [ReadingName: [Date: Double]] = [:]
     private var sorted: [ReadingName: [HistorySample]] = [:]
@@ -76,7 +76,7 @@ final class TemperatureHistoryModel {
     /// until the data or the end time changes.
     @ObservationIgnored private var chartCache: (end: Date, revision: Int, data: ChartData)?
 
-    init(water: WaterBody) {
+    public init(water: WaterBody) {
         self.water = water
     }
 
@@ -84,17 +84,17 @@ final class TemperatureHistoryModel {
         [water.temperatureName, .airTemperature, .heater, .heatPump, .filter] + Self.circulationNames
     }
 
-    func samples(_ name: ReadingName) -> [HistorySample] {
+    public func samples(_ name: ReadingName) -> [HistorySample] {
         sorted[name] ?? []
     }
 
-    var waterSamples: [HistorySample] { samples(water.temperatureName) }
-    var airSamples: [HistorySample] { samples(.airTemperature) }
+    public var waterSamples: [HistorySample] { samples(water.temperatureName) }
+    public var airSamples: [HistorySample] { samples(.airTemperature) }
 
     // MARK: - Loading
 
     /// Fetches whatever part of `range` hasn't been fetched yet, after any fetch already under way.
-    func ensureLoaded(_ range: ClosedRange<Date>, client: StatusClient) async {
+    public func ensureLoaded(_ range: ClosedRange<Date>, client: StatusClient) async {
         while let running = fetching {
             await running.value
             if Task.isCancelled {
@@ -182,7 +182,7 @@ final class TemperatureHistoryModel {
 
     // MARK: - Chart data
 
-    func chartData(through end: Date) -> ChartData {
+    public func chartData(through end: Date) -> ChartData {
         if let chartCache, chartCache.end == end, chartCache.revision == revision {
             return chartCache.data
         }
@@ -196,7 +196,7 @@ final class TemperatureHistoryModel {
 
     /// Times `source` (the heater or the heat pump) was warming this body of water, ending no
     /// later than `end`. The two are in series, so both send their heat to the same place.
-    func heatingIntervals(from source: ReadingName, through end: Date) -> [Interval] {
+    public func heatingIntervals(from source: ReadingName, through end: Date) -> [Interval] {
         intervals([source] + Self.circulationNames, through: end) { state in
             (state[source] ?? false) && heats(state)
         }
@@ -205,7 +205,7 @@ final class TemperatureHistoryModel {
     /// The water temperature line. Readings persist until they change, so each segment is
     /// carried to its end. Each sensor sits just downstream of its pump, so the line only covers
     /// times that pump ran, starting at that run's first reading, since an earlier one is stale.
-    func waterSegments(through end: Date) -> [Segment] {
+    public func waterSegments(through end: Date) -> [Segment] {
         let readings = waterSamples.filter { $0.date <= end }
         guard !readings.isEmpty else {
             return []
@@ -261,7 +261,7 @@ final class TemperatureHistoryModel {
         return result
     }
 
-    func airSegment(through end: Date) -> [HistorySample] {
+    public func airSegment(through end: Date) -> [HistorySample] {
         let readings = airSamples.filter { $0.date <= end }
         return readings.isEmpty ? [] : extended(readings, to: end)
     }
@@ -277,12 +277,14 @@ final class TemperatureHistoryModel {
 
 /// Salt level for one time window, from `GET /history`.
 @Observable
-final class SaltHistoryModel {
-    private(set) var samples: [HistorySample] = []
-    private(set) var isLoading = false
-    private(set) var errorMessage: String?
+public final class SaltHistoryModel {
+    public private(set) var samples: [HistorySample] = []
+    public private(set) var isLoading = false
+    public private(set) var errorMessage: String?
 
-    func load(from start: Date, to end: Date, client: StatusClient) async {
+    public init() {}
+
+    public func load(from start: Date, to end: Date, client: StatusClient) async {
         isLoading = true
         defer { isLoading = false }
         do {

@@ -20,6 +20,20 @@
                ReferencedContainer = "container:PoolStatus.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PoolStatusCoreTests"
+               BuildableName = "PoolStatusCoreTests"
+               BlueprintName = "PoolStatusCoreTests"
+               ReferencedContainer = "container:PoolStatusCore">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -32,22 +46,21 @@
       <CodeCoverageTargets>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "7C0A00000000000000000007"
-            BuildableName = "PoolStatus.app"
-            BlueprintName = "PoolStatus"
-            ReferencedContainer = "container:PoolStatus.xcodeproj">
+            BlueprintIdentifier = "PoolStatusCore"
+            BuildableName = "PoolStatusCore"
+            BlueprintName = "PoolStatusCore"
+            ReferencedContainer = "container:PoolStatusCore">
          </BuildableReference>
       </CodeCoverageTargets>
       <Testables>
          <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
+            skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "7C0A00000000000000000016"
-               BuildableName = "PoolStatusTests.xctest"
-               BlueprintName = "PoolStatusTests"
-               ReferencedContainer = "container:PoolStatus.xcodeproj">
+               BlueprintIdentifier = "PoolStatusCoreTests"
+               BuildableName = "PoolStatusCoreTests"
+               BlueprintName = "PoolStatusCoreTests"
+               ReferencedContainer = "container:PoolStatusCore">
             </BuildableReference>
          </TestableReference>
       </Testables>

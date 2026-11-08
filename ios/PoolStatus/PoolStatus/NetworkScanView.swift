@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 /// Looks for pool servers on the local network and hands back the address of the one chosen.

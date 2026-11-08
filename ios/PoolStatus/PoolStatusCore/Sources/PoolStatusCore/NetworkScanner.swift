@@ -2,19 +2,19 @@ import Foundation
 import Observation
 
 /// An IPv4 subnet written as an address and prefix, like 192.168.1.0/24.
-nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
+public nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
     /// Larger subnets would take minutes to scan.
-    static let maxHosts = 1024
+    public static let maxHosts = 1024
 
-    let network: UInt32
-    let prefix: Int
+    public let network: UInt32
+    public let prefix: Int
 
-    init(address: UInt32, prefix: Int) {
+    public init(address: UInt32, prefix: Int) {
         self.prefix = prefix
         network = address & Self.mask(prefix)
     }
 
-    init?(_ text: String) {
+    public init?(_ text: String) {
         let parts = text.trimmingCharacters(in: .whitespaces).split(separator: "/", omittingEmptySubsequences: false)
         guard parts.count == 2, let address = Self.parse(String(parts[0])),
               let prefix = Int(parts[1]), (0...32).contains(prefix) else {
@@ -23,35 +23,35 @@ nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
         self.init(address: address, prefix: prefix)
     }
 
-    var description: String { "\(Self.format(network))/\(prefix)" }
+    public var description: String { "\(Self.format(network))/\(prefix)" }
 
-    var broadcast: UInt32 { network | ~Self.mask(prefix) }
+    public var broadcast: UInt32 { network | ~Self.mask(prefix) }
 
     /// Addresses a server could have: all but the network and broadcast addresses.
-    var hostCount: Int {
+    public var hostCount: Int {
         prefix >= 31 ? 1 << (32 - prefix) : (1 << (32 - prefix)) - 2
     }
 
-    var hosts: [String] {
+    public var hosts: [String] {
         let range: ClosedRange<UInt32> = prefix >= 31 ? network...broadcast : (network + 1)...(broadcast - 1)
         return range.map(Self.format)
     }
 
     /// An IPv4 address on one of this device's network interfaces.
-    struct Interface {
-        let name: String
-        let address: UInt32
-        let prefix: Int
+    public struct Interface {
+        public let name: String
+        public let address: UInt32
+        public let prefix: Int
     }
 
     /// The subnet of this device's Wi-Fi or wired network, narrowed to the /24 around the device
     /// when it's too large to scan.
-    static func device() -> IPv4Network? {
+    public static func device() -> IPv4Network? {
         choose(from: interfaces())
     }
 
     /// Prefers en0, then any other Wi-Fi or Ethernet interface with an assigned address.
-    static func choose(from interfaces: [Interface]) -> IPv4Network? {
+    public static func choose(from interfaces: [Interface]) -> IPv4Network? {
         // en* is Wi-Fi or Ethernet; cellular and VPN interfaces don't reach the pool server,
         // and 169.254 means the network never handed out an address
         let candidates = interfaces.filter { $0.name.hasPrefix("en") && $0.address >> 16 != 0xA9FE }
@@ -82,7 +82,7 @@ nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
         }
     }
 
-    static func parse(_ text: String) -> UInt32? {
+    public static func parse(_ text: String) -> UInt32? {
         let octets = text.split(separator: ".", omittingEmptySubsequences: false).compactMap { UInt8($0) }
         guard octets.count == 4 else {
             return nil
@@ -90,7 +90,7 @@ nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
         return octets.reduce(0) { ($0 << 8) | UInt32($1) }
     }
 
-    static func format(_ address: UInt32) -> String {
+    public static func format(_ address: UInt32) -> String {
         [24, 16, 8, 0].map { String((address >> UInt32($0)) & 0xFF) }.joined(separator: ".")
     }
 
@@ -105,41 +105,41 @@ nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
     }
 }
 
-struct FoundServer: Identifiable, Hashable {
-    let host: String
-    let port: Int
-    let version: String
-    let startedAt: Date
+public struct FoundServer: Identifiable, Hashable {
+    public let host: String
+    public let port: Int
+    public let version: String
+    public let startedAt: Date
 
-    var address: String { "\(host):\(port)" }
-    var id: String { address }
+    public var address: String { "\(host):\(port)" }
+    public var id: String { address }
 }
 
 /// Asks every address in a subnet for the server's identity and collects the pool servers.
 @Observable
-final class NetworkScanner {
-    static let defaultPort = 3000
-    static let defaultTimeoutSeconds = 1.5
-    static let concurrency = 128
+public final class NetworkScanner {
+    public static let defaultPort = 3000
+    public static let defaultTimeoutSeconds = 1.5
+    public static let concurrency = 128
 
-    private(set) var found: [FoundServer] = []
-    private(set) var checked = 0
-    private(set) var total = 0
-    private(set) var port = defaultPort
-    private(set) var isScanning = false
-    private(set) var hasScanned = false
-    private(set) var wasStopped = false
+    public private(set) var found: [FoundServer] = []
+    public private(set) var checked = 0
+    public private(set) var total = 0
+    public private(set) var port = defaultPort
+    public private(set) var isScanning = false
+    public private(set) var hasScanned = false
+    public private(set) var wasStopped = false
 
     private let session: URLSession
     private var task: Task<Void, Never>?
     /// Lets a stopped scan's last few answers arrive without counting toward it or the next scan.
     private var generation = 0
 
-    init(session: URLSession = .shared) {
+    public init(session: URLSession = .shared) {
         self.session = session
     }
 
-    func scan(_ network: IPv4Network, port: Int, timeout: TimeInterval) {
+    public func scan(_ network: IPv4Network, port: Int, timeout: TimeInterval) {
         stop()
         #if targetEnvironment(simulator)
         // the simulator shares the Mac's network, so a server running on the Mac answers here
@@ -190,7 +190,7 @@ final class NetworkScanner {
         }
     }
 
-    func stop() {
+    public func stop() {
         guard isScanning else {
             return
         }
@@ -201,7 +201,7 @@ final class NetworkScanner {
     }
 
     /// Returns once the latest scan has finished, or has wound down after being stopped.
-    func waitUntilFinished() async {
+    public func waitUntilFinished() async {
         await task?.value
     }
 

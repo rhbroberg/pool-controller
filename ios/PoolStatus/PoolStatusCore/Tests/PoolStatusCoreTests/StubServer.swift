@@ -1,5 +1,5 @@
 import Foundation
-@testable import PoolStatus
+@testable import PoolStatusCore
 
 /// Answers requests for registered hosts from inside the process, so tests exercise the real
 /// client code without a server. It only sees requests made through `session`, and each test

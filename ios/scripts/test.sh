@@ -1,5 +1,6 @@
 #!/bin/bash
-# Runs the iOS unit tests with coverage and writes ios/coverage/lcov.info for Cursor.
+# Runs the iOS unit tests, which live in the PoolStatusCore package, with coverage and writes
+# ios/coverage/lcov.info for Cursor.
 #
 # The tests run on a simulator of their own, "PoolStatus Tests", created on first use, so the
 # app installed on your everyday simulator, its settings and its sign-in are left alone.
@@ -33,8 +34,9 @@ if [ -z "$udid" ]; then
 fi
 
 rm -rf "$RESULT"
+# the workspace, rather than the project, is what lets the app's scheme run the package's tests
 xcodebuild test \
-    -project PoolStatus/PoolStatus.xcodeproj \
+    -workspace PoolStatus/PoolStatus.xcworkspace \
     -scheme PoolStatus \
     -destination "id=$udid" \
     -derivedDataPath build/TestDerivedData \

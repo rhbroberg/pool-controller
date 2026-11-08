@@ -2,21 +2,21 @@
 import Foundation
 
 /// Keeps a sign-in in memory instead of in the keychain, for previews and tests.
-final class InMemoryCredentialStore: CredentialStore {
-    private(set) var saved: Credentials?
+public final class InMemoryCredentialStore: CredentialStore {
+    public private(set) var saved: Credentials?
 
-    init(_ saved: Credentials? = nil) {
+    public init(_ saved: Credentials? = nil) {
         self.saved = saved
     }
 
-    func load() -> Credentials? { saved }
-    func save(_ credentials: Credentials) { saved = credentials }
-    func delete() { saved = nil }
+    public func load() -> Credentials? { saved }
+    public func save(_ credentials: Credentials) { saved = credentials }
+    public func delete() { saved = nil }
 }
 
 extension StatusStore {
     /// A store whose server answers from canned data, so previews show a working dashboard.
-    static func preview(role: AccountRole? = .user) -> StatusStore {
+    public static func preview(role: AccountRole? = .user) -> StatusStore {
         StatusStore(serverAddress: "preview.local:3000",
                     defaults: UserDefaults(suiteName: "PoolStatusPreviews") ?? .standard,
                     session: PreviewURLProtocol.session,
@@ -26,7 +26,7 @@ extension StatusStore {
 
 /// Answers the API's GET routes with plausible readings for an evening with the filter running
 /// and the heater warming the pool.
-nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Sendable {
+private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Sendable {
     static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [PreviewURLProtocol.self]

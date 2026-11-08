@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 
 /// The pool and spa setpoints for the heater or the heat pump.

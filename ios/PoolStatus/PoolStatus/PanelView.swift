@@ -1,3 +1,4 @@
+import PoolStatusCore
 import SwiftUI
 import UIKit
 
@@ -137,7 +138,7 @@ struct PanelView: View {
 private struct PanelDisplayView: View {
     let display: PanelDisplay?
     let message: String?
-    let presses: [KeyPress]
+    let presses: [PanelKeyPress]
     let fontSize: CGFloat
 
     private static let background = Color(red: 0.07, green: 0.14, blue: 0.09)
@@ -207,7 +208,7 @@ private struct PanelDisplayView: View {
 /// The last few keys pressed, so a display that lags behind the finger isn't mistaken for a
 /// press that didn't take.
 private struct KeyTrail: View {
-    let presses: [KeyPress]
+    let presses: [PanelKeyPress]
 
     var body: some View {
         if !presses.isEmpty {
@@ -222,7 +223,7 @@ private struct KeyTrail: View {
         }
     }
 
-    private func row(_ shown: [KeyPress]) -> some View {
+    private func row(_ shown: [PanelKeyPress]) -> some View {
         HStack(spacing: 6) {
             Text("Keys")
                 .font(.caption)
@@ -233,7 +234,7 @@ private struct KeyTrail: View {
         }
     }
 
-    private func chip(_ press: KeyPress) -> some View {
+    private func chip(_ press: PanelKeyPress) -> some View {
         let failed = press.delivery == .failed
         return HStack(spacing: 2) {
             Text(press.key.label)
@@ -256,7 +257,7 @@ private struct KeyTrail: View {
         .fixedSize()
     }
 
-    private func description(_ press: KeyPress) -> String {
+    private func description(_ press: PanelKeyPress) -> String {
         switch press.delivery {
         case .sending: String(localized: "\(press.key.title), sending")
         case .queued: press.key.title

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PoolStatus
+@testable import PoolStatusCore
 
 @Suite("Networks and addresses")
 struct NetworkAndAddressTests {
@@ -133,9 +133,22 @@ struct ReadingTests {
 
 @Suite("Keychain")
 struct KeychainTests {
-    @Test("saves, replaces and deletes the sign-in")
+    private static func testStore() -> KeychainCredentialStore {
+        KeychainCredentialStore(service: "com.rhbroberg.PoolStatus.tests.\(UUID().uuidString)")
+    }
+
+    /// Tests without a host app on iOS have no keychain entitlement; `swift test` on a Mac does.
+    static func keychainAvailable() -> Bool {
+        let probe = testStore()
+        probe.save(Credentials(name: "probe", token: "probe", role: nil))
+        defer { probe.delete() }
+        return probe.load() != nil
+    }
+
+    @Test("saves, replaces and deletes the sign-in",
+          .enabled("needs a keychain this test process may use") { await keychainAvailable() })
     func roundTrip() {
-        let keychain = KeychainCredentialStore(service: "com.rhbroberg.PoolStatus.tests.\(UUID().uuidString)")
+        let keychain = Self.testStore()
         defer { keychain.delete() }
         #expect(keychain.load() == nil)
 
