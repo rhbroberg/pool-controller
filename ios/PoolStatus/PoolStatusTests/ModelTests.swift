@@ -4,7 +4,7 @@ import Testing
 
 @Suite("Event log")
 struct EventLogTests {
-    private static func event(_ id: String, minute: Int, type: String = "action") -> String {
+    nonisolated private static func event(_ id: String, minute: Int, type: String = "action") -> String {
         #"{"id":"\#(id)","timestamp":"2026-11-07T22:\#(String(format: "%02d", minute)):00.000Z","type":"\#(type)","user":"owner","summary":"event \#(id)"}"#
     }
 

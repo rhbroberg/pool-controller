@@ -1,6 +1,6 @@
 import Foundation
 
-enum StatusClientError: LocalizedError {
+nonisolated enum StatusClientError: LocalizedError {
     case invalidAddress(String)
     case badResponse
     case unauthorized(message: String?)
@@ -16,7 +16,7 @@ enum StatusClientError: LocalizedError {
     }
 }
 
-extension Error {
+nonisolated extension Error {
     /// The request was cancelled, as when the view that asked went away; not worth reporting.
     var isCancellation: Bool {
         self is CancellationError || (self as? URLError)?.code == .cancelled
@@ -24,7 +24,7 @@ extension Error {
 }
 
 /// How a server identifies itself; only a pool controller server says `poolService`.
-struct SystemInfo: Decodable {
+nonisolated struct SystemInfo: Decodable, Sendable {
     static let poolService = "pool-controller"
 
     let service: String
@@ -32,11 +32,11 @@ struct SystemInfo: Decodable {
     let startedAt: Date
 }
 
-/// The pool server's REST API.
-struct StatusClient {
+/// The pool server's REST API. Requests, and decoding their answers, run off the main actor.
+nonisolated struct StatusClient: Sendable {
     /// The server mounts every route under the Swagger `basePath`.
-    nonisolated static let apiPath = "rhbroberg/pool-api/1.0.0"
-    nonisolated static let defaultTimeout: TimeInterval = 10
+    static let apiPath = "rhbroberg/pool-api/1.0.0"
+    static let defaultTimeout: TimeInterval = 10
 
     /// Reads the server's ISO 8601 dates, with or without fractional seconds.
     static let decoder: JSONDecoder = {
@@ -219,20 +219,22 @@ struct StatusClient {
         case get = "GET", post = "POST", put = "PUT", delete = "DELETE"
     }
 
-    private func send<Response: Decodable>(_ method: Method, _ path: String, query: [URLQueryItem]? = nil,
-                                           token: String? = nil, body: (any Encodable)? = nil,
-                                           timeout: TimeInterval = defaultTimeout) async throws -> Response {
+    @concurrent
+    private func send<Response: Decodable & Sendable>(_ method: Method, _ path: String, query: [URLQueryItem]? = nil,
+                                                      token: String? = nil, body: (any Encodable & Sendable)? = nil,
+                                                      timeout: TimeInterval = defaultTimeout) async throws -> Response {
         let data = try await fetchData(method, path, query: query, token: token, body: body, timeout: timeout)
         return try Self.decoder.decode(Response.self, from: data)
     }
 
     /// For requests whose answer only matters for its status.
+    @concurrent
     private func perform(_ method: Method, _ path: String, token: String? = nil) async throws {
         _ = try await fetchData(method, path, token: token)
     }
 
     private func fetchData(_ method: Method, _ path: String, query: [URLQueryItem]? = nil, token: String? = nil,
-                      body: (any Encodable)? = nil, timeout: TimeInterval = defaultTimeout) async throws -> Data {
+                           body: (any Encodable & Sendable)? = nil, timeout: TimeInterval = defaultTimeout) async throws -> Data {
         var request = URLRequest(url: try url(for: path, query: query))
         request.httpMethod = method.rawValue
         request.timeoutInterval = timeout
@@ -291,7 +293,7 @@ struct StatusClient {
     }
 }
 
-private extension String {
+nonisolated private extension String {
     var capitalizingFirstLetter: String {
         prefix(1).uppercased() + dropFirst()
     }

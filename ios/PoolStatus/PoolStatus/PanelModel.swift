@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// The panel's two-line display, from `GET /panel/display`.
-struct PanelDisplay: Decodable, Equatable {
+nonisolated struct PanelDisplay: Decodable, Equatable, Sendable {
     let lines: [String]
     /// For each line, the character positions the panel is blinking.
     let blinking: [[Int]]
@@ -10,7 +10,7 @@ struct PanelDisplay: Decodable, Equatable {
 }
 
 /// The panel's navigation keys. On the panel, + and − step through a menu and change values.
-enum PanelKey: String, CaseIterable, Identifiable {
+nonisolated enum PanelKey: String, CaseIterable, Identifiable, Sendable {
     case menu, left, right, minus, plus
 
     var id: String { rawValue }

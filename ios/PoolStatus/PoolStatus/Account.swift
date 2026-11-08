@@ -1,7 +1,7 @@
 import Foundation
 
 /// What an account may do, from the server. Each role can do everything the one before it can.
-enum AccountRole: String, Codable, CaseIterable, Identifiable {
+nonisolated enum AccountRole: String, Codable, CaseIterable, Identifiable, Sendable {
     case viewer, user, admin
 
     /// A role this app doesn't know yet gets the least access rather than failing the sign-in.
@@ -53,7 +53,7 @@ struct Credentials: Equatable {
 }
 
 /// The server calls an account's name its `email`, though any name will do.
-struct SignInResult: Decodable {
+nonisolated struct SignInResult: Decodable, Sendable {
     let name: String
     let token: String
     let role: AccountRole?
@@ -66,7 +66,7 @@ struct SignInResult: Decodable {
 }
 
 /// An account as the server describes it, without a token.
-struct AccountInfo: Decodable, Identifiable, Hashable {
+nonisolated struct AccountInfo: Decodable, Identifiable, Hashable, Sendable {
     let name: String
     let role: AccountRole
     let mustChangeCredentials: Bool?

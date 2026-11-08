@@ -2,12 +2,12 @@ import Foundation
 import Observation
 
 /// `GET /events`
-struct EventPage: Decodable {
+nonisolated struct EventPage: Decodable, Sendable {
     let events: [EventEntry]
     let next: String?
 }
 
-struct EventEntry: Decodable, Identifiable, Hashable {
+nonisolated struct EventEntry: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let timestamp: Date
     let type: String
@@ -19,7 +19,7 @@ struct EventEntry: Decodable, Identifiable, Hashable {
 }
 
 /// The event log's filter buttons, each covering one or more of the server's event types.
-enum EventKind: String, CaseIterable, Identifiable {
+nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable {
     case equipment, readings, keypad, actions, protocolErrors
 
     var id: String { rawValue }

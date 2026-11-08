@@ -3,7 +3,7 @@ import Foundation
 /// How this installation's controller is wired. The controller numbers its auxiliary outputs
 /// and valves; the panel's labels say what each one runs here. Everything specific to this
 /// pool belongs in this file.
-extension ReadingName {
+nonisolated extension ReadingName {
     /// Labelled Spa Filter; it brings valve3 and aux1 with it.
     static let spaFilter = ReadingName("aux14")
     /// Runs the heat pump.
@@ -30,7 +30,7 @@ extension ReadingName {
     }
 }
 
-extension WaterBody {
+nonisolated extension WaterBody {
     /// The pump just upstream of this body's temperature sensor, so the sensor reads the water
     /// only while it runs: the filter for the pool, and the spa filter for the spa, whatever
     /// the water flow mode.
@@ -42,7 +42,7 @@ extension WaterBody {
     }
 }
 
-extension HeatingDevice {
+nonisolated extension HeatingDevice {
     /// The equipment control that enables it.
     var controlName: ReadingName {
         switch self {

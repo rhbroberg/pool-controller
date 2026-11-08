@@ -1,7 +1,7 @@
 import Foundation
 
 /// The pool and the spa.
-enum WaterBody: String, CaseIterable, Identifiable, Decodable {
+nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Sendable {
     case pool, spa
 
     var id: String { rawValue }
@@ -23,7 +23,7 @@ enum WaterBody: String, CaseIterable, Identifiable, Decodable {
 
 /// The heater and heat pump. They're in series, so both heat whichever body the water flows to,
 /// each toward its own setpoint for that body.
-enum HeatingDevice: String, CaseIterable, Identifiable {
+nonisolated enum HeatingDevice: String, CaseIterable, Identifiable, Sendable {
     case heater1, heatpump
 
     var id: String { rawValue }
@@ -44,7 +44,7 @@ enum HeatingDevice: String, CaseIterable, Identifiable {
 }
 
 /// `GET /heating`: every setpoint, and what each heating device is doing with them.
-struct HeatingStatus: Decodable {
+nonisolated struct HeatingStatus: Decodable, Sendable {
     struct Device: Decodable {
         /// Switched on (the heater in Auto); nil until the controller reports it.
         let enabled: Bool?

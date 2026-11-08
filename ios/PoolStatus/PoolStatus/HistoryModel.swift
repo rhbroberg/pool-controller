@@ -3,7 +3,7 @@ import Observation
 
 /// `GET /history`: readings are stored when they change, so `before` is each series' value
 /// as the window opens.
-struct HistoryResponse: Decodable {
+nonisolated struct HistoryResponse: Decodable, Sendable {
     struct Point: Decodable {
         let date: Date
         /// Nil where the reading was missing.

@@ -2,7 +2,7 @@ import Foundation
 
 /// A reading or switch as the server names it, such as `pool temp` or `aux14`. Names the
 /// controller reports are open-ended, so this wraps a string rather than enumerating them.
-struct ReadingName: RawRepresentable, Hashable, Codable {
+nonisolated struct ReadingName: RawRepresentable, Hashable, Codable, Sendable {
     let rawValue: String
 
     init(rawValue: String) {
@@ -15,7 +15,7 @@ struct ReadingName: RawRepresentable, Hashable, Codable {
 }
 
 /// The controller's own names, which are the same at every installation.
-extension ReadingName {
+nonisolated extension ReadingName {
     static let poolTemperature = ReadingName("pool temp")
     static let spaTemperature = ReadingName("spa temp")
     static let airTemperature = ReadingName("ambient")
@@ -35,7 +35,7 @@ extension ReadingName {
     static let spillover = ReadingName("spillover")
 }
 
-extension ReadingName {
+nonisolated extension ReadingName {
     private enum Unit {
         case fahrenheit, partsPerMillion, none
     }
@@ -71,7 +71,7 @@ extension ReadingName {
 }
 
 /// One entry from `GET /status`: the newest recorded value of a reading.
-struct StatusReading: Decodable, Identifiable, Hashable {
+nonisolated struct StatusReading: Decodable, Identifiable, Hashable, Sendable {
     enum Category: String, Decodable {
         /// A measurement parsed from the controller display, such as a temperature.
         case info

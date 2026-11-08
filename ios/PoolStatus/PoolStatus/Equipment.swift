@@ -80,7 +80,7 @@ struct EquipmentControl: Identifiable {
 }
 
 /// Where the water flows. The controller's spillover key steps through these in order.
-enum WaterMode: String, CaseIterable, Identifiable {
+nonisolated enum WaterMode: String, CaseIterable, Identifiable, Sendable {
     case pool, spa, spillover
 
     var id: String { rawValue }
