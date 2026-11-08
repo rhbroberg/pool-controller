@@ -38,6 +38,16 @@
         "outputCapture": "std"
     },
     {
+        // Mystic is mystic-backup-2026.11.08.tgz restored with --nsFrom 'Pool.*' --nsTo 'Mystic.*'
+        "type": "node",
+        "request": "launch",
+        "name": "Simulated controller (Mystic production data)",
+        "program": "${workspaceFolder}/server/server.js",
+        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim"],
+        "env": { "MONGODB_URI": "mongodb://127.0.0.1:27017/Mystic" },
+        "outputCapture": "std"
+    },
+    {
         "type": "node",
         "request": "launch",
         "name": "Web front end (port 80)",
