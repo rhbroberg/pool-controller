@@ -49,6 +49,14 @@ final class TemperatureHistoryModel {
         let samples: [HistorySample]
     }
 
+    /// Everything the graph draws, up to one time.
+    struct ChartData {
+        let water: [Segment]
+        let air: [HistorySample]
+        let heater: [Interval]
+        let heatPump: [Interval]
+    }
+
     let water: WaterBody
 
     private(set) var earliest: Date?
@@ -56,10 +64,17 @@ final class TemperatureHistoryModel {
     private(set) var errorMessage: String?
     /// The latest time covered by fetched data.
     private(set) var loadedThrough: Date?
+    /// Counts merged responses, so the graph is redrawn from new data.
+    private(set) var revision = 0
 
     private var values: [ReadingName: [Date: Double]] = [:]
     private var sorted: [ReadingName: [HistorySample]] = [:]
     private var loaded: [ClosedRange<Date>] = []
+    /// The fetch under way; another waits for it rather than fetching the same window.
+    @ObservationIgnored private var fetching: Task<Void, Never>?
+    /// The graph is redrawn for every touch while reading values off it, so its lines are kept
+    /// until the data or the end time changes.
+    @ObservationIgnored private var chartCache: (end: Date, revision: Int, data: ChartData)?
 
     init(water: WaterBody) {
         self.water = water
@@ -80,8 +95,8 @@ final class TemperatureHistoryModel {
 
     /// Fetches whatever part of `range` hasn't been fetched yet, after any fetch already under way.
     func ensureLoaded(_ range: ClosedRange<Date>, client: StatusClient) async {
-        while isLoading {
-            try? await Task.sleep(for: .milliseconds(100))
+        while let running = fetching {
+            await running.value
             if Task.isCancelled {
                 return
             }
@@ -90,9 +105,21 @@ final class TemperatureHistoryModel {
         guard !gaps.isEmpty else {
             return
         }
+        let fetch = Task {
+            await self.fetch(gaps, client: client)
+            self.fetching = nil
+            self.isLoading = false
+        }
+        fetching = fetch
         isLoading = true
-        defer { isLoading = false }
+        await withTaskCancellationHandler {
+            await fetch.value
+        } onCancel: {
+            fetch.cancel()
+        }
+    }
 
+    private func fetch(_ gaps: [ClosedRange<Date>], client: StatusClient) async {
         for gap in gaps {
             do {
                 let response = try await client.fetchHistory(names: names, from: gap.lowerBound, to: gap.upperBound)
@@ -150,9 +177,22 @@ final class TemperatureHistoryModel {
             values[series.name] = known
             sorted[series.name] = known.map { HistorySample(date: $0.key, value: $0.value) }.sorted { $0.date < $1.date }
         }
+        revision += 1
     }
 
     // MARK: - Chart data
+
+    func chartData(through end: Date) -> ChartData {
+        if let chartCache, chartCache.end == end, chartCache.revision == revision {
+            return chartCache.data
+        }
+        let data = ChartData(water: waterSegments(through: end),
+                             air: airSegment(through: end),
+                             heater: heatingIntervals(from: .heater, through: end),
+                             heatPump: heatingIntervals(from: .heatPump, through: end))
+        chartCache = (end, revision, data)
+        return data
+    }
 
     /// Times `source` (the heater or the heat pump) was warming this body of water, ending no
     /// later than `end`. The two are in series, so both send their heat to the same place.

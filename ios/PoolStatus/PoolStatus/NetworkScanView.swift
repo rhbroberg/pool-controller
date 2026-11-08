@@ -7,7 +7,7 @@ struct NetworkScanView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SettingsKey.networkScanPort) private var savedPort = NetworkScanner.defaultPort
     @AppStorage(SettingsKey.scanTimeoutSeconds) private var timeoutSeconds = NetworkScanner.defaultTimeoutSeconds
-    @State private var network = IPv4Network.device()?.description ?? ""
+    @State private var network = ""
     // text rather than a formatted number, which only updates once the field loses focus
     @State private var portText = ""
     @State private var scanner = NetworkScanner()
@@ -82,6 +82,9 @@ struct NetworkScanView: View {
             }
             .onAppear {
                 portText = String(savedPort)
+                if network.isEmpty {
+                    network = IPv4Network.device()?.description ?? ""
+                }
             }
             .onDisappear {
                 scanner.stop()

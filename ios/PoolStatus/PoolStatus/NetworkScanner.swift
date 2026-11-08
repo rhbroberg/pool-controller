@@ -37,37 +37,49 @@ nonisolated struct IPv4Network: Equatable, CustomStringConvertible {
         return range.map(Self.format)
     }
 
+    /// An IPv4 address on one of this device's network interfaces.
+    struct Interface {
+        let name: String
+        let address: UInt32
+        let prefix: Int
+    }
+
     /// The subnet of this device's Wi-Fi or wired network, narrowed to the /24 around the device
     /// when it's too large to scan.
     static func device() -> IPv4Network? {
-        var list: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&list) == 0, let first = list else {
-            return nil
-        }
-        defer { freeifaddrs(list) }
+        choose(from: interfaces())
+    }
 
-        var candidates: [(name: String, address: UInt32, prefix: Int)] = []
-        for entry in sequence(first: first, next: { $0.pointee.ifa_next }).map(\.pointee) {
-            let flags = Int32(bitPattern: entry.ifa_flags)
-            guard let address = entry.ifa_addr, let netmask = entry.ifa_netmask,
-                  address.pointee.sa_family == sa_family_t(AF_INET),
-                  flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0 else {
-                continue
-            }
-            let name = String(cString: entry.ifa_name)
-            let ip = ipv4(address)
-            // en* is Wi-Fi or Ethernet; cellular and VPN interfaces don't reach the pool server,
-            // and 169.254 means the network never handed out an address
-            guard name.hasPrefix("en"), ip >> 16 != 0xA9FE else {
-                continue
-            }
-            candidates.append((name, ip, ipv4(netmask).nonzeroBitCount))
-        }
+    /// Prefers en0, then any other Wi-Fi or Ethernet interface with an assigned address.
+    static func choose(from interfaces: [Interface]) -> IPv4Network? {
+        // en* is Wi-Fi or Ethernet; cellular and VPN interfaces don't reach the pool server,
+        // and 169.254 means the network never handed out an address
+        let candidates = interfaces.filter { $0.name.hasPrefix("en") && $0.address >> 16 != 0xA9FE }
         guard let chosen = candidates.first(where: { $0.name == "en0" }) ?? candidates.first else {
             return nil
         }
         let network = IPv4Network(address: chosen.address, prefix: chosen.prefix)
         return network.hostCount > maxHosts ? IPv4Network(address: chosen.address, prefix: 24) : network
+    }
+
+    /// The IPv4 addresses on interfaces that are up, other than loopback.
+    private static func interfaces() -> [Interface] {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0, let first = list else {
+            return []
+        }
+        defer { freeifaddrs(list) }
+
+        return sequence(first: first, next: { $0.pointee.ifa_next }).map(\.pointee).compactMap { entry in
+            let flags = Int32(bitPattern: entry.ifa_flags)
+            guard let address = entry.ifa_addr, let netmask = entry.ifa_netmask,
+                  address.pointee.sa_family == sa_family_t(AF_INET),
+                  flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0 else {
+                return nil
+            }
+            return Interface(name: String(cString: entry.ifa_name), address: ipv4(address),
+                             prefix: ipv4(netmask).nonzeroBitCount)
+        }
     }
 
     static func parse(_ text: String) -> UInt32? {
@@ -183,10 +195,14 @@ final class NetworkScanner {
             return
         }
         task?.cancel()
-        task = nil
         generation += 1
         isScanning = false
         wasStopped = true
+    }
+
+    /// Returns once the latest scan has finished, or has wound down after being stopped.
+    func waitUntilFinished() async {
+        await task?.value
     }
 
     private static func probe(_ client: StatusClient, host: String, port: Int, timeout: TimeInterval) async -> FoundServer? {

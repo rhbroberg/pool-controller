@@ -163,16 +163,3 @@ nonisolated enum Fixture {
         #"{"email":"\#(name)","token":"token-\#(name)","role":"\#(role)","mustChangeCredentials":\#(mustChange)}"#
     }
 }
-
-/// Waits until `condition` holds or `seconds` pass.
-@MainActor
-func waitUntil(_ seconds: Double = 5, _ condition: () -> Bool) async -> Bool {
-    let deadline = Date.now.addingTimeInterval(seconds)
-    while !condition() {
-        if Date.now > deadline {
-            return false
-        }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-    return true
-}

@@ -31,10 +31,19 @@ struct NetworkAndAddressTests {
         #expect(IPv4Network.parse("10.1.2") == nil)
     }
 
-    @Test("finds this device's network")
+    @Test("picks the Wi-Fi or wired network, narrowed when it's too large to scan")
     func deviceNetwork() throws {
-        let network = try #require(IPv4Network.device())
-        #expect(network.hostCount <= IPv4Network.maxHosts)
+        func interface(_ name: String, _ address: String, _ prefix: Int) throws -> IPv4Network.Interface {
+            IPv4Network.Interface(name: name, address: try #require(IPv4Network.parse(address)), prefix: prefix)
+        }
+        let chosen = IPv4Network.choose(from: [
+            try interface("pdp_ip0", "10.20.30.40", 30),
+            try interface("en1", "192.168.2.5", 24),
+            try interface("en0", "172.16.5.9", 16)
+        ])
+        #expect(chosen?.description == "172.16.5.0/24", "en0 first, and a /16 is too large to scan")
+        #expect(IPv4Network.choose(from: [try interface("en0", "169.254.1.1", 16)]) == nil, "no address assigned")
+        #expect(IPv4Network.choose(from: [try interface("utun0", "10.8.0.2", 24)]) == nil, "a VPN doesn't reach the pool")
     }
 
     @Test("shows addresses without scheme or trailing slash", arguments: [

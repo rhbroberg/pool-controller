@@ -70,10 +70,11 @@ struct TemperatureHistoryView: View {
 
     var body: some View {
         let end = model.loadedThrough.map { min($0, now) } ?? now
-        let segments = model.waterSegments(through: end)
-        let air = showAir ? model.airSegment(through: end) : []
-        let heater = model.heatingIntervals(from: .heater, through: end)
-        let heatPump = model.heatingIntervals(from: .heatPump, through: end)
+        let data = model.chartData(through: end)
+        let segments = data.water
+        let air = showAir ? data.air : []
+        let heater = data.heater
+        let heatPump = data.heatPump
 
         // no scroll view around the graph, so dragging it moves through time and never the page
         VStack(alignment: .leading, spacing: 12) {

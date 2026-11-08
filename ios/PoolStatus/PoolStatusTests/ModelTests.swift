@@ -179,6 +179,31 @@ struct HistoryTests {
         #expect(model.airSegment(through: at(6)).last?.date == at(6), "air is carried to the end")
     }
 
+    @Test("waits for a fetch under way instead of fetching the same window again")
+    func overlapping() async {
+        let body = history()
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = TemperatureHistoryModel(water: .pool)
+        async let first: Void = model.ensureLoaded(at(0)...at(6), client: server.client)
+        async let second: Void = model.ensureLoaded(at(0)...at(6), client: server.client)
+        _ = await (first, second)
+        #expect(server.requests.count == 1)
+        #expect(!model.isLoading)
+    }
+
+    @Test("keeps the graph's lines until the data changes")
+    func chartCache() async {
+        let body = history()
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = TemperatureHistoryModel(water: .pool)
+        let empty = model.chartData(through: at(6))
+        #expect(empty.water.isEmpty)
+        await model.ensureLoaded(at(0)...at(6), client: server.client)
+        let data = model.chartData(through: at(6))
+        #expect(data.water.count == 1, "new data replaces what was kept")
+        #expect(data.heater.map(\.start) == [at(2)])
+    }
+
     @Test("doesn't ask again for a window it already has")
     func caches() async {
         let body = history()
@@ -212,7 +237,8 @@ struct ScanTests {
         let scanner = NetworkScanner(session: StubURLProtocol.session)
         scanner.scan(try #require(IPv4Network("192.0.2.0/30")), port: 3000, timeout: 1)
         #expect(scanner.isScanning)
-        #expect(await waitUntil { !scanner.isScanning })
+        await scanner.waitUntilFinished()
+        #expect(!scanner.isScanning)
 
         #expect(scanner.found.map(\.address) == ["192.0.2.1:3000"])
         #expect(scanner.found.first?.version == "1.2.3")
@@ -227,7 +253,7 @@ struct ScanTests {
         scanner.scan(try #require(IPv4Network("198.51.100.0/24")), port: 3000, timeout: 5)
         scanner.stop()
         let checked = scanner.checked
-        try await Task.sleep(for: .milliseconds(200))
+        await scanner.waitUntilFinished()
         #expect(scanner.wasStopped)
         #expect(!scanner.isScanning)
         #expect(scanner.checked == checked)
