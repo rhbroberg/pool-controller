@@ -64,6 +64,93 @@ public nonisolated enum HistoryResolution {
     }
 }
 
+/// What a scrolling graph draws around the part in view. Its scale reaches back to the earliest
+/// reading, which can be thousands of screens away, and a chart lays out its marks and axis
+/// ticks across all of it; giving it only the stretch near the view keeps each frame light.
+public nonisolated enum HistoryWindow {
+    private enum Step {
+        case hours(Int), days(Int), weeks(Int), months(Int), years(Int)
+
+        var approximateLength: TimeInterval {
+            switch self {
+            case .hours(let n): Double(n) * 3600
+            case .days(let n): Double(n) * 86400
+            case .weeks(let n): Double(n) * 7 * 86400
+            case .months(let n): Double(n) * 30 * 86400
+            case .years(let n): Double(n) * 365 * 86400
+            }
+        }
+    }
+
+    private static let steps: [Step] = [
+        .hours(1), .hours(2), .hours(3), .hours(6), .hours(12), .days(1), .days(2), .weeks(1), .weeks(2),
+        .months(1), .months(2), .months(3), .months(6), .years(1), .years(2), .years(5), .years(10)
+    ]
+    /// About this many ticks across the part in view.
+    static let ticksInView = 5.0
+    static let maximumTicks = 500
+
+    /// The view, a whole view's length on each side and up to another; it moves a view's length at
+    /// a time, so scrolling within it leaves the drawn data and ticks as they were.
+    public static func around(_ start: Date, visibleLength: TimeInterval) -> ClosedRange<Date> {
+        let index = (start.timeIntervalSinceReferenceDate / visibleLength).rounded(.down)
+        return Date(timeIntervalSinceReferenceDate: (index - 1) * visibleLength)...Date(timeIntervalSinceReferenceDate: (index + 3) * visibleLength)
+    }
+
+    /// Calendar-aligned axis ticks across `window`, spaced for about five in a view `visibleLength`
+    /// long, so the same times are ticks whichever window they fall in.
+    public static func ticks(in window: ClosedRange<Date>, visibleLength: TimeInterval, calendar: Calendar = .current) -> [Date] {
+        let step = steps.first { $0.approximateLength >= visibleLength / ticksInView } ?? steps[steps.count - 1]
+        guard var tick = alignedStart(step, atOrBefore: window.lowerBound, calendar: calendar) else {
+            return []
+        }
+        var ticks: [Date] = []
+        while tick <= window.upperBound && ticks.count < maximumTicks {
+            if tick >= window.lowerBound {
+                ticks.append(tick)
+            }
+            guard let next = advance(tick, by: step, calendar: calendar), next > tick else {
+                break
+            }
+            tick = next
+        }
+        return ticks
+    }
+
+    private static func alignedStart(_ step: Step, atOrBefore date: Date, calendar: Calendar) -> Date? {
+        switch step {
+        case .hours(let n):
+            guard let hour = calendar.dateInterval(of: .hour, for: date)?.start else { return nil }
+            return calendar.date(byAdding: .hour, value: -(calendar.component(.hour, from: hour) % n), to: hour)
+        case .days(let n):
+            let day = calendar.startOfDay(for: date)
+            let ordinal = calendar.ordinality(of: .day, in: .era, for: day) ?? 0
+            return calendar.date(byAdding: .day, value: -(ordinal % n), to: day)
+        case .weeks(let n):
+            guard let week = calendar.dateInterval(of: .weekOfYear, for: date)?.start else { return nil }
+            let ordinal = (calendar.ordinality(of: .day, in: .era, for: week) ?? 0) / 7
+            return calendar.date(byAdding: .weekOfYear, value: -(ordinal % n), to: week)
+        case .months(let n):
+            guard let month = calendar.dateInterval(of: .month, for: date)?.start else { return nil }
+            let index = calendar.component(.year, from: month) * 12 + calendar.component(.month, from: month) - 1
+            return calendar.date(byAdding: .month, value: -(index % n), to: month)
+        case .years(let n):
+            guard let year = calendar.dateInterval(of: .year, for: date)?.start else { return nil }
+            return calendar.date(byAdding: .year, value: -(calendar.component(.year, from: year) % n), to: year)
+        }
+    }
+
+    private static func advance(_ date: Date, by step: Step, calendar: Calendar) -> Date? {
+        switch step {
+        case .hours(let n): calendar.date(byAdding: .hour, value: n, to: date)
+        case .days(let n): calendar.date(byAdding: .day, value: n, to: date)
+        case .weeks(let n): calendar.date(byAdding: .weekOfYear, value: n, to: date)
+        case .months(let n): calendar.date(byAdding: .month, value: n, to: date)
+        case .years(let n): calendar.date(byAdding: .year, value: n, to: date)
+        }
+    }
+}
+
 /// One reading on a history graph, or one bucket of readings.
 public struct HistorySample: Identifiable {
     public let date: Date
@@ -149,7 +236,7 @@ public final class TemperatureHistoryModel {
     @ObservationIgnored private var fetching: Task<Void, Never>?
     /// The graph is redrawn for every touch while reading values off it, so its lines are kept
     /// until the data, the level or the end time changes.
-    @ObservationIgnored private var chartCache: (end: Date, level: Int, revision: Int, data: ChartData)?
+    @ObservationIgnored private var chartCache: (end: Date, level: Int, window: ClosedRange<Date>?, revision: Int, data: ChartData)?
 
     public init(water: WaterBody) {
         self.water = water
@@ -291,17 +378,57 @@ public final class TemperatureHistoryModel {
         levels[level]?.sorted[name] ?? []
     }
 
-    public func chartData(through end: Date, level: Int) -> ChartData {
-        if let chartCache, chartCache.end == end, chartCache.level == level, chartCache.revision == revision {
+    /// The lines through `end`; within `window`, a stretch from `HistoryWindow`, only what crosses
+    /// it, so the graph has no more to draw than the part in view needs.
+    public func chartData(through end: Date, level: Int, within window: ClosedRange<Date>? = nil) -> ChartData {
+        if let chartCache, chartCache.end == end, chartCache.level == level, chartCache.window == window,
+           chartCache.revision == revision {
             return chartCache.data
         }
-        let data = ChartData(water: waterSegments(through: end, level: level),
-                             air: airSegment(through: end, level: level),
-                             heater: heatingSpans(from: .heater, through: end, level: level),
-                             heatPump: heatingSpans(from: .heatPump, through: end, level: level),
+        var water = waterSegments(through: end, level: level)
+        var air = airSegment(through: end, level: level)
+        var heater = heatingSpans(from: .heater, through: end, level: level)
+        var heatPump = heatingSpans(from: .heatPump, through: end, level: level)
+        if let window {
+            water = water.compactMap { segment in
+                let samples = Self.clipped(segment.samples, to: window)
+                return samples.isEmpty ? nil : Segment(id: segment.id, samples: samples)
+            }
+            air = Self.clipped(air, to: window)
+            heater = heater.filter { $0.end >= window.lowerBound && $0.start <= window.upperBound }
+            heatPump = heatPump.filter { $0.end >= window.lowerBound && $0.start <= window.upperBound }
+        }
+        let data = ChartData(water: water, air: air, heater: heater, heatPump: heatPump,
                              resolution: levels[level]?.resolution ?? 0)
-        chartCache = (end, level, revision, data)
+        chartCache = (end, level, window, revision, data)
         return data
+    }
+
+    /// The samples of one stepped line that cross `window`, with the one before it, whose value
+    /// holds into it, and the one after, so the line runs off both edges.
+    static func clipped(_ samples: [HistorySample], to window: ClosedRange<Date>) -> [HistorySample] {
+        guard let first = samples.first, let last = samples.last,
+              last.date >= window.lowerBound, first.date <= window.upperBound else {
+            return []
+        }
+        let inside = firstIndex(in: samples) { $0.date >= window.lowerBound }
+        let after = firstIndex(in: samples) { $0.date > window.upperBound }
+        return Array(samples[max(0, inside - 1)..<min(samples.count, after + 1)])
+    }
+
+    /// The first index of sorted `samples` where `isPast` holds, by bisection.
+    private static func firstIndex(in samples: [HistorySample], where isPast: (HistorySample) -> Bool) -> Int {
+        var low = 0
+        var high = samples.count
+        while low < high {
+            let middle = (low + high) / 2
+            if isPast(samples[middle]) {
+                high = middle
+            } else {
+                low = middle + 1
+            }
+        }
+        return low
     }
 
     /// Times `source` (the heater or the heat pump) was warming this body of water, ending no

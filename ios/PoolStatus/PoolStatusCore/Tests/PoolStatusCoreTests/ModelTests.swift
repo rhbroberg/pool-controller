@@ -288,6 +288,50 @@ struct HistoryTests {
         #expect(data.heater.map(\.start) == [at(2)])
     }
 
+    @Test("draws only what crosses the window, with the reading that holds into it")
+    func clipped() async {
+        let body = readings()
+        let server = StubServer { _, _, _ in .ok(body) }
+        let model = TemperatureHistoryModel(water: .pool)
+        await model.ensureLoaded(at(0)...at(6), level: level, client: server.client)
+
+        let middle = model.chartData(through: at(6), level: level, within: at(3.5)...at(4.5))
+        #expect(middle.water.first?.samples.map(\.date) == [at(3), at(5)])
+        #expect(middle.air.map(\.date) == [at(0), at(6)], "the air reading at 0:00 holds into the window")
+        #expect(middle.heater.map(\.start) == [at(2)])
+
+        let late = model.chartData(through: at(6), level: level, within: at(5.5)...at(6))
+        #expect(late.water.isEmpty, "the pump stopped at 5:00")
+        #expect(late.heater.isEmpty)
+        #expect(model.chartData(through: at(6), level: level).water.first?.samples.count == 3, "no window, every reading")
+    }
+
+    @Test("keeps the window still while scrolling within it, with a view's length to either side")
+    func window() {
+        let day: TimeInterval = 24 * 3600
+        let window = HistoryWindow.around(at(30), visibleLength: day)
+        #expect(window.lowerBound <= at(30 - 24))
+        #expect(window.upperBound >= at(30 + 48))
+        #expect(HistoryWindow.around(at(31), visibleLength: day) == window)
+    }
+
+    @Test("ticks the axis on calendar boundaries, about five to a view, whatever the history's length")
+    func ticks() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let day: TimeInterval = 24 * 3600
+        #expect(HistoryWindow.ticks(in: at(0)...at(24), visibleLength: day, calendar: calendar)
+                == [at(0), at(6), at(12), at(18), at(24)])
+
+        let date = { (text: String) in try! Date.ISO8601FormatStyle().parse(text) }
+        #expect(HistoryWindow.ticks(in: date("2026-01-15T00:00:00Z")...date("2027-02-01T00:00:00Z"),
+                                    visibleLength: 365 * day, calendar: calendar)
+                == ["2026-04-01", "2026-07-01", "2026-10-01", "2027-01-01"].map { date("\($0)T00:00:00Z") })
+
+        let window = HistoryWindow.around(at(0), visibleLength: day)
+        #expect(HistoryWindow.ticks(in: window, visibleLength: day, calendar: calendar).count <= 25)
+    }
+
     @Test("doesn't ask again for a window it already has at that resolution")
     func caches() async {
         let body = readings()

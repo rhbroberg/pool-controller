@@ -94,7 +94,8 @@ struct TemperatureHistoryView: View {
     var body: some View {
         let drawn = model.displayLevel(for: level, visible: visibleRange)
         let end = model.loadedThrough(level: drawn).map { min($0, now) } ?? now
-        let data = model.chartData(through: end, level: drawn)
+        let window = HistoryWindow.around(scrollPosition, visibleLength: visibleLength)
+        let data = model.chartData(through: end, level: drawn, within: window)
         let segments = data.water
         let air = showAir ? data.air : []
         let heater = data.heater
@@ -132,7 +133,8 @@ struct TemperatureHistoryView: View {
             }
             .frame(minHeight: 24)
 
-            chart(segments: segments, air: air, heater: heater, heatPump: heatPump)
+            chart(segments: segments, air: air, heater: heater, heatPump: heatPump,
+                  ticks: HistoryWindow.ticks(in: window, visibleLength: visibleLength))
                 .frame(minHeight: 160, maxHeight: .infinity)
 
             legend
@@ -192,8 +194,12 @@ struct TemperatureHistoryView: View {
                 return
             }
             let margin = visibleLength / 2
-            let wanted = scrollPosition.addingTimeInterval(-margin)...min(now, scrollPosition.addingTimeInterval(visibleLength + margin))
-            await model.ensureLoaded(wanted, level: level, client: store.client)
+            let start = scrollPosition.addingTimeInterval(-margin)
+            let end = min(now, scrollPosition.addingTimeInterval(visibleLength + margin))
+            guard start < end else {
+                return
+            }
+            await model.ensureLoaded(start...end, level: level, client: store.client)
         }
         .task {
             while !Task.isCancelled {
@@ -212,7 +218,7 @@ struct TemperatureHistoryView: View {
 
     private func chart(segments: [TemperatureHistoryModel.Segment], air: [HistorySample],
                        heater: [TemperatureHistoryModel.HeatingSpan],
-                       heatPump: [TemperatureHistoryModel.HeatingSpan]) -> some View {
+                       heatPump: [TemperatureHistoryModel.HeatingSpan], ticks: [Date]) -> some View {
         Chart {
             // a bucket is shaded by how much of it the heat was on
             ForEach(heater) { span in
@@ -279,7 +285,7 @@ struct TemperatureHistoryView: View {
             }
         }
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+            AxisMarks(values: ticks) { _ in
                 AxisGridLine()
                 AxisValueLabel(format: visibleLength <= 2 * 24 * 60 * 60
                                ? .dateTime.hour()
