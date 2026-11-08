@@ -32,7 +32,10 @@ for (const target of report.targets) {
 const records = [];
 let found = 0;
 let hit = 0;
-for (const [file, entries] of Object.entries(lines).sort(([a], [b]) => a.localeCompare(b))) {
+// coverage of the tests themselves says nothing about the app
+const isTest = (file) => /\/Tests\//.test(file);
+
+for (const [file, entries] of Object.entries(lines).filter(([file]) => !isTest(file)).sort(([a], [b]) => a.localeCompare(b))) {
     const executable = entries.filter((entry) => entry.isExecutable);
     const record = [`SF:${file}`];
     const functions = functionsByFile.get(file) || [];
