@@ -64,6 +64,11 @@ services:
       - "3000"
     devices:
       - "${POOL_SERIAL_DEVICE:-/dev/ttyUSB0}:/dev/ttyUSB0"
+    # the Pi's time zone, so history days start at the pool's midnight; without these the
+    # container runs on UTC until an admin sets a zone in Server Maintenance
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     logging:
       options:
         max-size: "50m"
