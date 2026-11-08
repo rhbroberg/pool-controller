@@ -4,9 +4,10 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { isAbort } from '../api.js';
 import { TimeChart } from '../chart.js';
-import { extended, valueAt } from '../history.js';
-import { formatMonthDayYear, formatMonthDay } from '../format.js';
-import { topbar, spinner, renderer } from '../ui.js';
+import { extended, valueAt, MAX_POINTS } from '../history.js';
+import { openHistoryCalendar } from './history-calendar.js';
+import { formatMonthDayYear, formatMonthDay, formatMonthYear } from '../format.js';
+import { topbar, barButton, spinner, renderer } from '../ui.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const RANGES = [
@@ -16,10 +17,14 @@ const RANGES = [
 ];
 const READING = 'salt';
 const COLOR = 'var(--teal)';
+// a bucket's range, behind its average
+const RANGE_OPACITY = 0.16;
 const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
 
 export const mountSaltHistory = (root, app) => {
+    // null while showing days picked in the calendar, held in custom as [from, to]
     let range = RANGES[1];
+    let custom = null;
     let end = Date.now();
     let samples = [];
     let isLoading = false;
@@ -28,21 +33,25 @@ export const mountSaltHistory = (root, app) => {
     let chart = null;
     let generation = 0;
 
-    const start = () => end - range.length;
+    const start = () => custom ? custom[0] : end - range.length;
+    // about one point per pixel, so a long range comes back as daily buckets
+    const maxPoints = () => Math.min(MAX_POINTS, Math.max(50, Math.round(chart ? chart.devicePixels : 1000)));
 
     const load = async () => {
         const loading = ++generation;
-        end = Date.now();
+        end = custom ? custom[1] : Date.now();
         isLoading = true;
         redraw();
         try {
-            const response = await app.client.fetchHistory([READING], start(), end);
+            const response = await app.client.fetchHistory([READING], start(), end, { maxPoints: maxPoints() });
             if (loading !== generation) {
                 return;
             }
             const series = response.series.find((s) => s.name === READING);
-            const points = [...(series && series.before ? [series.before] : []), ...(series ? series.points : [])];
-            const loaded = points.filter((p) => p.v !== null && p.v !== undefined).map((p) => ({ t: Math.max(p.t, start()), v: p.v }));
+            const bucketed = series && series.resolution > 0;
+            const points = [...(series && series.before && !bucketed ? [series.before] : []), ...(series ? series.points : [])];
+            const loaded = points.filter((p) => p.v !== null && p.v !== undefined)
+                .map((p) => ({ t: Math.max(p.t, start()), v: p.v, low: p.low, high: p.high }));
             // readings are stored when they change, so the last one holds until now
             samples = extended(loaded, end);
             errorMessage = null;
@@ -60,7 +69,7 @@ export const mountSaltHistory = (root, app) => {
 
     /** fits the readings, with room above and below */
     const yDomain = () => {
-        const values = samples.map((sample) => sample.v);
+        const values = samples.flatMap((sample) => [sample.v, sample.low, sample.high]).filter((v) => v !== null && v !== undefined);
         if (!values.length) {
             return [2000, 4000];
         }
@@ -84,6 +93,7 @@ export const mountSaltHistory = (root, app) => {
             yMin,
             yMax,
             label: `Salt level from ${formatMonthDayYear(start())} to ${formatMonthDayYear(end)}`,
+            ranges: [{ points: samples, color: COLOR, opacity: RANGE_OPACITY }],
             lines: [{ points: samples, color: COLOR, width: 2.5 }],
             dots,
             rule: selected
@@ -96,9 +106,19 @@ export const mountSaltHistory = (root, app) => {
         }
         chart = new TimeChart(host, {
             yLabel: (v) => String(Math.round(v)),
-            tickLabel: (t, step) => step < DAY ? hourLabel.format(t) : formatMonthDay(t)
+            tickLabel: (t, step) => step < DAY ? hourLabel.format(t) : step < 30 * DAY ? formatMonthDay(t) : formatMonthYear(t)
         });
         drawChart();
+    };
+
+    const chooseDates = async () => {
+        const picked = await openHistoryCalendar(app, [start(), end]);
+        if (picked) {
+            custom = [picked[0], Math.min(picked[1], Date.now())];
+            range = null;
+            selected = null;
+            load();
+        }
     };
 
     const select = (event) => {
@@ -117,18 +137,25 @@ export const mountSaltHistory = (root, app) => {
         drawChart();
         const value = selected !== null ? valueAt(samples, selected) : null;
         return [
-            topbar({ title: 'Salt Level', back: '', backTitle: app.poolName() }),
+            topbar({
+                title: 'Salt Level',
+                back: '',
+                backTitle: app.poolName(),
+                trailing: barButton({ label: 'Choose Dates', iconName: 'calendar', onClick: chooseDates })
+            }),
             h('main', { class: 'page full history-page' },
                 h('div', { class: 'segmented', role: 'group', 'aria-label': 'Range' },
                     RANGES.map((choice) => h('button', {
                         type: 'button',
-                        'aria-pressed': String(choice.id === range.id),
+                        'aria-pressed': String(Boolean(range) && choice.id === range.id),
                         onClick: () => {
                             range = choice;
+                            custom = null;
                             selected = null;
                             load();
                         }
-                    }, choice.title))),
+                    }, choice.title)),
+                    custom ? h('button', { type: 'button', 'aria-pressed': 'true', disabled: true, title: 'Days picked in the calendar' }, 'Custom') : null),
                 h('div', { class: 'history-readout', 'aria-live': 'polite' },
                     value !== null
                         ? [h('span', { class: 'when' }, formatMonthDayYear(selected)), h('span', { style: { color: COLOR } }, `${Math.trunc(value)} ppm`)]

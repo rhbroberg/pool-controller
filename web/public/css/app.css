@@ -1814,3 +1814,113 @@ button.form-row:disabled {
     padding: 14px 16px;
     font-size: 15px;
 }
+
+/* MARK: history calendar */
+
+.calendar-sheet {
+    width: min(94vw, 420px);
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.calendar-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.calendar-paging {
+    display: flex;
+    margin-left: auto;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.calendar-weekday {
+    padding: 4px 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--secondary);
+}
+
+.calendar-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 46px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.calendar-day.outside {
+    cursor: default;
+}
+
+.calendar-day:hover:not(:disabled) {
+    background: var(--fill);
+}
+
+.calendar-day:disabled {
+    color: var(--tertiary);
+    cursor: default;
+}
+
+.calendar-day.today .calendar-number {
+    color: var(--teal);
+    font-weight: 600;
+}
+
+.calendar-day.in-range {
+    background: color-mix(in srgb, var(--teal) 18%, transparent);
+}
+
+.calendar-day.range-end {
+    background: var(--teal);
+    color: #fff;
+}
+
+.calendar-day.range-end .calendar-number {
+    color: #fff;
+}
+
+.calendar-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--teal);
+}
+
+.calendar-day.range-end .calendar-dot {
+    background: #fff;
+}
+
+.calendar-dot.inline {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.calendar-selection {
+    margin: 14px 0 6px;
+    font-size: 17px;
+    font-weight: 600;
+}

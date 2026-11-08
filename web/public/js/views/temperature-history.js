@@ -3,11 +3,12 @@
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
-import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt } from '../history.js';
+import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt, levelFor } from '../history.js';
+import { openHistoryCalendar } from './history-calendar.js';
 import { TimeChart } from '../chart.js';
 import { waterBody } from '../model.js';
 import * as prefs from '../prefs.js';
-import { formatMonthDayTime, formatMonthDay, formatHour } from '../format.js';
+import { formatMonthDayTime, formatMonthDay, formatMonthYear, formatHour, formatSpan } from '../format.js';
 import { topbar, barButton, spinner, renderer } from '../ui.js';
 
 const HOUR = 60 * 60 * 1000;
@@ -18,7 +19,8 @@ const PRESETS = [
     { id: 'month', title: 'Month', length: 30 * DAY }
 ];
 const MINIMUM_LENGTH = HOUR;
-const MAXIMUM_LENGTH = 365 * DAY;
+// years of history are summarized by day, so even the longest view stays light
+const MAXIMUM_LENGTH = 10 * 365 * DAY;
 const ZOOM_STEP = 2;
 // how often to fetch readings newer than the last fetch while the page is open
 const REFRESH_MS = 60 * 1000;
@@ -35,13 +37,18 @@ const COLORS = {
 // the heating bands and their legend swatches share these, so the legend matches the plot
 const HEATER_OPACITY = 0.28;
 const HEAT_PUMP_OPACITY = 0.24;
+// a bucket's range, behind its average
+const RANGE_OPACITY = 0.16;
 
 const timeLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const tickLabel = (t, step) => {
     if (step < HOUR) {
         return timeLabel.format(t);
     }
-    return step < DAY ? formatHour(t) : formatMonthDay(t);
+    if (step < DAY) {
+        return formatHour(t);
+    }
+    return step < 30 * DAY ? formatMonthDay(t) : formatMonthYear(t);
 };
 
 export const mountTemperatureHistory = (root, app, water) => {
@@ -66,6 +73,9 @@ export const mountTemperatureHistory = (root, app, water) => {
     const domainStart = () => Math.min(model.earliest ?? now, now - length);
     const clampStart = (value) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
+    /** the bucket length that gives about one point per pixel at this zoom */
+    const level = () => levelFor(length, chart ? chart.devicePixels : 1000);
+    const drawnLevel = () => model.displayLevel(level(), start, start + length, now);
 
     const show = (newLength, endingAt) => {
         length = newLength;
@@ -96,6 +106,18 @@ export const mountTemperatureHistory = (root, app, water) => {
         windowChanged();
     };
 
+    /** shows the days picked in the calendar, as far as the zoom limits allow */
+    const chooseDates = async () => {
+        const picked = await openHistoryCalendar(app, [start, start + length]);
+        if (!picked) {
+            return;
+        }
+        preset = null;
+        now = Date.now();
+        const end = Math.min(picked[1], now);
+        show(Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, end - picked[0])), end);
+    };
+
     const choosePreset = (choice) => {
         preset = choice.id;
         now = Date.now();
@@ -107,7 +129,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         clearTimeout(loadTimer);
         loadTimer = setTimeout(() => {
             const margin = length / 2;
-            model.ensureLoaded(start - margin, Math.min(now, start + length + margin));
+            model.ensureLoaded(start - margin, Math.min(now, start + length + margin), level());
         }, LOAD_DELAY_MS);
     };
 
@@ -117,8 +139,9 @@ export const mountTemperatureHistory = (root, app, water) => {
         if (following) {
             start = now - length;
         }
-        if (model.loadedThrough !== null) {
-            model.ensureLoaded(model.loadedThrough, now);
+        const through = model.loadedThrough(level());
+        if (through !== null) {
+            model.ensureLoaded(through, now, level());
         }
         redraw();
     }, REFRESH_MS);
@@ -247,12 +270,15 @@ export const mountTemperatureHistory = (root, app, water) => {
     // MARK: drawing
 
     const lines = () => {
-        const end = model.loadedThrough !== null ? Math.min(model.loadedThrough, now) : now;
+        const drawn = drawnLevel();
+        const through = model.loadedThrough(drawn);
+        const end = through !== null ? Math.min(through, now) : now;
         return {
-            segments: model.waterSegments(end),
-            air: showAir ? model.airLine(end) : [],
-            heater: model.heatingIntervals(HEATER, end),
-            heatPump: model.heatingIntervals(HEAT_PUMP, end)
+            resolution: model.resolution(drawn),
+            segments: model.waterSegments(end, drawn),
+            air: showAir ? model.airLine(end, drawn) : [],
+            heater: model.heatingSpans(HEATER, end, drawn),
+            heatPump: model.heatingSpans(HEAT_PUMP, end, drawn)
         };
     };
 
@@ -273,7 +299,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         [...segments, air].forEach((line) => {
             line.forEach((sample) => {
                 if (sample.t >= start && sample.t <= end) {
-                    values.push(sample.v);
+                    values.push(...[sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined));
                 }
             });
             const opening = valueAt(line, start);
@@ -300,10 +326,12 @@ export const mountTemperatureHistory = (root, app, water) => {
             yMin,
             yMax,
             label: `${body.title} temperature from ${formatMonthDayTime(start)} to ${formatMonthDayTime(start + length)}`,
+            // a bucket is shaded by how much of it the heat was on
             bands: [
-                ...data.heater.map((band) => ({ ...band, color: COLORS.heater, opacity: HEATER_OPACITY })),
-                ...data.heatPump.map((band) => ({ ...band, color: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY }))
+                ...data.heater.map((band) => ({ ...band, color: COLORS.heater, opacity: HEATER_OPACITY * band.intensity })),
+                ...data.heatPump.map((band) => ({ ...band, color: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY * band.intensity }))
             ],
+            ranges: data.segments.map((points) => ({ points, color: COLORS.water, opacity: RANGE_OPACITY })),
             lines: [
                 { points: data.air, color: COLORS.air, width: 1.5, dash: '4 3' },
                 ...data.segments.map((points) => ({ points, color: COLORS.water, width: 2.5 }))
@@ -354,6 +382,7 @@ export const mountTemperatureHistory = (root, app, water) => {
                 back: '',
                 backTitle: app.poolName(),
                 trailing: [
+                    barButton({ label: 'Choose Dates', iconName: 'calendar', onClick: chooseDates }),
                     barButton({ label: 'Zoom Out', iconName: 'zoomOut', onClick: () => zoom(ZOOM_STEP), disabled: length >= MAXIMUM_LENGTH }),
                     barButton({ label: 'Zoom In', iconName: 'zoomIn', onClick: () => zoom(1 / ZOOM_STEP), disabled: length <= MINIMUM_LENGTH })
                 ]
@@ -387,6 +416,7 @@ export const mountTemperatureHistory = (root, app, water) => {
                 model.errorMessage ? h('div', { class: 'warning-line' }, icon('warning'), model.errorMessage) : null,
                 h('div', { class: 'help' },
                     h('span', null, 'Gaps in the line are times the pump was off, when the sensor can’t read the water.'),
+                    data.resolution > 0 ? h('span', null, `Each step averages ${formatSpan(data.resolution)}; the shading behind it spans its lowest to highest reading.`) : null,
                     helpSeen ? null : h('span', null, 'Drag the graph to move through time, scroll or pinch to zoom, and point at it (or touch and hold) to read a temperature.')))
         ];
     };
