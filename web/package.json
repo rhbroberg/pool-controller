@@ -1,0 +1,17 @@
+{
+    "name": "pool-web",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Web front end for the pool controller: serves the page and forwards its API calls to the pool server",
+    "type": "module",
+    "main": "server.js",
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "start": "node server.js",
+        "dev": "PORT=8080 node server.js",
+        "test": "node --test \"test/**/*.test.js\""
+    },
+    "license": "ISC"
+}

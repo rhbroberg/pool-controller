@@ -12,6 +12,19 @@ http://localhost:3000/docs
 
 Under docker-compose the service is only reachable through the reverse proxy, which serves it as https on port 443 (and answers LetsEncrypt on port 80).
 
+## Web front end
+
+`../web` is a separate service with the iOS app's features as a web page: the dashboard,
+setpoints, water flow, panel control, temperature and salt history, the event log, accounts and
+server maintenance. It serves the page on port 80 and forwards the REST API (and `/docs`) to the
+pool server, so the page needs no CORS and the iOS app can use the same address. It has no
+dependencies beyond Node.
+
+    cd ../web
+    npm start                                          # port 80, pool server at localhost:3000
+    PORT=8080 POOL_API_URL=http://pi.local:3000 npm start
+    npm test
+
 ## Tests
 
 The REST API tests start the real server with the simulated controller, each test file on its
@@ -47,7 +60,7 @@ This project is still in its infancy.  Some features I intend to add are:
  + temperature visualization
  - notification (temperature ranges, freeze pump activation, no-flow during pump operation, etc.)
  - native ios application
- - basic web interface to control devices
+ + basic web interface to control devices
 
 
 To test using Docker on non-ARM:
