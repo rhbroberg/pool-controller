@@ -157,8 +157,8 @@ struct StatusClient {
 
     /// Asks the server to press the device's button if it isn't already in `on` state.
     /// The controller confirms the change on a later status frame.
-    func setDevice(_ name: String, on: Bool, token: String) async throws {
-        let device = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+    func setDevice(_ name: ReadingName, on: Bool, token: String) async throws {
+        let device = name.rawValue.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name.rawValue
         var request = URLRequest(url: try url(for: "devices/\(device)/\(on)"))
         request.httpMethod = "PUT"
         request.setValue(token, forHTTPHeaderField: "x-auth")
@@ -166,13 +166,13 @@ struct StatusClient {
     }
 
     /// Readings for each name from `from` up to `to`, plus each one's value as the window opens.
-    func fetchHistory(names: [String], from: Date, to: Date) async throws -> HistoryResponse {
+    func fetchHistory(names: [ReadingName], from: Date, to: Date) async throws -> HistoryResponse {
         let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
         guard var components = URLComponents(url: try url(for: "history"), resolvingAgainstBaseURL: false) else {
             throw StatusClientError.invalidAddress(serverAddress)
         }
         components.queryItems = [
-            URLQueryItem(name: "names", value: names.joined(separator: ",")),
+            URLQueryItem(name: "names", value: names.map(\.rawValue).joined(separator: ",")),
             URLQueryItem(name: "from", value: iso.format(from)),
             URLQueryItem(name: "to", value: iso.format(to))
         ]

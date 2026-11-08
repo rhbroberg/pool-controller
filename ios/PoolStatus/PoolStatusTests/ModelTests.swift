@@ -162,7 +162,7 @@ struct HistoryTests {
 
         #expect(model.errorMessage == nil)
         #expect(model.earliest == at(0))
-        let heating = model.heatingIntervals(from: TemperatureHistoryModel.heaterName, through: at(6))
+        let heating = model.heatingIntervals(from: .heater, through: at(6))
         #expect(heating.map(\.start) == [at(2)])
         #expect(heating.map(\.end) == [at(4)])
 

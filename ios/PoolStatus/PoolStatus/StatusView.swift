@@ -136,8 +136,8 @@ struct StatusView: View {
 
     @ViewBuilder
     private var dashboard: some View {
-        TemperatureCard(pool: store.measurement(named: "pool temp"),
-                        secondary: ["spa temp", "ambient", "salt"].map(store.measurement(named:)),
+        TemperatureCard(pool: store.measurement(named: .poolTemperature),
+                        secondary: [.spaTemperature, .airTemperature, .salt].map(store.measurement(named:)),
                         lastRefresh: store.lastRefresh,
                         isConnected: store.isConnected)
 
@@ -330,14 +330,14 @@ private struct TemperatureCard: View {
     @ViewBuilder
     private func secondaryRow(_ measurement: DashboardReading) -> some View {
         switch measurement.name {
-        case "spa temp":
+        case .spaTemperature:
             NavigationLink {
                 TemperatureHistoryView(water: .spa)
             } label: {
                 row(measurement, linked: true)
             }
             .buttonStyle(.plain)
-        case "salt":
+        case .salt:
             NavigationLink {
                 SaltHistoryView()
             } label: {

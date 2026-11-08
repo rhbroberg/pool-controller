@@ -1,5 +1,75 @@
 import Foundation
 
+/// A reading or switch as the server names it, such as `pool temp` or `aux14`. Names the
+/// controller reports are open-ended, so this wraps a string rather than enumerating them.
+struct ReadingName: RawRepresentable, Hashable, Codable {
+    let rawValue: String
+
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+}
+
+/// The controller's own names, which are the same at every installation.
+extension ReadingName {
+    static let poolTemperature = ReadingName("pool temp")
+    static let spaTemperature = ReadingName("spa temp")
+    static let airTemperature = ReadingName("ambient")
+    static let salt = ReadingName("salt")
+    static let checkSystem = ReadingName("check system")
+
+    static let filter = ReadingName("filter")
+    static let lights = ReadingName("lights")
+    static let heater = ReadingName("heater1")
+    /// Whether the heater is in Auto Control rather than Manual Off.
+    static let heaterMode = ReadingName("heater1 mode")
+    static let superchlorinate = ReadingName("superchlorinate")
+
+    /// The water flow switches; spillover is on only with spa, and spa only with pool.
+    static let pool = ReadingName("pool")
+    static let spa = ReadingName("spa")
+    static let spillover = ReadingName("spillover")
+}
+
+extension ReadingName {
+    private enum Unit {
+        case fahrenheit, partsPerMillion, none
+    }
+
+    private var unit: Unit {
+        switch self {
+        case .poolTemperature, .spaTemperature, .airTemperature: .fahrenheit
+        case .salt: .partsPerMillion
+        default: .none
+        }
+    }
+
+    /// The value with its unit, or a placeholder with the unit while there is no value yet.
+    func format(_ value: Double?) -> String {
+        switch unit {
+        case .fahrenheit:
+            guard let value else {
+                return "--°F"
+            }
+            // the controller reports Fahrenheit and takes setpoints in it, so it isn't converted
+            return Measurement(value: value, unit: UnitTemperature.fahrenheit)
+                .formatted(.measurement(width: .abbreviated, usage: .asProvided,
+                                        numberFormatStyle: .number.precision(.fractionLength(0))))
+        case .partsPerMillion:
+            guard let value else {
+                return "-- ppm"
+            }
+            return "\(value.formatted(.number.precision(.fractionLength(0)).grouping(.never))) ppm"
+        case .none:
+            return value?.formatted() ?? "--"
+        }
+    }
+}
+
 /// One entry from `GET /status`: the newest recorded value of a reading.
 struct StatusReading: Decodable, Identifiable, Hashable {
     enum Category: String, Decodable {
@@ -16,38 +86,14 @@ struct StatusReading: Decodable, Identifiable, Hashable {
         }
     }
 
-    let name: String
+    let name: ReadingName
     let category: Category
     let value: Double
     let timestamp: Date
 
-    var id: String { name }
+    var id: ReadingName { name }
 
     var isOn: Bool { value != 0 }
 
-    var displayName: String { Self.displayName(for: name) }
-
-    var formattedValue: String {
-        switch name {
-        case "pool temp", "spa temp", "ambient": "\(Int(value))°F"
-        case "salt": "\(Int(value)) ppm"
-        default: value.formatted()
-        }
-    }
-
-    static func displayName(for name: String) -> String {
-        switch name {
-        case "pool temp": "Pool"
-        case "spa temp": "Spa"
-        case "ambient": "Air"
-        case "heater1": "Heater"
-        case "superchlorinate": "Super Chlorinate"
-        case "aux14": "Spa Filter"
-        case "aux3": "Yard Lights"
-        case "aux5": "Blower"
-        case "valve4": "Heat Pump"
-        case "spillover": "Spillover"
-        default: name.capitalized
-        }
-    }
+    var formattedValue: String { name.format(value) }
 }

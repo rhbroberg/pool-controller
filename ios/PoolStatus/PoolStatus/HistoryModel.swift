@@ -15,7 +15,7 @@ struct HistoryResponse: Decodable {
     }
 
     struct Series: Decodable {
-        let name: String
+        let name: ReadingName
         let before: Point?
         let points: [Point]
     }
@@ -49,14 +49,6 @@ final class TemperatureHistoryModel {
         let samples: [HistorySample]
     }
 
-    static let airName = "ambient"
-    static let heaterName = "heater1"
-    static let heatPumpName = "valve4"
-    static let spaFilterName = "aux14"
-    static let poolPumpName = "filter"
-    static let spaModeName = "spa"
-    static let spilloverName = "spillover"
-
     let water: WaterBody
 
     private(set) var earliest: Date?
@@ -65,24 +57,24 @@ final class TemperatureHistoryModel {
     /// The latest time covered by fetched data.
     private(set) var loadedThrough: Date?
 
-    private var values: [String: [Date: Double]] = [:]
-    private var sorted: [String: [HistorySample]] = [:]
+    private var values: [ReadingName: [Date: Double]] = [:]
+    private var sorted: [ReadingName: [HistorySample]] = [:]
     private var loaded: [ClosedRange<Date>] = []
 
     init(water: WaterBody) {
         self.water = water
     }
 
-    private var names: [String] {
-        [water.temperatureName, Self.airName, Self.heaterName, Self.heatPumpName, Self.poolPumpName] + Self.circulationNames
+    private var names: [ReadingName] {
+        [water.temperatureName, .airTemperature, .heater, .heatPump, .filter] + Self.circulationNames
     }
 
-    func samples(_ name: String) -> [HistorySample] {
+    func samples(_ name: ReadingName) -> [HistorySample] {
         sorted[name] ?? []
     }
 
     var waterSamples: [HistorySample] { samples(water.temperatureName) }
-    var airSamples: [HistorySample] { samples(Self.airName) }
+    var airSamples: [HistorySample] { samples(.airTemperature) }
 
     // MARK: - Loading
 
@@ -167,7 +159,7 @@ final class TemperatureHistoryModel {
 
     /// Times `source` (the heater or the heat pump) was warming this body of water, ending no
     /// later than `end`. The two are in series, so both send their heat to the same place.
-    func heatingIntervals(from source: String, through end: Date) -> [Interval] {
+    func heatingIntervals(from source: ReadingName, through end: Date) -> [Interval] {
         intervals([source] + Self.circulationNames, through: end) { state in
             (state[source] ?? false) && heats(state)
         }
@@ -181,43 +173,39 @@ final class TemperatureHistoryModel {
         guard !readings.isEmpty else {
             return []
         }
-        guard !samples(pumpName).isEmpty else {
+        let pump = water.pump
+        guard !samples(pump).isEmpty else {
             return [Segment(id: 0, samples: extended(readings, to: end))]
         }
-        let running = intervals([pumpName], through: end) { $0[pumpName] == true }
+        let running = intervals([pump], through: end) { $0[pump] == true }
         return running.enumerated().compactMap { index, interval in
             let inside = readings.filter { $0.date >= interval.start && $0.date <= interval.end }
             return inside.isEmpty ? nil : Segment(id: index, samples: extended(inside, to: interval.end))
         }
     }
 
-    /// The pump just upstream of this body's temperature sensor.
-    private var pumpName: String {
-        water == .pool ? Self.poolPumpName : Self.spaFilterName
-    }
-
     /// The switches that decide where water, and so heat, goes.
-    private static let circulationNames = [spaFilterName, spaModeName, spilloverName]
+    private static let circulationNames: [ReadingName] = [.spaFilter, .spa, .spillover]
 
     /// Heat reaches both bodies in spillover; otherwise the spa while water flows through it
     /// (spa mode or the spa filter), and the pool the rest of the time.
-    private func heats(_ state: [String: Bool]) -> Bool {
-        if state[Self.spilloverName] == true {
+    private func heats(_ state: [ReadingName: Bool]) -> Bool {
+        if state[.spillover] == true {
             return true
         }
-        let toSpa = state[Self.spaModeName] == true || state[Self.spaFilterName] == true
+        let toSpa = state[.spa] == true || state[.spaFilter] == true
         return water == .spa ? toSpa : !toSpa
     }
 
     /// The stretches of time `condition` held, replaying every change to the switches in `names`.
-    private func intervals(_ names: [String], through end: Date,
-                           where condition: ([String: Bool]) -> Bool) -> [Interval] {
+    private func intervals(_ names: [ReadingName], through end: Date,
+                           where condition: ([ReadingName: Bool]) -> Bool) -> [Interval] {
         let changes = names
             .flatMap { name in samples(name).map { (date: $0.date, name: name, on: $0.value != 0) } }
             .filter { $0.date <= end }
             .sorted { $0.date < $1.date }
 
-        var state: [String: Bool] = [:]
+        var state: [ReadingName: Bool] = [:]
         var result: [Interval] = []
         var since: Date?
         for change in changes {
@@ -253,8 +241,6 @@ final class TemperatureHistoryModel {
 /// Salt level for one time window, from `GET /history`.
 @Observable
 final class SaltHistoryModel {
-    static let readingName = "salt"
-
     private(set) var samples: [HistorySample] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
@@ -264,8 +250,8 @@ final class SaltHistoryModel {
         defer { isLoading = false }
         do {
             let response = try await StatusClient(serverAddress: serverAddress)
-                .fetchHistory(names: [Self.readingName], from: start, to: end)
-            let series = response.series.first { $0.name == Self.readingName }
+                .fetchHistory(names: [.salt], from: start, to: end)
+            let series = response.series.first { $0.name == .salt }
             let points = (series?.before.map { [$0] } ?? []) + (series?.points ?? [])
             var loaded = points.compactMap { point in
                 point.value.map { HistorySample(date: max(point.date, start), value: $0) }

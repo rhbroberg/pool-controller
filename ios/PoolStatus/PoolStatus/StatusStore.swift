@@ -30,7 +30,7 @@ final class StatusStore {
     /// commissioning, so it isn't saved.
     private(set) var commissioning: Credentials?
     /// Requested state for controls the controller hasn't confirmed yet.
-    private(set) var pending: [String: Bool] = [:]
+    private(set) var pending: [ReadingName: Bool] = [:]
     /// A requested water flow mode the controller hasn't reached yet.
     private(set) var pendingWaterMode: WaterMode?
     /// Counts changes the controller has confirmed, for haptic feedback.
@@ -38,7 +38,7 @@ final class StatusStore {
     /// Whether the saved account's role has been checked with the server since launch.
     private var accountChecked = false
 
-    private static let measurementOrder = ["pool temp", "spa temp", "ambient", "salt"]
+    private static let measurementOrder: [ReadingName] = [.poolTemperature, .spaTemperature, .airTemperature, .salt]
 
     var isConnected: Bool { connection == .connected }
 
@@ -50,23 +50,19 @@ final class StatusStore {
     /// The controller's water flow mode: spillover if that switch is on, otherwise spa if it is,
     /// otherwise pool. Unknown until the server has reported the pool switch.
     var waterMode: WaterMode? {
-        if reading(named: "spillover")?.isOn == true {
+        if reading(named: .spillover)?.isOn == true {
             return .spillover
         }
-        if reading(named: "spa")?.isOn == true {
+        if reading(named: .spa)?.isOn == true {
             return .spa
         }
-        return reading(named: "pool") == nil ? nil : .pool
+        return reading(named: .pool) == nil ? nil : .pool
     }
 
-    /// Whether the pump feeding a temperature sensor runs: each sensor sits just downstream of
-    /// its pump, so its reading is current only then. The pool's is the filter pump; the spa's is
-    /// the spa filter (aux14 at this installation), whatever the water flow mode.
-    func pumpRunning(for temperatureName: String) -> Bool {
-        reading(named: Self.pumpForTemperature[temperatureName] ?? "")?.isOn == true
+    /// Whether the pump feeding `body`'s temperature sensor runs, so its reading is current.
+    func pumpRunning(for body: WaterBody) -> Bool {
+        reading(named: body.pump)?.isOn == true
     }
-
-    static let pumpForTemperature = ["pool temp": "filter", "spa temp": "aux14"]
 
     /// Every measurement always has a slot, so the card keeps its shape while readings arrive;
     /// pool and spa are dimmed, as stale readings, while their pumps are off.
@@ -74,23 +70,23 @@ final class StatusStore {
         Self.measurementOrder.map(measurement(named:))
     }
 
-    func measurement(named name: String) -> DashboardReading {
-        let reading = reading(named: name)
+    func measurement(named name: ReadingName) -> DashboardReading {
+        let body = WaterBody.allCases.first { $0.temperatureName == name }
         return DashboardReading(name: name,
-                           title: StatusReading.displayName(for: name),
-                           value: reading?.formattedValue ?? (name == "salt" ? "-- ppm" : "--°F"),
-                           isDimmed: Self.pumpForTemperature[name] != nil && !pumpRunning(for: name))
+                                title: name.displayName,
+                                value: name.format(reading(named: name)?.value),
+                                isDimmed: body.map { !pumpRunning(for: $0) } ?? false)
     }
 
     var needsAttention: Bool {
-        reading(named: "check system")?.isOn ?? false
+        reading(named: .checkSystem)?.isOn ?? false
     }
 
     var lastSwitchChange: Date? {
         readings.first { $0.category == .status }?.timestamp
     }
 
-    func reading(named name: String) -> StatusReading? {
+    func reading(named name: ReadingName) -> StatusReading? {
         readings.first { $0.name == name }
     }
 
@@ -100,7 +96,7 @@ final class StatusStore {
     }
 
     /// The state requested for `name` that the controller hasn't confirmed yet.
-    func pendingState(_ name: String) -> Bool? {
+    func pendingState(_ name: ReadingName) -> Bool? {
         pending[name]
     }
 

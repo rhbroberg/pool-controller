@@ -8,7 +8,7 @@ struct StatusRefreshTests {
         + [("pool temp", "info", 81), ("spa temp", "info", 99), ("ambient", "info", 60), ("salt", "info", 3200)]
 
     @Test("shows the server's readings and heating, connected")
-    func refreshes() async {
+    func refreshes() async throws {
         let status = Fixture.status(readings)
         let server = StubServer { _, path, _ in
             switch path {
@@ -25,14 +25,14 @@ struct StatusRefreshTests {
         #expect(store.lastRefresh != nil)
         #expect(store.waterMode == .pool)
         #expect(store.measurements.map(\.value) == ["81°F", "99°F", "60°F", "3200 ppm"])
-        #expect(store.measurement(named: "pool temp").isDimmed == false)
-        #expect(store.measurement(named: "spa temp").isDimmed, "the spa filter is off, so its reading is old")
+        #expect(store.measurement(named: .poolTemperature).isDimmed == false)
+        #expect(store.measurement(named: .spaTemperature).isDimmed, "the spa filter is off, so its reading is old")
         #expect(store.heating?.target == .pool)
 
-        let heater = EquipmentControl.all.first { $0.name == "heater1" }!
+        let heater = try #require(EquipmentControl.control(named: .heater))
         #expect(store.isOn(heater), "the heater's state comes from its mode")
         #expect(store.heating(for: heater)?.heating == true)
-        let filter = EquipmentControl.all.first { $0.name == "filter" }!
+        let filter = try #require(EquipmentControl.control(named: .filter))
         #expect(store.heating(for: filter) == nil)
     }
 
@@ -145,11 +145,11 @@ struct SignedInTests {
         try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
         #expect(store.canControl)
 
-        let lights = try #require(EquipmentControl.all.first { $0.name == "lights" })
+        let lights = try #require(EquipmentControl.control(named: .lights))
         await store.setControl(lights, on: true, serverAddress: server.address)
         #expect(store.isOn(lights))
         #expect(store.confirmedChanges == 1)
-        #expect(store.pendingState("lights") == nil)
+        #expect(store.pendingState(.lights) == nil)
         #expect(server.requests.contains("PUT devices/lights/true"))
         store.signOut()
     }
@@ -274,7 +274,7 @@ struct SignedInTests {
         }
         let store = StatusStore()
         try await store.signIn(name: "operator", password: "operator-password", serverAddress: server.address)
-        let filter = try #require(EquipmentControl.all.first { $0.name == "filter" })
+        let filter = try #require(EquipmentControl.control(named: .filter))
         await store.setControl(filter, on: false, serverAddress: server.address)
         #expect(store.credentials == nil)
         #expect(store.errorMessage?.contains("Sign in again") == true)

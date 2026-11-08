@@ -68,6 +68,14 @@ struct ReadingTests {
         #expect(readings[0].formattedValue == "81°F")
         #expect(readings[1].formattedValue == "3100 ppm")
         #expect(readings[2].isOn)
+        #expect(ReadingName.poolTemperature.format(nil) == "--°F")
+        #expect(ReadingName.salt.format(nil) == "-- ppm")
+    }
+
+    @Test("words a pending change to suit the control")
+    func pendingText() throws {
+        #expect(try #require(EquipmentControl.control(named: .lights)).pendingText(true) == "Turning On…")
+        #expect(try #require(EquipmentControl.control(named: .heater)).pendingText(false) == "To Manual Off…")
     }
 
     @Test("names controller outputs the way the panel does", arguments: [
@@ -75,7 +83,7 @@ struct ReadingTests {
         ("heater1", "Heater"), ("ambient", "Air"), ("lights", "Lights")
     ])
     func names(_ name: String, _ title: String) {
-        #expect(StatusReading.displayName(for: name) == title)
+        #expect(ReadingName(name).displayName == title)
     }
 
     @Test("maps server event types onto the log's filters")
@@ -105,8 +113,8 @@ struct ReadingTests {
         #expect(heating.range == 65...104)
         #expect(heating.setpoint(.heatpump, for: .spa) == 100)
         #expect(heating.device(.heater1)?.body == nil)
-        #expect(HeatingDevice(controlName: "valve4") == .heatpump)
-        #expect(HeatingDevice(controlName: "filter") == nil)
+        #expect(HeatingDevice(controlName: .heatPump) == .heatpump)
+        #expect(HeatingDevice(controlName: .filter) == nil)
     }
 }
 

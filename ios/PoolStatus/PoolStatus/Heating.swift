@@ -13,10 +13,10 @@ enum WaterBody: String, CaseIterable, Identifiable, Decodable {
         }
     }
 
-    var temperatureName: String {
+    var temperatureName: ReadingName {
         switch self {
-        case .pool: "pool temp"
-        case .spa: "spa temp"
+        case .pool: .poolTemperature
+        case .spa: .spaTemperature
         }
     }
 }
@@ -35,15 +35,7 @@ enum HeatingDevice: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The equipment control that enables it.
-    var controlName: String {
-        switch self {
-        case .heater1: "heater1"
-        case .heatpump: "valve4"
-        }
-    }
-
-    init?(controlName: String) {
+    init?(controlName: ReadingName) {
         guard let device = Self.allCases.first(where: { $0.controlName == controlName }) else {
             return nil
         }
