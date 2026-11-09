@@ -280,6 +280,11 @@ public final class StatusStore {
         }
     }
 
+    /// The server's identity and build; nil if it can't be reached.
+    public func systemInfo() async -> SystemInfo? {
+        try? await client.fetchSystemInfo(timeout: StatusClient.defaultTimeout)
+    }
+
     // MARK: Server maintenance (admin)
 
     /// Erases the server's history and accounts. Every account is gone afterwards, so this
