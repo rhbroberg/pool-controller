@@ -129,7 +129,12 @@ private struct HistoryCalendar: UIViewRepresentable {
         context.coordinator.showSelection()
         if context.coordinator.markedRevision != model.revision {
             context.coordinator.markedRevision = model.revision
-            view.reloadDecorations(forDateComponents: daysAround(visibleMonth), animated: true)
+            let days = daysAround(visibleMonth)
+            // An animated reload applies a collection snapshot, and the calendar scrolls while
+            // that snapshot is still applying, which asks for a second one. UIKit aborts on that.
+            DispatchQueue.main.async {
+                view.reloadDecorations(forDateComponents: days, animated: false)
+            }
         }
     }
 
