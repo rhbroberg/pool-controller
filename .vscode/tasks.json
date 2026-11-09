@@ -38,6 +38,15 @@
             "problemMatcher": []
         },
         {
+            "label": "Scan Docker images",
+            "detail": "builds the images and fails on critical or high CVEs Docker Scout knows a fix for; needs Docker",
+            "type": "shell",
+            "command": "make scout",
+            "options": { "cwd": "${workspaceFolder}/docker" },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
             "label": "Test iOS app with coverage",
             "detail": "runs on the \"PoolStatus Tests\" simulator; writes ios/coverage/lcov.info",
             "type": "shell",

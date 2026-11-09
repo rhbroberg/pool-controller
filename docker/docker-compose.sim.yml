@@ -5,7 +5,8 @@ name: pool-controller-sim
 
 services:
   pool:
-    command: ["node", "server.js", "-d", "sim", "-f", "/opt/test-data/sample-various-bin"]
+    # the image's entrypoint is node
+    command: ["server.js", "-d", "sim", "-f", "/opt/test-data/sample-various-bin"]
     environment:
       - MONGODB_URI=mongodb://mongo:27017/Mystic
     devices: !reset []

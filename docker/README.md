@@ -11,6 +11,12 @@ Four containers, defined in `docker-compose.yml`:
 - **mongo** keeps history and accounts in `/data/db` on the host. No port is published; only the
   pool server reaches it.
 
+The web and pool images are [distroless](https://github.com/GoogleContainerTools/distroless):
+Node and the app, with no shell or package manager, so `docker compose exec pool sh` doesn't work.
+Node does, though it isn't on the `PATH`:
+`docker compose exec pool /nodejs/bin/node -e 'console.log(process.version)'`. For a shell, put
+the base image's `:debug` tag, which adds busybox, on the Dockerfile's last `FROM` and rebuild.
+
 Settings are in `.env`. The two secrets come from the shell that runs `docker compose`, never a
 committed file:
 
@@ -20,7 +26,7 @@ committed file:
 On the Pi:
 
     export POOL_JWT_SECRET=... POOL_HE_DDNS_KEY=...
-    make up        # docker compose up -d --build
+    make up        # docker compose build --pull, then up -d
     make logs
     make down
 
@@ -31,6 +37,48 @@ only to recreate a container, after changing `.env` or pulling a new version.
 the images as `POOL_GIT_COMMIT`; the page's and the app's Settings show it, and so does
 `GET /system/info`. Running `docker compose` directly builds images that report `unknown` unless
 `POOL_GIT_COMMIT` is exported first.
+
+## Checking the images for vulnerabilities
+
+    make scout
+
+builds the images the compose file builds (pool, web and caddy, on freshly pulled base images)
+and fails if [Docker Scout](https://docs.docker.com/scout/) finds a critical or high CVE in any
+of them that has a fix available. CVEs nobody has fixed yet don't fail it, since there's nothing
+to update to. Mongo isn't checked: it's pulled rather than built, and pinned for the Pi 4 (below).
+It needs Docker running and signed in to Docker Hub (`docker login`), and `jq`.
+
+The git pre-commit hook runs it whenever a commit changes what goes into an image: the
+Dockerfiles, `.dockerignore`, the package files, `docker/caddy`, the compose files, or the check
+itself. It builds from the working tree, not the staged files. For a commit:
+
+    POOL_SCOUT=always git commit ...   # scan even though no image changed
+    POOL_SCOUT=skip git commit ...     # don't scan
+    git commit --no-verify ...         # skip the lint as well
+
+New CVEs are published every day, so an image that passed can fail later without any change;
+run `make scout` now and then, and before deploying.
+
+When a finding can't be fixed yet and doesn't matter here, record why in an
+[OpenVEX](https://openvex.dev) file in `docker/scout/` (any `*.json`), and the check stops
+counting it:
+
+    {
+      "@context": "https://openvex.dev/ns/v0.2.0",
+      "@id": "https://github.com/rhbroberg/pool-controller/vex/2026-11-09",
+      "author": "rhbroberg",
+      "timestamp": "2026-11-09T00:00:00Z",
+      "version": 1,
+      "statements": [{
+        "vulnerability": { "name": "CVE-2026-82560" },
+        "products": [{ "@id": "pkg:docker/rhbroberg/pool-web" }],
+        "status": "not_affected",
+        "justification": "vulnerable_code_not_in_execute_path",
+        "impact_statement": "why it doesn't apply"
+      }]
+    }
+
+Remove the statement once the fix is in, so the check covers that CVE again.
 
 ## The certificate
 
