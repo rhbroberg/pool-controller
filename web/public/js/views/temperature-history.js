@@ -61,7 +61,12 @@ export const mountTemperatureHistory = (root, app, water) => {
     let preset = 'day';
     // the time under the pointer while reading values off the graph
     let selected = null;
-    let showAir = prefs.read('showAirTemperature', true);
+    // what the legend's switches show on the graph, kept between visits
+    const shown = {
+        air: prefs.read('showAirTemperature', true),
+        heater: prefs.read('showHeater', true),
+        heatPump: prefs.read('showHeatPump', true)
+    };
     const helpSeen = prefs.read('historyHelpSeen', false);
     let chart = null;
     let loadTimer = null;
@@ -276,9 +281,9 @@ export const mountTemperatureHistory = (root, app, water) => {
         return {
             resolution: model.resolution(drawn),
             segments: model.waterSegments(end, drawn),
-            air: showAir ? model.airLine(end, drawn) : [],
-            heater: model.heatingSpans(HEATER, end, drawn),
-            heatPump: model.heatingSpans(HEAT_PUMP, end, drawn)
+            air: shown.air ? model.airLine(end, drawn) : [],
+            heater: shown.heater ? model.heatingSpans(HEATER, end, drawn) : [],
+            heatPump: shown.heatPump ? model.heatingSpans(HEAT_PUMP, end, drawn) : []
         };
     };
 
@@ -357,22 +362,26 @@ export const mountTemperatureHistory = (root, app, water) => {
         ];
     };
 
+    // the air, heater and heat pump entries double as their show/hide switches
+    const legendToggle = (key, pref, title, tooltip, swatch) => h('button', {
+        class: ['legend-toggle legend-item', shown[key] ? '' : 'off'],
+        type: 'button',
+        'aria-pressed': String(shown[key]),
+        title: tooltip,
+        onClick: () => {
+            shown[key] = !shown[key];
+            prefs.write(pref, shown[key]);
+            redraw();
+        }
+    }, swatch, title, icon(shown[key] ? 'eye' : 'eyeOff'));
+
     const legend = () => h('div', { class: 'legend' },
         h('span', { class: 'legend-item', style: { color: COLORS.water } }, h('span', { class: 'legend-line' }), h('span', { style: { color: 'var(--text)' } }, body.title)),
-        // the air entry doubles as its show/hide switch
-        h('button', {
-            class: ['legend-toggle legend-item', showAir ? '' : 'off'],
-            type: 'button',
-            'aria-pressed': String(showAir),
-            title: 'Shows or hides air temperature on the graph',
-            onClick: () => {
-                showAir = !showAir;
-                prefs.write('showAirTemperature', showAir);
-                redraw();
-            }
-        }, h('span', { class: 'legend-line' }), 'Air', icon(showAir ? 'eye' : 'eyeOff')),
-        h('span', { class: 'legend-item' }, h('span', { class: 'legend-band', style: { background: COLORS.heater, opacity: HEATER_OPACITY } }), 'Heater'),
-        h('span', { class: 'legend-item' }, h('span', { class: 'legend-band', style: { background: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY } }), 'Heat Pump'));
+        legendToggle('air', 'showAirTemperature', 'Air', 'Shows or hides air temperature on the graph', h('span', { class: 'legend-line' })),
+        legendToggle('heater', 'showHeater', 'Heater', 'Shows or hides when the heater was on',
+            h('span', { class: 'legend-band', style: { background: COLORS.heater, opacity: HEATER_OPACITY } })),
+        legendToggle('heatPump', 'showHeatPump', 'Heat Pump', 'Shows or hides when the heat pump was on',
+            h('span', { class: 'legend-band', style: { background: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY } })));
 
     const render = () => {
         const data = drawChart() || lines();

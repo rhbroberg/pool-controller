@@ -47,6 +47,8 @@ struct TemperatureHistoryView: View {
 
     @Environment(StatusStore.self) private var store
     @AppStorage(SettingsKey.showAirTemperature) private var showAir = true
+    @AppStorage(SettingsKey.showHeater) private var showHeater = true
+    @AppStorage(SettingsKey.showHeatPump) private var showHeatPump = true
     @AppStorage(SettingsKey.historyHelpSeen) private var helpSeen = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.displayScale) private var displayScale
@@ -98,8 +100,8 @@ struct TemperatureHistoryView: View {
         let data = model.chartData(through: end, level: drawn, within: window)
         let segments = data.water
         let air = showAir ? data.air : []
-        let heater = data.heater
-        let heatPump = data.heatPump
+        let heater = showHeater ? data.heater : []
+        let heatPump = showHeatPump ? data.heatPump : []
 
         // no scroll view around the graph, so dragging it moves through time and never the page
         VStack(alignment: .leading, spacing: 12) {
@@ -356,39 +358,52 @@ struct TemperatureHistoryView: View {
     }
 
     private var heaterLegend: some View {
-        legendItem("Heater") {
-            RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(Self.heaterOpacity)).frame(width: 14, height: 12)
+        legendToggle("Heater", isOn: $showHeater, accessibilityLabel: "Heater",
+                     hint: "Shows or hides when the heater was on") {
+            RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(Self.heaterOpacity * (showHeater ? 1 : 0.35)))
+                .frame(width: 14, height: 12)
         }
     }
 
     private var heatPumpLegend: some View {
-        legendItem("Heat Pump") {
-            RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(Self.heatPumpOpacity)).frame(width: 14, height: 12)
+        legendToggle("Heat Pump", isOn: $showHeatPump, accessibilityLabel: "Heat pump",
+                     hint: "Shows or hides when the heat pump was on") {
+            RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(Self.heatPumpOpacity * (showHeatPump ? 1 : 0.35)))
+                .frame(width: 14, height: 12)
         }
     }
 
     private var airLegend: some View {
-        // the air entry doubles as its show/hide switch, which keeps the page short enough
-        // to fit without scrolling
+        legendToggle("Air", isOn: $showAir, accessibilityLabel: "Air temperature",
+                     hint: "Shows or hides air temperature on the graph") {
+            Capsule().fill(Self.airColor.opacity(showAir ? 1 : 0.35)).frame(width: 18, height: 2)
+        }
+    }
+
+    // the air, heater and heat pump entries double as their show/hide switches, which keeps the
+    // page short enough to fit without scrolling
+    private func legendToggle(_ title: LocalizedStringKey, isOn: Binding<Bool>,
+                              accessibilityLabel: LocalizedStringKey, hint: LocalizedStringKey,
+                              @ViewBuilder swatch: () -> some View) -> some View {
         Button {
-                showAir.toggle()
-            } label: {
-                HStack(spacing: 6) {
-                    Capsule().fill(Self.airColor.opacity(showAir ? 1 : 0.35)).frame(width: 18, height: 2)
-                    Text("Air")
-                    Image(systemName: showAir ? "eye" : "eye.slash")
-                        .font(.caption2)
-                }
-                .foregroundStyle(showAir ? Color.primary : Color.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(.tertiarySystemFill), in: .capsule)
+            isOn.wrappedValue.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                swatch()
+                Text(title)
+                Image(systemName: isOn.wrappedValue ? "eye" : "eye.slash")
+                    .font(.caption2)
             }
-            .buttonStyle(.plain)
-            .fixedSize()
-            .accessibilityLabel("Air temperature")
-            .accessibilityValue(showAir ? "Shown" : "Hidden")
-            .accessibilityHint("Shows or hides air temperature on the graph")
+            .foregroundStyle(isOn.wrappedValue ? Color.primary : Color.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(.tertiarySystemFill), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(isOn.wrappedValue ? "Shown" : "Hidden")
+        .accessibilityHint(hint)
     }
 
     /// The values under the finger, in place of the date range while reading the graph.

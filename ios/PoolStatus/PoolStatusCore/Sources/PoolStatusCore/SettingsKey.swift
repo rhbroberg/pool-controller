@@ -8,5 +8,7 @@ public enum SettingsKey {
     public static let networkScanPort = "networkScanPort"
     public static let scanTimeoutSeconds = "scanTimeoutSeconds"
     public static let showAirTemperature = "showAirTemperature"
+    public static let showHeater = "showHeater"
+    public static let showHeatPump = "showHeatPump"
     public static let historyHelpSeen = "historyHelpSeen"
 }
