@@ -5,6 +5,8 @@ import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, wa
 import * as prefs from './prefs.js';
 
 export const REFRESH_SECONDS = 15;
+// the server fetches the forecast every half hour, so the page needn't ask on every refresh
+export const WEATHER_REFRESH_SECONDS = 300;
 export const DEFAULT_RECONNECT_SECONDS = 30;
 export const RECONNECT_CHOICES = [10, 30, 60, 120, 300];
 // how long to keep polling for the controller to report a requested change
@@ -29,6 +31,9 @@ export class StatusStore {
         this.readings = [];
         // setpoints and what the heater and heat pump are doing; null from a server without them
         this.heating = null;
+        // today's forecast; null until it's been asked for or from a server without weather
+        this.weather = null;
+        this.weatherCheckedAt = 0;
         this.lastRefresh = null;
         this.errorMessage = null;
         this.isLoading = false;
@@ -199,8 +204,19 @@ export class StatusStore {
         try {
             // heating is extra detail; a server that doesn't offer it still counts as connected
             const heating = this.client.fetchHeating().catch(() => null);
+            // weather is extra detail too; a failed check keeps the last forecast and, like a
+            // successful one, waits before asking again, so a server without weather isn't pestered
+            const weather = Date.now() - this.weatherCheckedAt >= WEATHER_REFRESH_SECONDS * 1000
+                ? this.client.fetchWeather().catch(() => this.weather).then((answer) => {
+                    this.weatherCheckedAt = Date.now();
+                    return answer;
+                })
+                : null;
             this.readings = await this.client.fetchStatus();
             this.heating = await heating;
+            if (weather) {
+                this.weather = await weather;
+            }
             this.lastRefresh = new Date();
             this.errorMessage = null;
             this.markConnected();
@@ -336,8 +352,16 @@ export class StatusStore {
         return this.adminRequest((token) => this.client.fetchSettings(token));
     }
 
-    updateServerSettings(changes) {
-        return this.adminRequest((token) => this.client.updateSettings(changes, token));
+    async updateServerSettings(changes) {
+        const settings = await this.adminRequest((token) => this.client.updateSettings(changes, token));
+        if ('zipCode' in changes || 'timeZone' in changes) {
+            // the server fetches the new forecast straight away; the next refresh picks it up
+            this.weatherCheckedAt = 0;
+            if (!settings.location) {
+                this.weather = null;
+            }
+        }
+        return settings;
     }
 
     maintenanceJobs() {

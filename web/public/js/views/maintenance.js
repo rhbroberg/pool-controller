@@ -1,5 +1,6 @@
-// The time zone and history settings, the maintenance jobs, restart and factory reset, kept off
-// the main Settings page because they affect the server rather than this page.
+// The pool's location for weather, the time zone and history settings, the maintenance jobs,
+// restart and factory reset, kept off the main Settings page because they affect the server
+// rather than this page.
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
@@ -11,7 +12,8 @@ const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
 
-const JOB_TITLES = { rollups: 'History Summaries', retention: 'Old History Cleanup' };
+const JOB_TITLES = { rollups: 'History Summaries', retention: 'Old History Cleanup', weather: 'Weather Forecast' };
+const ZIP_CODE = /^\d{5}(-\d{4})?$/;
 
 export const retentionTitle = (days) => {
     const plural = (count, unit) => `${count} ${unit}${count === 1 ? '' : 's'}`;
@@ -38,6 +40,10 @@ export const mountMaintenance = (root, app) => {
     // settings or jobs that couldn't be read or changed
     let settingsError = null;
     let runningJob = null;
+    // the zip code being typed; null shows the saved one
+    let zipDraft = null;
+    let savingZip = false;
+    let locationError = null;
 
     const run = async (action, done) => {
         working = true;
@@ -77,6 +83,23 @@ export const mountMaintenance = (root, app) => {
             settingsError = error.message;
         }
         redraw();
+    };
+
+    /** a zip code is looked up by the server before it answers; null stops fetching weather */
+    const saveZip = async (zipCode) => {
+        savingZip = true;
+        locationError = null;
+        redraw();
+        try {
+            settings = await store.updateServerSettings({ zipCode });
+            zipDraft = null;
+            jobs = await store.maintenanceJobs().catch(() => jobs);
+        } catch (error) {
+            locationError = error.message;
+        } finally {
+            savingZip = false;
+            redraw();
+        }
     };
 
     const runJob = async (job) => {
@@ -149,6 +172,49 @@ export const mountMaintenance = (root, app) => {
                 })));
     };
 
+    const locationSection = () => {
+        const saved = settings.location ? settings.location.zipCode : '';
+        const draft = zipDraft === null ? saved : zipDraft;
+        const changed = draft.trim() !== saved;
+        const canSave = changed && ZIP_CODE.test(draft.trim()) && !savingZip;
+        const footer = locationError
+            || (settings.location
+                ? 'The server fetches the forecast for this zip code every half hour, shows today’s on the main page and keeps the conditions with the water temperature history.'
+                : 'Give the pool’s zip code to show today’s forecast on the main page. Weather comes from Open-Meteo.');
+        return formSection({ header: 'Location', footer, footerClass: locationError ? 'error' : '' },
+            formRow(h('label', { for: 'zip-code', class: 'label' }, 'Zip Code'),
+                h('input', {
+                    id: 'zip-code',
+                    class: 'trailing',
+                    value: draft,
+                    placeholder: '32801',
+                    inputmode: 'numeric',
+                    autocomplete: 'postal-code',
+                    maxlength: 10,
+                    disabled: savingZip,
+                    onInput: (event) => {
+                        zipDraft = event.target.value;
+                        locationError = null;
+                        redraw();
+                    },
+                    onKeydown: (event) => {
+                        if (event.key === 'Enter' && canSave) {
+                            event.preventDefault();
+                            saveZip(draft.trim());
+                        }
+                    }
+                }),
+                savingZip
+                    ? spinner('small')
+                    : h('button', { class: 'button small', type: 'button', disabled: !canSave, onClick: () => saveZip(draft.trim()) }, 'Save')),
+            settings.location
+                ? formRow(h('span', { class: 'label' }, 'Place'), h('span', { class: 'value' }, settings.location.placeName))
+                : null,
+            settings.location
+                ? actionRow('Stop Fetching Weather', () => saveZip(null), { destructive: true, disabled: savingZip })
+                : null);
+    };
+
     const jobRow = (job) => {
         const failed = job.lastResult === 'failed';
         const lastRun = job.lastFinishedAt
@@ -171,6 +237,7 @@ export const mountMaintenance = (root, app) => {
             topbar({ title: 'Server Maintenance', back: 'settings', backTitle: 'Settings' }),
             h('main', { class: 'page' },
                 h('div', { class: 'form' },
+                    settings ? locationSection() : null,
                     settings ? historySection() : null,
                     jobs.length
                         ? formSection({ header: 'Maintenance Jobs', footer: 'These run on their own. Run Now brings them up to date straight away.' }, ...jobs.map(jobRow))

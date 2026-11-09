@@ -58,6 +58,31 @@ struct StatusRefreshTests {
         await store.refresh()
         #expect(store.connection == .connected)
         #expect(store.heating == nil)
+        #expect(store.weatherSummary == nil)
+    }
+
+    @Test("shows today's weather, asking for it now and then rather than on every refresh")
+    func weather() async throws {
+        let status = Fixture.status(readings)
+        let failing = Shared(false)
+        let server = StubServer { _, path, _ in
+            switch path {
+            case "status": .ok(status)
+            case "weather": failing.value ? .status(500) : .ok(Fixture.weather())
+            default: .status(404)
+            }
+        }
+        let store = server.makeStore()
+        await store.refresh()
+        let summary = try #require(store.weatherSummary)
+        #expect(summary.condition == .sunny)
+        #expect(summary.highLow == "88° / 71°")
+        #expect(summary.place == "Orlando, FL")
+
+        failing.value = true
+        await store.refresh()
+        #expect(server.requests.filter { $0 == "GET weather" }.count == 1)
+        #expect(store.weatherSummary?.highLow == "88° / 71°", "the last forecast stays")
     }
 
     @Test("goes offline when the server can't be reached, keeping the last readings")
@@ -333,6 +358,36 @@ struct SignedInTests {
         let run = try await store.runMaintenanceJob("rollups")
         #expect(run.more == false)
         #expect(server.requests.contains("POST system/jobs/rollups/run"))
+    }
+
+    @Test("an admin sets the zip code, and the forecast for it is asked for straight away")
+    func zipCode() async throws {
+        let located = #"{"timeZone":"America/New_York","timeZoneSource":"system","detectedTimeZone":"America/New_York","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"location":{"zipCode":"32801","countryCode":"US","placeName":"Orlando, FL","latitude":28.5399,"longitude":-81.3898}}"#
+        let cleared = #"{"timeZone":"America/New_York","timeZoneSource":"system","detectedTimeZone":"America/New_York","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"location":null}"#
+        let status = Fixture.status(Fixture.switches(["pool"]))
+        let clearing = Shared(false)
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): .ok(Fixture.login("owner", role: "admin"))
+            case ("GET", "status"): .ok(status)
+            case ("GET", "weather"): .ok(Fixture.weather())
+            case ("PUT", "system/settings"): .ok(clearing.value ? cleared : located)
+            default: .status(404)
+            }
+        }
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "owner", password: "owner-password")
+        await store.refresh()
+
+        let settings = try await store.updateServerSettings(.init(zipCode: .code("32801")))
+        #expect(settings.location?.placeName == "Orlando, FL")
+        await store.refresh()
+        #expect(server.requests.filter { $0 == "GET weather" }.count == 2)
+
+        clearing.value = true
+        let none = try await store.updateServerSettings(.init(zipCode: .clear))
+        #expect(none.location == nil)
+        #expect(store.weatherSummary == nil)
     }
 
     @Test("says an operator can't change the server's settings")

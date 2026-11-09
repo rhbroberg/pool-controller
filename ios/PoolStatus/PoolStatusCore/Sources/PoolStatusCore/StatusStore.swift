@@ -15,6 +15,8 @@ public final class StatusStore {
     public typealias Sleep = (Duration) async throws -> Void
 
     public static let refreshSeconds = 15
+    /// The server fetches the forecast every half hour, so the app needn't ask on every refresh.
+    public static let weatherRefreshSeconds = 300
     public static let defaultReconnectSeconds = 30
     /// How often to ask for status while waiting for the controller to report a requested change.
     public static let confirmationInterval: Duration = .seconds(1)
@@ -38,6 +40,8 @@ public final class StatusStore {
     public private(set) var readings: [StatusReading] = []
     /// Setpoints and what the heater and heat pump are doing; nil from a server without them.
     public private(set) var heating: HeatingStatus?
+    /// Today's forecast; nil until it's been asked for, and from a server without weather.
+    public private(set) var weather: WeatherReport?
     public private(set) var lastRefresh: Date?
     public private(set) var errorMessage: String?
     public private(set) var connection = Connection.connecting
@@ -60,6 +64,8 @@ public final class StatusStore {
     /// Numbers each refresh, so one that finishes after a newer one doesn't replace its readings.
     @ObservationIgnored private var refreshesStarted = 0
     @ObservationIgnored private var newestApplied = 0
+    /// When the weather was last asked for, whether or not the server had any.
+    @ObservationIgnored private var weatherCheckedAt: Date?
 
     public init(serverAddress: String? = nil,
          defaults: UserDefaults = .standard,
@@ -108,6 +114,11 @@ public final class StatusStore {
                                 title: name.displayName,
                                 value: name.format(reading(named: name)?.value),
                                 isDimmed: body.map { !pumpRunning(for: $0) } ?? false)
+    }
+
+    /// Today's forecast as the dashboard shows it; nil until there is one.
+    public var weatherSummary: DashboardWeather? {
+        weather?.summary
     }
 
     public var needsAttention: Bool {
@@ -175,14 +186,23 @@ public final class StatusStore {
         do {
             // heating is extra detail; a server that doesn't offer it still counts as connected
             async let heatingStatus = try? client.fetchHeating()
+            // so is weather; a failed check keeps the last forecast and, like a successful one,
+            // waits before asking again, so a server without weather isn't pestered
+            let checkWeather = weatherCheckedAt.map { Date.now.timeIntervalSince($0) >= TimeInterval(Self.weatherRefreshSeconds) } ?? true
+            async let weatherReport = checkWeather ? try? client.fetchWeather() : nil
             let fetched = try await client.fetchStatus()
             let fetchedHeating = await heatingStatus
+            let fetchedWeather = await weatherReport
             guard number > newestApplied else {
                 return
             }
             newestApplied = number
             readings = fetched
             heating = fetchedHeating
+            if checkWeather {
+                weatherCheckedAt = .now
+                weather = fetchedWeather ?? weather
+            }
             lastRefresh = .now
             errorMessage = nil
             markConnected()
@@ -286,9 +306,17 @@ public final class StatusStore {
     }
 
     public func updateServerSettings(_ changes: ServerSettings.Changes) async throws -> ServerSettings {
-        try await auth.authorized(.configureServer) { client, token in
+        let settings = try await auth.authorized(.configureServer) { client, token in
             try await client.updateSettings(changes, token: token)
         }
+        if changes.zipCode != nil || changes.timeZone != nil {
+            // the server fetches the new forecast straight away; the next refresh picks it up
+            weatherCheckedAt = nil
+            if settings.location == nil {
+                weather = nil
+            }
+        }
+        return settings
     }
 
     public func maintenanceJobs() async throws -> [MaintenanceJob] {

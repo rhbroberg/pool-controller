@@ -5,6 +5,7 @@ var { Setting } = require('../models/setting');
 var utils = require('../utils/writer.js');
 const { isValidTimeZone } = require('../utils/timezone');
 const activity = require('./ActivityService');
+const weatherProviders = require('./WeatherProviders');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
@@ -13,7 +14,10 @@ const DEFAULT_RETENTION_DAYS = 365;
 const MIN_RETENTION_DAYS = 7;
 const MAX_RETENTION_DAYS = 3650;
 
-var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS };
+// five digits, optionally with the ZIP+4 extension, which the lookup doesn't need
+const ZIP_CODE = /^(\d{5})(?:-\d{4})?$/;
+
+var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS, location: null };
 var detected;
 var listeners = [];
 
@@ -60,9 +64,11 @@ exports.load = async function() {
     const doc = await Setting.findById(SETTINGS_ID).lean();
     stored = {
         timeZone: doc && doc.timeZone ? doc.timeZone : null,
-        rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS
+        rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS,
+        location: doc && doc.location && doc.location.zipCode ? doc.location : null
     };
-    logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days`);
+    const where = stored.location ? `weather for ${stored.location.placeName} (${stored.location.zipCode})` : 'no zip code for weather';
+    logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
 };
 
 /**
@@ -84,7 +90,48 @@ exports.rawRetentionDays = function() {
 };
 
 /**
- * listener(changes) runs after a change, with changes.timeZone set when the zone changed
+ * where the pool is ({ zipCode, countryCode, latitude, longitude, placeName }), or null
+ **/
+exports.location = function() {
+    return stored.location;
+};
+
+var publicLocation = (location) => location ? {
+    zipCode: location.zipCode,
+    countryCode: location.countryCode,
+    placeName: location.placeName,
+    latitude: location.latitude,
+    longitude: location.longitude
+} : null;
+
+/**
+ * the place for a zip code: null clears it, an unknown code or one that isn't five digits is a
+ * 400, and a lookup service that can't be reached is a 502
+ **/
+var locate = async (zipCode) => {
+    const text = zipCode === null || typeof zipCode === 'undefined' ? '' : String(zipCode).trim();
+    if (text === '') {
+        return null;
+    }
+    const match = ZIP_CODE.exec(text);
+    if (!match) {
+        throw validationError(`${text} isn’t a zip code; use five digits such as 32801`);
+    }
+    let place;
+    try {
+        place = await weatherProviders.geocode(match[1]);
+    } catch (e) {
+        throw utils.respondWithCode(502, { code: 502, message: `couldn’t look up zip code ${match[1]}: ${e.message}` });
+    }
+    if (!place) {
+        throw validationError(`no place has the zip code ${match[1]}`);
+    }
+    return Object.assign(place, { updatedAt: new Date() });
+};
+
+/**
+ * listener(changes) runs after a change, with changes.timeZone set when the zone changed and
+ * changes.location when the zip code did
  **/
 exports.onChange = function(listener) {
     listeners.push(listener);
@@ -100,12 +147,14 @@ exports.getSettings = async function() {
         detectedTimeZone: detected || null,
         rawRetentionDays: stored.rawRetentionDays,
         minimumRetentionDays: MIN_RETENTION_DAYS,
-        maximumRetentionDays: MAX_RETENTION_DAYS
+        maximumRetentionDays: MAX_RETENTION_DAYS,
+        location: publicLocation(stored.location)
     };
 };
 
 /**
- * changes the time zone (null goes back to the detected one) or how long raw events are kept
+ * changes the time zone (null goes back to the detected one), how long raw events are kept, or
+ * the zip code weather is fetched for (null or empty stops fetching)
  *
  * returns Settings
  **/
@@ -126,11 +175,15 @@ exports.updateSettings = async function(changes, user) {
         }
         update.rawRetentionDays = days;
     }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'zipCode')) {
+        update.location = await locate(changes.zipCode);
+    }
     if (Object.keys(update).length === 0) {
-        throw validationError('give a timeZone or rawRetentionDays to change');
+        throw validationError('give a timeZone, rawRetentionDays or zipCode to change');
     }
 
     const previousZone = exports.timeZone();
+    const previousZip = stored.location ? stored.location.zipCode : null;
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
     stored = Object.assign({}, stored, update);
 
@@ -142,6 +195,10 @@ exports.updateSettings = async function(changes, user) {
     }
     if ('rawRetentionDays' in update) {
         notes.push(`raw history kept ${update.rawRetentionDays} days`);
+    }
+    if ('location' in update && (update.location ? update.location.zipCode : null) !== previousZip) {
+        changed.location = publicLocation(update.location);
+        notes.push(update.location ? `weather for ${update.location.placeName} (${update.location.zipCode})` : 'no zip code for weather');
     }
     if (notes.length > 0) {
         logger.info(`REST ${who}: ${notes.join('; ')}`);

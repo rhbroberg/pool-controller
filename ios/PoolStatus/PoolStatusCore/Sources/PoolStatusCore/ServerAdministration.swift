@@ -1,7 +1,17 @@
 import Foundation
 
-/// `GET /system/settings`: the time zone history days follow and how long raw history is kept.
+/// `GET /system/settings`: the time zone history days follow, how long raw history is kept and
+/// where the pool is, for weather.
 public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
+    /// The place the server found for the zip code an admin gave.
+    public struct Location: Decodable, Sendable, Equatable {
+        public let zipCode: String
+        /// The town and state, such as "Orlando, FL".
+        public let placeName: String
+        public let latitude: Double
+        public let longitude: Double
+    }
+
     public enum TimeZoneSource: String, Decodable, Sendable {
         /// Set by an admin.
         case configured
@@ -19,16 +29,24 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
             case host
         }
 
+        public enum ZipCodeChoice: Sendable, Equatable {
+            case code(String)
+            /// Stop fetching weather.
+            case clear
+        }
+
         public var timeZone: TimeZoneChoice?
         public var rawRetentionDays: Int?
+        public var zipCode: ZipCodeChoice?
 
-        public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil) {
+        public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil, zipCode: ZipCodeChoice? = nil) {
             self.timeZone = timeZone
             self.rawRetentionDays = rawRetentionDays
+            self.zipCode = zipCode
         }
 
         private enum CodingKeys: String, CodingKey {
-            case timeZone, rawRetentionDays
+            case timeZone, rawRetentionDays, zipCode
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -40,7 +58,17 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
             case nil: break
             }
             try container.encodeIfPresent(rawRetentionDays, forKey: .rawRetentionDays)
+            switch zipCode {
+            case .code(let code): try container.encode(code, forKey: .zipCode)
+            case .clear: try container.encodeNil(forKey: .zipCode)
+            case nil: break
+            }
         }
+    }
+
+    /// Five digits, optionally with the ZIP+4 extension.
+    public static func isZipCode(_ text: String) -> Bool {
+        text.wholeMatch(of: /\d{5}(-\d{4})?/) != nil
     }
 
     public let timeZone: String
@@ -49,6 +77,8 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
     public let rawRetentionDays: Int
     public let minimumRetentionDays: Int
     public let maximumRetentionDays: Int
+    /// Nil until an admin gives a zip code, and from a server without weather.
+    public let location: Location?
 }
 
 /// `GET /system/jobs`: one of the server's maintenance jobs and how its last run went.
@@ -76,6 +106,7 @@ public nonisolated struct MaintenanceJob: Decodable, Sendable, Identifiable, Equ
         switch name {
         case "rollups": String(localized: "History Summaries", bundle: .module)
         case "retention": String(localized: "Old History Cleanup", bundle: .module)
+        case "weather": String(localized: "Weather Forecast", bundle: .module)
         default: name.capitalized
         }
     }

@@ -624,6 +624,23 @@ a {
     color: var(--secondary);
 }
 
+.weather-row .weather-icon {
+    width: 15px;
+    height: 15px;
+    margin-right: 2px;
+    color: var(--secondary);
+}
+
+.weather-row .weather-icon.sun,
+.weather-row .weather-icon.cloudSun {
+    color: var(--orange);
+}
+
+.weather-row .weather-icon.cloudRain,
+.weather-row .weather-icon.cloudLightning {
+    color: var(--blue);
+}
+
 .control-section {
     display: flex;
     flex-direction: column;

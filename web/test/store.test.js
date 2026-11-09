@@ -16,6 +16,11 @@ const fakeClient = (overrides = {}) => {
         readings: [switchReading('pool', 1), switchReading('filter', 0)],
         fetchStatus: async () => client.readings,
         fetchHeating: async () => null,
+        weatherRequests: 0,
+        fetchWeather: async () => {
+            client.weatherRequests += 1;
+            return { configured: true, location: { zipCode: '32801', placeName: 'Orlando, FL' }, today: { high: 88, low: 71, condition: 'sunny' }, stale: false };
+        },
         setDevice: async (name, on, token) => {
             client.calls.push(['setDevice', name, on, token]);
         },
@@ -49,6 +54,31 @@ describe('status store', () => {
         assert.equal(store.connection, 'disconnected');
         assert.equal(store.connectionFailure, 'Can’t reach the pool server');
         assert.equal(store.readings.length, 2, 'the last readings stay on screen');
+    });
+
+    it('asks for the weather now and then rather than on every refresh, keeping it through a failure', async () => {
+        const client = fakeClient();
+        const store = newStore(client);
+        await store.refresh();
+        assert.equal(store.weather.today.high, 88);
+        await store.refresh();
+        assert.equal(client.weatherRequests, 1);
+
+        store.weatherCheckedAt = 0;
+        client.fetchWeather = async () => { throw new ApiError('server', { status: 500 }); };
+        await store.refresh();
+        assert.equal(store.weather.today.high, 88, 'the last forecast stays');
+        assert.equal(store.connection, 'connected');
+    });
+
+    it('asks for the weather again once the zip code changes', async () => {
+        prefs.write('credentials', { email: 'owner', token: 't', role: 'admin' });
+        const client = fakeClient({ updateSettings: async (changes) => ({ location: { zipCode: changes.zipCode } }) });
+        const store = newStore(client);
+        await store.refresh();
+        await store.updateServerSettings({ zipCode: '80202' });
+        await store.refresh();
+        assert.equal(client.weatherRequests, 2);
     });
 
     it('stays connected when the server answers with an error', async () => {

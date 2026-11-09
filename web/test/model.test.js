@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -77,6 +77,36 @@ describe('measurements', () => {
         assert.equal(measurement([], 'salt').value, '-- ppm');
         assert.equal(measurement([], 'ambient').value, '--°F');
         assert.equal(measurement([], 'ambient').isDimmed, false);
+    });
+});
+
+describe('weather', () => {
+    const weather = (today, extra = {}) => ({ configured: true, location: { zipCode: '32801', placeName: 'Orlando, FL' }, today, fetchedAt: new Date(), stale: false, ...extra });
+
+    it('shows today’s condition and high and low', () => {
+        assert.deepEqual(weatherSummary(weather({ high: 87.6, low: 71.2, condition: 'sunny', precipitationProbability: 10 })), {
+            title: 'Sunny', icon: 'sun', highLow: '88° / 71°', place: 'Orlando, FL', rain: null, isStale: false
+        });
+    });
+
+    it('mentions a real chance of rain and an out-of-date forecast', () => {
+        const summary = weatherSummary(weather({ high: 75, low: 60, condition: 'rain', precipitationProbability: 80 }, { stale: true }));
+        assert.equal(summary.title, 'Rain');
+        assert.equal(summary.icon, 'cloudRain');
+        assert.equal(summary.rain, '80% chance of rain');
+        assert.equal(summary.isStale, true);
+    });
+
+    it('shows nothing without a zip code or before the first forecast', () => {
+        assert.equal(weatherSummary(null), null);
+        assert.equal(weatherSummary({ configured: false, location: null, today: null }), null);
+        assert.equal(weatherSummary(weather(null)), null);
+    });
+
+    it('copes with a missing temperature or an unknown condition', () => {
+        const summary = weatherSummary(weather({ high: null, low: 60, condition: null }));
+        assert.equal(summary.highLow, '--° / 60°');
+        assert.equal(summary.title, 'Today');
     });
 });
 

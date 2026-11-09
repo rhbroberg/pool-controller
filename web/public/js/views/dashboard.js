@@ -2,7 +2,7 @@
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
-import { GROUPS, WATER_MODES, controlsIn, heatingDeviceFor, measurement, tileState, waterModeInfo } from '../model.js';
+import { GROUPS, WATER_MODES, controlsIn, heatingDeviceFor, measurement, tileState, waterModeInfo, weatherSummary } from '../model.js';
 import { relative, countdown } from '../format.js';
 import { topbar, barButton, navigate, signInPrompt, spinner, renderer } from '../ui.js';
 import { openSetpoints } from './setpoints.js';
@@ -102,6 +102,20 @@ export const mountDashboard = (root, app) => {
             : h('div', { class: 'measurement-row' }, content);
     };
 
+    /** today's forecast at the pool's zip code; nothing until an admin sets one */
+    const weatherRow = () => {
+        const weather = weatherSummary(store.weather);
+        if (!weather) {
+            return null;
+        }
+        const details = [weather.place ? `Today in ${weather.place}` : 'Today', weather.rain, weather.isStale ? 'Forecast out of date' : null];
+        return h('div', { class: 'measurement-row weather-row', title: details.filter(Boolean).join(' · ') },
+            icon(weather.icon, { className: `weather-icon ${weather.icon}` }),
+            h('span', { class: 'row-title' }, weather.title),
+            h('span', { class: ['row-value', weather.isStale ? 'dimmed' : ''], 'aria-label': `High ${weather.highLow.replace(' / ', ', low ')}` }, weather.highLow),
+            icon('chevronRight', { className: 'chevron' }));
+    };
+
     const temperatureCard = () => {
         const pool = measurement(store.readings, 'pool temp');
         return h('div', { class: 'card temperature-card' },
@@ -116,6 +130,7 @@ export const mountDashboard = (root, app) => {
             h('div', { class: 'measurements' },
                 measurementRow('spa temp', '#/history/spa'),
                 measurementRow('ambient'),
+                weatherRow(),
                 measurementRow('salt', '#/history/salt')));
     };
 

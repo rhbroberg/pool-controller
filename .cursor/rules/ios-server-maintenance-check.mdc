@@ -1,0 +1,30 @@
+---
+description: After any change to the iOS Server Maintenance page, check its bottom in the simulator
+globs: ios/PoolStatus/PoolStatus/SettingsView.swift
+alwaysApply: false
+---
+
+# Check the bottom of Server Maintenance after every change
+
+`ServerMaintenanceView` (in `SettingsView.swift`) has repeatedly ended up with its bottom clipped
+after edits. Whenever it changes, look at it in the simulator before saying the work is done, and
+show the screenshot.
+
+1. Temporarily present it the way the app does, in a sheet, and scroll to the true end of the form:
+   - in `PoolStatusApp.swift`, add to `StatusView()` a `.sheet(isPresented: .constant(true))` holding
+     `NavigationStack { ScrollViewReader { proxy in ServerMaintenanceView().task { sleep ~8s;
+     proxy.scrollTo("bottom", anchor: .bottom) } } }.environment(store)`
+   - as the last thing in the view's `Form`, add
+     `Color.clear.frame(height: 1).listRowBackground(Color.clear).id("bottom")`
+   - mark every temporary line `// TEMP-HARNESS`
+2. Build, install, launch and screenshot (simulator "iPhone 17 Pro", A1C3AA84-…):
+   `xcodebuild -project PoolStatus.xcodeproj -scheme PoolStatus -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/PoolStatusDD build`,
+   then `xcrun simctl install`, `xcrun simctl launch --terminate-running-process`, wait, and
+   `xcrun simctl io <udid> screenshot`.
+3. The Factory Reset footer must be fully visible above the home indicator. Also check with the
+   software keyboard after focusing a text field (`defaults write com.apple.iphonesimulator
+   ConnectHardwareKeyboard -bool false`, relaunch Simulator, reboot the device; delete the default
+   afterwards) and at a large text size (`xcrun simctl ui <udid> content_size accessibility-large`,
+   then back to `large`).
+4. Remove the harness (`rg TEMP ios/PoolStatus/PoolStatus` finds nothing), rebuild and reinstall
+   the real app.

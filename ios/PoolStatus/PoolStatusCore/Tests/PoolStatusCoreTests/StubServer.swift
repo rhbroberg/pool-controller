@@ -146,6 +146,15 @@ nonisolated enum Fixture {
         """
     }
 
+    static func weather(high: Int = 88, low: Int = 71, condition: String = "sunny", rain: Int = 10, stale: Bool = false) -> String {
+        """
+        {"configured":true,"location":{"zipCode":"32801","placeName":"Orlando, FL"},
+         "today":{"date":"2026-11-07","high":\(high),"low":\(low),"condition":"\(condition)","weatherCode":0,
+                  "precipitationProbability":\(rain),"sunrise":"\(time)","sunset":"\(time)"},
+         "fetchedAt":"\(time)","stale":\(stale)}
+        """
+    }
+
     static func login(_ name: String, role: String = "user", mustChange: Bool = false) -> String {
         #"{"email":"\#(name)","token":"token-\#(name)","role":"\#(role)","mustChangeCredentials":\#(mustChange)}"#
     }
