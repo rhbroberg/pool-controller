@@ -70,6 +70,20 @@ describe('history calendar', () => {
         assert.equal(october.find((day) => day.key === '2026-10-02').selectable, true);
     });
 
+    it('gives every month six weeks, so the page stays the same size as it pages', () => {
+        const calendar = new HistoryCalendar(fakeClient());
+        const now = Date.UTC(2026, 10, 20, 17);
+        // February 2026 fits in four weeks, August 2026 needs all six
+        [{ year: 2026, month: 2 }, { year: 2026, month: 8 }, { year: 2026, month: 11 }].forEach((visible) => {
+            const weeks = calendar.monthGrid(visible, now);
+            assert.equal(weeks.length, 6, `${visible.year}-${visible.month}`);
+            assert.ok(weeks.every((week) => week.length === 7));
+        });
+        const february = calendar.monthGrid({ year: 2026, month: 2 }, now).flat();
+        assert.equal(february.filter((day) => day.inMonth).length, 28);
+        assert.equal(february.at(-1).key, '2026-03-14');
+    });
+
     it('turns two picked days into the window from the first’s midnight to the end of the last', () => {
         const calendar = new HistoryCalendar(fakeClient());
         calendar.timeZone = NEW_YORK;
