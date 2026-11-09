@@ -127,11 +127,15 @@ struct TemperatureHistoryView: View {
                         .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)
+            }
+            .frame(minHeight: 24)
+            // over the row rather than in it: a spinner has no baseline to line up with the text, so
+            // it would hang below it, and taking room would rewrap the readout, either way moving the graph
+            .overlay(alignment: .trailing) {
                 if model.isLoading {
                     ProgressView()
                 }
             }
-            .frame(minHeight: 24)
 
             chart(segments: segments, air: air, heater: heater, heatPump: heatPump,
                   ticks: HistoryWindow.ticks(in: window, visibleLength: visibleLength))

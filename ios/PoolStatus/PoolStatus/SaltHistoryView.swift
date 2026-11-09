@@ -81,12 +81,16 @@ struct SaltHistoryView: View {
                     Text("\(start, format: .dateTime.month(.abbreviated).day().year()) – \(end, format: .dateTime.month(.abbreviated).day().year())")
                 }
                 Spacer(minLength: 0)
+            }
+            .font(.headline.monospacedDigit())
+            .frame(minHeight: 24)
+            // over the row rather than in it: a spinner has no baseline to line up with the text, so
+            // it would hang below it and make the row taller, moving the graph
+            .overlay(alignment: .trailing) {
                 if model.isLoading {
                     ProgressView()
                 }
             }
-            .font(.headline.monospacedDigit())
-            .frame(minHeight: 24)
 
             chart
                 .frame(minHeight: 160, maxHeight: .infinity)
