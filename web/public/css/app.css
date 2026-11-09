@@ -1815,6 +1815,70 @@ button.form-row:disabled {
     font-size: 15px;
 }
 
+/* a person waiting for approval: who they are, then the role to give them and the buttons */
+.request-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    flex: 1;
+    min-width: 0;
+    padding: 4px 0;
+}
+
+.request-row .row-text {
+    flex: 1 1 180px;
+}
+
+.request-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.request-actions select {
+    margin-left: 0;
+}
+
+.count-badge {
+    margin-left: auto;
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 11px;
+    background: var(--red);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.count-badge + .icon {
+    margin-left: 8px !important;
+}
+
+a.form-row .action-text {
+    color: var(--accent);
+}
+
+.form-row .key-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 0;
+    border: 0;
+    background: none;
+    outline: none;
+    resize: vertical;
+    font: 13px ui-monospace, Menlo, monospace;
+    color: inherit;
+}
+
+.form-footer code.selectable {
+    user-select: all;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+}
+
 /* MARK: history calendar */
 
 .calendar-sheet {

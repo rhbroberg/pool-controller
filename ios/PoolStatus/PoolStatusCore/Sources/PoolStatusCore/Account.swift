@@ -59,9 +59,11 @@ public nonisolated struct SignInResult: Decodable, Sendable {
     public let role: AccountRole?
     /// The default admin account, whose token only works for renaming it.
     public let mustChangeCredentials: Bool?
+    /// password and/or the ids of the services the account signs in with; nil from older servers.
+    public let methods: [String]?
 
     private enum CodingKeys: String, CodingKey {
-        case name = "email", token, role, mustChangeCredentials
+        case name = "email", token, role, mustChangeCredentials, methods
     }
 }
 
@@ -70,11 +72,25 @@ public nonisolated struct AccountInfo: Decodable, Identifiable, Hashable, Sendab
     public let name: String
     public let role: AccountRole
     public let mustChangeCredentials: Bool?
+    /// password and/or the ids of the services the account signs in with; nil from older servers.
+    public let methods: [String]?
+    /// The name a sign-in service gave.
+    public let displayName: String?
 
     public var id: String { name }
+    /// True until the server says otherwise.
+    public var hasPassword: Bool { methods?.contains("password") ?? true }
+
+    public init(name: String, role: AccountRole, mustChangeCredentials: Bool? = nil, methods: [String]? = nil, displayName: String? = nil) {
+        self.name = name
+        self.role = role
+        self.mustChangeCredentials = mustChangeCredentials
+        self.methods = methods
+        self.displayName = displayName
+    }
 
     private enum CodingKeys: String, CodingKey {
-        case name = "email", role, mustChangeCredentials
+        case name = "email", role, mustChangeCredentials, methods, displayName
     }
 }
 

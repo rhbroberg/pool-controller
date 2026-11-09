@@ -81,6 +81,12 @@ const proxy = (req, res, target) => {
     if (forwardedFor) {
         headers['x-forwarded-for'] = headers['x-forwarded-for'] ? `${headers['x-forwarded-for']}, ${forwardedFor}` : forwardedFor;
     }
+    // the pool server builds sign-in callback addresses from where the browser reached the page;
+    // a proxy in front of this one, such as Caddy, has already said
+    if (!headers['x-forwarded-host'] && req.headers.host) {
+        headers['x-forwarded-host'] = req.headers.host;
+        headers['x-forwarded-proto'] = req.socket.encrypted ? 'https' : 'http';
+    }
     const basePath = target.pathname.replace(/\/$/, '');
     const upstream = transport.request({
         protocol: target.protocol,

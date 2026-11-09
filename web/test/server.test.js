@@ -100,6 +100,18 @@ describe('web service', () => {
         assert.deepEqual(JSON.parse(last.body), { email: 'rick', password: 'secret' });
     });
 
+    it('tells the pool server where the browser reached the page, for sign-in callbacks', async () => {
+        await fetch(`${base}${API_BASE}/auth/providers`);
+        const direct = upstream.seen[upstream.seen.length - 1];
+        assert.equal(direct.headers['x-forwarded-host'], base.replace('http://', ''));
+        assert.equal(direct.headers['x-forwarded-proto'], 'http');
+
+        await fetch(`${base}${API_BASE}/auth/providers`, { headers: { 'x-forwarded-host': 'pool.example.com', 'x-forwarded-proto': 'https' } });
+        const proxied = upstream.seen[upstream.seen.length - 1];
+        assert.equal(proxied.headers['x-forwarded-host'], 'pool.example.com', 'a proxy in front has the final say');
+        assert.equal(proxied.headers['x-forwarded-proto'], 'https');
+    });
+
     it('forwards the pool server’s Swagger UI', async () => {
         const response = await fetch(`${base}/docs/`);
         assert.deepEqual(await response.json(), { echoed: '/docs/' });

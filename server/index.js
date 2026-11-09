@@ -86,6 +86,8 @@ var initializeServer = (cb) => {
     app.use('/docs', swaggerUi.serve, swaggerUi.setup(apiDoc));
 
     app.use(express.json());
+    // some sign-in services, Apple's among them, post their answer back as a form
+    app.use(express.urlencoded({ extended: false }));
     app.use(OpenApiValidator.middleware({
         apiSpec: specPath,
         validateRequests: { allowUnknownQueryParameters: true },

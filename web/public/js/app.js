@@ -13,6 +13,8 @@ import { mountEventLog } from './views/event-log.js';
 import { mountAccounts, mountAccountDetail } from './views/accounts.js';
 import { mountMaintenance } from './views/maintenance.js';
 import { watchCommissioning } from './views/commissioning.js';
+import { mountSignInComplete } from './views/signin-complete.js';
+import { mountSignInSettings } from './views/sign-in-settings.js';
 
 const ROUTES = [
     [/^$/, (root, app) => mountDashboard(root, app)],
@@ -24,7 +26,9 @@ const ROUTES = [
     [/^events$/, (root, app) => mountEventLog(root, app)],
     [/^accounts$/, (root, app) => mountAccounts(root, app)],
     [/^accounts\/(.+)$/, (root, app, [name]) => mountAccountDetail(root, app, decodeURIComponent(name))],
-    [/^maintenance$/, (root, app) => mountMaintenance(root, app)]
+    [/^maintenance$/, (root, app) => mountMaintenance(root, app)],
+    [/^sign-in$/, (root, app) => mountSignInSettings(root, app)],
+    [/^signin\/complete$/, (root, app, _, query) => mountSignInComplete(root, app, query)]
 ];
 
 const client = new Client();
@@ -50,7 +54,8 @@ const root = document.getElementById('app');
 let unmount = null;
 
 const route = () => {
-    const path = decodeURI(location.hash.replace(/^#\/?/, '')).replace(/\/$/, '');
+    const [hashPath, hashQuery = ''] = location.hash.replace(/^#\/?/, '').split('?');
+    const path = decodeURI(hashPath).replace(/\/$/, '');
     let match = null;
     const found = ROUTES.find(([pattern]) => {
         match = pattern.exec(path);
@@ -66,7 +71,7 @@ const route = () => {
         location.replace('#/');
         return;
     }
-    unmount = found[1](root, app, match.slice(1)) || null;
+    unmount = found[1](root, app, match.slice(1), new URLSearchParams(hashQuery)) || null;
 };
 
 window.addEventListener('hashchange', route);

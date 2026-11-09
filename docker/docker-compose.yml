@@ -57,6 +57,10 @@ services:
       - NODE_ENV=docker-test
       # signs login tokens; export POOL_JWT_SECRET on the host, never commit it
       - JWT_SECRET=${POOL_JWT_SECRET}
+      # 1 lets passwords sign in even if an admin turned them off; for getting back in
+      - POOL_FORCE_PASSWORD_SIGNIN=${POOL_FORCE_PASSWORD_SIGNIN:-}
+      # where sign-in services send the browser back; normally worked out from the proxies' headers
+      - POOL_PUBLIC_URL=${POOL_PUBLIC_URL:-}
     depends_on:
       mongo:
         condition: service_healthy

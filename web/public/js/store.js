@@ -15,6 +15,14 @@ const CONFIRMATION_POLL_MS = 1000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// what's kept of a sign-in: methods lists password and the services the account signs in with
+const signedInAs = (result) => ({
+    email: result.email,
+    token: result.token,
+    role: result.role || null,
+    methods: Array.isArray(result.methods) ? result.methods : null
+});
+
 export class StatusStore {
     constructor(client, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS } = {}) {
         this.client = client;
@@ -208,7 +216,7 @@ export class StatusStore {
 
     async signIn(email, password) {
         const result = await this.client.signIn(email, password);
-        const signedIn = { email: result.email, token: result.token, role: result.role || null };
+        const signedIn = signedInAs(result);
         this.markConnected();
         if (result.mustChangeCredentials === true) {
             this.commissioning = signedIn;
@@ -218,6 +226,19 @@ export class StatusStore {
         this.save(signedIn);
     }
 
+    /** finishes a sign-in through a service with the ticket it came back with */
+    async signInWithTicket(ticket) {
+        const result = await this.client.signInWithTicket(ticket);
+        this.markConnected();
+        this.save(signedInAs(result));
+    }
+
+    /** whether the signed-in account has a password; true until the server has said */
+    get hasPassword() {
+        const methods = this.credentials && this.credentials.methods;
+        return !methods || methods.includes('password');
+    }
+
     /** renames the default admin account and sets its password, then signs in as the new account */
     async commission(name, password) {
         if (!this.commissioning) {
@@ -225,7 +246,7 @@ export class StatusStore {
         }
         const result = await this.client.changeCredentials(name, password, this.commissioning.token);
         this.commissioning = null;
-        this.save({ email: result.email, token: result.token, role: result.role || null });
+        this.save(signedInAs(result));
     }
 
     cancelCommissioning() {
@@ -249,7 +270,7 @@ export class StatusStore {
             throw error;
         }
         const result = await this.client.changeCredentials(credentials.email, password, verified.token);
-        this.save({ email: result.email, token: result.token, role: result.role || credentials.role });
+        this.save({ ...signedInAs(result), role: result.role || credentials.role });
     }
 
     /** asks the server for the signed-in account's current role, which an admin may have changed */
@@ -260,7 +281,7 @@ export class StatusStore {
         }
         try {
             const account = await this.client.fetchAccount(credentials.token);
-            this.save({ email: account.email, token: credentials.token, role: account.role });
+            this.save(signedInAs({ ...account, token: credentials.token }));
         } catch (error) {
             if (error instanceof ApiError && error.kind === 'unauthorized') {
                 this.signOut();

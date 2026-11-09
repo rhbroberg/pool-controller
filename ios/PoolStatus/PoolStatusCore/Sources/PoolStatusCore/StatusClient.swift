@@ -194,6 +194,90 @@ public nonisolated struct StatusClient: Sendable {
         try await perform(.delete, "users/\(Self.pathComponent(name))", token: token)
     }
 
+    // MARK: Sign-in services
+
+    /// What the sign-in form offers; needs no account.
+    public func fetchSignInChoices() async throws -> SignInChoices {
+        try await send(.get, "auth/providers")
+    }
+
+    /// Where a web authentication session starts signing in with a service; it ends at
+    /// `poolstatus://signin`.
+    public func signInURL(provider: String) throws -> URL {
+        try url(for: "auth/\(Self.pathComponent(provider))/start", query: [URLQueryItem(name: "client", value: "ios")])
+    }
+
+    /// Trades the ticket a sign-in through a service came back with for a token.
+    public func signIn(ticket: String) async throws -> SignInResult {
+        try await send(.post, "users/login/external", body: TicketBody(ticket: ticket))
+    }
+
+    /// Where a web authentication session goes to add the service to the signed-in account.
+    public func linkIdentityURL(provider: String, token: String) async throws -> URL {
+        let link: LinkResponse = try await send(.post, "users/me/identities/\(Self.pathComponent(provider))", token: token,
+                                                body: LinkBody(client: "ios"))
+        guard let url = URL(string: link.url) else {
+            throw StatusClientError.badResponse
+        }
+        return url
+    }
+
+    public func unlinkIdentity(provider: String, token: String) async throws -> AccountInfo {
+        try await send(.delete, "users/me/identities/\(Self.pathComponent(provider))", token: token)
+    }
+
+    public func listRequests(token: String) async throws -> [AccessRequest] {
+        try await send(.get, "users/requests", token: token)
+    }
+
+    /// Creates the person's account with `role`.
+    public func approveRequest(_ id: String, role: AccountRole, token: String) async throws -> AccountInfo {
+        try await send(.post, "users/requests/\(Self.pathComponent(id))/approve", token: token, body: ApprovalBody(role: role))
+    }
+
+    public func denyRequest(_ id: String, token: String) async throws -> AccessRequest {
+        try await send(.post, "users/requests/\(Self.pathComponent(id))/deny", token: token)
+    }
+
+    /// Forgets a request, so a denied person may ask again.
+    public func forgetRequest(_ id: String, token: String) async throws {
+        try await perform(.delete, "users/requests/\(Self.pathComponent(id))", token: token)
+    }
+
+    public func listInvitations(token: String) async throws -> [Invitation] {
+        try await send(.get, "users/invitations", token: token)
+    }
+
+    /// `provider` nil works with any service trusted for email addresses.
+    public func createInvitation(email: String, role: AccountRole, provider: String?, token: String) async throws -> Invitation {
+        try await send(.post, "users/invitations", token: token, body: InvitationBody(email: email, role: role, provider: provider))
+    }
+
+    public func deleteInvitation(_ id: String, token: String) async throws {
+        try await perform(.delete, "users/invitations/\(Self.pathComponent(id))", token: token)
+    }
+
+    public func fetchSignInSettings(token: String) async throws -> SignInSettings {
+        try await send(.get, "system/sign-in", token: token)
+    }
+
+    public func updateSignInSettings(_ changes: SignInSettings.Changes, token: String) async throws -> SignInSettings {
+        try await send(.put, "system/sign-in", token: token, body: changes)
+    }
+
+    /// The server reads the issuer's discovery document before saving, so this can take a moment.
+    public func createSignInService(_ service: SignInServiceChange, token: String) async throws -> SignInService {
+        try await send(.post, "system/sign-in/providers", token: token, body: service, timeout: 20)
+    }
+
+    public func updateSignInService(_ id: String, _ changes: SignInServiceChange, token: String) async throws -> SignInService {
+        try await send(.put, "system/sign-in/providers/\(Self.pathComponent(id))", token: token, body: changes, timeout: 20)
+    }
+
+    public func deleteSignInService(_ id: String, token: String) async throws {
+        try await perform(.delete, "system/sign-in/providers/\(Self.pathComponent(id))", token: token)
+    }
+
     /// Erases the server's history and accounts; returns the server's description of the result.
     public func factoryReset(token: String) async throws -> String {
         let data = try await fetchData(.post, "system/factory-reset", token: token)
@@ -265,8 +349,9 @@ public nonisolated struct StatusClient: Sendable {
 
     /// For requests whose answer only matters for its status.
     @concurrent
-    private func perform(_ method: Method, _ path: String, token: String? = nil) async throws {
-        _ = try await fetchData(method, path, token: token)
+    private func perform(_ method: Method, _ path: String, token: String? = nil,
+                         body: (any Encodable & Sendable)? = nil) async throws {
+        _ = try await fetchData(method, path, token: token, body: body)
     }
 
     private func fetchData(_ method: Method, _ path: String, query: [URLQueryItem]? = nil, token: String? = nil,
@@ -326,6 +411,40 @@ public nonisolated struct StatusClient: Sendable {
     private struct AccountChanges: Encodable {
         let role: AccountRole?
         let password: String?
+    }
+
+    private struct TicketBody: Encodable {
+        let ticket: String
+    }
+
+    private struct LinkBody: Encodable {
+        let client: String
+    }
+
+    private struct LinkResponse: Decodable {
+        let url: String
+    }
+
+    private struct ApprovalBody: Encodable {
+        let role: AccountRole
+    }
+
+    /// The server takes a null provider as any service trusted for email addresses.
+    private struct InvitationBody: Encodable {
+        let email: String
+        let role: AccountRole
+        let provider: String?
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(email, forKey: .email)
+            try container.encode(role, forKey: .role)
+            try container.encode(provider, forKey: .provider)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case email, role, provider
+        }
     }
 }
 
