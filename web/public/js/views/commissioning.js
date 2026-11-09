@@ -3,7 +3,7 @@
 
 import { h, openDialog } from '../dom.js';
 import { DEFAULT_ADMIN, MINIMUM_PASSWORD_LENGTH } from '../model.js';
-import { formSection, formRow, sheetHeader, textInput, spinner } from '../ui.js';
+import { formSection, formRow, sheetHeader, textInput, passwordInput, revealer, spinner } from '../ui.js';
 
 const openCommissioning = (store) => {
     let name = '';
@@ -45,7 +45,9 @@ const openCommissioning = (store) => {
         }
     };
 
-    const field = (label, value, set, type, autocomplete) => formRow(textInput({
+    const reveal = revealer(() => dialog.update());
+    const field = (label, value, set, type, autocomplete) => formRow((type === 'password' ? passwordInput : textInput)({
+        reveal,
         label,
         type,
         value,

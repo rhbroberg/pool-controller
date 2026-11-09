@@ -1006,6 +1006,33 @@ a {
     font-size: 16px;
 }
 
+.form-row .password-input {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.password-input .reveal-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 4px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--secondary);
+}
+
+.password-input .reveal-button:hover {
+    background: var(--fill);
+}
+
+.password-input .reveal-button .icon {
+    width: 18px;
+    height: 18px;
+}
+
 .form-row input.trailing {
     text-align: right;
 }

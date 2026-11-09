@@ -82,6 +82,39 @@ export const textInput = ({ label, value, onInput, type = 'text', autocomplete, 
     } : null
 });
 
+/**
+ * which of a view's password fields show what's typed, by label; toggling one redraws
+ **/
+export const revealer = (redraw) => {
+    const shown = new Set();
+    return {
+        shown: (key) => shown.has(key),
+        toggle: (key) => {
+            if (!shown.delete(key)) {
+                shown.add(key);
+            }
+            redraw();
+        }
+    };
+};
+
+/** a password field with an eye button that shows what's typed; reveal comes from revealer */
+export const passwordInput = ({ reveal, ...options }) => {
+    const shown = reveal.shown(options.label);
+    return h('span', { class: 'password-input' },
+        textInput({ ...options, type: shown ? 'text' : 'password' }),
+        h('button', {
+            class: 'reveal-button',
+            type: 'button',
+            title: shown ? 'Hide password' : 'Show password',
+            'aria-label': shown ? 'Hide password' : 'Show password',
+            'aria-pressed': String(shown),
+            // keeps the focus, and the caret, in the field
+            onMousedown: (event) => event.preventDefault(),
+            onClick: () => reveal.toggle(options.label)
+        }, icon(shown ? 'eyeOff' : 'eye')));
+};
+
 export const select = ({ label, value, options, onChange, disabled = false }) => h('select', {
     'aria-label': label,
     value,

@@ -6,7 +6,7 @@ import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable } from
 import { RECONNECT_CHOICES, DEFAULT_RECONNECT_SECONDS } from '../store.js';
 import { formatDurationSeconds } from '../format.js';
 import * as prefs from '../prefs.js';
-import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, textInput, select, spinner, renderer } from '../ui.js';
+import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, textInput, passwordInput, revealer, select, spinner, renderer } from '../ui.js';
 
 export const mountSettings = (root, app) => {
     const { store, client } = app;
@@ -20,6 +20,7 @@ export const mountSettings = (root, app) => {
     let pendingRequests = 0;
     let methodsError = null;
     let linking = null;
+    const reveal = revealer(() => redraw());
 
     const token = () => store.credentials ? store.credentials.token : '';
 
@@ -191,7 +192,7 @@ export const mountSettings = (root, app) => {
             footerClass: signInError ? 'error' : ''
         },
         formRow(textInput({ label: 'Account Name', name: 'username', value: email, autocomplete: 'username', onInput: (v) => { email = v; redraw(); } })),
-        formRow(textInput({ label: 'Password', name: 'password', type: 'password', value: password, autocomplete: 'current-password', onInput: (v) => { password = v; redraw(); } })),
+        formRow(passwordInput({ reveal, label: 'Password', name: 'password', value: password, autocomplete: 'current-password', onInput: (v) => { password = v; redraw(); }, onEnter: signIn })),
         h('button', { class: 'form-row action', type: 'submit', disabled: !email.trim() || !password || signingIn },
             h('span', null, 'Sign In'),
             signingIn ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null))),
@@ -246,6 +247,7 @@ export const mountChangePassword = (root, app) => {
     let confirmation = '';
     let saving = false;
     let errorMessage = null;
+    const reveal = revealer(() => redraw());
 
     const canSave = () => current && passwordAcceptable(password, confirmation) && !saving;
 
@@ -269,9 +271,9 @@ export const mountChangePassword = (root, app) => {
 
     const render = () => {
         const problem = errorMessage || passwordProblem(password, confirmation);
-        const field = (label, value, set, autocomplete) => formRow(textInput({
+        const field = (label, value, set, autocomplete) => formRow(passwordInput({
+            reveal,
             label,
-            type: 'password',
             value,
             autocomplete,
             onInput: (v) => { set(v); redraw(); },

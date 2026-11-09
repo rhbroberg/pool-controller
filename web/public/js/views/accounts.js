@@ -5,7 +5,7 @@ import { h, openDialog, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
 import { ROLES, roleInfo, passwordProblem, passwordAcceptable, methodNames } from '../model.js';
 import { relative } from '../format.js';
-import { topbar, barButton, formSection, formRow, textInput, select, sheetHeader, spinner, renderer, navigate } from '../ui.js';
+import { topbar, barButton, formSection, formRow, textInput, passwordInput, revealer, select, sheetHeader, spinner, renderer, navigate } from '../ui.js';
 
 const roleOptions = ROLES.map((r) => ({ value: r.id, label: r.title }));
 
@@ -246,6 +246,7 @@ const openNewAccount = (app, services) => {
     let role = 'user';
     let saving = false;
     let errorMessage = null;
+    const reveal = revealer(() => dialog.update());
 
     const inviting = () => method === 'invitation';
     const canAdd = () => !saving && (inviting()
@@ -274,7 +275,8 @@ const openNewAccount = (app, services) => {
 
     const render = (close) => {
         const message = errorMessage || (inviting() ? null : passwordProblem(password, confirmation));
-        const field = (label, value, set, type, autocomplete) => formRow(textInput({
+        const field = (label, value, set, type, autocomplete) => formRow((type === 'password' ? passwordInput : textInput)({
+            reveal,
             label,
             type,
             value,
@@ -402,9 +404,10 @@ export const mountAccountDetail = (root, app, name) => {
         }
     };
 
-    const field = (label, value, set) => formRow(textInput({
+    const reveal = revealer(() => redraw());
+    const field = (label, value, set) => formRow(passwordInput({
+        reveal,
         label,
-        type: 'password',
         value,
         autocomplete: 'new-password',
         onInput: (v) => { set(v); redraw(); }

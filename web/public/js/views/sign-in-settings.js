@@ -4,7 +4,7 @@
 import { h, openDialog, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
 import { SERVICE_PRESETS } from '../model.js';
-import { topbar, barButton, formSection, formRow, actionRow, textInput, select, sheetHeader, spinner, renderer } from '../ui.js';
+import { topbar, barButton, formSection, formRow, actionRow, textInput, passwordInput, revealer, select, sheetHeader, spinner, renderer } from '../ui.js';
 
 const ON_OFF = [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }];
 
@@ -139,6 +139,7 @@ const openService = (app, settings, service) => {
         : { ...service, clientSecret: '', apple: { teamId: '', keyId: '', privateKey: '', ...(service.apple || {}) } };
     let saving = false;
     let errorMessage = null;
+    const reveal = revealer(() => dialog.update());
     const token = () => store.credentials ? store.credentials.token : '';
 
     const choosePreset = (index) => {
@@ -216,7 +217,9 @@ const openService = (app, settings, service) => {
 
     const field = (label, key, { type = 'text', placeholder, target = draft } = {}) => formRow(
         h('span', { class: 'label' }, label),
-        textInput({ label, value: target[key], type, placeholder, trailing: true, autocomplete: 'off', onInput: (v) => { target[key] = v; dialog.update(); } }));
+        (type === 'password' ? passwordInput : textInput)({
+            reveal, label, value: target[key], type, placeholder, trailing: true, autocomplete: 'off', onInput: (v) => { target[key] = v; dialog.update(); }
+        }));
 
     const render = (close) => {
         const redirect = draft.id ? settings.redirectUriTemplate.replace('{id}', draft.id.trim().toLowerCase()) : null;
