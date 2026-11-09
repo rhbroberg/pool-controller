@@ -131,6 +131,7 @@ struct StatusView: View {
     private var dashboard: some View {
         TemperatureCard(pool: store.measurement(named: .poolTemperature),
                         secondary: [.spaTemperature, .airTemperature, .salt].map(store.measurement(named:)),
+                        weather: store.weatherSummary,
                         lastRefresh: store.lastRefresh,
                         isConnected: store.isConnected)
 
@@ -268,10 +269,11 @@ private extension WaterMode {
 
 // MARK: - Temperatures
 
-/// The pool temperature large on the left; spa, air and salt in a column beside it.
+/// The pool temperature large on the left; spa, air, today's weather and salt in a column beside it.
 private struct TemperatureCard: View {
     let pool: DashboardReading
     let secondary: [DashboardReading]
+    let weather: DashboardWeather?
     let lastRefresh: Date?
     let isConnected: Bool
 
@@ -290,6 +292,9 @@ private struct TemperatureCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(secondary) { measurement in
                     secondaryRow(measurement)
+                    if measurement.name == .airTemperature, let weather {
+                        WeatherRow(weather: weather)
+                    }
                 }
             }
             .frame(maxWidth: 170)
@@ -379,6 +384,52 @@ private struct TemperatureCard: View {
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityHint(linked ? "Shows the history" : "")
+    }
+}
+
+/// Today's forecast at the pool's zip code: its condition, and the high and low.
+private struct WeatherRow: View {
+    let weather: DashboardWeather
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: weather.symbolName)
+                .symbolRenderingMode(.multicolor)
+                .font(.subheadline)
+                .accessibilityHidden(true)
+            Text(weather.title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 6)
+            Text(weather.highLow)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .foregroundStyle(weather.isStale ? .secondary : .primary)
+            // keeps the values lined up with the linked rows
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .hidden()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        var parts = [String(localized: "Today: \(weather.title), high \(weather.high), low \(weather.low)")]
+        if let place = weather.place {
+            parts.append(place)
+        }
+        if let rain = weather.rainChance {
+            parts.append(String(localized: "\(rain)% chance of rain"))
+        }
+        if weather.isStale {
+            parts.append(String(localized: "Forecast out of date"))
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

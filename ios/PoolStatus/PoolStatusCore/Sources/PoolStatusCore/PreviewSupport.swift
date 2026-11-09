@@ -73,6 +73,13 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
              "devices":{"heater1":{"enabled":true,"heating":true,"callingForHeat":true,"body":"pool","setpoint":84,"temperature":81},
                         "heatpump":{"enabled":false,"heating":false,"callingForHeat":false,"body":"pool","setpoint":82,"temperature":81}}}
             """
+        case "weather":
+            return """
+            {"configured":true,"location":{"zipCode":"32801","placeName":"Orlando, FL"},
+             "today":{"date":"2026-11-09","high":84,"low":68,"condition":"partly-cloudy","weatherCode":2,"precipitationProbability":20,
+                      "sunrise":"\(now)","sunset":"\(now)"},
+             "fetchedAt":"\(now)","stale":false}
+            """
         case "panel/display":
             return #"{"lines":["  Pool Temp  81°F   ","  Heater1 Auto Ctrl "],"blinking":[[],[]],"timestamp":"\#(now)"}"#
         case "events/users":

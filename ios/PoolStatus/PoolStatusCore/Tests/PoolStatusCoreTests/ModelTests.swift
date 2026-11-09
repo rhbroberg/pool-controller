@@ -441,6 +441,56 @@ struct ServerSettingsTests {
         #expect(try encoded(.init(timeZone: .named("Europe/London"))) == #"{"timeZone":"Europe\/London"}"#)
         #expect(try encoded(.init(rawRetentionDays: 200)) == #"{"rawRetentionDays":200}"#)
     }
+
+    @Test("sends a zip code, or null to stop fetching weather")
+    func zipCode() throws {
+        #expect(try encoded(.init(zipCode: .code("32801"))) == #"{"zipCode":"32801"}"#)
+        #expect(try encoded(.init(zipCode: .clear)) == #"{"zipCode":null}"#)
+    }
+
+    @Test("knows a zip code when it sees one")
+    func zipCodes() {
+        #expect(ServerSettings.isZipCode("32801"))
+        #expect(ServerSettings.isZipCode("32801-1234"))
+        #expect(!ServerSettings.isZipCode("3280"))
+        #expect(!ServerSettings.isZipCode("abcde"))
+        #expect(!ServerSettings.isZipCode(""))
+    }
+}
+
+@Suite("Weather")
+struct WeatherTests {
+    private func report(_ json: String) throws -> WeatherReport {
+        try StatusClient.decoder.decode(WeatherReport.self, from: Data(json.utf8))
+    }
+
+    @Test("shows today's condition, high and low, and a real chance of rain")
+    func summary() throws {
+        let rainy = try #require(try report(Fixture.weather(high: 75, low: 60, condition: "rain", rain: 80, stale: true)).summary)
+        #expect(rainy.title == "Rain")
+        #expect(rainy.symbolName == "cloud.rain.fill")
+        #expect(rainy.highLow == "75° / 60°")
+        #expect(rainy.rainChance == 80)
+        #expect(rainy.isStale)
+
+        let sunny = try #require(try report(Fixture.weather()).summary)
+        #expect(sunny.condition == .sunny)
+        #expect(sunny.rainChance == nil, "a 10% chance isn't worth mentioning")
+    }
+
+    @Test("shows nothing without a zip code or before the first forecast")
+    func nothing() throws {
+        #expect(try report(#"{"configured":false,"location":null,"today":null,"fetchedAt":null,"stale":false}"#).summary == nil)
+        #expect(try report(#"{"configured":true,"location":{"zipCode":"32801","placeName":"Orlando, FL"},"today":null,"fetchedAt":null,"stale":true}"#).summary == nil)
+    }
+
+    @Test("copes with a condition it doesn't know and a missing temperature")
+    func unknown() throws {
+        let json = #"{"configured":true,"location":null,"today":{"date":"2026-11-07","high":null,"low":60,"condition":"volcanic-ash"},"fetchedAt":null,"stale":false}"#
+        let summary = try #require(try report(json).summary)
+        #expect(summary.condition == nil)
+        #expect(summary.highLow == "--° / 60°")
+    }
 }
 
 @Suite("Network scan")

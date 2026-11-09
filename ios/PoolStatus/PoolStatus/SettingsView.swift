@@ -257,8 +257,9 @@ struct SettingsView: View {
     }
 }
 
-/// The time zone and history settings, the maintenance jobs, restart and factory reset, kept off
-/// the main Settings page because they affect the server rather than this app.
+/// The pool's location for weather, the time zone and history settings, the maintenance jobs,
+/// restart and factory reset, kept off the main Settings page because they affect the server
+/// rather than this app.
 struct ServerMaintenanceView: View {
     private enum Operation {
         case restart, factoryReset
@@ -275,10 +276,17 @@ struct ServerMaintenanceView: View {
     /// Settings or jobs that couldn't be read or changed.
     @State private var settingsError: String?
     @State private var runningJob: String?
+    /// The zip code being typed; nil shows the saved one.
+    @State private var zipDraft: String?
+    @State private var savingZip = false
+    @State private var locationError: String?
+    @FocusState private var zipFocused: Bool
 
     var body: some View {
         Form {
             if let settings {
+                locationSection(settings)
+
                 Section {
                     NavigationLink {
                         TimeZonePicker(settings: settings) { choice in
@@ -346,9 +354,9 @@ struct ServerMaintenanceView: View {
                     Text("Sign in to restart or reset the server.")
                         .foregroundStyle(.secondary)
                 }
-            }
-        }
+            }        }
         .disabled(!store.auth.isAdmin || operation != nil)
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Server Maintenance")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Restart the server?", isPresented: $confirmingRestart, titleVisibility: .visible) {
@@ -376,9 +384,76 @@ struct ServerMaintenanceView: View {
             if store.auth.isAdmin {
                 await loadSettings()
             }
-        }
-        .refreshable {
+        }        .refreshable {
             await loadSettings()
+        }
+    }
+
+    private func locationSection(_ settings: ServerSettings) -> some View {
+        let saved = settings.location?.zipCode ?? ""
+        let draft = zipDraft ?? saved
+        let trimmed = draft.trimmingCharacters(in: .whitespaces)
+        let canSave = trimmed != saved && ServerSettings.isZipCode(trimmed) && !savingZip
+        return Section {
+            HStack {
+                TextField("Zip Code", text: Binding(
+                    get: { draft },
+                    set: { zipDraft = $0; locationError = nil }), prompt: Text(verbatim: "32801"))
+                    .keyboardType(.numbersAndPunctuation)
+                    .textContentType(.postalCode)
+                    .autocorrectionDisabled()
+                    .focused($zipFocused)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        if canSave {
+                            Task { await saveZip(.code(trimmed)) }
+                        }
+                    }
+                if savingZip {
+                    ProgressView()
+                } else {
+                    Button("Save") {
+                        Task { await saveZip(.code(trimmed)) }
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(!canSave)
+                }
+            }
+            if let location = settings.location {
+                LabeledContent("Place", value: location.placeName)
+                Button("Stop Fetching Weather", role: .destructive) {
+                    Task { await saveZip(.clear) }
+                }
+                .disabled(savingZip)
+            }
+        } header: {
+            Text("Location")
+        } footer: {
+            if let locationError {
+                Text(locationError)
+                    .foregroundStyle(.orange)
+            } else if settings.location != nil {
+                Text("The server fetches the forecast for this zip code every half hour, shows today’s on the main page and keeps the conditions with the water temperature history.")
+            } else {
+                Text("Give the pool’s zip code to show today’s forecast on the main page. Weather comes from Open-Meteo.")
+            }
+        }
+    }
+
+    /// A zip code is looked up by the server before it answers.
+    private func saveZip(_ choice: ServerSettings.Changes.ZipCodeChoice) async {
+        zipFocused = false
+        savingZip = true
+        locationError = nil
+        defer { savingZip = false }
+        do {
+            settings = try await store.updateServerSettings(.init(zipCode: choice))
+            zipDraft = nil
+            jobs = (try? await store.maintenanceJobs()) ?? jobs
+        } catch {
+            if !error.isCancellation {
+                locationError = error.localizedDescription
+            }
         }
     }
 

@@ -74,6 +74,10 @@ public nonisolated struct StatusClient: Sendable {
         try await send(.get, "heating")
     }
 
+    public func fetchWeather() async throws -> WeatherReport {
+        try await send(.get, "weather")
+    }
+
     public func fetchPanelDisplay() async throws -> PanelDisplay {
         try await send(.get, "panel/display")
     }
@@ -293,8 +297,9 @@ public nonisolated struct StatusClient: Sendable {
         try await send(.get, "system/settings", token: token)
     }
 
+    /// A new zip code is looked up by the server before it answers, so this allows it longer.
     public func updateSettings(_ changes: ServerSettings.Changes, token: String) async throws -> ServerSettings {
-        try await send(.put, "system/settings", token: token, body: changes)
+        try await send(.put, "system/settings", token: token, body: changes, timeout: 20)
     }
 
     public func fetchJobs(token: String) async throws -> [MaintenanceJob] {
