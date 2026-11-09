@@ -129,16 +129,24 @@ private struct HistoryCalendar: UIViewRepresentable {
         view.visibleDateComponents = visibleMonth
         view.tintColor = .systemTeal
         view.setContentCompressionResistancePriority(.required, for: .vertical)
-        context.coordinator.showSelection()
+        context.coordinator.calendarView = view
+        context.coordinator.showSelection(immediate: true)
         return view
     }
 
     func updateUIView(_ view: UICalendarView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.calendarView = view
         if view.calendar.timeZone != model.timeZone {
             view.calendar = model.calendar
         }
-        view.availableDateRange = availableRange
+        // The end of the range is "now", so it changes on every refresh. Assigning it again
+        // while the calendar is paging makes the forward chevron land a month too far.
+        let range = availableRange
+        if abs(view.availableDateRange.start.timeIntervalSince(range.start)) > 1
+            || !model.calendar.isDate(view.availableDateRange.end, inSameDayAs: range.end) {
+            view.availableDateRange = range
+        }
         context.coordinator.showSelection()
         if context.coordinator.markedRevision != model.revision {
             context.coordinator.markedRevision = model.revision
@@ -171,30 +179,78 @@ private struct HistoryCalendar: UIViewRepresentable {
     final class Coordinator: NSObject, UICalendarViewDelegate, UICalendarSelectionMultiDateDelegate {
         var parent: HistoryCalendar
         var selection: UICalendarSelectionMultiDate?
+        weak var calendarView: UICalendarView?
         var markedRevision = -1
+        /// Set while the selection is being replaced, so those callbacks are not new taps.
+        private var applyingSelection = false
+        private var selectionGeneration = 0
+        /// Set while a wrong two-month jump is being put back, so that change is kept.
+        private var correctingMonth = false
 
         init(_ parent: HistoryCalendar) {
             self.parent = parent
         }
 
+        /// The days from the first tap through the last, in the calendar's own components.
+        private func daysToSelect() -> [DateComponents] {
+            guard let first = parent.first, let range = parent.model.range(from: first, through: parent.last ?? first) else {
+                return []
+            }
+            return parent.model.days(in: range)
+        }
+
         /// Selects every day from the first tapped through the last.
-        func showSelection() {
-            guard let selection else {
+        ///
+        /// The calendar is still applying the tap's own snapshot when this runs, and a selection
+        /// applied then never reaches the month on screen. It shows up only after that month is
+        /// built again, which is what scrolling away and back does.
+        func showSelection(immediate: Bool = false) {
+            guard let selection, !applyingSelection else {
                 return
             }
-            var days: [DateComponents] = []
-            if let first = parent.first {
-                if let range = parent.model.range(from: first, through: parent.last ?? first) {
-                    days = parent.model.days(in: range)
-                }
-            }
+            let days = daysToSelect()
+            let wanted = Set(days.compactMap(HistoryCalendarModel.key))
             let current = Set(selection.selectedDates.compactMap(HistoryCalendarModel.key))
-            if current != Set(days.compactMap(HistoryCalendarModel.key)) {
-                selection.setSelectedDates(days, animated: false)
+            guard current != wanted else {
+                return
+            }
+            selectionGeneration &+= 1
+            let generation = selectionGeneration
+            if immediate {
+                applyQueuedSelection(generation)
+            } else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.applyQueuedSelection(generation)
+                }
             }
         }
 
+        /// Replaces the selection, then makes the month on screen draw it.
+        private func applyQueuedSelection(_ generation: Int) {
+            guard selectionGeneration == generation, let selection else {
+                return
+            }
+            let days = daysToSelect()
+            applyingSelection = true
+            selection.setSelectedDates(days, animated: false)
+            if let calendarView {
+                let visible = calendarView.visibleDateComponents
+                // Putting the behavior back makes the visible month read the selection. Setting
+                // the dates alone leaves the month that is already on screen unchanged.
+                calendarView.selectionBehavior = selection
+                if Self.monthIndex(calendarView.visibleDateComponents) != Self.monthIndex(visible) {
+                    correctingMonth = true
+                    calendarView.setVisibleDateComponents(DateComponents(year: visible.year, month: visible.month), animated: false)
+                    correctingMonth = false
+                }
+            }
+            applyingSelection = false
+        }
+
         private func tapped(_ day: DateComponents) {
+            guard !applyingSelection else {
+                return
+            }
             let day = DateComponents(calendar: parent.model.calendar, year: day.year, month: day.month, day: day.day)
             if parent.first == nil || parent.last != nil {
                 parent.first = day
@@ -210,8 +266,33 @@ private struct HistoryCalendar: UIViewRepresentable {
         }
 
         func calendarView(_ calendarView: UICalendarView, didChangeVisibleDateComponentsFrom previousDateComponents: DateComponents) {
-            let month = calendarView.visibleDateComponents
-            parent.visibleMonth = DateComponents(year: month.year, month: month.month)
+            let shown = calendarView.visibleDateComponents
+            // A forward chevron moves one month. With a range selected, the one that returns to
+            // the month holding that range is reported as two months, so the page in between is skipped.
+            if !correctingMonth, let landed = Self.oneMonthForward(from: previousDateComponents, shown: shown) {
+                correctingMonth = true
+                calendarView.setVisibleDateComponents(landed, animated: false)
+                correctingMonth = false
+                parent.visibleMonth = landed
+                return
+            }
+            parent.visibleMonth = DateComponents(year: shown.year, month: shown.month)
+        }
+
+        private static func monthIndex(_ components: DateComponents) -> Int? {
+            guard let year = components.year, let month = components.month else {
+                return nil
+            }
+            return year * 12 + (month - 1)
+        }
+
+        /// The month one step forward of `previous`, when `shown` is two steps forward.
+        private static func oneMonthForward(from previous: DateComponents, shown: DateComponents) -> DateComponents? {
+            guard let from = monthIndex(previous), let to = monthIndex(shown), to - from == 2 else {
+                return nil
+            }
+            let intended = from + 1
+            return DateComponents(year: intended / 12, month: intended % 12 + 1)
         }
 
         func multiDateSelection(_ selection: UICalendarSelectionMultiDate, didSelectDate dateComponents: DateComponents) {
