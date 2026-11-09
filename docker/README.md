@@ -111,6 +111,68 @@ Let's Encrypt no longer emails before a certificate expires, so watch it from ou
 example with one of the services on its
 [monitoring page](https://letsencrypt.org/docs/monitoring-options/).
 
+## Signing in with Google, Microsoft or Apple
+
+Out of the box, accounts sign in with a name and password, as always. An admin can also offer
+any OpenID Connect service (Google, Microsoft, Apple, Auth0, Okta, Keycloak, ...) under
+Settings → Sign-In, on the web page or in the app. People then sign in with the service, and the
+server keeps no password for them. Nothing else needs installing; the services only need the
+public https name, since they send the browser back to it. Signing in through the LAN address
+works only with passwords.
+
+**Who gets in, and as what:**
+
+- **An invitation** lets an email address in with a role, ahead of time: Accounts → + →
+  Signs In With: A Service. The first sign-in with that address, verified by a service marked
+  *Trust Email Addresses*, creates the account. Google and Apple are trusted out of the box.
+  Microsoft personal accounts don't vouch for their addresses, so they don't redeem invitations.
+- **A request**: anyone else who signs in with a service waits in Accounts under *Waiting for
+  Approval*. Approve them as a Viewer, Operator or Admin, or Deny them. A denied person is turned
+  away without asking again until the request is forgotten. Settings → Sign-In → Newcomers →
+  *Turn Away* makes the server invitation-only, with no requests.
+- **Roles** are the same as for password accounts and change the same way, in the account's
+  page. Removing an account takes effect at once. Removing someone at Google doesn't, since the
+  server only asks the service at sign-in.
+
+### Setting up a service
+
+Settings → Sign-In shows the redirect address to register with each service:
+`https://<POOL_HOSTNAME>/rhbroberg/pool-api/1.0.0/auth/<id>/callback`, where `<id>` is the
+service's id (`google`, `microsoft`, `apple`, ...).
+
+- **Google** (free): in [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+  create a project, set up the OAuth consent screen (External, Testing is fine for up to 100
+  people, and add each person as a test user, or publish it), then create an OAuth client ID of
+  type *Web application*. Add the redirect address under *Authorized redirect URIs*. Paste the
+  client ID and secret into Add Service → Google.
+- **Microsoft** (free): in [Entra app registrations](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade),
+  register an app for *personal Microsoft accounts*, add a *Web* redirect URI, and create a client
+  secret under Certificates & secrets. Paste the Application (client) ID and the secret's value
+  into Add Service → Microsoft.
+- **Apple** (needs the Apple Developer membership): under Certificates, Identifiers & Profiles,
+  create a *Services ID* with Sign in with Apple, with the pool's name as a domain and the
+  redirect address as a return URL. Then create a *Key* with Sign in with Apple. Add Service →
+  Apple takes the Services ID, your team ID, the key's ID and the contents of its `.p8` file; the
+  server makes Apple's short-lived client secret from the key itself.
+- **Anything else**: Add Service → Other OpenID Connect, with the issuer address (the one whose
+  `/.well-known/openid-configuration` exists), a client ID and a secret.
+
+Saving reads the issuer's discovery document, so a mistyped issuer is caught then.
+
+### Turning passwords off
+
+1. Add a service, then in Settings → Sign-In Methods, **Link** it to your own admin account.
+2. Settings → Sign-In → Password Sign-In → Off. The server refuses while no admin has a linked
+   service.
+
+To get back in with a password, as after losing access to the service, export
+`POOL_FORCE_PASSWORD_SIGNIN=1` and run `make up`. Passwords then work whatever the setting
+says. A factory reset also turns them back on.
+
+The server works out the redirect address from Caddy's `X-Forwarded-Host` and
+`X-Forwarded-Proto` headers. If a different proxy in front gets it wrong, set
+`POOL_PUBLIC_URL=https://<name>` in `.env`.
+
 ## MongoDB on a Raspberry Pi 4
 
 MongoDB 5.0 and later need an ARMv8.2 CPU, which a Pi 4 lacks, and 4.4 releases after 4.4.18 stop
