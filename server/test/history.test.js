@@ -31,6 +31,7 @@ var generate = (now) => {
     let pool;
     let filter;
     let heater;
+    let aux14;
     for (let t = start; t < end; t += HOUR_MS / 2) {
         const daysAgo = (now - t) / DAY_MS;
         const inGap = daysAgo >= GAP.from && daysAgo < GAP.to;
@@ -53,6 +54,21 @@ var generate = (now) => {
         if (nextHeater !== heater) {
             heater = nextHeater;
             add('status', t, 'heater1', heater);
+        }
+        // weekly, plus one day in the gap when the pool has no temperature
+        const onTheHour = hour === 16 && new Date(t).getUTCMinutes() === 0;
+        const weeklySpa = dayNumber % 7 === 0 && !inGap;
+        const spaOnly = inGap && Math.floor(daysAgo) === GAP.from + 3;
+        if (onTheHour && (weeklySpa || spaOnly)) {
+            add('info', t, 'spa temp', 101);
+        }
+        // the spa filter runs through the weekly reading and the next morning, when the
+        // temperature merely holds; the gap's reading is taken while it is off
+        const spaRunning = !inGap && ((dayNumber % 7 === 0 && hour >= 15 && hour < 18) || (dayNumber % 7 === 1 && hour >= 10 && hour < 12));
+        const nextAux = spaRunning ? 1 : 0;
+        if (nextAux !== aux14) {
+            aux14 = nextAux;
+            add('status', t, 'aux14', aux14);
         }
     }
     events.push({ _id: new mongoose.Types.ObjectId(), eventType: 'action', source: 'rest', user: 'old-timer', message: 'Turned Lights on', timestamp: new Date(now - 390 * DAY_MS), status: [] });
@@ -267,15 +283,55 @@ describe('long history', () => {
             const response = await api('GET', `/history/availability?from=${new Date(now - 200 * DAY_MS).toISOString()}&to=${new Date(now).toISOString()}`);
             assert.equal(response.status, 200);
             const days = new Set(response.body.days.map((day) => day.date));
+            const spaDays = new Set(generated.filter((event) => event.status[0] && event.status[0].name === 'spa temp').map((event) => tz.dayKey(event.timestamp.getTime(), NEW_YORK)));
             assert.equal(response.body.timeZone, NEW_YORK);
             assert.ok(response.body.days.every((day) => day.readings > 0));
             for (let ago = GAP.from + 1; ago < GAP.to - 1; ago++) {
-                assert.ok(!days.has(tz.dayKey(now - ago * DAY_MS, NEW_YORK)), `${ago} days ago has no water readings`);
+                const key = tz.dayKey(now - ago * DAY_MS, NEW_YORK);
+                if (spaDays.has(key)) {
+                    assert.ok(days.has(key), `${ago} days ago has a spa temperature`);
+                } else {
+                    assert.ok(!days.has(key), `${ago} days ago has no water readings`);
+                }
             }
             for (const ago of [5, 50, 150]) {
                 assert.ok(days.has(tz.dayKey(now - ago * DAY_MS, NEW_YORK)), `${ago} days ago has readings`);
             }
             assert.equal(response.body.earliest, tz.dayKey(generated[0].timestamp.getTime(), NEW_YORK));
+        });
+
+        it('marks only the temperature that was asked for', async () => {
+            const from = new Date(now - 200 * DAY_MS).toISOString();
+            const to = new Date(now).toISOString();
+            const pool = await api('GET', `/history/availability?names=pool%20temp&from=${from}&to=${to}`);
+            const spa = await api('GET', `/history/availability?names=spa%20temp&from=${from}&to=${to}`);
+            assert.equal(pool.status, 200);
+            assert.equal(spa.status, 200);
+            const poolDays = new Set(pool.body.days.map((day) => day.date));
+            const spaDays = new Set(spa.body.days.map((day) => day.date));
+            const spaOnly = generated.find((event) => {
+                const ago = event.status[0] && event.status[0].name === 'spa temp' ? (now - event.timestamp.getTime()) / DAY_MS : -1;
+                return ago >= GAP.from && ago < GAP.to;
+            });
+            assert.ok(spaOnly, 'the gap has a spa temperature and no pool temperature');
+            const spaOnlyDay = tz.dayKey(spaOnly.timestamp.getTime(), NEW_YORK);
+            assert.ok(!spaDays.has(spaOnlyDay), 'a spa temperature while the spa filter is off is not graphable');
+            const running = generated.find((event) => {
+                if (!event.status[0] || event.status[0].name !== 'spa temp') {
+                    return false;
+                }
+                const ago = (now - event.timestamp.getTime()) / DAY_MS;
+                return ago >= 20 && ago < 80;
+            });
+            assert.ok(running);
+            const runningDay = tz.dayKey(running.timestamp.getTime(), NEW_YORK);
+            const heldDay = tz.dayKey(tz.addDays(tz.startOfDay(running.timestamp.getTime(), NEW_YORK), 1, NEW_YORK), NEW_YORK);
+            assert.ok(spaDays.has(runningDay), 'the day the spa filter ran with a new temperature');
+            assert.ok(spaDays.has(heldDay), 'the next morning the temperature held while the spa filter ran');
+            assert.ok(!generated.some((event) => event.status[0] && event.status[0].name === 'spa temp' && tz.dayKey(event.timestamp.getTime(), NEW_YORK) === heldDay));
+            const poolOnly = [...poolDays].find((day) => !spaDays.has(day));
+            assert.ok(poolOnly, 'a pool temperature does not mark the spa calendar');
+            assert.equal((await api('GET', `/history/availability?names=ambient&from=${from}&to=${to}`)).status, 400);
         });
 
         it('limits how many days one request covers', async () => {

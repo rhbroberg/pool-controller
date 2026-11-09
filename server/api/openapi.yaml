@@ -227,10 +227,22 @@ paths:
       tags:
         - History
       description: which local days have pool or spa temperature or salt readings, for
-        marking a calendar; air temperature doesn't count. Days are in the server's
-        time zone. At most 1500 days at a time.
+        marking a calendar; air temperature doesn't count. Pass pool temp or spa temp
+        to mark days that temperature was known while its pump ran, which is when its
+        graph can draw it. Days are in the server's time zone. At most 1500 days at a time.
       operationId: getHistoryAvailability
       parameters:
+        - name: names
+          in: query
+          allowReserved: true
+          description: readings to mark, pool temp, spa temp or salt; defaults to all three
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
         - name: from
           in: query
           allowReserved: true

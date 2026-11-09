@@ -189,7 +189,7 @@ struct TemperatureHistoryView: View {
             }
         }
         .sheet(isPresented: $choosingDates) {
-            HistoryCalendarSheet(initialRange: visibleRange) { range in
+            HistoryCalendarSheet(initialRange: visibleRange, reading: water.temperatureName) { range in
                 show(range)
             }
         }

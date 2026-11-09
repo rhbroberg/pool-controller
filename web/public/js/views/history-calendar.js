@@ -1,5 +1,5 @@
 // Picks a range of days for a history graph, in a sheet: click the first day, then the last.
-// A dot marks each day the server has pool, spa or salt readings for.
+// A dot marks each day `name` was recorded, or any pool, spa or salt reading when name is omitted.
 
 import { h, openDialog } from '../dom.js';
 import { icon } from '../icons.js';
@@ -20,9 +20,19 @@ const keyAsUtcDate = (key) => {
  * resolves with [from, to] in milliseconds for the days picked, or undefined when cancelled;
  * initial is the window the graph shows now
  **/
-export const openHistoryCalendar = (app, [initialFrom, initialTo]) => {
+const dotCaption = (name) => {
+    if (name === 'pool temp') {
+        return 'A dot marks a day the pool was running and its temperature was known. Click the first day, then the last.';
+    }
+    if (name === 'spa temp') {
+        return 'A dot marks a day the spa was running and its temperature was known. Click the first day, then the last.';
+    }
+    return 'A dot marks a day with pool, spa or salt readings. Click the first day, then the last.';
+};
+
+export const openHistoryCalendar = (app, [initialFrom, initialTo], name = null) => {
     let sheet;
-    const calendar = new HistoryCalendar(app.client, () => sheet && sheet.update());
+    const calendar = new HistoryCalendar(app.client, () => sheet && sheet.update(), name ? [name] : null);
     let { first, last } = calendar.keysIn(initialFrom, initialTo);
     let visible = (({ year, month }) => ({ year, month }))(partsOf(last));
 
@@ -104,7 +114,7 @@ export const openHistoryCalendar = (app, [initialFrom, initialTo]) => {
                 h('div', { class: 'help' },
                     h('span', null,
                         h('span', { class: 'calendar-dot inline' }),
-                        ' A dot marks a day with pool, spa or salt readings. Click the first day, then the last.')),
+                        ` ${dotCaption(name)}`)),
                 calendar.errorMessage ? h('div', { class: 'warning-line' }, icon('warning'), calendar.errorMessage) : null)
         ];
     };

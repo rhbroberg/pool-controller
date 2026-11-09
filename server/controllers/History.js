@@ -19,7 +19,7 @@ module.exports.getHistory = function getHistory (req, res) {
 };
 
 module.exports.getHistoryAvailability = function getHistoryAvailability (req, res) {
-  History.getAvailability(req.swagger.params['from'].value, req.swagger.params['to'].value)
+  History.getAvailability(req.swagger.params['from'].value, req.swagger.params['to'].value, req.swagger.params['names'].value)
     .then(function (response) {
       utils.writeJson(res, response);
     })

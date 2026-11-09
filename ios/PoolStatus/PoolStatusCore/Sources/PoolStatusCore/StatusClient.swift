@@ -115,12 +115,17 @@ public nonisolated struct StatusClient: Sendable {
         return try await send(.get, "history", query: query)
     }
 
-    /// Which days between `from` and `to` have water temperature or salt readings.
-    public func fetchAvailability(from: Date, to: Date) async throws -> HistoryAvailability {
-        try await send(.get, "history/availability", query: [
+    /// Which days between `from` and `to` have the named readings, or any water temperature or
+    /// salt reading when `names` is empty.
+    public func fetchAvailability(from: Date, to: Date, names: [ReadingName] = []) async throws -> HistoryAvailability {
+        var query = [
             URLQueryItem(name: "from", value: Self.iso.format(from)),
             URLQueryItem(name: "to", value: Self.iso.format(to))
-        ])
+        ]
+        if !names.isEmpty {
+            query.append(URLQueryItem(name: "names", value: names.map(\.rawValue).joined(separator: ",")))
+        }
+        return try await send(.get, "history/availability", query: query)
     }
 
     private static let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)

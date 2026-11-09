@@ -46,6 +46,20 @@ describe('history calendar', () => {
         assert.deepEqual(client.requests[1], [midnightOf(2026, 5, 1, NEW_YORK), midnightOf(2026, 8, 1, NEW_YORK)], 'May through July');
     });
 
+    it('asks for only the spa temperature when the calendar is the spa’s', async () => {
+        const names = [];
+        const client = {
+            fetchAvailability: async (from, to, requested) => {
+                names.push(requested);
+                return availability;
+            }
+        };
+        const calendar = new HistoryCalendar(client, () => {}, ['spa temp']);
+        calendar.timeZone = NEW_YORK;
+        await calendar.load({ year: 2026, month: 10 }, Date.UTC(2026, 10, 20));
+        assert.deepEqual(names, [['spa temp']]);
+    });
+
     it('keeps the error, so paging back tries again', async () => {
         const calendar = new HistoryCalendar({ fetchAvailability: async () => { throw new Error('The pool server isn’t answering.'); } });
         await calendar.load({ year: 2026, month: 11 });

@@ -113,7 +113,7 @@ export const mountTemperatureHistory = (root, app, water) => {
 
     /** shows the days picked in the calendar, as far as the zoom limits allow */
     const chooseDates = async () => {
-        const picked = await openHistoryCalendar(app, [start, start + length]);
+        const picked = await openHistoryCalendar(app, [start, start + length], model.temperatureName);
         if (!picked) {
             return;
         }

@@ -401,6 +401,21 @@ struct CalendarTests {
         #expect(model.earliest.map { model.calendar.dateComponents([.month, .day], from: $0) } == DateComponents(month: 10, day: 2))
     }
 
+    @Test("asks for the spa temperature when the calendar is the spa's")
+    func asksForOneTemperature() async {
+        let query = Shared([String: String]())
+        let body = availability
+        let server = StubServer { _, path, received in
+            if path == "history/availability" {
+                query.value = received
+            }
+            return path == "history/availability" ? .ok(body) : .status(404)
+        }
+        let model = HistoryCalendarModel(names: [.spaTemperature], timeZone: TimeZone(identifier: "UTC")!)
+        await model.load(around: DateComponents(year: 2026, month: 11), client: server.client)
+        #expect(query.value["names"] == "spa temp")
+    }
+
     @Test("asks for a month and its neighbors only once")
     func fetchesOnce() async {
         let body = availability

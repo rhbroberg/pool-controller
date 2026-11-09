@@ -3,26 +3,40 @@ import SwiftUI
 import UIKit
 
 /// Picks a range of days for a history graph: tap the first day, then the last. A dot marks
-/// each day the server has pool, spa or salt readings for.
+/// each day `reading` was recorded, or any pool, spa or salt reading when `reading` is nil.
 struct HistoryCalendarSheet: View {
     let initialRange: ClosedRange<Date>
+    /// The temperature this calendar is choosing days for.
+    let reading: ReadingName?
     let choose: (ClosedRange<Date>) -> Void
 
     @Environment(StatusStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var model = HistoryCalendarModel()
+    @State private var model: HistoryCalendarModel
     @State private var first: DateComponents?
     @State private var last: DateComponents?
     @State private var visibleMonth: DateComponents
 
-    init(initialRange: ClosedRange<Date>, choose: @escaping (ClosedRange<Date>) -> Void) {
+    init(initialRange: ClosedRange<Date>, reading: ReadingName? = nil, choose: @escaping (ClosedRange<Date>) -> Void) {
         self.initialRange = initialRange
+        self.reading = reading
         self.choose = choose
+        _model = State(initialValue: HistoryCalendarModel(names: reading.map { [$0] } ?? []))
         let calendar = Calendar.current
         let lastMoment = max(initialRange.lowerBound, initialRange.upperBound.addingTimeInterval(-1))
         _first = State(initialValue: calendar.dateComponents([.year, .month, .day], from: initialRange.lowerBound))
         _last = State(initialValue: calendar.dateComponents([.year, .month, .day], from: lastMoment))
         _visibleMonth = State(initialValue: calendar.dateComponents([.year, .month], from: lastMoment))
+    }
+
+    private var dotCaption: String {
+        if reading == .poolTemperature {
+            return String(localized: "A dot marks a day the pool was running and its temperature was known. Tap the first day, then the last.")
+        }
+        if reading == .spaTemperature {
+            return String(localized: "A dot marks a day the spa was running and its temperature was known. Tap the first day, then the last.")
+        }
+        return String(localized: "A dot marks a day with pool, spa or salt readings. Tap the first day, then the last.")
     }
 
     private var chosenRange: ClosedRange<Date>? {
@@ -45,8 +59,7 @@ struct HistoryCalendarSheet: View {
                              format: .interval.month(.abbreviated).day().year())
                             .font(.headline)
                     }
-                    Label("A dot marks a day with pool, spa or salt readings. Tap the first day, then the last.",
-                          systemImage: "circle.fill")
+                    Label(dotCaption, systemImage: "circle.fill")
                         .labelStyle(DotLabelStyle())
                         .font(.footnote)
                         .foregroundStyle(.secondary)

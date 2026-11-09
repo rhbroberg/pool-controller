@@ -1,11 +1,14 @@
 import Foundation
 import Observation
 
-/// The days with water temperature or salt readings, for marking a calendar, fetched a few
-/// months at a time as the calendar pages. Days are the server's, in its time zone, so the
-/// calendar should use `calendar` to line up with them.
+/// The days with the named readings, for marking a calendar, fetched a few months at a time as
+/// the calendar pages. With no names, days that have a pool or spa temperature or a salt reading
+/// are marked. Days are the server's, in its time zone, so the calendar should use `calendar`
+/// to line up with them.
 @Observable
 public final class HistoryCalendarModel {
+    /// Empty asks for every water reading.
+    public let names: [ReadingName]
     public private(set) var timeZone: TimeZone
     /// The first day with readings.
     public private(set) var earliest: Date?
@@ -19,7 +22,8 @@ public final class HistoryCalendarModel {
     /// The months already asked for, keyed YYYY-MM.
     private var fetchedMonths: Set<String> = []
 
-    public init(timeZone: TimeZone = .current) {
+    public init(names: [ReadingName] = [], timeZone: TimeZone = .current) {
+        self.names = names
         self.timeZone = timeZone
     }
 
@@ -55,7 +59,7 @@ public final class HistoryCalendarModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            let availability = try await client.fetchAvailability(from: first, to: min(end, .now))
+            let availability = try await client.fetchAvailability(from: first, to: min(end, .now), names: names)
             if let zone = TimeZone(identifier: availability.timeZone), zone != timeZone {
                 // days counted in another zone don't line up with these
                 timeZone = zone

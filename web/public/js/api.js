@@ -197,10 +197,14 @@ export class Client {
         };
     }
 
-    /** the days (YYYY-MM-DD, in the server's time zone) with water temperature or salt readings */
-    fetchAvailability(from, to) {
+    /** the days (YYYY-MM-DD, in the server's time zone) with these readings, or any water reading when names is omitted */
+    fetchAvailability(from, to, names) {
         return this.send('GET', 'history/availability', {
-            query: { from: new Date(from).toISOString(), to: new Date(to).toISOString() }
+            query: {
+                names: names && names.length ? names.join(',') : undefined,
+                from: new Date(from).toISOString(),
+                to: new Date(to).toISOString()
+            }
         });
     }
 

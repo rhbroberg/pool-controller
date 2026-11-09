@@ -1,6 +1,7 @@
-// The days with water temperature or salt readings, for marking the history calendar, fetched a
-// few months at a time as the calendar pages. Days are the server's, in its time zone, so the
-// month grid is laid out in that zone too.
+// The days with the named readings, for marking the history calendar, fetched a few months at a
+// time as the calendar pages. With no names, days that have a pool or spa temperature or a salt
+// reading are marked. Days are the server's, in its time zone, so the month grid is laid out
+// in that zone too.
 
 import { isAbort } from './api.js';
 import { localTimeZone, isValidTimeZone, keyOf, partsOf, midnightOf, midnightOfKey, addDaysToKey, dayKey } from './timezone.js';
@@ -14,9 +15,11 @@ export const shiftMonth = ({ year, month }, offset) => {
 };
 
 export class HistoryCalendar {
-    constructor(client, changed = () => {}) {
+    constructor(client, changed = () => {}, names = null) {
         this.client = client;
         this.changed = changed;
+        // null asks for every water reading; ['pool temp'] marks only that one
+        this.names = names;
         this.timeZone = localTimeZone();
         // the first day with readings, YYYY-MM-DD
         this.earliest = null;
@@ -50,7 +53,7 @@ export class HistoryCalendar {
         this.isLoading = true;
         this.changed();
         try {
-            const availability = await this.client.fetchAvailability(from, Math.max(to, from + 1));
+            const availability = await this.client.fetchAvailability(from, Math.max(to, from + 1), this.names);
             if (isValidTimeZone(availability.timeZone) && availability.timeZone !== this.timeZone) {
                 // days counted in another zone don't line up with these
                 this.timeZone = availability.timeZone;

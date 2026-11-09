@@ -125,6 +125,12 @@
     "192.168.1.20:3000" : {
 
     },
+    "A dot marks a day the pool was running and its temperature was known. Tap the first day, then the last." : {
+
+    },
+    "A dot marks a day the spa was running and its temperature was known. Tap the first day, then the last." : {
+
+    },
     "A dot marks a day with pool, spa or salt readings. Tap the first day, then the last." : {
 
     },
