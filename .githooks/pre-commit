@@ -1,21 +1,47 @@
 #!/bin/sh
-# Lints the staged version of each server JavaScript file, so unstaged edits
-# can't hide an error from the check.
+# Lints the staged version of each server JavaScript file, so unstaged edits can't hide an error
+# from the check, and scans the Docker images with Docker Scout when the commit changes what goes
+# into them. POOL_SCOUT=always scans whatever the commit changes; POOL_SCOUT=skip doesn't scan.
 
-cd "$(git rev-parse --show-toplevel)/server" || exit 1
+top=$(git rev-parse --show-toplevel) || exit 1
+status=0
+# the path patterns below are for git to match, not the shell
+set -f
 
+cd "$top/server" || exit 1
 eslint=node_modules/.bin/eslint
 if [ ! -x "$eslint" ]; then
     echo "pre-commit: ESLint isn't installed, skipping lint (run npm install in server/)" >&2
-    exit 0
+else
+    lint_status=0
+    for file in $(git diff --cached --name-only --diff-filter=ACMR --relative -- '*.js' '*.cjs'); do
+        git show ":./$file" | "$eslint" --no-warn-ignored --stdin --stdin-filename "$file" || lint_status=1
+    done
+    if [ $lint_status -ne 0 ]; then
+        echo "pre-commit: fix the ESLint errors above, or skip the check with git commit --no-verify" >&2
+        status=1
+    fi
 fi
 
-status=0
-for file in $(git diff --cached --name-only --diff-filter=ACMR --relative -- '*.js' '*.cjs'); do
-    git show ":./$file" | "$eslint" --no-warn-ignored --stdin --stdin-filename "$file" || status=1
-done
+cd "$top" || exit 1
+# what the images are built from, and how they're checked
+image_inputs="Dockerfile .dockerignore web/Dockerfile web/package*.json server/package*.json
+    docker/caddy docker/docker-compose*.yml docker/scout docker/scout-check.sh"
+scan=
+case "${POOL_SCOUT:-}" in
+    skip) ;;
+    always) scan=1 ;;
+    *) git diff --cached --quiet -- $image_inputs || scan=1 ;;
+esac
 
-if [ $status -ne 0 ]; then
-    echo "pre-commit: fix the ESLint errors above, or skip the check with git commit --no-verify" >&2
+if [ -n "$scan" ]; then
+    # the images are built from the working tree, not the staged files
+    git diff --quiet -- $image_inputs ||
+        echo "pre-commit: building the images from the working tree, which has unstaged changes to them" >&2
+    if ! docker/scout-check.sh; then
+        echo "pre-commit: fix what the Docker Scout check reports above, or skip the scan with POOL_SCOUT=skip git commit" >&2
+        status=1
+    fi
 fi
+
 exit $status

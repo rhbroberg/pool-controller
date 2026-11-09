@@ -19,7 +19,7 @@ SIM_LOCAL = $(SIM) -f docker-compose.local-certs.yml
 TEST_HOSTNAME ?= pooltest.brobasino.onthegrid.net
 TEST_ACME_CA ?= https://acme-staging-v02.api.letsencrypt.org/directory
 
-.PHONY: up down logs sim sim-letsencrypt sim-down sim-logs sim-root-cert
+.PHONY: up down logs scout sim sim-letsencrypt sim-down sim-logs sim-root-cert
 
 up:
 	$(COMPOSE) up -d --build
@@ -29,6 +29,11 @@ down:
 
 logs:
 	$(COMPOSE) logs -f
+
+# builds the images and fails on any critical or high CVE Docker Scout knows a fix for; the
+# pre-commit hook runs it when a commit changes what goes into an image
+scout:
+	./scout-check.sh
 
 # https://localhost:8443 with a certificate from Caddy's own CA
 sim:
