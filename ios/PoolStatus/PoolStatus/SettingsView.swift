@@ -1,3 +1,4 @@
+import AuthenticationServices
 import PoolStatusCore
 import SwiftUI
 
@@ -5,10 +6,11 @@ struct SettingsView: View {
     static let reconnectChoices = [10, 30, 60, 120, 300]
 
     private enum Route: Hashable {
-        case changePassword, eventLog, accounts, serverMaintenance
+        case changePassword, signInMethods, eventLog, accounts, serverMaintenance
     }
 
     @Environment(StatusStore.self) private var store
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
     @Environment(\.dismiss) private var dismiss
@@ -19,8 +21,16 @@ struct SettingsView: View {
     @State private var isSigningIn = false
     @State private var signInError: String?
     @State private var isScanningNetwork = false
+    /// nil from a server too old to have sign-in services.
+    @State private var serverChoices: SignInChoices?
+    /// The service whose sign-in page is open.
+    @State private var signingInWith: SignInProvider?
+    /// What signing in with a service ended with, when it didn't simply sign in.
+    @State private var serviceMessage: String?
+    @State private var serviceFailed = false
 
     private var auth: AuthSession { store.auth }
+    private var choices: SignInChoices { serverChoices ?? .passwordOnly }
 
     private var trimmedAddress: String {
         draftAddress.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -77,39 +87,67 @@ struct SettingsView: View {
                                 Text(credentials.name)
                             }
                         }
-                        NavigationLink("Change Password", value: Route.changePassword)
+                        if !choices.providers.isEmpty {
+                            NavigationLink(value: Route.signInMethods) {
+                                LabeledContent("Sign-In Methods",
+                                               value: signInMethodNames(auth.methods, services: choices.providers).joined(separator: ", "))
+                            }
+                        } else if auth.hasPassword {
+                            NavigationLink("Change Password", value: Route.changePassword)
+                        }
                         Button("Sign Out", role: .destructive) {
                             auth.signOut()
                         }
                     } else {
-                        TextField("Account Name", text: $accountName)
-                            .textContentType(.username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        SecureField("Password", text: $password)
-                            .textContentType(.password)
-                        Button {
-                            signInError = nil
-                            // signing in is to the server being typed, so it takes effect now
-                            // rather than on Done
-                            store.serverAddress = trimmedAddress
-                            isSigningIn = true
-                        } label: {
-                            HStack {
-                                Text("Sign In")
-                                if isSigningIn {
-                                    Spacer()
-                                    ProgressView()
+                        if choices.passwordSignIn {
+                            TextField("Account Name", text: $accountName)
+                                .textContentType(.username)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            SecureField("Password", text: $password)
+                                .textContentType(.password)
+                            Button {
+                                signInError = nil
+                                // signing in is to the server being typed, so it takes effect now
+                                // rather than on Done
+                                store.serverAddress = trimmedAddress
+                                isSigningIn = true
+                            } label: {
+                                HStack {
+                                    Text("Sign In")
+                                    if isSigningIn {
+                                        Spacer()
+                                        ProgressView()
+                                    }
                                 }
                             }
+                            .disabled(accountName.isEmpty || password.isEmpty || trimmedAddress.isEmpty || isSigningIn)
                         }
-                        .disabled(accountName.isEmpty || password.isEmpty || trimmedAddress.isEmpty || isSigningIn)
+                        ForEach(choices.providers) { provider in
+                            Button {
+                                store.serverAddress = trimmedAddress
+                                signInError = nil
+                                serviceMessage = nil
+                                signingInWith = provider
+                            } label: {
+                                HStack {
+                                    Text("Continue with \(provider.displayName)")
+                                    if signingInWith == provider {
+                                        Spacer()
+                                        ProgressView()
+                                    }
+                                }
+                            }
+                            .disabled(trimmedAddress.isEmpty || signingInWith != nil)
+                        }
                     }
                 } header: {
                     Text("Account")
                 } footer: {
                     if let signInError {
                         Text(signInError).foregroundStyle(.red)
+                    } else if auth.credentials == nil, let serviceMessage {
+                        Text(serviceMessage).foregroundStyle(serviceFailed ? .red : .secondary)
                     } else if auth.credentials == nil {
                         Text("Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.")
                     }
@@ -127,9 +165,18 @@ struct SettingsView: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .changePassword: ChangePasswordView()
+                case .signInMethods: SignInMethodsView(providers: choices.providers)
                 case .eventLog: EventLogView()
                 case .accounts: AccountsView()
                 case .serverMaintenance: ServerMaintenanceView()
+                }
+            }
+            .task(id: store.serverAddress) {
+                serverChoices = await auth.signInChoices()
+            }
+            .task(id: signingInWith) {
+                if let signingInWith {
+                    await signIn(with: signingInWith)
                 }
             }
             .fullScreenCover(isPresented: Binding(get: { auth.commissioning != nil },
@@ -179,6 +226,22 @@ struct SettingsView: View {
             }
         }
         isSigningIn = false
+    }
+
+    private func signIn(with provider: SignInProvider) async {
+        defer { signingInWith = nil }
+        do {
+            let url = try auth.client.signInURL(provider: provider.id)
+            if let outcome = try await runSignInSession(url, in: webAuthenticationSession, auth: auth) {
+                serviceMessage = outcome.message
+                serviceFailed = outcome.isFailure
+            }
+        } catch {
+            if !error.isCancellation {
+                serviceMessage = error.localizedDescription
+                serviceFailed = true
+            }
+        }
     }
 }
 
