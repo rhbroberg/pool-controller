@@ -26,11 +26,24 @@ var UserSchema = new mongoose.Schema({
         trim: true,
         unique: true
     },
+    // an account that signs in only through an external service has none
     password: {
         type: String,
-        required: true,
+        required: function() {
+            return !this.identities || this.identities.length === 0;
+        },
         minlength: 6
     },
+    // the external services this account signs in with, each by the provider's own id for it
+    identities: [{
+        _id: false,
+        provider: { type: String, required: true },
+        subject: { type: String, required: true },
+        email: String,
+        linkedAt: { type: Date, default: Date.now }
+    }],
+    displayName: String,
+    lastSignInAt: Date,
     mustChangeCredentials: {
         type: Boolean,
         default: false
@@ -52,11 +65,41 @@ var UserSchema = new mongoose.Schema({
     }]
 });
 
+UserSchema.index({ 'identities.provider': 1, 'identities.subject': 1 },
+    { unique: true, partialFilterExpression: { 'identities.subject': { $exists: true } } });
+
 UserSchema.methods.toJSON = function() {
     var user = this;
     var userObject = user.toObject();
 
     return _.pick(userObject, ['_id', 'email', 'role', 'mustChangeCredentials']);
+};
+
+UserSchema.methods.hasPassword = function() {
+    return Boolean(this.password);
+};
+
+// how the account signs in: password and/or the ids of its external services
+UserSchema.methods.signInMethods = function() {
+    return (this.hasPassword() ? ['password'] : []).concat((this.identities || []).map((identity) => identity.provider));
+};
+
+// the account as the API reports it, without secrets
+UserSchema.methods.describe = function() {
+    const described = {
+        email: this.email,
+        role: this.role,
+        mustChangeCredentials: this.mustChangeCredentials,
+        methods: this.signInMethods()
+    };
+    if (this.displayName) {
+        described.displayName = this.displayName;
+    }
+    return described;
+};
+
+UserSchema.statics.findByIdentity = function(provider, subject) {
+    return this.findOne({ identities: { $elemMatch: { provider, subject } } });
 };
 
 UserSchema.methods.hasScope = function(scope) {
@@ -107,7 +150,7 @@ UserSchema.statics.findByCredentials = function(email, password) {
     var User = this;
 
     return User.findOne({ email }).then((user) => {
-        if (!user) {
+        if (!user || !user.password) {
             return Promise.reject();
         }
 

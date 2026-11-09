@@ -970,6 +970,526 @@ paths:
         - OAuth2:
             - account
       x-swagger-router-controller: UserManagement
+  /auth/providers:
+    get:
+      tags:
+        - Sign-in services
+      description: the services the sign-in page offers, and whether it also offers a
+        name and password
+      operationId: listProviders
+      responses:
+        "200":
+          description: the sign-in choices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInChoices"
+      x-swagger-router-controller: ExternalAuth
+  "/auth/{provider}/start":
+    get:
+      tags:
+        - Sign-in services
+      description: "open in a browser (or ASWebAuthenticationSession) to sign in with a
+        service. It redirects to the service, which comes back to the callback, which
+        redirects to the page's #/signin/complete, or poolstatus://signin for the iOS
+        app, with ticket (trade it at /users/login/external), status (pending,
+        denied, refused, cancelled or linked) or error."
+      operationId: startSignIn
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: client
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - web
+              - ios
+        - name: link
+          in: query
+          required: false
+          description: from POST /users/me/identities/{provider}, to add the service to
+            the signed-in account instead of signing in
+          schema:
+            type: string
+      responses:
+        "302":
+          description: on to the service, or back to the page with an error
+      x-swagger-router-controller: ExternalAuth
+  "/auth/{provider}/callback":
+    get:
+      tags:
+        - Sign-in services
+      description: where the service sends the browser back; register this address with
+        the service
+      operationId: finishSignIn
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: back to the page or app with the outcome
+      x-swagger-router-controller: ExternalAuth
+    post:
+      tags:
+        - Sign-in services
+      description: the same, for services such as Apple that post their answer as a form
+      operationId: finishSignIn
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "302":
+          description: back to the page or app with the outcome
+      x-swagger-router-controller: ExternalAuth
+  /users/login/external:
+    post:
+      tags:
+        - User management
+      description: trades the ticket a sign-in through a service came back with for a
+        token, as /users/login does for a password. A ticket works once, for a minute.
+      operationId: exchangeTicket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Ticket"
+        required: true
+      x-codegen-request-body-name: ticket
+      responses:
+        "200":
+          description: the account, its role and a token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: the ticket is unknown, used or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      x-swagger-router-controller: ExternalAuth
+  "/users/me/identities/{provider}":
+    post:
+      tags:
+        - User management
+      description: starts adding a sign-in service to the signed-in account; open the
+        returned url in a browser
+      operationId: linkIdentity
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client:
+                  type: string
+                  enum:
+                    - web
+                    - ios
+      responses:
+        "200":
+          description: where to send the browser
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        "404":
+          description: there is no such service, or it is off
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - account
+      x-swagger-router-controller: ExternalAuth
+    delete:
+      tags:
+        - User management
+      description: stops the signed-in account signing in with a service; refused if it
+        is the account's only way in
+      operationId: unlinkIdentity
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: the account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "409":
+          description: the account has no other way to sign in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - account
+      x-swagger-router-controller: ExternalAuth
+  /users/requests:
+    get:
+      tags:
+        - User management
+      description: "admin: people who signed in through a service without an account,
+        waiting for approval or denied"
+      operationId: listRequests
+      responses:
+        "200":
+          description: the requests, latest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccessRequest"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  "/users/requests/{id}":
+    delete:
+      tags:
+        - User management
+      description: "admin: forgets a request, so a denied person may ask again"
+      operationId: forgetRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: forgotten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  "/users/requests/{id}/approve":
+    post:
+      tags:
+        - User management
+      description: "admin: creates the person's account with a role; they are signed in
+        the next time they sign in with the service"
+      operationId: approveRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum:
+                    - viewer
+                    - user
+                    - admin
+        required: true
+      x-codegen-request-body-name: approval
+      responses:
+        "200":
+          description: the new account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: there is no such request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  "/users/requests/{id}/deny":
+    post:
+      tags:
+        - User management
+      description: "admin: turns the person away; later attempts are refused without
+        asking again"
+      operationId: denyRequest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: the request, now denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRequest"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  /users/invitations:
+    get:
+      tags:
+        - User management
+      description: "admin: email addresses let in ahead of time"
+      operationId: listInvitations
+      responses:
+        "200":
+          description: the invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invitation"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+    post:
+      tags:
+        - User management
+      description: "admin: lets an email address in with a role. The first sign-in with
+        that verified address, through a service trusted for email addresses, creates
+        the account."
+      operationId: createInvitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Invitation"
+        required: true
+      x-codegen-request-body-name: invitation
+      responses:
+        "200":
+          description: the invitation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "409":
+          description: the address is already invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  "/users/invitations/{id}":
+    delete:
+      tags:
+        - User management
+      description: "admin: withdraws an invitation"
+      operationId: deleteInvitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  /system/sign-in:
+    get:
+      tags:
+        - Sign-in services
+      description: "admin: whether passwords work, whether newcomers may ask to join, and
+        every sign-in service, without its secrets"
+      operationId: getSignInSettings
+      responses:
+        "200":
+          description: the sign-in settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInSettings"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+    put:
+      tags:
+        - Sign-in services
+      description: "admin: turns password sign-in on or off (off only once an admin can
+        sign in through a service), or chooses whether newcomers may ask to join"
+      operationId: updateSignInSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInSettingsUpdate"
+        required: true
+      x-codegen-request-body-name: changes
+      responses:
+        "200":
+          description: the settings after the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInSettings"
+        "409":
+          description: no admin could sign in afterwards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  /system/sign-in/providers:
+    post:
+      tags:
+        - Sign-in services
+      description: "admin: adds an OpenID Connect service; its discovery document is read
+        to check the issuer"
+      operationId: createProvider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInServiceChange"
+        required: true
+      x-codegen-request-body-name: service
+      responses:
+        "200":
+          description: the service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInService"
+        "400":
+          description: something is missing, or the issuer's discovery document can't be read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: the id is taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+  "/system/sign-in/providers/{id}":
+    put:
+      tags:
+        - Sign-in services
+      description: "admin: changes a service, or turns it on or off. An empty or missing
+        clientSecret keeps the current one; null removes it."
+      operationId: updateProvider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInServiceChange"
+        required: true
+      x-codegen-request-body-name: changes
+      responses:
+        "200":
+          description: the service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInService"
+        "404":
+          description: there is no such service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
+    delete:
+      tags:
+        - Sign-in services
+      description: "admin: removes a service; accounts keep their link to it, and can
+        sign in with it again if it's added back with the same id"
+      operationId: deleteProvider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: ExternalAuth
   /system/info:
     get:
       tags:
@@ -1158,8 +1678,9 @@ components:
       in: header
     OAuth2:
       type: oauth2
-      description: "Sign in with POST /users/login and send the returned token as the
-        x-auth header. Reads need no token. Each account's role grants scopes:
+      description: "Sign in with POST /users/login, or through a service from
+        /auth/{provider}/start and then POST /users/login/external, and send the
+        returned token as the x-auth header. Reads need no token. Each account's role grants scopes:
         viewer has account; user has account and control; admin has all three.
         An operation's listed scopes must all be granted, or it is refused with
         403."
@@ -1212,10 +1733,21 @@ components:
             - admin
         mustChangeCredentials:
           type: boolean
+        methods:
+          type: array
+          description: how it signs in; password and/or the ids of sign-in services
+          items:
+            type: string
+        displayName:
+          type: string
+          description: the name a sign-in service gave
       example:
         email: rick
         role: admin
         mustChangeCredentials: false
+        methods:
+          - password
+          - google
     AccountUpdate:
       type: object
       properties:
@@ -1230,6 +1762,179 @@ components:
           description: a new password; the account is signed out everywhere
       example:
         role: viewer
+    Ticket:
+      type: object
+      required:
+        - ticket
+      properties:
+        ticket:
+          type: string
+    SignInChoices:
+      type: object
+      properties:
+        passwordSignIn:
+          type: boolean
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              displayName:
+                type: string
+    SignInService:
+      type: object
+      properties:
+        id:
+          type: string
+          description: lowercase letters, digits and dashes; part of the callback address
+        displayName:
+          type: string
+        kind:
+          type: string
+          description: oidc for any standard service; apple builds Apple's client secret
+            from its key
+          enum:
+            - oidc
+            - apple
+        issuer:
+          type: string
+        clientId:
+          type: string
+        hasClientSecret:
+          type: boolean
+        apple:
+          type: object
+          properties:
+            teamId:
+              type: string
+            keyId:
+              type: string
+            hasPrivateKey:
+              type: boolean
+        enabled:
+          type: boolean
+        trustEmail:
+          type: boolean
+          description: verified email addresses from this service may redeem invitations
+        redirectUri:
+          type: string
+          description: register this with the service
+    SignInServiceChange:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        kind:
+          type: string
+          enum:
+            - oidc
+            - apple
+        issuer:
+          type: string
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          nullable: true
+        apple:
+          type: object
+          properties:
+            teamId:
+              type: string
+            keyId:
+              type: string
+            privateKey:
+              type: string
+        enabled:
+          type: boolean
+        trustEmail:
+          type: boolean
+    SignInSettings:
+      type: object
+      properties:
+        passwordSignIn:
+          type: boolean
+        passwordSignInForced:
+          type: boolean
+          description: POOL_FORCE_PASSWORD_SIGNIN=1 keeps passwords working whatever the setting
+        signInRequests:
+          type: string
+          enum:
+            - ask
+            - refuse
+        redirectUriTemplate:
+          type: string
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignInService"
+    SignInSettingsUpdate:
+      type: object
+      properties:
+        passwordSignIn:
+          type: boolean
+        signInRequests:
+          type: string
+          enum:
+            - ask
+            - refuse
+    AccessRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        provider:
+          type: string
+        providerName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - pending
+            - denied
+        firstSeen:
+          type: string
+          format: date-time
+        lastSeen:
+          type: string
+          format: date-time
+        attempts:
+          type: integer
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        provider:
+          type: string
+          nullable: true
+          description: the one service it works with; null for any trusted for email
+        providerName:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum:
+            - viewer
+            - user
+            - admin
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     LightingZone:
       type: object
       properties:

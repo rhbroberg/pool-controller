@@ -3,12 +3,13 @@
 const { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } = require('./../models/user');
 var utils = require('../utils/writer.js');
 const activity = require('./ActivityService');
+const externalAuth = require('./ExternalAuthService');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
 
 const MINIMUM_PASSWORD_LENGTH = 6;
-// "me" would collide with the /users/me routes
-const RESERVED_NAMES = ['me'];
+// these would collide with the /users/me, /users/login, /users/requests and /users/invitations routes
+const RESERVED_NAMES = ['me', 'login', 'requests', 'invitations'];
 
 var requireJwtSecret = () => {
     if (!process.env.JWT_SECRET) {
@@ -18,11 +19,7 @@ var requireJwtSecret = () => {
 
 var fail = (code, message) => utils.respondWithCode(code, { code: code, message: message });
 
-var describe = (user) => ({
-    email: user.email,
-    role: user.role,
-    mustChangeCredentials: user.mustChangeCredentials
-});
+var describe = (user) => user.describe();
 
 var checkName = (name) => {
     if (!name) {
@@ -161,6 +158,9 @@ exports.getUser = async function(user) {
  **/
 exports.loginUser = async function(credentials) {
     requireJwtSecret();
+    if (!externalAuth.passwordSignInAllowed()) {
+        throw fail(403, 'password sign-in is turned off here; sign in with one of the services instead');
+    }
 
     let user;
     try {

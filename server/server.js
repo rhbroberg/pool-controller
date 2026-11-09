@@ -20,6 +20,7 @@ const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
 const heatingService = require('./service/HeatingService');
 const settingsService = require('./service/SettingsService');
+const externalAuthService = require('./service/ExternalAuthService');
 const scheduler = require('./jobs/scheduler');
 const rollupsJob = require('./jobs/rollups');
 const retentionJob = require('./jobs/retention');
@@ -93,7 +94,7 @@ var syncIndexes = () => Promise.all([Event, Rollup].map((model) => model.syncInd
 // the API waits for this, so the default admin account exists before the first sign-in and
 // history uses the configured time zone
 const startupChecked = mongoose.connection.asPromise()
-    .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), syncIndexes()]))
+    .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), externalAuthService.load(), syncIndexes()]))
     .catch((e) => logger.error(`startup checks failed: ${e}`));
 
 scheduler.register(rollupsJob);
@@ -536,6 +537,7 @@ systemService.registerResetListener(() => {
     waterModeRequest = undefined;
     // the reset erased the settings along with everything else
     settingsService.load().catch((e) => logger.error(`could not reload settings: ${e.message}`));
+    externalAuthService.load().catch((e) => logger.error(`could not reload sign-in settings: ${e.message}`));
 });
 
 // docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish
