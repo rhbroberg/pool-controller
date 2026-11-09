@@ -6,7 +6,11 @@ ENV PORT=80
 ENV POOL_API_URL=http://pool:3000
 WORKDIR /opt/pool-web
 
-# no dependencies to install: the service uses only Node's own modules
+# no dependencies to install: the service uses only Node's own modules, so the package managers,
+# and the vulnerabilities Docker Scout finds in their dependencies, can go
+RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx \
+    /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
+
 COPY package.json server.js ./
 COPY public ./public
 
