@@ -35,7 +35,7 @@ const controlMap = new TwoWayMap({
 
     // curiously, bits 4-7 are not represented
 
-    // bits 8-15 follow test-data/pool-decode.txt; valve3 and valve4 are confirmed by
+    // bits 8-15 follow test/test-data/pool-decode.txt; valve3 and valve4 are confirmed by
     // presses in sample-various-bin, heater1 is not
     '8': 'valve3', // 0x00 00 01 00: 'valve3',
     // pool-decode.txt calls this valve4/heater2; named for the status bit it drives so requests

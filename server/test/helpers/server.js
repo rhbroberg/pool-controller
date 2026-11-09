@@ -7,7 +7,7 @@ const path = require('node:path');
 const mongoose = require('mongoose');
 
 const SERVER_DIR = path.join(__dirname, '..', '..');
-const CAPTURE = path.join(SERVER_DIR, '..', 'test-data', 'sample-various-bin');
+const CAPTURE = path.join(SERVER_DIR, 'test', 'test-data', 'sample-various-bin');
 const API_BASE = '/rhbroberg/pool-api/1.0.0';
 const MONGO_HOST = process.env.TEST_MONGO_HOST || 'mongodb://127.0.0.1:27017';
 const STARTUP_MS = 20000;

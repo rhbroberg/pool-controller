@@ -1,0 +1,13 @@
+# the builder stage installs node_modules; the rest is for development, not the running server
+node_modules
+npm-debug.log
+coverage
+test
+.c8rc.json
+eslint.config.cjs
+.swagger-codegen
+.swagger-codegen-ignore
+README.md
+Dockerfile
+.dockerignore
+**/.DS_Store

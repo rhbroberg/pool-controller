@@ -55,7 +55,7 @@ services:
   pool:
     image: rhbroberg/pool-controller
     build:
-      context: ..
+      context: ../server
       args:
         # the Makefile sets it; reported by GET /system/info
         - POOL_GIT_COMMIT=${POOL_GIT_COMMIT:-unknown}

@@ -3,7 +3,7 @@
 # since distroless's Debian 12 image lags behind Node 22's security releases.
 FROM node:22-trixie-slim AS builder
 WORKDIR /opt/pool-controller
-COPY server/package.json server/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 FROM gcr.io/distroless/nodejs22-debian13
@@ -12,7 +12,7 @@ ENV NODE_ENV=docker-test
 WORKDIR /opt/pool-controller
 
 COPY --from=builder /opt/pool-controller/node_modules ./node_modules
-COPY server /opt/pool-controller
+COPY . /opt/pool-controller
 
 # the image has no .git, so the commit it was built from comes in from the build
 ARG POOL_GIT_COMMIT=unknown

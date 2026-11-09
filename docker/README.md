@@ -49,7 +49,7 @@ to update to. Mongo isn't checked: it's pulled rather than built, and pinned for
 It needs Docker running and signed in to Docker Hub (`docker login`), and `jq`.
 
 The git pre-commit hook runs it whenever a commit changes what goes into an image: the
-Dockerfiles, `.dockerignore`, the package files, `docker/caddy`, the compose files, or the check
+Dockerfiles, `server/.dockerignore`, the package files, `docker/caddy`, the compose files, or the check
 itself. It builds from the working tree, not the staged files. For a commit:
 
     POOL_SCOUT=always git commit ...   # scan even though no image changed
