@@ -24,11 +24,13 @@ const externalAuthService = require('./service/ExternalAuthService');
 const scheduler = require('./jobs/scheduler');
 const rollupsJob = require('./jobs/rollups');
 const retentionJob = require('./jobs/retention');
+const weatherJob = require('./jobs/weather');
 
 var { mongoose } = require('./mongoose');
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
 var { Event } = require('./models/event');
 var { Rollup } = require('./models/rollup');
+var { WeatherHour, WeatherDay } = require('./models/weather');
 var serial = require('./drivers/serial');
 var fileHandler = require('./drivers/filehandler');
 var tailHandler = require('./drivers/tailhandler');
@@ -85,7 +87,7 @@ var latestDisplay;
 var heaterAuto;
 
 // drops indexes the models no longer list, such as the old status.0.name ones, and builds new ones
-var syncIndexes = () => Promise.all([Event, Rollup].map((model) => model.syncIndexes().then((dropped) => {
+var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map((model) => model.syncIndexes().then((dropped) => {
     if (dropped.length > 0) {
         logger.info(`dropped unused ${model.collection.name} indexes: ${dropped.join(', ')}`);
     }
@@ -99,11 +101,16 @@ const startupChecked = mongoose.connection.asPromise()
 
 scheduler.register(rollupsJob);
 scheduler.register(retentionJob);
+scheduler.register(weatherJob);
 startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
-// days begin at a different time in a new zone, so the daily rollups are redone right away
+// days begin at a different time in a new zone, so the daily rollups are redone right away, and
+// the weather's days with them; a new zip code needs its forecast straight away too
 settingsService.onChange((changes) => {
     if (changes.timeZone) {
         scheduler.runNow(rollupsJob.name, 'time zone change').catch((e) => logger.error(`rollups after a time zone change: ${e.message}`));
+    }
+    if ((changes.timeZone && settingsService.location()) || changes.location) {
+        scheduler.runNow(weatherJob.name, 'settings change').catch((e) => logger.error(`weather after a settings change: ${e.message}`));
     }
 });
 

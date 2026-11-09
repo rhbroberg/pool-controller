@@ -5,6 +5,7 @@ var { Event } = require('../models/event');
 var { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD } = require('../models/user');
 var { Rollup } = require('../models/rollup');
 var { Provider, AccessRequest, Invitation } = require('../models/signIn');
+var { WeatherHour, WeatherDay } = require('../models/weather');
 var utils = require('../utils/writer.js');
 const activity = require('./ActivityService');
 const log4js = require('log4js');
@@ -57,7 +58,7 @@ exports.factoryReset = async function(user) {
     logger.warn(`REST ${who}: factory reset; erasing all history and accounts`);
     try {
         await mongoose.connection.dropDatabase();
-        await Promise.all([Event, User, Rollup, Provider, AccessRequest, Invitation].map((model) => model.createIndexes()));
+        await Promise.all([Event, User, Rollup, Provider, AccessRequest, Invitation, WeatherHour, WeatherDay].map((model) => model.createIndexes()));
         await exports.commissionIfEmpty();
     } catch (e) {
         logger.error(`factory reset failed: ${e}`);
