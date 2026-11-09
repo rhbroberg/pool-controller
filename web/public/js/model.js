@@ -187,6 +187,43 @@ export const measurement = (readings, name) => {
 
 export const measurements = (readings) => MEASUREMENT_ORDER.map((name) => measurement(readings, name));
 
+// MARK: weather
+
+export const WEATHER_CONDITIONS = {
+    sunny: { title: 'Sunny', icon: 'sun' },
+    'partly-cloudy': { title: 'Partly Cloudy', icon: 'cloudSun' },
+    cloudy: { title: 'Cloudy', icon: 'cloud' },
+    fog: { title: 'Fog', icon: 'cloudFog' },
+    rain: { title: 'Rain', icon: 'cloudRain' },
+    snow: { title: 'Snow', icon: 'snowflake' },
+    storm: { title: 'Storms', icon: 'cloudLightning' }
+};
+
+const degrees = (value) => typeof value === 'number' ? `${Math.round(value)}°` : '--°';
+
+/**
+ * what the main page shows of today's forecast; null while there's nothing to show, as before
+ * an admin sets a zip code
+ **/
+export const weatherSummary = (weather) => {
+    if (!weather || !weather.configured || !weather.today) {
+        return null;
+    }
+    const { today } = weather;
+    const condition = WEATHER_CONDITIONS[today.condition] || { title: 'Today', icon: 'cloud' };
+    const rain = typeof today.precipitationProbability === 'number' && today.precipitationProbability >= 30
+        ? `${Math.round(today.precipitationProbability)}% chance of rain`
+        : null;
+    return {
+        title: condition.title,
+        icon: condition.icon,
+        highLow: `${degrees(today.high)} / ${degrees(today.low)}`,
+        place: weather.location ? weather.location.placeName : null,
+        rain,
+        isStale: Boolean(weather.stale)
+    };
+};
+
 // MARK: accounts
 
 /**

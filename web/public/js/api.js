@@ -136,6 +136,13 @@ export class Client {
         return this.send('GET', 'heating');
     }
 
+    /** today's forecast at the pool's zip code: { configured, location, today, fetchedAt, stale } */
+    async fetchWeather() {
+        const weather = await this.send('GET', 'weather');
+        const today = weather.today ? { ...weather.today, sunrise: toDate(weather.today.sunrise), sunset: toDate(weather.today.sunset) } : null;
+        return { ...weather, today, fetchedAt: toDate(weather.fetchedAt) };
+    }
+
     // MARK: control
 
     setDevice(name, on, token) {
@@ -341,14 +348,17 @@ export class Client {
         return this.send('POST', 'system/restart', { token });
     }
 
-    /** the time zone history days follow and how long raw history is kept */
+    /** the time zone history days follow, how long raw history is kept and the weather's location */
     fetchSettings(token) {
         return this.send('GET', 'system/settings', { token });
     }
 
-    /** changes: { timeZone } (null for the server's own zone) and/or { rawRetentionDays } */
+    /**
+     * changes: { timeZone } (null for the server's own zone), { rawRetentionDays } and/or
+     * { zipCode } (null to stop fetching weather); a new zip code is looked up before this answers
+     **/
     updateSettings(changes, token) {
-        return this.send('PUT', 'system/settings', { token, body: changes });
+        return this.send('PUT', 'system/settings', { token, body: changes, timeout: 20000 });
     }
 
     async fetchJobs(token) {
