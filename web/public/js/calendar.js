@@ -78,7 +78,8 @@ export class HistoryCalendar {
 
     /**
      * the weeks of a month page, Sunday first: each day has its key, its number, whether it's in
-     * the month, and whether it can be picked (from the first day with readings through today)
+     * the month, and whether it can be picked (from the first day with readings through today).
+     * Every month gets six weeks, the most one spans, so paging doesn't move the paging buttons.
      **/
     monthGrid({ year, month }, now = Date.now()) {
         const firstKey = keyOf(year, month, 1);
@@ -86,7 +87,7 @@ export class HistoryCalendar {
         const today = this.today(now);
         let key = addDaysToKey(firstKey, -weekday);
         const weeks = [];
-        do {
+        while (weeks.length < 6) {
             const week = [];
             for (let i = 0; i < 7; i++) {
                 const parts = partsOf(key);
@@ -99,7 +100,7 @@ export class HistoryCalendar {
                 key = addDaysToKey(key, 1);
             }
             weeks.push(week);
-        } while (partsOf(key).month === month);
+        }
         return weeks;
     }
 
