@@ -1,6 +1,7 @@
 // Settings: the pool's name, the account signed in, and the way to history and administration.
 
-import { h } from '../dom.js';
+import { h, confirmAction } from '../dom.js';
+import { icon } from '../icons.js';
 import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable } from '../model.js';
 import { RECONNECT_CHOICES, DEFAULT_RECONNECT_SECONDS } from '../store.js';
 import { formatDurationSeconds } from '../format.js';
@@ -8,12 +9,75 @@ import * as prefs from '../prefs.js';
 import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, textInput, select, spinner, renderer } from '../ui.js';
 
 export const mountSettings = (root, app) => {
-    const { store } = app;
+    const { store, client } = app;
     let poolName = prefs.read('poolName', DEFAULT_POOL_NAME);
     let email = '';
     let password = '';
     let signingIn = false;
     let signInError = null;
+    // what the sign-in form offers: passwords and/or services; null until the server says
+    let choices = null;
+    let pendingRequests = 0;
+    let methodsError = null;
+    let linking = null;
+
+    const token = () => store.credentials ? store.credentials.token : '';
+
+    const loadChoices = async () => {
+        try {
+            choices = await client.fetchSignInChoices();
+        } catch {
+            choices = null;
+        }
+        redraw();
+    };
+
+    const loadPendingRequests = async () => {
+        if (!store.isAdmin) {
+            return;
+        }
+        try {
+            const requests = await client.listRequests(token());
+            pendingRequests = requests.filter((request) => request.status === 'pending').length;
+            redraw();
+        } catch {
+            // the count is a hint; Accounts shows any error
+        }
+    };
+
+    const link = async (provider) => {
+        linking = provider.id;
+        methodsError = null;
+        redraw();
+        try {
+            const { url } = await client.linkIdentity(provider.id, token());
+            location.assign(url);
+        } catch (error) {
+            methodsError = error.message;
+            linking = null;
+            redraw();
+        }
+    };
+
+    const unlink = async (provider) => {
+        const confirmed = await confirmAction({
+            title: `Stop signing in with ${provider.displayName}?`,
+            message: 'You can link it again later.',
+            action: 'Unlink',
+            destructive: true
+        });
+        if (!confirmed) {
+            return;
+        }
+        try {
+            await client.unlinkIdentity(provider.id, token());
+            methodsError = null;
+            await store.refreshAccount();
+        } catch (error) {
+            methodsError = error.message;
+        }
+        redraw();
+    };
 
     const setPoolName = (value) => {
         poolName = value;
@@ -75,17 +139,48 @@ export const mountSettings = (root, app) => {
             onChange: setReconnect
         })));
 
+    const providers = () => choices ? choices.providers : [];
+
+    const methodsSection = () => {
+        const methods = (store.credentials && store.credentials.methods) || [];
+        if (providers().length === 0) {
+            return null;
+        }
+        return formSection({
+            header: 'Sign-In Methods',
+            footer: methodsError || 'Link a service to sign in with it instead of a password.',
+            footerClass: methodsError ? 'error' : ''
+        },
+        ...providers().map((provider) => methods.includes(provider.id)
+            ? formRow(h('span', { class: 'label' }, provider.displayName),
+                h('span', { class: 'value' }, 'Linked'),
+                h('button', { class: 'button small', type: 'button', onClick: () => unlink(provider) }, 'Unlink'))
+            : actionRow(`Link ${provider.displayName}`, () => link(provider), { busy: linking === provider.id })));
+    };
+
+    const servicesSection = () => providers().length === 0 ? null : formSection({
+        header: choices.passwordSignIn ? 'Or Sign In With' : 'Account',
+        footer: choices.passwordSignIn ? null : 'Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.'
+    },
+    ...providers().map((provider) => h('a', { class: 'form-row', href: client.signInUrl(provider.id) },
+        h('span', { class: 'action-text' }, `Continue with ${provider.displayName}`),
+        icon('chevronRight'))));
+
     const accountSection = () => {
         const credentials = store.credentials;
         if (credentials) {
             const role = roleInfo(credentials.role);
-            return formSection({ header: 'Account' },
+            return [formSection({ header: 'Account' },
                 formRow(h('span', { class: 'label' }, 'Signed In'), h('span', { class: 'value' }, role ? `${credentials.email} · ${role.title}` : credentials.email)),
-                linkRow('Change Password', '#/settings/password'),
-                actionRow('Sign Out', () => store.signOut({ endSession: true }), { destructive: true }));
+                store.hasPassword ? linkRow('Change Password', '#/settings/password') : null,
+                actionRow('Sign Out', () => store.signOut({ endSession: true }), { destructive: true })),
+            methodsSection()];
+        }
+        if (choices && !choices.passwordSignIn) {
+            return servicesSection();
         }
         // a form, so the browser offers to save and fill the password
-        return h('form', {
+        return [h('form', {
             onSubmit: (event) => {
                 event.preventDefault();
                 signIn();
@@ -99,12 +194,17 @@ export const mountSettings = (root, app) => {
         formRow(textInput({ label: 'Password', name: 'password', type: 'password', value: password, autocomplete: 'current-password', onInput: (v) => { password = v; redraw(); } })),
         h('button', { class: 'form-row action', type: 'submit', disabled: !email.trim() || !password || signingIn },
             h('span', null, 'Sign In'),
-            signingIn ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null)));
+            signingIn ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null))),
+        servicesSection()];
     };
 
     const historySection = () => formSection({ header: store.isAdmin ? 'History & Administration' : 'History' },
         linkRow('Event Log', '#/events'),
-        store.isAdmin ? linkRow('Accounts', '#/accounts') : null,
+        store.isAdmin ? h('a', { class: 'form-row', href: '#/accounts' },
+            h('span', null, 'Accounts'),
+            pendingRequests > 0 ? h('span', { class: 'count-badge', title: `${pendingRequests} waiting for approval` }, String(pendingRequests)) : null,
+            icon('chevronRight')) : null,
+        store.isAdmin && choices ? linkRow('Sign-In', '#/sign-in') : null,
         store.isAdmin ? linkRow('Server Maintenance', '#/maintenance') : null);
 
     const render = () => [
@@ -119,10 +219,19 @@ export const mountSettings = (root, app) => {
     ];
 
     const redraw = renderer(root, render);
-    const unsubscribe = store.subscribe(redraw);
+    let wasAdmin = store.isAdmin;
+    const unsubscribe = store.subscribe(() => {
+        if (store.isAdmin && !wasAdmin) {
+            loadPendingRequests();
+        }
+        wasAdmin = store.isAdmin;
+        redraw();
+    });
     const unwatch = app.onSettingsChanged(redraw);
     document.title = 'Settings';
     redraw();
+    loadChoices();
+    loadPendingRequests();
     return () => {
         unsubscribe();
         unwatch();

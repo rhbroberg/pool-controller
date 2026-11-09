@@ -61,10 +61,26 @@ describe('status store', () => {
     it('signs in, remembers the account and knows what its role allows', async () => {
         const store = newStore(fakeClient());
         await store.signIn('rick', 'secret');
-        assert.deepEqual(store.credentials, { email: 'rick', token: 'token-for-rick', role: 'user' });
+        assert.deepEqual(store.credentials, { email: 'rick', token: 'token-for-rick', role: 'user', methods: null });
         assert.equal(store.canControl, true);
         assert.equal(store.isAdmin, false);
+        assert.equal(store.hasPassword, true, 'until the server says otherwise');
         assert.deepEqual(prefs.read('credentials'), store.credentials);
+    });
+
+    it('signs in with the ticket a service sent back, and knows the account has no password', async () => {
+        const client = fakeClient({
+            signInWithTicket: async (ticket) => {
+                client.calls.push(['signInWithTicket', ticket]);
+                return { email: 'alice@example.com', token: 'from-google', role: 'viewer', methods: ['google'] };
+            }
+        });
+        const store = newStore(client);
+        await store.signInWithTicket('ticket-1');
+        assert.deepEqual(client.calls, [['signInWithTicket', 'ticket-1']]);
+        assert.deepEqual(store.credentials, { email: 'alice@example.com', token: 'from-google', role: 'viewer', methods: ['google'] });
+        assert.equal(store.hasPassword, false);
+        assert.equal(store.connection, 'connected');
     });
 
     it('holds the default admin aside until it is renamed, without saving its token', async () => {
@@ -76,7 +92,7 @@ describe('status store', () => {
 
         await store.commission('rick', 'poolpass');
         assert.equal(store.commissioning, null);
-        assert.deepEqual(store.credentials, { email: 'rick', token: 'renamed-rick', role: 'admin' });
+        assert.deepEqual(store.credentials, { email: 'rick', token: 'renamed-rick', role: 'admin', methods: null });
     });
 
     it('checks the current password before changing it', async () => {

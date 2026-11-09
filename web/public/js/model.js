@@ -221,6 +221,55 @@ export const passwordProblem = (password, confirmation) => {
 
 export const passwordAcceptable = (password, confirmation) => password.length >= MINIMUM_PASSWORD_LENGTH && password === confirmation;
 
+// MARK: sign-in services
+
+/**
+ * what the server's answer at #/signin/complete means: a ticket to trade for a token, or a title
+ * and message to show
+ **/
+export const signInOutcome = (params) => {
+    const provider = params.get('provider') || 'the service';
+    if (params.get('ticket')) {
+        return { ticket: params.get('ticket') };
+    }
+    switch (params.get('status')) {
+    case 'pending':
+        return { title: 'Waiting for Approval', message: `Your request to sign in with ${provider} was sent to the pool’s admin. Sign in again once they’ve approved it.` };
+    case 'denied':
+        return { title: 'Not Allowed', message: `This ${provider} account isn’t allowed to sign in here.`, failed: true };
+    case 'refused':
+        return { title: 'Invitation Needed', message: 'This pool only lets in people an admin has invited. Ask an admin to invite your email address, then sign in again.', failed: true };
+    case 'cancelled':
+        return { title: 'Sign-In Cancelled', message: 'You didn’t finish signing in.' };
+    case 'linked':
+        return { title: 'Service Linked', message: `You can sign in with ${provider} from now on.`, linked: true };
+    default:
+        return { title: 'Couldn’t Sign In', message: params.get('error') || 'The sign-in didn’t complete. Try again.', failed: true };
+    }
+};
+
+/**
+ * the names of how an account signs in, with services' ids replaced by their names
+ **/
+export const methodNames = (methods, providers = []) => (methods || []).map((method) => {
+    if (method === 'password') {
+        return 'Password';
+    }
+    const provider = providers.find((p) => p.id === method);
+    return provider ? provider.displayName : method;
+});
+
+/**
+ * ready-made settings for common services; trustEmail says whether their verified addresses
+ * may redeem invitations
+ **/
+export const SERVICE_PRESETS = [
+    { id: 'google', displayName: 'Google', kind: 'oidc', issuer: 'https://accounts.google.com', trustEmail: true },
+    { id: 'microsoft', displayName: 'Microsoft', kind: 'oidc', issuer: 'https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0', trustEmail: false },
+    { id: 'apple', displayName: 'Apple', kind: 'apple', issuer: 'https://appleid.apple.com', trustEmail: true },
+    { id: '', displayName: '', kind: 'oidc', issuer: '', trustEmail: false, other: true }
+];
+
 // MARK: event log
 
 /**

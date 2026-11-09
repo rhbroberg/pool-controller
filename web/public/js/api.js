@@ -253,6 +253,83 @@ export class Client {
         return this.send('DELETE', `users/${encodeURIComponent(name)}`, { token });
     }
 
+    // MARK: sign-in services
+
+    /** { passwordSignIn, providers: [{ id, displayName }] }: what the sign-in form offers */
+    fetchSignInChoices() {
+        return this.send('GET', 'auth/providers');
+    }
+
+    /** where the browser goes to sign in with a service; it comes back to #/signin/complete */
+    signInUrl(provider) {
+        return this.url(`auth/${encodeURIComponent(provider)}/start`, { client: 'web' });
+    }
+
+    /** trades the ticket a sign-in through a service came back with for a token */
+    signInWithTicket(ticket) {
+        return this.send('POST', 'users/login/external', { body: { ticket } });
+    }
+
+    /** resolves with { url } to send the browser to, to add the service to this account */
+    linkIdentity(provider, token) {
+        return this.send('POST', `users/me/identities/${encodeURIComponent(provider)}`, { token, body: { client: 'web' } });
+    }
+
+    unlinkIdentity(provider, token) {
+        return this.send('DELETE', `users/me/identities/${encodeURIComponent(provider)}`, { token });
+    }
+
+    async listRequests(token) {
+        const requests = await this.send('GET', 'users/requests', { token });
+        return requests.map((request) => ({ ...request, firstSeen: toDate(request.firstSeen), lastSeen: toDate(request.lastSeen) }));
+    }
+
+    approveRequest(id, role, token) {
+        return this.send('POST', `users/requests/${encodeURIComponent(id)}/approve`, { token, body: { role } });
+    }
+
+    denyRequest(id, token) {
+        return this.send('POST', `users/requests/${encodeURIComponent(id)}/deny`, { token });
+    }
+
+    forgetRequest(id, token) {
+        return this.send('DELETE', `users/requests/${encodeURIComponent(id)}`, { token });
+    }
+
+    listInvitations(token) {
+        return this.send('GET', 'users/invitations', { token });
+    }
+
+    /** provider null works with any service trusted for email addresses */
+    createInvitation({ email, role, provider }, token) {
+        return this.send('POST', 'users/invitations', { token, body: { email, role, provider: provider || null } });
+    }
+
+    deleteInvitation(id, token) {
+        return this.send('DELETE', `users/invitations/${encodeURIComponent(id)}`, { token });
+    }
+
+    fetchSignInSettings(token) {
+        return this.send('GET', 'system/sign-in', { token });
+    }
+
+    /** changes: { passwordSignIn } and/or { signInRequests: 'ask' | 'refuse' } */
+    updateSignInSettings(changes, token) {
+        return this.send('PUT', 'system/sign-in', { token, body: changes });
+    }
+
+    createSignInService(service, token) {
+        return this.send('POST', 'system/sign-in/providers', { token, body: service, timeout: 20000 });
+    }
+
+    updateSignInService(id, changes, token) {
+        return this.send('PUT', `system/sign-in/providers/${encodeURIComponent(id)}`, { token, body: changes, timeout: 20000 });
+    }
+
+    deleteSignInService(id, token) {
+        return this.send('DELETE', `system/sign-in/providers/${encodeURIComponent(id)}`, { token });
+    }
+
     // MARK: system
 
     async factoryReset(token) {

@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, passwordProblem, passwordAcceptable, displayName, eventKindOf } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -95,5 +95,28 @@ describe('event kinds', () => {
         assert.equal(eventKindOf('failed').id, 'protocolErrors');
         assert.equal(eventKindOf('unrecognized').id, 'protocolErrors');
         assert.equal(eventKindOf('action').id, 'actions');
+    });
+});
+
+describe('sign-in services', () => {
+    const outcome = (query) => signInOutcome(new URLSearchParams(query));
+
+    it('reads a ticket to trade for a token', () => {
+        assert.deepEqual(outcome('ticket=abc'), { ticket: 'abc' });
+    });
+
+    it('explains each way a sign-in can stop short', () => {
+        assert.match(outcome('status=pending&provider=Google').message, /sign in with Google was sent to the pool’s admin/);
+        assert.equal(outcome('status=denied&provider=Google').failed, true);
+        assert.match(outcome('status=refused').message, /invited/);
+        assert.equal(outcome('status=cancelled').title, 'Sign-In Cancelled');
+        assert.equal(outcome('status=linked&provider=Google').linked, true);
+        assert.equal(outcome('error=The service said no').message, 'The service said no');
+        assert.equal(outcome('').failed, true);
+    });
+
+    it('names how an account signs in', () => {
+        assert.deepEqual(methodNames(['password', 'google', 'gone'], [{ id: 'google', displayName: 'Google' }]), ['Password', 'Google', 'gone']);
+        assert.deepEqual(methodNames(undefined), []);
     });
 });
