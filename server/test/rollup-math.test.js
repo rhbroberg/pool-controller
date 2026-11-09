@@ -65,7 +65,7 @@ describe('time-weighted buckets', () => {
 
 describe('heating derived from the switches', () => {
     const t0 = Date.UTC(2026, 0, 1);
-    const initials = { heater1: 0, valve4: 0, aux14: 0, spa: 0, spillover: 0 };
+    const initials = { heater1: 0, valve4: 0, filter: 1, aux14: 0, spa: 0, spillover: 0 };
     const events = {
         heater1: [{ t: t0 + 1000, v: 1 }, { t: t0 + 5000, v: 0 }],
         aux14: [{ t: t0 + 3000, v: 1 }]
@@ -82,6 +82,21 @@ describe('heating derived from the switches', () => {
         const spillover = Object.assign({}, initials, { spillover: 1, heater1: 1 });
         assert.equal(rollups.derive('heating:pool:heater1', spillover, {}).initial, 1);
         assert.equal(rollups.derive('heating:spa:heater1', spillover, {}).initial, 1);
+    });
+
+    it('heats only while a pump moves water through the heaters', () => {
+        // as on July 2, 2024: the heat pump switched on with the filter, and left on after it stopped
+        const minute = 60 * 1000;
+        const pump = rollups.derive('heating:pool:valve4', Object.assign({}, initials, { filter: 0 }), {
+            filter: [{ t: t0 + 10 * minute, v: 1 }, { t: t0 + 30 * minute, v: 0 }],
+            valve4: [{ t: t0 + 10 * minute, v: 1 }, { t: t0 + 38 * minute, v: 0 }, { t: t0 + 107 * minute, v: 1 }, { t: t0 + 111 * minute, v: 0 }]
+        });
+        assert.equal(pump.initial, 0);
+        assert.deepEqual(pump.events, [{ t: t0 + 10 * minute, v: 1 }, { t: t0 + 30 * minute, v: 0 }]);
+
+        const spaFilterOnly = Object.assign({}, initials, { filter: 0, aux14: 1, heater1: 1 });
+        assert.equal(rollups.derive('heating:spa:heater1', spaFilterOnly, {}).initial, 1);
+        assert.equal(rollups.derive('heating:pool:heater1', spaFilterOnly, {}).initial, 0);
     });
 
     it('is unknown until the heat source has been seen', () => {

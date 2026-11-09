@@ -15,7 +15,7 @@ const DAY = 86400;
 const INFO_NAMES = ['pool temp', 'spa temp', 'ambient', 'salt', 'heater1 mode'];
 // a day "has data" when any of these was recorded; air temperature doesn't count
 const WATER_NAMES = ['pool temp', 'spa temp', 'salt'];
-const CIRCULATION = ['aux14', 'spa', 'spillover'];
+const CIRCULATION = ['filter', 'aux14', 'spa', 'spillover'];
 const HEAT_SOURCES = ['heater1', 'valve4'];
 const BODIES = ['pool', 'spa'];
 // heating:<body>:<source> is 1 while that source was warming that body
@@ -149,9 +149,13 @@ var pointOf = (bucket) => {
 
 // MARK: heating, derived from the switches
 
-// heat reaches both bodies in spillover; otherwise the spa while water flows through it (spa
-// mode or the spa filter), and the pool the rest of the time
+// heat reaches the water only while a pump (the filter or the spa filter) moves it through the
+// heaters, as in protocol/heating.js; then both bodies in spillover, otherwise the spa while
+// water flows through it (spa mode or the spa filter), and the pool the rest of the time
 var heats = (state, body) => {
+    if (state.filter !== 1 && state.aux14 !== 1) {
+        return false;
+    }
     if (state.spillover === 1) {
         return true;
     }

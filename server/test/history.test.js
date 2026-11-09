@@ -160,6 +160,21 @@ describe('long history', () => {
             const run = await runJob('rollups');
             assert.match(run.lastSummary, /rolled up 0 hours and 0 days/);
         });
+
+        it('redoes the stored heating rollups once when the heating rules change', async () => {
+            const stored = db.collection('rollups');
+            const query = { name: 'heating:pool:heater1', res: 3600 };
+            const original = await stored.find(query).sort({ start: -1 }).skip(100).limit(1).next();
+            // as the old rules might have had it
+            const wrong = original.sum === original.knownMs ? 0 : original.knownMs;
+            await stored.updateOne({ _id: original._id }, { $set: { sum: wrong } });
+            await db.collection('jobs').updateOne({ _id: 'rollups' }, { $unset: { 'data.heatingRules': '' } });
+
+            await runJob('rollups');
+            const redone = await stored.findOne(Object.assign({ start: original.start }, query));
+            assert.equal(redone.sum, original.sum);
+            assert.match((await runJob('rollups')).lastSummary, /rolled up 0 hours and 0 days/);
+        });
     });
 
     describe('history', () => {
@@ -176,7 +191,7 @@ describe('long history', () => {
         });
 
         it('returns a year at a graph’s width as daily buckets with their range', async () => {
-            const body = await history({ names: 'pool temp,filter,heating:pool:heater1', from: new Date(now - 365 * DAY_MS).toISOString(), to: new Date(now).toISOString(), maxPoints: 400 });
+            const body = await history({ names: 'pool temp,filter', from: new Date(now - 365 * DAY_MS).toISOString(), to: new Date(now).toISOString(), maxPoints: 400 });
             assert.equal(body.timeZone, NEW_YORK);
             for (const each of body.series) {
                 assert.ok(each.points.length <= 400, `${each.name} has ${each.points.length} points`);
@@ -193,9 +208,14 @@ describe('long history', () => {
             const filter = series(body, 'filter');
             assert.equal(filter.resolution, 86400);
             assert.ok(filter.points[200].v > 0.45 && filter.points[200].v < 0.55, JSON.stringify(filter.points[200]));
-            // the heater changed only about 365 times, which fits, so those come exactly as they happened
+        });
+
+        it('returns a derived heating series exactly when its switches changed few enough times', async () => {
+            // in two months the heater and the filter it needs changed about 180 times, which fits
+            const body = await history({ names: 'heating:pool:heater1', from: new Date(now - 60 * DAY_MS).toISOString(), to: new Date(now).toISOString(), maxPoints: 400 });
             const heating = series(body, 'heating:pool:heater1');
             assert.equal(heating.resolution, 0);
+            assert.ok(heating.points.length >= 50, `${heating.points.length} changes`);
             assert.ok(heating.points.every((p) => p.v === 0 || p.v === 1));
         });
 

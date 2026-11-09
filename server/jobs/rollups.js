@@ -14,6 +14,9 @@ const BUDGET_MS = Number(process.env.ROLLUP_BUDGET_MS) || 15000;
 // hours rolled per query; a few days of raw events at a time
 const HOUR_CHUNK = 48;
 const DAY_CHUNK = 14;
+// raised whenever the heating series are derived from the switches differently, so the stored
+// ones are redone from the raw events still kept; 2 needs a pump moving water
+const HEATING_RULES = 2;
 
 var floorHour = (ms) => Math.floor(ms / HOUR_MS) * HOUR_MS;
 
@@ -37,6 +40,12 @@ var run = async (context) => {
         day = Math.min(day, tz.startOfDay(from, timeZone));
         notes.push(`rebuilding from ${new Date(from).toISOString()}`);
     }
+    // rollups from before raw events expired keep the old rules, since nothing is left to redo them from
+    if (data.hourWatermark && data.heatingRules !== HEATING_RULES && typeof oldest === 'number') {
+        hour = Math.min(hour, floorHour(oldest));
+        day = Math.min(day, tz.startOfDay(oldest, timeZone));
+        notes.push(`redoing heating from ${new Date(oldest).toISOString()} under new rules`);
+    }
     // days start at a different time in the new zone, so every daily rollup is redone
     if (data.timeZone && data.timeZone !== timeZone) {
         await Rollup.deleteMany({ res: rollups.DAY });
@@ -45,7 +54,7 @@ var run = async (context) => {
         day = tz.startOfDay(first, timeZone);
         notes.push(`redoing daily rollups for ${timeZone}`);
     }
-    await context.save({ hourWatermark: new Date(hour), dayWatermark: new Date(day), timeZone, rebuildFrom: null });
+    await context.save({ hourWatermark: new Date(hour), dayWatermark: new Date(day), timeZone, rebuildFrom: null, heatingRules: HEATING_RULES });
 
     const target = floorHour(Date.now());
     let hours = 0;
