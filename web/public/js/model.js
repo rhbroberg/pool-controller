@@ -244,6 +244,15 @@ export const DEFAULT_ADMIN = 'admin';
 export const MINIMUM_PASSWORD_LENGTH = 6;
 
 /**
+ * the builds in use: this page's web service, the pool server, and the API version it serves;
+ * a dash for any not known, as from a server that is down or too old to say
+ **/
+export const aboutLine = (webCommit, serverInfo) => {
+    const known = (value) => value || '—';
+    return `Web ${known(webCommit)} · Server ${known(serverInfo && serverInfo.commit)} · API ${known(serverInfo && serverInfo.apiVersion)}`;
+};
+
+/**
  * why a new password and its confirmation can't be used yet, once something has been typed
  **/
 export const passwordProblem = (password, confirmation) => {

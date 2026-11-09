@@ -2,7 +2,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { createWebServer, API_BASE, UNREACHABLE_HEADER } from '../server.js';
+import { createWebServer, describeCommit, API_BASE, UNREACHABLE_HEADER } from '../server.js';
 import { Client, ApiError } from '../public/js/api.js';
 
 const listen = (server) => new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -47,7 +47,7 @@ describe('web service', () => {
 
     before(async () => {
         upstream = await startUpstream();
-        web = createWebServer({ apiUrl: `http://127.0.0.1:${upstream.port}` });
+        web = createWebServer({ apiUrl: `http://127.0.0.1:${upstream.port}`, commit: 'a1b2c3d-dirty' });
         base = `http://127.0.0.1:${await listen(web)}`;
     });
 
@@ -80,9 +80,25 @@ describe('web service', () => {
         assert.equal((await fetch(`${base}/index.html`, { method: 'HEAD' })).status, 200);
     });
 
-    it('tells the page which pool server it forwards to', async () => {
+    it('tells the page which pool server it forwards to, and the commit it was built from', async () => {
         const config = await (await fetch(`${base}/config.json`)).json();
-        assert.deepEqual(config, { apiServer: `127.0.0.1:${upstream.port}` });
+        assert.deepEqual(config, { apiServer: `127.0.0.1:${upstream.port}`, webCommit: 'a1b2c3d-dirty' });
+    });
+
+    it('takes its commit from the build, or else from git', () => {
+        const saved = process.env.POOL_GIT_COMMIT;
+        try {
+            process.env.POOL_GIT_COMMIT = 'feedbee';
+            assert.equal(describeCommit(), 'feedbee');
+            delete process.env.POOL_GIT_COMMIT;
+            assert.match(describeCommit(), /^([0-9a-f]{7,}(-dirty)?|unknown)$/);
+        } finally {
+            if (saved === undefined) {
+                delete process.env.POOL_GIT_COMMIT;
+            } else {
+                process.env.POOL_GIT_COMMIT = saved;
+            }
+        }
     });
 
     it('forwards API requests with their method, query, headers and body', async () => {

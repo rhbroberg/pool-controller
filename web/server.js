@@ -1,5 +1,6 @@
 // Serves the web front end and forwards its REST calls to the pool server, so the page and the
 // API share an origin and the pool server needs no CORS support.
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
@@ -9,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 export const API_BASE = '/rhbroberg/pool-api/1.0.0';
 const DEFAULT_PORT = 80;
 const DEFAULT_API_URL = 'http://localhost:3000';
-const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = path.join(HERE, 'public');
 // the API, and the pool server's Swagger UI and the spec it loads
 const PROXIED_PREFIXES = [`${API_BASE}/`, '/docs', '/api-docs'];
 // longer than the slowest API call (a history window), shorter than a browser gives up
@@ -26,6 +28,19 @@ const CONTENT_TYPES = {
     '.png': 'image/png',
     '.ico': 'image/x-icon',
     '.webmanifest': 'application/manifest+json'
+};
+
+/** the git commit this service was built from; an image has no .git, so its build passes it in */
+export const describeCommit = () => {
+    if (process.env.POOL_GIT_COMMIT) {
+        return process.env.POOL_GIT_COMMIT;
+    }
+    try {
+        return execFileSync('git', ['describe', '--always', '--dirty'],
+            { cwd: HERE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || 'unknown';
+    } catch {
+        return 'unknown';
+    }
 };
 
 const isProxied = (pathname) => PROXIED_PREFIXES.some((prefix) => pathname === prefix.replace(/\/$/, '') || pathname.startsWith(prefix));
@@ -115,9 +130,9 @@ const proxy = (req, res, target) => {
 
 /**
  * the web service: files from publicDir, the API forwarded to apiUrl, and /config.json telling
- * the page which pool server that is
+ * the page which pool server that is and which commit this service was built from
  **/
-export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_DIR } = {}) => {
+export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_DIR, commit = describeCommit() } = {}) => {
     const target = new URL(apiUrl);
     const root = path.resolve(publicDir);
     return http.createServer((req, res) => {
@@ -125,7 +140,7 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
         if (isProxied(pathname)) {
             proxy(req, res, target);
         } else if (pathname === '/config.json') {
-            sendJson(res, 200, { apiServer: target.host });
+            sendJson(res, 200, { apiServer: target.host, webCommit: commit });
         } else {
             serveFile(req, res, pathname, root);
         }

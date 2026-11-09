@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -148,5 +148,16 @@ describe('sign-in services', () => {
     it('names how an account signs in', () => {
         assert.deepEqual(methodNames(['password', 'google', 'gone'], [{ id: 'google', displayName: 'Google' }]), ['Password', 'Google', 'gone']);
         assert.deepEqual(methodNames(undefined), []);
+    });
+});
+
+describe('about line', () => {
+    it('names the web, server and API builds', () => {
+        assert.equal(aboutLine('a1b2c3d', { commit: 'e4f5a6b-dirty', apiVersion: '1.0.0' }), 'Web a1b2c3d · Server e4f5a6b-dirty · API 1.0.0');
+    });
+
+    it('shows a dash for a build it doesn’t know', () => {
+        assert.equal(aboutLine(null, null), 'Web — · Server — · API —');
+        assert.equal(aboutLine('a1b2c3d', { service: 'pool-controller', version: '1.0.0' }), 'Web a1b2c3d · Server — · API —');
     });
 });
