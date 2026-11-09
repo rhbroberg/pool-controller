@@ -11,7 +11,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/Mystic
     devices: !reset []
     volumes:
-      - ../test-data:/opt/test-data:ro
+      - ../server/test/test-data:/opt/test-data:ro
 
   mongo:
     volumes: !override

@@ -47,7 +47,7 @@ const CONTROL_VERIFY_STATUS_FRAMES = 40;
 var driver;
 
 var argv = yargs(hideBin(process.argv))
-    .default('f', __dirname + '/../test-data/sample-various-bin')
+    .default('f', __dirname + '/test/test-data/sample-various-bin')
     .default('l', 'info')
     .default('d', 'file')
     .boolean('from-start')

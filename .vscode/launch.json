@@ -10,7 +10,7 @@
         "request": "launch",
         "name": "Tail dash-eff",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "tail", "--from-start"],
+        "args": ["-f", "${workspaceFolder}/server/test/test-data/sample-various-bin", "-d", "tail", "--from-start"],
         "outputCapture": "std"
     },
     {
@@ -18,7 +18,7 @@
         "request": "launch",
         "name": "Tail long capture",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "${workspaceFolder}/test-data/sample-all-bin", "-d", "tail", "--from-start"],
+        "args": ["-f", "${workspaceFolder}/server/test/test-data/sample-all-bin", "-d", "tail", "--from-start"],
         "outputCapture": "std"
     },
     {
@@ -26,7 +26,7 @@
         "request": "launch",
         "name": "Simulated controller",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim"],
+        "args": ["-f", "${workspaceFolder}/server/test/test-data/sample-various-bin", "-d", "sim"],
         "outputCapture": "std"
     },
     {
@@ -34,7 +34,7 @@
         "request": "launch",
         "name": "Simulated controller (verbose)",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim", "-v"],
+        "args": ["-f", "${workspaceFolder}/server/test/test-data/sample-various-bin", "-d", "sim", "-v"],
         "outputCapture": "std"
     },
     {
@@ -43,7 +43,7 @@
         "request": "launch",
         "name": "Simulated controller (Mystic production data)",
         "program": "${workspaceFolder}/server/server.js",
-        "args": ["-f", "${workspaceFolder}/test-data/sample-various-bin", "-d", "sim"],
+        "args": ["-f", "${workspaceFolder}/server/test/test-data/sample-various-bin", "-d", "sim"],
         "env": { "MONGODB_URI": "mongodb://127.0.0.1:27017/Mystic" },
         "outputCapture": "std"
     },
