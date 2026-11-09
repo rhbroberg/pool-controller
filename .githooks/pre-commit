@@ -25,7 +25,7 @@ fi
 
 cd "$top" || exit 1
 # what the images are built from, and how they're checked
-image_inputs="Dockerfile .dockerignore web/Dockerfile web/package*.json server/package*.json
+image_inputs="server/Dockerfile server/.dockerignore server/package*.json web/Dockerfile web/package*.json
     docker/caddy docker/docker-compose*.yml docker/scout docker/scout-check.sh"
 scan=
 case "${POOL_SCOUT:-}" in
