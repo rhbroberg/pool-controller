@@ -20,7 +20,7 @@ committed file:
 On the Pi:
 
     export POOL_JWT_SECRET=... POOL_HE_DDNS_KEY=...
-    make up        # docker compose up -d --build
+    make up        # docker compose build --pull, then up -d
     make logs
     make down
 

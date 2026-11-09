@@ -21,8 +21,11 @@ TEST_ACME_CA ?= https://acme-staging-v02.api.letsencrypt.org/directory
 
 .PHONY: up down logs scout sim sim-letsencrypt sim-down sim-logs sim-root-cert
 
+# --pull on the build, not on up, which pulls only the images services run and not the Dockerfiles'
+# base images; fresh bases match what make scout checks
 up:
-	$(COMPOSE) up -d --build
+	$(COMPOSE) build --pull
+	$(COMPOSE) up -d
 
 down:
 	$(COMPOSE) down
