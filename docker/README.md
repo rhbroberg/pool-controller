@@ -11,6 +11,12 @@ Four containers, defined in `docker-compose.yml`:
 - **mongo** keeps history and accounts in `/data/db` on the host. No port is published; only the
   pool server reaches it.
 
+The web and pool images are [distroless](https://github.com/GoogleContainerTools/distroless):
+Node and the app, with no shell or package manager, so `docker compose exec pool sh` doesn't work.
+Node does, though it isn't on the `PATH`:
+`docker compose exec pool /nodejs/bin/node -e 'console.log(process.version)'`. For a shell, put
+the base image's `:debug` tag, which adds busybox, on the Dockerfile's last `FROM` and rebuild.
+
 Settings are in `.env`. The two secrets come from the shell that runs `docker compose`, never a
 committed file:
 
