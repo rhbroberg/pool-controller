@@ -68,6 +68,9 @@ public final class AuthSession {
     /// The default admin account, signed in but not yet renamed. Its token only works for
     /// commissioning, so it isn't saved.
     public private(set) var commissioning: Credentials?
+    /// How the signed-in account signs in: password and/or services' ids; nil until the server
+    /// has said since launch.
+    public private(set) var methods: [String]?
     /// The client for the current server; the status store replaces it when the address changes.
     @ObservationIgnored public var client: StatusClient
     @ObservationIgnored private let store: CredentialStore
@@ -84,6 +87,8 @@ public final class AuthSession {
     /// Signed in with a role that may change equipment and press panel keys.
     public var canControl: Bool { role?.canControl ?? false }
     public var isAdmin: Bool { role?.isAdmin ?? false }
+    /// Whether the account has a password to change; true until the server has said.
+    public var hasPassword: Bool { methods?.contains("password") ?? true }
     /// Signed in, but the account's current role hasn't been asked for since launch.
     public var needsAccountCheck: Bool { credentials != nil && !accountChecked }
 
@@ -114,7 +119,44 @@ public final class AuthSession {
             commissioning = signedIn
             return
         }
-        save(signedIn)
+        save(signedIn, methods: result.methods)
+    }
+
+    /// What the sign-in form offers; nil from a server too old to have sign-in services, which
+    /// offers only passwords.
+    public func signInChoices() async -> SignInChoices? {
+        try? await client.fetchSignInChoices()
+    }
+
+    /// Finishes a sign-in through a service with what it came back to `poolstatus://signin`
+    /// with: signs in for a ticket, and otherwise says why not.
+    public func completeSignIn(callback url: URL) async throws -> SignInOutcome {
+        let outcome = SignInOutcome(callback: url)
+        switch outcome {
+        case .ticket(let ticket):
+            let result = try await client.signIn(ticket: ticket)
+            save(Credentials(name: result.name, token: result.token, role: result.role), methods: result.methods)
+        case .linked:
+            await refreshAccount()
+        default:
+            break
+        }
+        return outcome
+    }
+
+    /// Where to send a web authentication session to add `provider` to this account.
+    public func linkURL(provider: String) async throws -> URL {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.linkIdentityURL(provider: provider, token: token)
+        }
+    }
+
+    /// Stops this account signing in with `provider`.
+    public func unlink(provider: String) async throws {
+        let account = try await authorized(.manageAccounts) { client, token in
+            try await client.unlinkIdentity(provider: provider, token: token)
+        }
+        methods = account.methods
     }
 
     /// Renames the default admin account and sets its password, then signs in as the new account.
@@ -123,7 +165,7 @@ public final class AuthSession {
             return
         }
         let result = try await client.changeCredentials(name: name, password: password, token: commissioning.token)
-        save(Credentials(name: result.name, token: result.token, role: result.role))
+        save(Credentials(name: result.name, token: result.token, role: result.role), methods: result.methods)
         self.commissioning = nil
     }
 
@@ -144,7 +186,7 @@ public final class AuthSession {
             throw PasswordChangeError.wrongCurrentPassword
         }
         let result = try await client.changeCredentials(name: credentials.name, password: password, token: verified.token)
-        save(Credentials(name: result.name, token: result.token, role: result.role ?? credentials.role))
+        save(Credentials(name: result.name, token: result.token, role: result.role ?? credentials.role), methods: result.methods)
     }
 
     /// Asks the server for the signed-in account's current role, which an admin may have changed.
@@ -154,7 +196,7 @@ public final class AuthSession {
         }
         do {
             let account = try await client.fetchAccount(token: credentials.token)
-            save(Credentials(name: account.name, token: credentials.token, role: account.role))
+            save(Credentials(name: account.name, token: credentials.token, role: account.role), methods: account.methods)
         } catch StatusClientError.unauthorized {
             forget()
         } catch {
@@ -175,12 +217,14 @@ public final class AuthSession {
     public func forget() {
         store.delete()
         credentials = nil
+        methods = nil
         accountChecked = false
     }
 
-    private func save(_ signedIn: Credentials) {
+    private func save(_ signedIn: Credentials, methods: [String]?) {
         store.save(signedIn)
         credentials = signedIn
+        self.methods = methods
         accountChecked = signedIn.role != nil
     }
 
@@ -213,6 +257,84 @@ public final class AuthSession {
     public func deleteAccount(_ name: String) async throws {
         try await authorized(.manageAccounts) { client, token in
             try await client.deleteAccount(name, token: token)
+        }
+    }
+
+    // MARK: Sign-in services (admin)
+
+    public func listRequests() async throws -> [AccessRequest] {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.listRequests(token: token)
+        }
+    }
+
+    public func approveRequest(_ request: AccessRequest, role: AccountRole) async throws -> AccountInfo {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.approveRequest(request.id, role: role, token: token)
+        }
+    }
+
+    public func denyRequest(_ request: AccessRequest) async throws -> AccessRequest {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.denyRequest(request.id, token: token)
+        }
+    }
+
+    public func forgetRequest(_ request: AccessRequest) async throws {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.forgetRequest(request.id, token: token)
+        }
+    }
+
+    public func listInvitations() async throws -> [Invitation] {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.listInvitations(token: token)
+        }
+    }
+
+    public func invite(email: String, role: AccountRole, provider: String?) async throws -> Invitation {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.createInvitation(email: email, role: role, provider: provider, token: token)
+        }
+    }
+
+    public func withdraw(_ invitation: Invitation) async throws {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.deleteInvitation(invitation.id, token: token)
+        }
+    }
+
+    public func signInSettings() async throws -> SignInSettings {
+        do {
+            return try await authorized(.configureServer) { client, token in
+                try await client.fetchSignInSettings(token: token)
+            }
+        } catch StatusClientError.server(code: 404, message: _) {
+            throw SignInServicesError.unsupported
+        }
+    }
+
+    public func updateSignInSettings(_ changes: SignInSettings.Changes) async throws -> SignInSettings {
+        try await authorized(.configureServer) { client, token in
+            try await client.updateSignInSettings(changes, token: token)
+        }
+    }
+
+    public func createSignInService(_ service: SignInServiceChange) async throws -> SignInService {
+        try await authorized(.configureServer) { client, token in
+            try await client.createSignInService(service, token: token)
+        }
+    }
+
+    public func updateSignInService(_ id: String, _ changes: SignInServiceChange) async throws -> SignInService {
+        try await authorized(.configureServer) { client, token in
+            try await client.updateSignInService(id, changes, token: token)
+        }
+    }
+
+    public func deleteSignInService(_ id: String) async throws {
+        try await authorized(.configureServer) { client, token in
+            try await client.deleteSignInService(id, token: token)
         }
     }
 }
