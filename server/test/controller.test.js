@@ -2,7 +2,12 @@
 // Reading and changing the pool through the REST API, against the simulated controller.
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const jsyaml = require('js-yaml');
 const { startServer, commission, account, reading, eventually } = require('./helpers/server');
+
+const spec = jsyaml.safeLoad(fs.readFileSync(path.join(__dirname, '../api/openapi.yaml'), 'utf8'));
 
 describe('controller', () => {
     let server;
@@ -36,6 +41,8 @@ describe('controller', () => {
             assert.equal(info.status, 200);
             assert.equal(info.body.service, 'pool-controller');
             assert.match(info.body.version, /^\d+\.\d+\.\d+/);
+            assert.equal(info.body.apiVersion, spec.info.version);
+            assert.match(info.body.commit, /^([0-9a-f]{7,}(-dirty)?|unknown)$/);
             assert.ok(!Number.isNaN(Date.parse(info.body.startedAt)));
         });
 
