@@ -527,3 +527,24 @@ struct ScanTests {
         #expect(scanner.checked == checked)
     }
 }
+
+@Suite("About line")
+struct AboutLineTests {
+    private func info(_ json: String) throws -> SystemInfo {
+        try StatusClient.decoder.decode(SystemInfo.self, from: Data(json.utf8))
+    }
+
+    @Test("names the app, server and API builds")
+    func names() throws {
+        let server = try info(#"{"service":"pool-controller","version":"1.0.0","apiVersion":"1.0.0","commit":"e4f5a6b-dirty","startedAt":"2026-11-07T22:00:00.000Z"}"#)
+        #expect(SystemInfo.aboutLine(appCommit: "a1b2c3d", server: server) == "App a1b2c3d · Server e4f5a6b-dirty · API 1.0.0")
+    }
+
+    @Test("shows a dash for a build it doesn't know, as from an older server")
+    func unknown() throws {
+        let older = try info(#"{"service":"pool-controller","version":"1.0.0","startedAt":"2026-11-07T22:00:00.000Z"}"#)
+        #expect(older.commit == nil && older.apiVersion == nil)
+        #expect(SystemInfo.aboutLine(appCommit: "a1b2c3d", server: older) == "App a1b2c3d · Server — · API —")
+        #expect(SystemInfo.aboutLine(appCommit: nil, server: nil) == "App — · Server — · API —")
+    }
+}

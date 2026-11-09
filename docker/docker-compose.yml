@@ -35,7 +35,11 @@ services:
   # one address
   web:
     image: rhbroberg/pool-web
-    build: ../web
+    build:
+      context: ../web
+      args:
+        # the Makefile sets it; shown in the page's Settings
+        - POOL_GIT_COMMIT=${POOL_GIT_COMMIT:-unknown}
     restart: always
     environment:
       - POOL_API_URL=http://pool:3000
@@ -50,7 +54,11 @@ services:
 
   pool:
     image: rhbroberg/pool-controller
-    build: ..
+    build:
+      context: ..
+      args:
+        # the Makefile sets it; reported by GET /system/info
+        - POOL_GIT_COMMIT=${POOL_GIT_COMMIT:-unknown}
     restart: always
     environment:
       # reached through the web service rather than directly through the proxy

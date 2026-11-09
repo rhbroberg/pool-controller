@@ -38,6 +38,8 @@ const app = {
     store,
     // which pool server the web service forwards to, for showing in Settings and when it's down
     apiServer: null,
+    // the commit the web service was built from, for the about line in Settings
+    webCommit: null,
     poolName: () => prefs.read('poolName', DEFAULT_POOL_NAME) || DEFAULT_POOL_NAME,
     listeners: new Set(),
     /** tells every page a setting kept by the page itself, such as the pool name, changed */
@@ -95,6 +97,7 @@ fetch('/config.json', { cache: 'no-store' })
     .then((response) => response.ok ? response.json() : null)
     .then((config) => {
         app.apiServer = config && config.apiServer ? config.apiServer : null;
+        app.webCommit = config && config.webCommit ? config.webCommit : null;
         app.settingsChanged();
     })
     .catch(() => {});

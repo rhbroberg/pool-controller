@@ -24,15 +24,17 @@ var nameOf = (user) => user && user.email ? user.email : 'unknown user';
 
 const SERVICE_NAME = 'pool-controller';
 const { version } = require('../package.json');
+const { commit, apiVersion } = require('../utils/buildInfo');
 const startedAt = new Date();
 
 /**
- * identifies the service, so a client can tell it found a pool controller server
+ * identifies the service, so a client can tell it found a pool controller server, and the build
+ * it is running
  *
  * returns SystemInfo
  **/
 exports.info = function() {
-    return { service: SERVICE_NAME, version, startedAt };
+    return { service: SERVICE_NAME, version, apiVersion, commit, startedAt };
 };
 
 /**

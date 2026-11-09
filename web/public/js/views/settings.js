@@ -2,7 +2,7 @@
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
-import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable } from '../model.js';
+import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable, aboutLine } from '../model.js';
 import { RECONNECT_CHOICES, DEFAULT_RECONNECT_SECONDS } from '../store.js';
 import { formatDurationSeconds } from '../format.js';
 import * as prefs from '../prefs.js';
@@ -20,6 +20,8 @@ export const mountSettings = (root, app) => {
     let pendingRequests = 0;
     let methodsError = null;
     let linking = null;
+    // the pool server's build, for the about line; null until it answers
+    let serverInfo = null;
     const reveal = revealer(() => redraw());
 
     const token = () => store.credentials ? store.credentials.token : '';
@@ -31,6 +33,15 @@ export const mountSettings = (root, app) => {
             choices = null;
         }
         redraw();
+    };
+
+    const loadServerInfo = async () => {
+        try {
+            serverInfo = await client.fetchSystemInfo();
+            redraw();
+        } catch {
+            // the about line shows a dash for the server
+        }
     };
 
     const loadPendingRequests = async () => {
@@ -199,7 +210,10 @@ export const mountSettings = (root, app) => {
         servicesSection()];
     };
 
-    const historySection = () => formSection({ header: store.isAdmin ? 'History & Administration' : 'History' },
+    const historySection = () => formSection({
+        header: store.isAdmin ? 'History & Administration' : 'History',
+        footer: aboutLine(app.webCommit, serverInfo)
+    },
         linkRow('Event Log', '#/events'),
         store.isAdmin ? h('a', { class: 'form-row', href: '#/accounts' },
             h('span', null, 'Accounts'),
@@ -233,6 +247,7 @@ export const mountSettings = (root, app) => {
     redraw();
     loadChoices();
     loadPendingRequests();
+    loadServerInfo();
     return () => {
         unsubscribe();
         unwatch();

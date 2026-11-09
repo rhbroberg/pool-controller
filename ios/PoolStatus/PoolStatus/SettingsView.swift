@@ -29,6 +29,8 @@ struct SettingsView: View {
     /// What signing in with a service ended with, when it didn't simply sign in.
     @State private var serviceMessage: String?
     @State private var serviceFailed = false
+    /// The server's build, for the about line; nil until it answers.
+    @State private var serverInfo: SystemInfo?
 
     private var auth: AuthSession { store.auth }
     private var choices: SignInChoices { serverChoices ?? .passwordOnly }
@@ -151,12 +153,17 @@ struct SettingsView: View {
                     }
                 }
 
-                Section(auth.isAdmin ? "History & Administration" : "History") {
+                Section {
                     NavigationLink("Event Log", value: Route.eventLog)
                     if auth.isAdmin {
                         NavigationLink("Accounts", value: Route.accounts)
                         NavigationLink("Server Maintenance", value: Route.serverMaintenance)
                     }
+                } header: {
+                    Text(auth.isAdmin ? "History & Administration" : "History")
+                } footer: {
+                    Text(SystemInfo.aboutLine(appCommit: Bundle.main.object(forInfoDictionaryKey: "PoolGitCommit") as? String,
+                                              server: serverInfo))
                 }
             }
             .navigationTitle("Settings")
@@ -171,6 +178,10 @@ struct SettingsView: View {
             }
             .task(id: store.serverAddress) {
                 serverChoices = await auth.signInChoices()
+            }
+            .task(id: store.serverAddress) {
+                serverInfo = nil
+                serverInfo = await store.systemInfo()
             }
             .task(id: signingInWith) {
                 if let signingInWith {

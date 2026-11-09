@@ -3,6 +3,10 @@
 
 COMPOSE = docker compose
 
+# the commit the images are built from, for the web page, the iOS app and GET /system/info to show
+POOL_GIT_COMMIT ?= $(shell git describe --always --dirty 2>/dev/null || echo unknown)
+export POOL_GIT_COMMIT
+
 # a simulated controller, on ports that leave 80 and 443 to whatever already has them
 SIM_HTTP_PORT ?= 8080
 SIM_HTTPS_PORT ?= 8443

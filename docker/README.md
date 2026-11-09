@@ -27,6 +27,11 @@ On the Pi:
 The containers restart with the Pi, keeping the secrets they were created with; export them again
 only to recreate a container, after changing `.env` or pulling a new version.
 
+`make` also passes the git commit of the checkout, with `-dirty` if it has uncommitted changes, into
+the images as `POOL_GIT_COMMIT`; the page's and the app's Settings show it, and so does
+`GET /system/info`. Running `docker compose` directly builds images that report `unknown` unless
+`POOL_GIT_COMMIT` is exported first.
+
 ## The certificate
 
 Caddy proves the name in `POOL_HOSTNAME` to Let's Encrypt with a DNS TXT record (the DNS-01

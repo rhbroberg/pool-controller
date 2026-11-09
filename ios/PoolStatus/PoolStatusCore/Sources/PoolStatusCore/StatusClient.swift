@@ -29,7 +29,21 @@ public nonisolated struct SystemInfo: Decodable, Sendable {
 
     public let service: String
     public let version: String
+    /// The REST API version; nil from a server too old to say.
+    public let apiVersion: String?
+    /// The short git commit the server was built from, ending in -dirty if it had uncommitted
+    /// changes; nil from a server too old to say.
+    public let commit: String?
     public let startedAt: Date
+
+    /// The builds in use: this app, the pool server, and the API version it serves; a dash for
+    /// any not known, as from a server that is down or too old to say.
+    public static func aboutLine(appCommit: String?, server: SystemInfo?) -> String {
+        let app = appCommit ?? "—"
+        let commit = server?.commit ?? "—"
+        let api = server?.apiVersion ?? "—"
+        return String(localized: "App \(app) · Server \(commit) · API \(api)", bundle: .module)
+    }
 }
 
 /// The pool server's REST API. Requests, and decoding their answers, run off the main actor.

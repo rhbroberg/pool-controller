@@ -10,6 +10,10 @@ WORKDIR /opt/pool-web
 COPY package.json server.js ./
 COPY public ./public
 
+# the image has no .git, so the commit it was built from comes in from the build
+ARG POOL_GIT_COMMIT=unknown
+ENV POOL_GIT_COMMIT=$POOL_GIT_COMMIT
+
 EXPOSE 80
 
 CMD [ "node", "server.js" ]

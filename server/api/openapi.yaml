@@ -1510,9 +1510,9 @@ paths:
     get:
       tags:
         - System
-      description: identifies this server as the pool controller service; needs
-        neither the database nor the pool controller, so it answers whenever the
-        server is up
+      description: identifies this server as the pool controller service, with the
+        git commit it was built from and the version of this API; needs neither the
+        database nor the pool controller, so it answers whenever the server is up
       operationId: getSystemInfo
       responses:
         "200":
@@ -2267,6 +2267,13 @@ components:
             - pool-controller
         version:
           type: string
+        apiVersion:
+          type: string
+          description: the version of this API, as in info.version
+        commit:
+          type: string
+          description: the short git commit the server was built from, ending in
+            -dirty if it had uncommitted changes, or unknown
         startedAt:
           type: string
           format: date-time
