@@ -247,7 +247,7 @@ private struct SignInServiceEditor: View {
                             .autocorrectionDisabled()
                     } else {
                         LabeledContent("Client Secret") {
-                            SecureField(service?.hasClientSecret == true ? "Saved" : "", text: $clientSecret)
+                            PasswordField(service?.hasClientSecret == true ? "Saved" : "", text: $clientSecret)
                                 .multilineTextAlignment(.trailing)
                         }
                     }

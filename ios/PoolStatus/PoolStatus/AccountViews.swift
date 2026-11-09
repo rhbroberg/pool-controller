@@ -14,15 +14,12 @@ struct ChangePasswordView: View {
     var body: some View {
         Form {
             Section {
-                SecureField("Current Password", text: $current)
-                    .textContentType(.password)
+                PasswordField("Current Password", text: $current, contentType: .password)
             }
 
             Section {
-                SecureField("New Password", text: $password)
-                    .textContentType(.newPassword)
-                SecureField("Confirm Password", text: $confirmation)
-                    .textContentType(.newPassword)
+                PasswordField("New Password", text: $password)
+                PasswordField("Confirm Password", text: $confirmation)
             } footer: {
                 if let message = errorMessage ?? PasswordRules.problem(password, confirmation: confirmation) {
                     Text(message).foregroundStyle(.red)
@@ -451,10 +448,8 @@ private struct AccountDetailView: View {
             }
 
             Section {
-                SecureField("New Password", text: $password)
-                    .textContentType(.newPassword)
-                SecureField("Confirm Password", text: $confirmation)
-                    .textContentType(.newPassword)
+                PasswordField("New Password", text: $password)
+                PasswordField("Confirm Password", text: $confirmation)
                 Button("Reset Password") {
                     confirmingReset = true
                 }
@@ -597,10 +592,8 @@ private struct NewAccountView: View {
                             .textContentType(.username)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                        SecureField("Password", text: $password)
-                            .textContentType(.newPassword)
-                        SecureField("Confirm Password", text: $confirmation)
-                            .textContentType(.newPassword)
+                        PasswordField("Password", text: $password)
+                        PasswordField("Confirm Password", text: $confirmation)
                     } footer: {
                         if let message = errorMessage ?? PasswordRules.problem(password, confirmation: confirmation) {
                             Text(message).foregroundStyle(.red)

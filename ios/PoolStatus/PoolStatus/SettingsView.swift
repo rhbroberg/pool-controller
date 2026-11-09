@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var isSigningIn = false
     @State private var signInError: String?
     @State private var isScanningNetwork = false
+    @FocusState private var passwordFocused: Bool
     /// nil from a server too old to have sign-in services.
     @State private var serverChoices: SignInChoices?
     /// The service whose sign-in page is open.
@@ -104,15 +105,12 @@ struct SettingsView: View {
                                 .textContentType(.username)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
-                            SecureField("Password", text: $password)
-                                .textContentType(.password)
-                            Button {
-                                signInError = nil
-                                // signing in is to the server being typed, so it takes effect now
-                                // rather than on Done
-                                store.serverAddress = trimmedAddress
-                                isSigningIn = true
-                            } label: {
+                                .submitLabel(.next)
+                                .onSubmit { passwordFocused = true }
+                            PasswordField("Password", text: $password, contentType: .password, focused: $passwordFocused)
+                                .submitLabel(.go)
+                                .onSubmit(startPasswordSignIn)
+                            Button(action: startPasswordSignIn) {
                                 HStack {
                                     Text("Sign In")
                                     if isSigningIn {
@@ -121,7 +119,7 @@ struct SettingsView: View {
                                     }
                                 }
                             }
-                            .disabled(accountName.isEmpty || password.isEmpty || trimmedAddress.isEmpty || isSigningIn)
+                            .disabled(!canSignIn)
                         }
                         ForEach(choices.providers) { provider in
                             Button {
@@ -213,6 +211,20 @@ struct SettingsView: View {
         }
         let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
         poolName = name.isEmpty ? StatusView.defaultPoolName : name
+    }
+
+    private var canSignIn: Bool {
+        !accountName.isEmpty && !password.isEmpty && !trimmedAddress.isEmpty && !isSigningIn
+    }
+
+    private func startPasswordSignIn() {
+        guard canSignIn else {
+            return
+        }
+        signInError = nil
+        // signing in is to the server being typed, so it takes effect now rather than on Done
+        store.serverAddress = trimmedAddress
+        isSigningIn = true
     }
 
     private func signIn() async {

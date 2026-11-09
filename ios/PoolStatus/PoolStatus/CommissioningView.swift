@@ -43,10 +43,15 @@ struct CommissioningView: View {
                         .textContentType(.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField("New Password", text: $password)
-                        .textContentType(.newPassword)
-                    SecureField("Confirm Password", text: $confirmation)
-                        .textContentType(.newPassword)
+                    PasswordField("New Password", text: $password)
+                    PasswordField("Confirm Password", text: $confirmation)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            if canSave {
+                                errorMessage = nil
+                                isSaving = true
+                            }
+                        }
                 } header: {
                     Text("Your Account")
                 } footer: {
