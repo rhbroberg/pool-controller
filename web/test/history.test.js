@@ -20,7 +20,7 @@ const fakeClient = (seriesList) => {
         requests,
         fetchHistory: async (names, from, to, options) => {
             requests.push({ names, from, to, ...options });
-            return { from, to, earliest: 0, series: typeof seriesList === 'function' ? seriesList(options) : seriesList };
+            return { from, to, earliest: 0, series: typeof seriesList === 'function' ? seriesList({ names, from, to, ...options }) : seriesList };
         }
     };
 };
@@ -72,6 +72,35 @@ describe('temperature history loading', () => {
         }
         await history.ensureLoaded(0, 5000, 60);
         assert.equal(client.requests.length, 6, 'the oldest resolution was let go');
+    });
+
+    it('asks again for a closer look at a summary, and replaces it with the readings', async () => {
+        const hour = 3600 * 1000;
+        const client = fakeClient(({ from, to }) => (to - from <= 30 * hour
+            ? [series('pool temp', [[10 * hour, 80], [12 * hour, 82]])]
+            : [series('pool temp', [[0, 70, 68, 72], [4.5 * hour, 75, 74, 76], [10 * hour, 79, 78, 80]], { resolution: 3600 })]));
+        const history = new TemperatureHistory('pool', client);
+        await history.ensureLoaded(0, 100 * hour, 3600);
+        await history.ensureLoaded(5 * hour, 25 * hour, 3600);
+        await history.ensureLoaded(5 * hour, 25 * hour, 3600);
+        assert.equal(client.requests.length, 2, 'the closer window is fetched once');
+        const samples = history.samples('pool temp', 3600);
+        assert.equal(samples.some((sample) => sample.t === 4.5 * hour), false, 'the bucket that ran into the closer window is gone');
+        assert.deepEqual(samples.filter((sample) => sample.t >= 5 * hour && sample.t < 25 * hour).map((sample) => [sample.t, sample.v, sample.span]), [
+            [10 * hour, 80, 0],
+            [12 * hour, 82, 0]
+        ]);
+        assert.equal(samples.some((sample) => sample.t === 0), true, 'a bucket outside the closer window stays for zooming back out');
+    });
+
+    it('does not ask again when a closer look is still a summary', async () => {
+        const hour = 3600 * 1000;
+        const client = fakeClient([series('pool temp', [[0, 70, 68, 72]], { resolution: 3600 })]);
+        const history = new TemperatureHistory('pool', client);
+        await history.ensureLoaded(0, 100 * hour, 3600);
+        await history.ensureLoaded(5 * hour, 25 * hour, 3600);
+        await history.ensureLoaded(5 * hour, 25 * hour, 3600);
+        assert.equal(client.requests.length, 2);
     });
 
     it('draws the coarser resolution it has until the finer one covers the window', async () => {
@@ -150,8 +179,8 @@ describe('resolution', () => {
         assert.equal(levelFor(3600 * 1000, 1179), 60);
     });
 
-    it('asks for no more than the server sends', () => {
-        assert.equal(pointsFor(24 * 3600 * 1000, 120), 722);
+    it('asks for as many points as the server sends, so a window can come back as its readings', () => {
+        assert.equal(pointsFor(24 * 3600 * 1000, 120), MAX_POINTS);
         assert.equal(pointsFor(10 * 365 * 24 * 3600 * 1000, 60), MAX_POINTS);
     });
 });

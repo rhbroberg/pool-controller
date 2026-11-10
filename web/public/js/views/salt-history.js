@@ -6,7 +6,7 @@ import { isAbort } from '../api.js';
 import { TimeChart } from '../chart.js';
 import { extended, valueAt, MAX_POINTS } from '../history.js';
 import { openHistoryCalendar } from './history-calendar.js';
-import { formatMonthDayYear, formatMonthDay, formatMonthYear } from '../format.js';
+import { formatMonthDayYear, formatMonthDay, formatMonthYear, formatSpan } from '../format.js';
 import { topbar, barButton, spinner, renderer } from '../ui.js';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -27,6 +27,7 @@ export const mountSaltHistory = (root, app) => {
     let custom = null;
     let end = Date.now();
     let samples = [];
+    let resolution = 0;
     let isLoading = false;
     let errorMessage = null;
     let selected = null;
@@ -49,6 +50,7 @@ export const mountSaltHistory = (root, app) => {
             }
             const series = response.series.find((s) => s.name === READING);
             const bucketed = series && series.resolution > 0;
+            resolution = bucketed ? series.resolution : 0;
             const points = [...(series && series.before && !bucketed ? [series.before] : []), ...(series ? series.points : [])];
             const loaded = points.filter((p) => p.v !== null && p.v !== undefined)
                 .map((p) => ({ t: Math.max(p.t, start()), v: p.v, low: p.low, high: p.high }));
@@ -182,6 +184,7 @@ export const mountSaltHistory = (root, app) => {
                         },
                         onPointerleave: clearSelection
                     }),
+                    resolution > 0 ? h('div', { class: 'chart-summary' }, `Summary · ${formatSpan(resolution)} averages`) : null,
                     !samples.length && !isLoading && !errorMessage ? h('div', { class: 'chart-empty' }, 'No salt readings in this range') : null),
                 errorMessage ? h('div', { class: 'warning-line' }, icon('warning'), errorMessage) : null,
                 h('div', { class: 'help' }, 'Point at the graph, or touch and hold it, to read a level.'))

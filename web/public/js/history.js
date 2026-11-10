@@ -10,6 +10,9 @@ export const HEAT_PUMP = 'valve4';
 const MINIMUM_GAP_MS = 1000;
 // how many resolutions to keep fetched readings for
 const KEPT_LEVELS = 4;
+// a summary fetched for a window this many times wider is fetched again for the closer one,
+// which comes back as the readings themselves when they are still stored
+const SUMMARY_ZOOM = 1.5;
 
 const TEMPERATURE_NAMES = { pool: 'pool temp', spa: 'spa temp' };
 // the pump just upstream of each body's temperature sensor
@@ -26,14 +29,28 @@ export const levelFor = (lengthMs, pixels) => {
     return RESOLUTIONS.find((seconds) => seconds >= wanted) || RESOLUTIONS[RESOLUTIONS.length - 1];
 };
 
-/** the points a window spanMs long needs at level, within the server's limit */
-export const pointsFor = (spanMs, level) => Math.min(MAX_POINTS, Math.max(10, Math.ceil(spanMs / 1000 / level) + 2));
+/**
+ * as many points as the server will send, so a window comes back as the readings themselves
+ * whenever they are still stored and fit. The bucket length sent with the request is what the
+ * server uses when a window has more readings than that
+ **/
+export const pointsFor = (_spanMs, _level) => MAX_POINTS;
 
 /** 1 while source (heater1 or valve4) was warming water; the server works it out from the switches */
 export const heatingName = (water, source) => `heating:${water}:${source}`;
 
 /** a point from the server as a sample: a reading holds until the next; a bucket for its span */
 const sampleOf = (point, resolution) => ({ t: point.t, v: point.v, low: point.low ?? null, high: point.high ?? null, span: resolution * 1000 });
+
+/** drops buckets a finer answer replaces; a reading (span 0) is already the finest */
+const dropCoarser = (known, from, to, span) => {
+    for (const [t, sample] of known) {
+        const stop = sample.span > 0 ? t + sample.span : t;
+        if (t < to && stop > from && sample.span > span) {
+            known.delete(t);
+        }
+    }
+};
 
 export class TemperatureHistory {
     /**
@@ -79,7 +96,7 @@ export class TemperatureHistory {
     /** the latest time level has readings for */
     loadedThrough(level) {
         const store = this.levels.get(level);
-        return store && store.loaded.length ? store.loaded[store.loaded.length - 1][1] : null;
+        return store && store.loaded.length ? Math.max(...store.loaded.map((range) => range.to)) : null;
     }
 
     // MARK: loading
@@ -105,7 +122,7 @@ export class TemperatureHistory {
             for (const [start, end] of gaps) {
                 const response = await this.client.fetchHistory(this.names, start, end, { maxPoints: pointsFor(end - start, level), resolution: level });
                 this.merge(response, level);
-                this.record(start, end, level);
+                this.record(start, end, level, response.series.some((series) => (series.resolution || 0) > 0));
                 this.errorMessage = null;
             }
             this.evict(level);
@@ -119,17 +136,29 @@ export class TemperatureHistory {
         }
     }
 
+    /**
+     * readings answer any window they overlap. A summary answers one only when it isn't much
+     * wider, so zooming in asks again and can come back as the readings if they are still stored
+     **/
+    covers(loaded, from, to) {
+        if (loaded.to <= from || loaded.from >= to) {
+            return false;
+        }
+        return !loaded.summarized || loaded.to - loaded.from <= (to - from) * SUMMARY_ZOOM;
+    }
+
     missing(from, to, level) {
+        const covering = this.level(level).loaded.filter((loaded) => this.covers(loaded, from, to)).sort((a, b) => a.from - b.from);
         const gaps = [];
         let cursor = from;
-        for (const [start, end] of this.level(level).loaded) {
-            if (end <= cursor || start >= to) {
+        for (const loaded of covering) {
+            if (loaded.to <= cursor || loaded.from >= to) {
                 continue;
             }
-            if (start > cursor) {
-                gaps.push([cursor, start]);
+            if (loaded.from > cursor) {
+                gaps.push([cursor, loaded.from]);
             }
-            cursor = Math.max(cursor, end);
+            cursor = Math.max(cursor, loaded.to);
         }
         if (cursor < to) {
             gaps.push([cursor, to]);
@@ -137,15 +166,16 @@ export class TemperatureHistory {
         return gaps.filter(([start, end]) => end - start >= MINIMUM_GAP_MS);
     }
 
-    record(from, to, level) {
+    record(from, to, level, summarized) {
         const store = this.level(level);
         const merged = [];
-        for (const next of [...store.loaded, [from, to]].sort((a, b) => a[0] - b[0])) {
+        for (const next of [...store.loaded, { from, to, summarized }].sort((a, b) => a.from - b.from)) {
             const last = merged[merged.length - 1];
-            if (last && next[0] <= last[1]) {
-                last[1] = Math.max(last[1], next[1]);
+            // a closer summary has to stay separate, or the wider one would hide that it was already fetched
+            if (last && !last.summarized && !next.summarized && next.from <= last.to) {
+                last.to = Math.max(last.to, next.to);
             } else {
-                merged.push([...next]);
+                merged.push({ ...next });
             }
         }
         store.loaded = merged;
@@ -159,6 +189,7 @@ export class TemperatureHistory {
         for (const series of response.series) {
             const resolution = series.resolution || 0;
             const known = store.values.get(series.name) || new Map();
+            dropCoarser(known, response.from, response.to, resolution * 1000);
             for (const point of series.points) {
                 if (point && point.v !== null && point.v !== undefined) {
                     known.set(point.t, sampleOf(point, resolution));
@@ -189,7 +220,7 @@ export class TemperatureHistory {
      * recently used one that does, so zooming in shows the coarser lines until finer arrive
      **/
     displayLevel(level, from, to, now = Date.now()) {
-        const covers = (store) => store.loaded.some(([start, end]) => start <= from && end >= Math.min(to, now));
+        const covers = (store) => store.loaded.some((range) => range.from <= from && range.to >= Math.min(to, now));
         const wanted = this.levels.get(level);
         if (wanted && covers(wanted)) {
             return level;
@@ -198,7 +229,7 @@ export class TemperatureHistory {
         return others.length ? others[0][0] : level;
     }
 
-    /** the bucket length the lines at level are drawn from, or 0 for readings as recorded */
+    /** the coarsest bucket length answered at level, or 0 when every series was readings as recorded */
     resolution(level) {
         const store = this.levels.get(level);
         return store ? store.resolution : 0;

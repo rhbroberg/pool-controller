@@ -274,17 +274,40 @@ export const mountTemperatureHistory = (root, app, water) => {
 
     // MARK: drawing
 
+    /** the longest bucket overlapping the time in view, in seconds, or 0 for readings as recorded */
+    const bucketSeconds = (samples) => {
+        const end = start + length;
+        return samples.reduce((span, sample) => {
+            const stop = sample.span > 0 ? sample.t + sample.span : sample.t;
+            return sample.span > 0 && sample.t < end && stop > start ? Math.max(span, sample.span) : span;
+        }, 0) / 1000;
+    };
+
     const lines = () => {
         const drawn = drawnLevel();
         const through = model.loadedThrough(drawn);
         const end = through !== null ? Math.min(through, now) : now;
+        const segments = model.waterSegments(end, drawn);
+        const air = shown.air ? model.airLine(end, drawn) : [];
         return {
-            resolution: model.resolution(drawn),
-            segments: model.waterSegments(end, drawn),
-            air: shown.air ? model.airLine(end, drawn) : [],
+            waterResolution: bucketSeconds(segments.flat()),
+            airResolution: bucketSeconds(air),
+            segments,
+            air,
             heater: shown.heater ? model.heatingSpans(HEATER, end, drawn) : [],
             heatPump: shown.heatPump ? model.heatingSpans(HEAT_PUMP, end, drawn) : []
         };
+    };
+
+    /** a label for the graph while a line is averages rather than the readings */
+    const summaryText = (waterSeconds, airSeconds) => {
+        if (waterSeconds > 0) {
+            return `Summary · ${formatSpan(waterSeconds)} averages`;
+        }
+        if (airSeconds > 0) {
+            return `Air summary · ${formatSpan(airSeconds)} averages`;
+        }
+        return null;
     };
 
     /** the water temperature at t, or null when the pump was off and the line has a gap */
@@ -418,6 +441,9 @@ export const mountTemperatureHistory = (root, app, water) => {
                         onWheel,
                         onKeydown
                     }),
+                    summaryText(data.waterResolution, data.airResolution)
+                        ? h('div', { class: 'chart-summary' }, summaryText(data.waterResolution, data.airResolution))
+                        : null,
                     !data.segments.length && !model.isLoading
                         ? h('div', { class: 'chart-empty' }, `No ${body.title.toLowerCase()} temperature readings yet`)
                         : null),
@@ -425,7 +451,8 @@ export const mountTemperatureHistory = (root, app, water) => {
                 model.errorMessage ? h('div', { class: 'warning-line' }, icon('warning'), model.errorMessage) : null,
                 h('div', { class: 'help' },
                     h('span', null, 'Gaps in the line are times the pump was off, when the sensor can’t read the water.'),
-                    data.resolution > 0 ? h('span', null, `Each step averages ${formatSpan(data.resolution)}; the shading behind it spans its lowest to highest reading.`) : null,
+                    data.waterResolution > 0 ? h('span', null, `Each step averages ${formatSpan(data.waterResolution)}; the shading behind it spans its lowest to highest reading.`) : null,
+                    data.airResolution > 0 && data.airResolution !== data.waterResolution ? h('span', null, `The air line averages ${formatSpan(data.airResolution)}.`) : null,
                     helpSeen ? null : h('span', null, 'Drag the graph to move through time, scroll or pinch to zoom, and point at it (or touch and hold) to read a temperature.')))
         ];
     };

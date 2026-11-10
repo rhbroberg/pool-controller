@@ -1325,6 +1325,20 @@ button.form-row:disabled {
     stroke-width: 1;
 }
 
+.chart-summary {
+    position: absolute;
+    z-index: 1;
+    top: 16px;
+    right: 16px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--fill);
+    color: var(--secondary);
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
 .chart-empty {
     position: absolute;
     inset: 0;
