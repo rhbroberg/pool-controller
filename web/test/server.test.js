@@ -2,6 +2,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import net from 'node:net';
 import { createWebServer, describeCommit, API_BASE, UNREACHABLE_HEADER } from '../server.js';
 import { Client, ApiError } from '../public/js/api.js';
 
@@ -206,5 +207,166 @@ describe('web service', () => {
             assert.equal(url.searchParams.has('user'), false);
             assert.equal(url.searchParams.has('cursor'), false);
         });
+    });
+});
+
+describe('web service live updates', () => {
+    let upstream;
+    let upstreamPort;
+    let web;
+    let webPort;
+    const upgrades = [];
+
+    // stands in for the pool server's socket.io: it greets each WebSocket, then echoes what it hears
+    before(async () => {
+        upstream = http.createServer((req, res) => res.end());
+        upstream.on('upgrade', (req, socket) => {
+            upgrades.push({ url: req.url, headers: req.headers });
+            if (req.url.includes('refuse')) {
+                socket.end('HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: 20\r\n\r\n{"code":0,"bad":"x"}');
+                return;
+            }
+            socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: test\r\n\r\nhello');
+            socket.on('data', (chunk) => {
+                if (String(chunk) === 'bye') {
+                    socket.destroy();
+                } else {
+                    socket.write(chunk);
+                }
+            });
+            socket.on('end', () => socket.end());
+            socket.on('error', () => socket.destroy());
+        });
+        upstreamPort = await listen(upstream);
+        web = createWebServer({ apiUrl: `http://127.0.0.1:${upstreamPort}` });
+        webPort = await listen(web);
+    });
+
+    after(async () => {
+        await close(web);
+        await close(upstream);
+    });
+
+    // asks the web service to upgrade `path`, resolving with the switched socket or the refusal
+    const upgrade = (port, path) => new Promise((resolve, reject) => {
+        const request = http.request({
+            host: '127.0.0.1', port, path,
+            headers: { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': 'dGVzdA==', 'Sec-WebSocket-Version': '13' }
+        });
+        request.on('upgrade', (answer, socket, head) => resolve({ answer, socket, head }));
+        request.on('response', (answer) => {
+            let body = '';
+            answer.on('data', (chunk) => { body += chunk; });
+            answer.on('end', () => resolve({ answer, body }));
+        });
+        request.on('error', reject);
+        request.end();
+    });
+
+    // what socket has said once it's at least length long, or once done(what it has said)
+    const read = (socket, have, length, done = (all) => all.length >= length) => new Promise((resolve) => {
+        let text = have.toString();
+        const check = () => {
+            if (done(text)) {
+                socket.off('data', onData);
+                resolve(text);
+            }
+        };
+        const onData = (chunk) => {
+            text += chunk;
+            check();
+        };
+        socket.on('data', onData);
+        check();
+    });
+
+    it('forwards the WebSocket the apps receive live updates over', async () => {
+        const { answer, socket, head } = await upgrade(webPort, '/socket.io/?EIO=4&transport=websocket');
+        try {
+            assert.equal(answer.statusCode, 101);
+            assert.equal(answer.headers.upgrade, 'websocket');
+            assert.equal(answer.headers['sec-websocket-accept'], 'test');
+            assert.equal(await read(socket, head, 5), 'hello', 'what the pool server sends at once arrives');
+            socket.write('ping');
+            assert.equal(await read(socket, Buffer.alloc(0), 4), 'ping', 'and both ways afterwards');
+        } finally {
+            socket.destroy();
+        }
+        const seen = upgrades[upgrades.length - 1];
+        assert.equal(seen.url, '/socket.io/?EIO=4&transport=websocket');
+        assert.equal(seen.headers.host, `127.0.0.1:${upstreamPort}`);
+        assert.equal(seen.headers['x-forwarded-host'], `127.0.0.1:${webPort}`);
+        assert.equal(seen.headers['sec-websocket-key'], 'dGVzdA==');
+    });
+
+    it('closes the pool server’s side when the browser goes away', async () => {
+        const { socket, head } = await upgrade(webPort, '/socket.io/?EIO=4&transport=websocket');
+        await read(socket, head, 5);
+        const connections = () => new Promise((resolve) => upstream.getConnections((_, count) => resolve(count)));
+        const open = await connections();
+        socket.destroy();
+        for (let i = 0; i < 50 && (await connections()) >= open; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        assert.ok((await connections()) < open);
+    });
+
+    it('closes the browser’s side when the pool server goes away', async () => {
+        const { socket, head } = await upgrade(webPort, '/socket.io/?EIO=4&transport=websocket');
+        await read(socket, head, 5);
+        const ended = new Promise((resolve) => socket.on('close', resolve));
+        socket.write('bye');
+        // the stand-in hangs up on whoever said bye
+        await ended;
+    });
+
+    it('passes on what the browser sent along with the upgrade', async () => {
+        const socket = net.connect(webPort, '127.0.0.1');
+        await new Promise((resolve) => socket.once('connect', resolve));
+        socket.write('GET /socket.io/?EIO=4&transport=websocket HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\n' +
+            'Upgrade: websocket\r\nSec-WebSocket-Key: dGVzdA==\r\nSec-WebSocket-Version: 13\r\n\r\nearly');
+        try {
+            const text = await read(socket, Buffer.alloc(0), 0, (all) => all.includes('helloearly'));
+            assert.match(text, /^HTTP\/1\.1 101 /);
+        } finally {
+            socket.destroy();
+        }
+    });
+
+    it('lets go of live connections when it shuts down', async () => {
+        const closing = createWebServer({ apiUrl: `http://127.0.0.1:${upstreamPort}` });
+        const { socket, head } = await upgrade(await listen(closing), '/socket.io/?EIO=4&transport=websocket');
+        await read(socket, head, 5);
+        const ended = new Promise((resolve) => socket.on('close', resolve));
+        await close(closing);
+        await ended;
+    });
+
+    it('passes on the pool server turning an upgrade down', async () => {
+        const { answer, body } = await upgrade(webPort, '/socket.io/?refuse=1');
+        assert.equal(answer.statusCode, 400);
+        assert.equal(body, '{"code":0,"bad":"x"}');
+    });
+
+    it('says the pool server is unreachable when it is down', async () => {
+        const orphan = createWebServer({ apiUrl: 'http://127.0.0.1:9' });
+        try {
+            const { answer, body } = await upgrade(await listen(orphan), '/socket.io/?EIO=4&transport=websocket');
+            assert.equal(answer.statusCode, 502);
+            assert.equal(answer.headers[UNREACHABLE_HEADER], '1');
+            assert.match(JSON.parse(body).message, /can’t reach the pool server/);
+        } finally {
+            await close(orphan);
+        }
+    });
+
+    it('upgrades nothing else', async () => {
+        const { answer } = await upgrade(webPort, '/js/app.js');
+        assert.equal(answer.statusCode, 404);
+    });
+
+    it('forwards socket.io’s long-polling fallback too', async () => {
+        const response = await fetch(`http://127.0.0.1:${webPort}/socket.io/?EIO=4&transport=polling`);
+        assert.equal(response.status, 200, 'reaches the pool server rather than a missing file');
     });
 });

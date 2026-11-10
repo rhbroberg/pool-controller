@@ -6,7 +6,9 @@ Four containers, defined in `docker-compose.yml`:
   The REST API is at `/rhbroberg/pool-api/1.0.0` there, through the web service, so the iOS app
   needs only the hostname.
 - **web** is the web page; it forwards the REST API to the pool server, so the page and the iOS
-  app use the same address.
+  app use the same address. It forwards the live updates too: socket.io's WebSocket at
+  `/socket.io/`, which shows changes as the controller reports them. Caddy passes WebSocket
+  upgrades on without any setting of its own.
 - **pool** is the pool server, talking to the controller over the RS-485 adapter.
 - **mongo** keeps history and accounts in `/data/db` on the host. No port is published; only the
   pool server reaches it.

@@ -12,8 +12,8 @@ const DEFAULT_PORT = 80;
 const DEFAULT_API_URL = 'http://localhost:3000';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(HERE, 'public');
-// the API, and the pool server's Swagger UI and the spec it loads
-const PROXIED_PREFIXES = [`${API_BASE}/`, '/docs', '/api-docs'];
+// the API, the pool server's Swagger UI and the spec it loads, and its live updates
+const PROXIED_PREFIXES = [`${API_BASE}/`, '/docs', '/api-docs', '/socket.io/'];
 // longer than the slowest API call (a history window), shorter than a browser gives up
 const PROXY_TIMEOUT_MS = 30000;
 // tells the page the pool server, rather than this service, could not be reached
@@ -89,8 +89,7 @@ const serveFile = (req, res, pathname, publicDir) => {
     });
 };
 
-const proxy = (req, res, target) => {
-    const transport = target.protocol === 'https:' ? https : http;
+const forwardedHeaders = (req, target) => {
     const headers = { ...req.headers, host: target.host };
     const forwardedFor = req.socket.remoteAddress;
     if (forwardedFor) {
@@ -102,15 +101,23 @@ const proxy = (req, res, target) => {
         headers['x-forwarded-host'] = req.headers.host;
         headers['x-forwarded-proto'] = req.socket.encrypted ? 'https' : 'http';
     }
-    const basePath = target.pathname.replace(/\/$/, '');
-    const upstream = transport.request({
+    return headers;
+};
+
+const upstreamRequest = (req, target, onResponse) => {
+    const transport = target.protocol === 'https:' ? https : http;
+    return transport.request({
         protocol: target.protocol,
         hostname: target.hostname,
         port: target.port,
         method: req.method,
-        path: basePath + req.url,
-        headers
-    }, (answer) => {
+        path: target.pathname.replace(/\/$/, '') + req.url,
+        headers: forwardedHeaders(req, target)
+    }, onResponse);
+};
+
+const proxy = (req, res, target) => {
+    const upstream = upstreamRequest(req, target, (answer) => {
         res.writeHead(answer.statusCode, answer.headers);
         answer.pipe(res);
     });
@@ -128,6 +135,63 @@ const proxy = (req, res, target) => {
     req.pipe(upstream);
 };
 
+const rawHead = (statusLine, rawHeaders) => {
+    let head = `${statusLine}\r\n`;
+    for (let i = 0; i < rawHeaders.length; i += 2) {
+        head += `${rawHeaders[i]}: ${rawHeaders[i + 1]}\r\n`;
+    }
+    return `${head}\r\n`;
+};
+
+/**
+ * relays a WebSocket upgrade, such as the pool server's live updates, then copies bytes both
+ * ways until either side closes
+ **/
+const proxyUpgrade = (req, socket, head, target, live) => {
+    live.add(socket);
+    socket.on('close', () => live.delete(socket));
+    const upstream = upstreamRequest(req, target);
+    socket.on('error', () => upstream.destroy());
+    upstream.setTimeout(PROXY_TIMEOUT_MS, () => {
+        upstream.destroy(new Error(`no answer within ${PROXY_TIMEOUT_MS / 1000} seconds`));
+    });
+    upstream.on('upgrade', (answer, upstreamSocket, upstreamHead) => {
+        // the connection now lives as long as the pool server and the browser keep it open
+        upstreamSocket.setTimeout(0);
+        upstreamSocket.setNoDelay(true);
+        socket.setNoDelay(true);
+        socket.write(rawHead(`HTTP/1.1 ${answer.statusCode} ${answer.statusMessage}`, answer.rawHeaders));
+        if (upstreamHead.length > 0) {
+            socket.write(upstreamHead);
+        }
+        if (head.length > 0) {
+            upstreamSocket.write(head);
+        }
+        upstreamSocket.on('error', () => socket.destroy());
+        socket.on('close', () => upstreamSocket.destroy());
+        upstreamSocket.on('close', () => socket.destroy());
+        upstreamSocket.pipe(socket).pipe(upstreamSocket);
+    });
+    // the pool server turned the upgrade down; pass its answer on and hang up
+    upstream.on('response', (answer) => {
+        socket.write(rawHead(`HTTP/1.1 ${answer.statusCode} ${answer.statusMessage}`, answer.rawHeaders));
+        answer.pipe(socket);
+    });
+    upstream.on('error', (error) => {
+        if (!socket.writable) {
+            return;
+        }
+        const body = JSON.stringify({ code: 502, message: `can’t reach the pool server at ${target.host} (${error.code || error.message})` });
+        socket.end(rawHead('HTTP/1.1 502 Bad Gateway', [
+            'Content-Type', 'application/json; charset=utf-8',
+            'Content-Length', String(Buffer.byteLength(body)),
+            UNREACHABLE_HEADER, '1',
+            'Connection', 'close'
+        ]) + body);
+    });
+    upstream.end();
+};
+
 /**
  * the web service: files from publicDir, the API forwarded to apiUrl, and /config.json telling
  * the page which pool server that is and which commit this service was built from
@@ -135,7 +199,7 @@ const proxy = (req, res, target) => {
 export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_DIR, commit = describeCommit() } = {}) => {
     const target = new URL(apiUrl);
     const root = path.resolve(publicDir);
-    return http.createServer((req, res) => {
+    const server = http.createServer((req, res) => {
         const { pathname } = new URL(req.url, 'http://localhost');
         if (isProxied(pathname)) {
             proxy(req, res, target);
@@ -145,6 +209,22 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
             serveFile(req, res, pathname, root);
         }
     });
+    // upgraded connections are no longer the HTTP server's to close
+    const live = new Set();
+    server.on('upgrade', (req, socket, head) => {
+        const { pathname } = new URL(req.url, 'http://localhost');
+        if (isProxied(pathname)) {
+            proxyUpgrade(req, socket, head, target, live);
+        } else {
+            socket.end('HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n');
+        }
+    });
+    const closeAllConnections = server.closeAllConnections.bind(server);
+    server.closeAllConnections = () => {
+        closeAllConnections();
+        live.forEach((socket) => socket.destroy());
+    };
+    return server;
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
