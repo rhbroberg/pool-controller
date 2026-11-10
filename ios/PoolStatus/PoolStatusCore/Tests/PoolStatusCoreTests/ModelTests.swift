@@ -332,6 +332,53 @@ struct HistoryTests {
         #expect(HistoryWindow.ticks(in: window, visibleLength: day, calendar: calendar).count <= 25)
     }
 
+    @Test("asks again for a closer look at a summary and draws the readings there")
+    func closerLook() async {
+        let rawPoints = #"{"t":"\#(iso(10))","v":80},{"t":"\#(iso(12))","v":82}"#
+        let coarsePoints = #"{"t":"\#(iso(0))","v":70,"min":68,"max":72},{"t":"\#(iso(4.5))","v":75,"min":74,"max":76},{"t":"\#(iso(10))","v":79,"min":78,"max":80}"#
+        let parser = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        let server = StubServer { _, _, query in
+            let start = try! parser.parse(query["from"] ?? "")
+            let end = try! parser.parse(query["to"] ?? "")
+            let summarized = end.timeIntervalSince(start) > 30 * 3600
+            let points = summarized ? coarsePoints : rawPoints
+            let resolution = summarized ? 3600 : 0
+            let from = query["from"] ?? ""
+            let to = query["to"] ?? ""
+            return .ok(#"{"from":"\#(from)","to":"\#(to)","earliest":"\#(from)","series":[{"name":"pool temp","resolution":\#(resolution),"before":null,"points":[\#(points)]}]}"#)
+        }
+        let model = TemperatureHistoryModel(water: .pool)
+        await model.ensureLoaded(at(0)...at(100), level: 3600, client: server.client)
+        await model.ensureLoaded(at(5)...at(25), level: 3600, client: server.client)
+        await model.ensureLoaded(at(5)...at(25), level: 3600, client: server.client)
+        #expect(server.requests.count == 2, "the closer window is fetched once")
+
+        let temps = model.samples(.poolTemperature, level: 3600)
+        #expect(!temps.contains { $0.date == at(4.5) }, "the bucket that ran into the closer window is gone")
+        #expect(temps.contains { $0.date == at(10) && $0.value == 80 && !$0.isBucket })
+        #expect(temps.contains { $0.date == at(0) }, "a bucket outside the closer window stays")
+        #expect(model.chartData(through: at(25), level: 3600, within: at(5)...at(25)).resolution == 0)
+    }
+
+    @Test("does not ask again when a closer look is still a summary")
+    func closerSummaryStays() async {
+        let body = buckets()
+        let fromKey = #"\"from\":\"\#(iso(0))\""#
+        let toKey = #"\"to\":\"\#(iso(6))\""#
+        let server = StubServer { _, _, query in
+            let from = query["from"] ?? ""
+            let to = query["to"] ?? ""
+            let json = body.replacingOccurrences(of: fromKey, with: "\"from\":\"\(from)\"")
+                .replacingOccurrences(of: toKey, with: "\"to\":\"\(to)\"")
+            return .ok(json)
+        }
+        let model = TemperatureHistoryModel(water: .pool)
+        await model.ensureLoaded(at(0)...at(100), level: 3600, client: server.client)
+        await model.ensureLoaded(at(5)...at(25), level: 3600, client: server.client)
+        await model.ensureLoaded(at(5)...at(25), level: 3600, client: server.client)
+        #expect(server.requests.count == 2)
+    }
+
     @Test("doesn't ask again for a window it already has at that resolution")
     func caches() async {
         let body = readings()
@@ -358,7 +405,7 @@ struct HistoryTests {
         #expect(HistoryResolution.level(visibleLength: 24 * 3600, pixels: 1179) == 120)
         #expect(HistoryResolution.level(visibleLength: 365 * 24 * 3600, pixels: 1179) == 43200)
         #expect(HistoryResolution.level(visibleLength: 3600, pixels: 1179) == 60)
-        #expect(HistoryResolution.points(for: 24 * 3600, level: 120) == 722)
+        #expect(HistoryResolution.points(for: 24 * 3600, level: 120) == HistoryResolution.maxPoints)
         #expect(HistoryResolution.points(for: 10 * 365 * 24 * 3600, level: 60) == HistoryResolution.maxPoints)
     }
 }

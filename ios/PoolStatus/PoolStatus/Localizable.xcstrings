@@ -163,6 +163,9 @@
     "Air %lld°F" : {
 
     },
+    "Air summary" : {
+
+    },
     "Air temperature" : {
 
     },
@@ -878,6 +881,12 @@
     "such as auth0" : {
 
     },
+    "Summary" : {
+
+    },
+    "Summary · %@" : {
+
+    },
     "Swipe left on an account to remove it. Viewers can only look; operators can also change equipment, water flow and panel settings; admins can also manage accounts and the server." : {
 
     },
@@ -913,6 +922,9 @@
 
     },
     "The account is deleted and signed out everywhere." : {
+
+    },
+    "The air line averages %@." : {
 
     },
     "The first sign-in with one of these verified email addresses creates the account with the role shown. Swipe left to withdraw one." : {

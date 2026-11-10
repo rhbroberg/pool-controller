@@ -58,9 +58,12 @@ public nonisolated enum HistoryResolution {
         return ladder.first { Double($0) >= wanted } ?? ladder[ladder.count - 1]
     }
 
-    /// The points a window `span` long needs at `level`, within the server's limit.
+    /// As many points as the server will send, so a window comes back as the readings themselves
+    /// whenever they are still stored and fit. `level` is the bucket length sent with the request,
+    /// which the server uses when a window has more readings than this.
     public static func points(for span: TimeInterval, level: Int) -> Int {
-        min(maxPoints, max(10, Int((span / Double(level)).rounded(.up)) + 2))
+        _ = (span, level)
+        return maxPoints
     }
 }
 
@@ -206,8 +209,10 @@ public final class TemperatureHistoryModel {
         public let air: [HistorySample]
         public let heater: [HeatingSpan]
         public let heatPump: [HeatingSpan]
-        /// The bucket length the lines are drawn from, or 0 for readings as recorded.
+        /// The water line's bucket length, in seconds, or 0 when it is readings as recorded.
         public let resolution: Int
+        /// The air line's bucket length, in seconds, or 0 when it is readings or hidden from the draw.
+        public let airResolution: Int
     }
 
     /// How many resolutions to keep fetched readings for.
@@ -221,15 +226,24 @@ public final class TemperatureHistoryModel {
     /// Counts merged responses, so the graph is redrawn from new data.
     public private(set) var revision = 0
 
+    /// One fetch: the window it covered, and whether any series in it was a summary.
+    private struct Fetch: Equatable {
+        var range: ClosedRange<Date>
+        var summarized: Bool
+    }
+
     /// Readings fetched at one resolution, and the windows they cover.
     private struct Level {
         var values: [ReadingName: [Date: HistorySample]] = [:]
         var sorted: [ReadingName: [HistorySample]] = [:]
-        var loaded: [ClosedRange<Date>] = []
-        /// The resolution the server answered with, which can be coarser than asked.
+        var loaded: [Fetch] = []
+        /// The coarsest resolution the server answered with, which can be coarser than asked.
         var resolution = 0
         var used = Date.now
     }
+
+    /// A summary fetched for a window this many times wider is fetched again for the closer one.
+    private static let summaryZoom = 1.5
 
     private var levels: [Int: Level] = [:]
     /// The fetch under way; another waits for it rather than fetching the same window.
@@ -248,7 +262,7 @@ public final class TemperatureHistoryModel {
 
     /// The latest time `level` has readings for.
     public func loadedThrough(level: Int) -> Date? {
-        levels[level]?.loaded.last?.upperBound
+        levels[level]?.loaded.map(\.range.upperBound).max()
     }
 
     // MARK: - Loading
@@ -289,7 +303,7 @@ public final class TemperatureHistoryModel {
                                                              maxPoints: HistoryResolution.points(for: span, level: level),
                                                              resolution: level)
                 merge(response, level: level)
-                record(gap, level: level)
+                record(gap, summarized: response.series.contains { $0.resolution > 0 }, level: level)
                 errorMessage = nil
             } catch {
                 if !error.isCancellation {
@@ -301,14 +315,30 @@ public final class TemperatureHistoryModel {
         evictUnusedLevels(keeping: level)
     }
 
+    /// Readings answer any window they overlap. A summary answers one only when it isn't much
+    /// wider, so zooming in asks again and can come back as the readings if they are still stored.
+    private func covers(_ fetch: Fetch, request: ClosedRange<Date>) -> Bool {
+        guard fetch.range.upperBound > request.lowerBound, fetch.range.lowerBound < request.upperBound else {
+            return false
+        }
+        guard fetch.summarized else {
+            return true
+        }
+        let requestSpan = request.upperBound.timeIntervalSince(request.lowerBound)
+        let fetchedSpan = fetch.range.upperBound.timeIntervalSince(fetch.range.lowerBound)
+        return fetchedSpan <= requestSpan * Self.summaryZoom
+    }
+
     private func missing(from range: ClosedRange<Date>, level: Int) -> [ClosedRange<Date>] {
+        let covering = (levels[level]?.loaded ?? []).filter { covers($0, request: range) }
+            .sorted { $0.range.lowerBound < $1.range.lowerBound }
         var gaps: [ClosedRange<Date>] = []
         var cursor = range.lowerBound
-        for covered in levels[level]?.loaded ?? [] where covered.upperBound > cursor && covered.lowerBound < range.upperBound {
-            if covered.lowerBound > cursor {
-                gaps.append(cursor...covered.lowerBound)
+        for fetch in covering where fetch.range.upperBound > cursor && fetch.range.lowerBound < range.upperBound {
+            if fetch.range.lowerBound > cursor {
+                gaps.append(cursor...fetch.range.lowerBound)
             }
-            cursor = max(cursor, covered.upperBound)
+            cursor = max(cursor, fetch.range.upperBound)
         }
         if cursor < range.upperBound {
             gaps.append(cursor...range.upperBound)
@@ -316,11 +346,13 @@ public final class TemperatureHistoryModel {
         return gaps.filter { $0.upperBound.timeIntervalSince($0.lowerBound) >= 1 }
     }
 
-    private func record(_ range: ClosedRange<Date>, level: Int) {
-        var merged: [ClosedRange<Date>] = []
-        for next in ((levels[level]?.loaded ?? []) + [range]).sorted(by: { $0.lowerBound < $1.lowerBound }) {
-            if let last = merged.last, next.lowerBound <= last.upperBound {
-                merged[merged.count - 1] = last.lowerBound...max(last.upperBound, next.upperBound)
+    private func record(_ range: ClosedRange<Date>, summarized: Bool, level: Int) {
+        var merged: [Fetch] = []
+        let fetches = (levels[level]?.loaded ?? []) + [Fetch(range: range, summarized: summarized)]
+        for next in fetches.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+            // a closer summary has to stay separate, or the wider one would hide that it was already fetched
+            if let last = merged.last, !last.summarized, !next.summarized, next.range.lowerBound <= last.range.upperBound {
+                merged[merged.count - 1].range = last.range.lowerBound...max(last.range.upperBound, next.range.upperBound)
             } else {
                 merged.append(next)
             }
@@ -335,6 +367,12 @@ public final class TemperatureHistoryModel {
         var store = levels[level] ?? Level()
         for series in response.series {
             var known = store.values[series.name] ?? [:]
+            let span = TimeInterval(series.resolution)
+            known = known.filter { date, sample in
+                let stop = sample.span > 0 ? date.addingTimeInterval(sample.span) : date
+                let overlaps = date < response.to && stop > response.from
+                return !(overlaps && sample.span > span)
+            }
             for point in series.points {
                 if let sample = HistorySample(point, resolution: series.resolution) {
                     known[sample.date] = sample
@@ -366,7 +404,7 @@ public final class TemperatureHistoryModel {
     /// recently used one that does, so zooming in shows the coarser lines until finer arrive.
     public func displayLevel(for level: Int, visible: ClosedRange<Date>) -> Int {
         func covers(_ store: Level) -> Bool {
-            store.loaded.contains { $0.lowerBound <= visible.lowerBound && $0.upperBound >= min(visible.upperBound, Date.now) }
+            store.loaded.contains { $0.range.lowerBound <= visible.lowerBound && $0.range.upperBound >= min(visible.upperBound, Date.now) }
         }
         if let store = levels[level], covers(store) {
             return level
@@ -399,9 +437,22 @@ public final class TemperatureHistoryModel {
             heatPump = heatPump.filter { $0.end >= window.lowerBound && $0.start <= window.upperBound }
         }
         let data = ChartData(water: water, air: air, heater: heater, heatPump: heatPump,
-                             resolution: levels[level]?.resolution ?? 0)
+                             resolution: Self.bucketSeconds(water.flatMap(\.samples), within: window),
+                             airResolution: Self.bucketSeconds(air, within: window))
         chartCache = (end, level, window, revision, data)
         return data
+    }
+
+    /// The longest bucket overlapping `window`, in seconds, or 0 when the samples are readings.
+    /// With no window, any bucket counts.
+    private static func bucketSeconds(_ samples: [HistorySample], within window: ClosedRange<Date>?) -> Int {
+        let spans = samples.compactMap { sample -> TimeInterval? in
+            guard sample.span > 0 else { return nil }
+            guard let window else { return sample.span }
+            let stop = sample.date.addingTimeInterval(sample.span)
+            return sample.date < window.upperBound && stop > window.lowerBound ? sample.span : nil
+        }
+        return Int(spans.max() ?? 0)
     }
 
     /// The samples of one stepped line that cross `window`, with the one before it, whose value

@@ -102,6 +102,8 @@ struct TemperatureHistoryView: View {
         let air = showAir ? data.air : []
         let heater = showHeater ? data.heater : []
         let heatPump = showHeatPump ? data.heatPump : []
+        let waterSummary = summarySeconds(segments.flatMap(\.samples))
+        let airSummary = summarySeconds(air)
 
         // no scroll view around the graph, so dragging it moves through time and never the page
         VStack(alignment: .leading, spacing: 12) {
@@ -142,6 +144,10 @@ struct TemperatureHistoryView: View {
             chart(segments: segments, air: air, heater: heater, heatPump: heatPump,
                   ticks: HistoryWindow.ticks(in: window, visibleLength: visibleLength))
                 .frame(minHeight: 160, maxHeight: .infinity)
+                .overlay(alignment: .topTrailing) {
+                    summaryBadge(water: waterSummary, air: airSummary)
+                        .padding(8)
+                }
 
             legend
 
@@ -154,8 +160,11 @@ struct TemperatureHistoryView: View {
             if verticalSizeClass != .compact {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Gaps in the line are times the pump was off, when the sensor can’t read the water.")
-                    if data.resolution > 0 {
-                        Text("Each step averages \(Duration.seconds(data.resolution), format: .units(allowed: [.days, .hours, .minutes], width: .wide)); the shading behind it spans its lowest to highest reading.")
+                    if waterSummary > 0 {
+                        Text("Each step averages \(Duration.seconds(waterSummary), format: .units(allowed: [.days, .hours, .minutes], width: .wide)); the shading behind it spans its lowest to highest reading.")
+                    }
+                    if airSummary > 0, airSummary != waterSummary {
+                        Text("The air line averages \(Duration.seconds(airSummary), format: .units(allowed: [.days, .hours, .minutes], width: .wide)).")
                     }
                     if !helpSeen {
                         Text("Drag the graph to move through time, pinch to zoom, and touch and hold to read a temperature.")
@@ -219,6 +228,36 @@ struct TemperatureHistoryView: View {
                     await model.ensureLoaded(through...now, level: level, client: store.client)
                 }
             }
+        }
+    }
+
+    /// The longest bucket overlapping the time in view, in seconds, or 0 for readings as recorded.
+    private func summarySeconds(_ samples: [HistorySample]) -> Int {
+        let range = visibleRange
+        let span = samples.compactMap { sample -> TimeInterval? in
+            guard sample.span > 0 else { return nil }
+            let stop = sample.date.addingTimeInterval(sample.span)
+            return sample.date < range.upperBound && stop > range.lowerBound ? sample.span : nil
+        }.max() ?? 0
+        return Int(span)
+    }
+
+    /// On the graph itself, so a summary is marked even when the footnote is off the screen.
+    @ViewBuilder
+    private func summaryBadge(water: Int, air: Int) -> some View {
+        let seconds = water > 0 ? water : air
+        if seconds > 0 {
+            HStack(spacing: 6) {
+                Text(water > 0 ? "Summary" : "Air summary")
+                Text(Duration.seconds(seconds), format: .units(allowed: [.days, .hours, .minutes], width: .abbreviated))
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.regularMaterial, in: Capsule())
+            .accessibilityElement(children: .combine)
+            .allowsHitTesting(false)
         }
     }
 

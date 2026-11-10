@@ -187,6 +187,18 @@ struct SaltHistoryView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if let seconds = model.samples.map(\.span).max(), seconds > 0 {
+                Text("Summary · \(Duration.seconds(seconds), format: .units(allowed: [.days, .hours, .minutes], width: .abbreviated))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(8)
+                    .allowsHitTesting(false)
+            }
+        }
         .padding()
         .cardBackground()
     }
