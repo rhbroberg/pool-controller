@@ -1,0 +1,359 @@
+import PoolStatusCore
+import SwiftUI
+
+/// The pool at a glance, then the few switches the watch offers. Everything else, setup and
+/// signing in included, stays on the iPhone.
+struct WatchStatusView: View {
+    static let defaultPoolName = "Pool"
+
+    @Environment(StatusStore.self) private var store
+    @AppStorage(SettingsKey.poolName) private var poolName = WatchStatusView.defaultPoolName
+    @Environment(\.scenePhase) private var scenePhase
+    /// Bumped to refresh at once when the app comes back to the front.
+    @State private var pollGeneration = 0
+
+    private struct PollKey: Equatable {
+        let serverAddress: String
+        let generation: Int
+    }
+
+    var body: some View {
+        NavigationStack {
+            if store.serverAddress.isEmpty {
+                SetUpOnPhone()
+            } else {
+                TabView {
+                    GlancePage(title: poolName.isEmpty ? Self.defaultPoolName : poolName)
+                    ControlsPage()
+                }
+                .tabViewStyle(.verticalPage)
+            }
+        }
+        .task(id: PollKey(serverAddress: store.serverAddress, generation: pollGeneration)) {
+            guard !store.serverAddress.isEmpty else {
+                return
+            }
+            await store.poll(reconnectSeconds: StatusStore.defaultReconnectSeconds)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                pollGeneration += 1
+            }
+        }
+        .sensoryFeedback(.success, trigger: store.confirmedChanges)
+    }
+}
+
+/// Shown until the iPhone app has sent a server, with why asking it hasn't worked yet.
+private struct SetUpOnPhone: View {
+    @Environment(PhoneLink.self) private var phone
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                Image(systemName: "iphone")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("Set Up on iPhone")
+                    .font(.headline)
+                Text("Open Pool Status on your iPhone and connect it to your pool’s server.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                if phone.isAsking {
+                    ProgressView()
+                } else {
+                    if let problem = phone.problem {
+                        Text(problem)
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                    Button("Try Again") {
+                        phone.requestContext()
+                    }
+                }
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+// MARK: - Glance
+
+/// Temperatures, where the water flows, and what's heating it.
+private struct GlancePage: View {
+    let title: String
+
+    @Environment(StatusStore.self) private var store
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                if store.connection == .disconnected {
+                    Label("Can’t reach the server", systemImage: "wifi.exclamationmark")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+
+                if store.readings.isEmpty {
+                    if store.connection == .connecting {
+                        ProgressView("Connecting…")
+                            .frame(maxWidth: .infinity)
+                    } else if store.isConnected {
+                        Text("The server hasn’t recorded any status yet.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    temperatures
+                    Divider()
+                    flowAndHeating
+                    FreshnessLine(lastRefresh: store.lastRefresh, isConnected: store.isConnected)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .navigationTitle(title)
+    }
+
+    private var temperatures: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(WaterBody.allCases) { body in
+                    WaterTemperature(reading: store.measurement(named: body.temperatureName),
+                                     pumpRunning: store.pumpRunning(for: body))
+                }
+            }
+            SmallReading(reading: store.measurement(named: .airTemperature))
+        }
+    }
+
+    @ViewBuilder
+    private var flowAndHeating: some View {
+        if let mode = store.waterMode {
+            Label {
+                Text(mode.title)
+            } icon: {
+                Image(systemName: "arrow.triangle.branch")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .font(.footnote)
+            .accessibilityLabel("Water flow: \(mode.title)")
+        }
+        ForEach(HeatingDevice.allCases) { device in
+            if let control = EquipmentControl.control(named: device.controlName), store.isOn(control) {
+                HeatingRow(device: device, tint: control.tint.color, status: store.heating(for: control))
+            }
+        }
+    }
+}
+
+/// The pool's or spa's temperature, and whether the pump feeding its sensor runs; while it's off,
+/// the reading is from when it last ran.
+private struct WaterTemperature: View {
+    let reading: DashboardReading
+    let pumpRunning: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(reading.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(reading.value)
+                .font(.system(size: 30, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(pumpRunning ? .primary : .secondary)
+            Label(pumpRunning ? "Pump on" : "Pump off",
+                  systemImage: pumpRunning ? "play.circle.fill" : "pause.circle.fill")
+                .font(.caption2)
+                .foregroundStyle(pumpRunning ? Color.green : Color.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct SmallReading: View {
+    let reading: DashboardReading
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(reading.title)
+                .foregroundStyle(.secondary)
+            Text(reading.value)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+                .foregroundStyle(reading.isDimmed ? .secondary : .primary)
+        }
+        .font(.footnote)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A heater or heat pump that's switched on, and what it's doing.
+private struct HeatingRow: View {
+    let device: HeatingDevice
+    let tint: Color
+    let status: HeatingStatus.Device?
+
+    private var detail: String {
+        guard let status else {
+            return String(localized: "On")
+        }
+        // with no pump running, no water reaches the heaters
+        guard let body = status.body else {
+            return String(localized: "Pump off")
+        }
+        if status.heating {
+            guard let setpoint = status.setpoint else {
+                return String(localized: "Heating \(body.title)")
+            }
+            return String(localized: "Heating \(body.title) to \(setpoint)°")
+        }
+        if status.callingForHeat {
+            return String(localized: "Waiting · \(body.title)")
+        }
+        return String(localized: "\(body.title) at setpoint")
+    }
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(device.title)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: device == .heater1 ? "flame.fill" : "heat.waves")
+                .foregroundStyle(tint)
+        }
+        .font(.footnote)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// How old the readings on screen are, in words.
+private struct FreshnessLine: View {
+    let lastRefresh: Date?
+    let isConnected: Bool
+
+    var body: some View {
+        if let lastRefresh {
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                let when = context.date.timeIntervalSince(lastRefresh) < 60
+                    ? String(localized: "just now")
+                    : lastRefresh.formatted(.relative(presentation: .named))
+                Text(isConnected ? "Updated \(when)" : "Last reading \(when)")
+                    .font(.caption2)
+                    .foregroundStyle(isConnected ? Color.secondary : Color.orange)
+            }
+        }
+    }
+}
+
+// MARK: - Controls
+
+/// The few switches the watch offers, for accounts that may change equipment.
+private struct ControlsPage: View {
+    @Environment(StatusStore.self) private var store
+
+    var body: some View {
+        List {
+            if let errorMessage = store.errorMessage, store.isConnected {
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            Section {
+                ForEach(EquipmentControl.watch) { control in
+                    ControlRow(control: control,
+                               isOn: store.isOn(control),
+                               pending: store.pendingState(control.name),
+                               isLocked: !store.auth.canControl) {
+                        // the store's change outlives this view, so the watch can go back to sleep
+                        Task { await store.setControl(control, on: !store.isOn(control)) }
+                    }
+                }
+            } header: {
+                accessNote
+            }
+            .disabled(!store.isConnected)
+        }
+        .navigationTitle("Controls")
+    }
+
+    @ViewBuilder
+    private var accessNote: some View {
+        if store.auth.credentials == nil {
+            Label("Sign in on your iPhone to switch equipment.", systemImage: "lock.fill")
+        } else if !store.auth.canControl {
+            Label("View only. Your account can’t change equipment.", systemImage: "eye")
+        }
+    }
+}
+
+private struct ControlRow: View {
+    let control: EquipmentControl
+    /// The state the controller last reported.
+    let isOn: Bool
+    /// The state requested and not yet confirmed.
+    let pending: Bool?
+    let isLocked: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { pending ?? isOn }, set: { _ in toggle() })) {
+            HStack(spacing: 8) {
+                Image(systemName: control.systemImage)
+                    .symbolVariant(isOn ? .fill : .none)
+                    .foregroundStyle(isOn ? control.tint.color : Color.secondary)
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(control.title)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(pending.map { control.pendingText($0) } ?? control.stateText(isOn))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .tint(control.tint.color)
+        .disabled(isLocked || pending != nil)
+    }
+}
+
+extension Tint {
+    var color: Color {
+        switch self {
+        case .pink: .pink
+        case .orange: .orange
+        case .blue: .blue
+        case .cyan: .cyan
+        case .yellow: .yellow
+        case .green: .green
+        case .mint: .mint
+        case .teal: .teal
+        case .indigo: .indigo
+        }
+    }
+}
+
+#if DEBUG
+#Preview("Operator") {
+    WatchStatusView()
+        .environment(StatusStore.preview())
+}
+
+#Preview("Viewer") {
+    WatchStatusView()
+        .environment(StatusStore.preview(role: .viewer))
+}
+#endif
