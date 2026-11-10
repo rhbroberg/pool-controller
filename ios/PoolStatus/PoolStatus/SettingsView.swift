@@ -332,6 +332,16 @@ struct ServerMaintenanceView: View {
                 }
             }
 
+            if store.auth.isAdmin {
+                Section {
+                    NavigationLink("Reprocess History") {
+                        ReprocessHistoryView()
+                    }
+                } footer: {
+                    Text("Reads stored history again with the server’s current decoding, as after a fix to how it reads the controller.")
+                }
+            }
+
             if let settingsError {
                 Section {
                     Label(settingsError, systemImage: "exclamationmark.triangle.fill")

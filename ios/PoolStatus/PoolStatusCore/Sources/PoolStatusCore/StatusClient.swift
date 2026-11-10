@@ -330,6 +330,22 @@ public nonisolated struct StatusClient: Sendable {
         try await send(.post, "system/jobs/\(Self.pathComponent(name))/run", token: token, timeout: 120)
     }
 
+    /// Starts reading stored frames again; answers at once with the run, which goes on in the server.
+    public func startReprocess(_ request: ReprocessRequest, token: String) async throws -> ReprocessRun {
+        try await send(.post, "system/reprocess", token: token, body: request)
+    }
+
+    /// The reprocessing run under way or the last one; nil when there hasn't been one since the
+    /// server started.
+    public func fetchReprocess(token: String) async throws -> ReprocessRun? {
+        do {
+            let run: ReprocessRun = try await send(.get, "system/reprocess", token: token)
+            return run
+        } catch StatusClientError.server(code: 404, _) {
+            return nil
+        }
+    }
+
     // MARK: Requests
 
     public func url(for path: String, query: [URLQueryItem]? = nil) throws -> URL {

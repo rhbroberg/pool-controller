@@ -337,6 +337,20 @@ public final class StatusStore {
         }
     }
 
+    /// Starts reading stored frames again; answers with the run, which goes on in the server.
+    public func startReprocess(_ request: ReprocessRequest) async throws -> ReprocessRun {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.startReprocess(request, token: token)
+        }
+    }
+
+    /// The reprocessing run under way or the last one, or nil.
+    public func reprocessRun() async throws -> ReprocessRun? {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.fetchReprocess(token: token)
+        }
+    }
+
     // MARK: Errors
 
     private func markConnected() {

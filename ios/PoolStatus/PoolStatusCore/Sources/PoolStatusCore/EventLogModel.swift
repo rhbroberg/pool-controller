@@ -24,6 +24,9 @@ public nonisolated enum EventKind: String, CaseIterable, Identifiable, Sendable 
 
     public var id: String { rawValue }
 
+    /// The kinds made from controller frames, which can be read again; actions come from accounts.
+    public static let reprocessable: [EventKind] = [.equipment, .readings, .keypad, .protocolErrors]
+
     public init?(serverType: String) {
         guard let kind = Self.allCases.first(where: { $0.serverTypes.contains(serverType) }) else {
             return nil

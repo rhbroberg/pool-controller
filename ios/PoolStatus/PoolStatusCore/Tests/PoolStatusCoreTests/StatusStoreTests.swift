@@ -360,6 +360,47 @@ struct SignedInTests {
         #expect(server.requests.contains("POST system/jobs/rollups/run"))
     }
 
+    @Test("an admin reprocesses history and follows the run")
+    func reprocess() async throws {
+        let started = Shared(false)
+        let run = #"{"state":"finished","from":"2020-07-19T04:00:00.000Z","to":"2020-07-21T04:00:00.000Z","eventTypes":["failed","unrecognized"],"dryRun":true,"requestedBy":"owner","requestedAt":"2026-11-09T22:00:00.000Z","startedAt":"2026-11-09T22:00:00.000Z","finishedAt":"2026-11-09T22:00:01.000Z","through":"2020-07-21T04:00:00.000Z","scanned":1458,"examined":1458,"unchanged":0,"updated":7,"removed":1451,"unreadable":0,"transitions":[{"from":"failed","to":"removed","count":1451},{"from":"failed","to":"info","count":7}],"error":null}"#
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"):
+                return .ok(Fixture.login("owner", role: "admin"))
+            case ("POST", "system/reprocess"):
+                started.value = true
+                return .ok(run)
+            case ("GET", "system/reprocess"):
+                return started.value ? .ok(run) : .status(404, message: "not yet")
+            default:
+                return .status(404)
+            }
+        }
+        let store = server.makeStore()
+        try await store.auth.signIn(name: "owner", password: "owner-password")
+
+        #expect(try await store.reprocessRun() == nil, "nothing has run yet")
+        let request = ReprocessRequest(from: .now.addingTimeInterval(-3600), to: .now, eventTypes: ["failed", "unrecognized"], dryRun: true)
+        let answer = try await store.startReprocess(request)
+        #expect(answer.dryRun)
+        #expect(!answer.isActive)
+        #expect(answer.transitions.map(\.id) == ["failed>removed", "failed>info"])
+        #expect(try await store.reprocessRun()?.updated == 7)
+    }
+
+    @Test("sends the range as dates and leaves out the kinds when it's every kind")
+    func reprocessRequest() throws {
+        let from = try Date.ISO8601FormatStyle().parse("2020-07-19T04:00:00Z")
+        let every = try JSONSerialization.jsonObject(with: JSONEncoder().encode(ReprocessRequest(from: from, to: from.addingTimeInterval(3600)))) as? [String: Any]
+        #expect(every?["from"] as? String == "2020-07-19T04:00:00.000Z")
+        #expect(every?["to"] as? String == "2020-07-19T05:00:00.000Z")
+        #expect(every?["eventTypes"] == nil)
+        #expect(every?["dryRun"] as? Bool == false)
+        let chosen = try JSONSerialization.jsonObject(with: JSONEncoder().encode(ReprocessRequest(from: from, to: from, eventTypes: ["failed"]))) as? [String: Any]
+        #expect(chosen?["eventTypes"] as? [String] == ["failed"])
+    }
+
     @Test("an admin sets the zip code, and the forecast for it is asked for straight away")
     func zipCode() async throws {
         let located = #"{"timeZone":"America/New_York","timeZoneSource":"system","detectedTimeZone":"America/New_York","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"location":{"zipCode":"32801","countryCode":"US","placeName":"Orlando, FL","latitude":28.5399,"longitude":-81.3898}}"#
