@@ -15,6 +15,14 @@ public final class StatusStore {
     public typealias Sleep = (Duration) async throws -> Void
 
     public static let refreshSeconds = 15
+    /// While live updates arrive, polling only catches anything they missed.
+    public static let liveRefreshSeconds = 60
+    /// While live, how long to wait for the push confirming a change before asking anyway.
+    public static let liveConfirmationInterval: Duration = .seconds(5)
+    /// How long the live updates may take to open before giving up on them.
+    static let liveOpenTimeout: Duration = .seconds(10)
+    static let firstLiveRetry: Duration = .seconds(1)
+    static let longestLiveRetry: Duration = .seconds(30)
     /// The server fetches the forecast every half hour, so the app needn't ask on every refresh.
     public static let weatherRefreshSeconds = 300
     public static let defaultReconnectSeconds = 30
@@ -57,25 +65,35 @@ public final class StatusStore {
     public private(set) var confirmedChanges = 0
     /// Refreshes under way; polling and change confirmation can overlap.
     private var refreshesInFlight = 0
+    /// Whether the server's live updates are arriving, so changes show as the controller reports them.
+    public private(set) var isLive = false
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let session: URLSession
     @ObservationIgnored private let sleep: Sleep
+    @ObservationIgnored private let live: (any LiveTransport)?
+    /// The wait before the next poll, which joining or losing the live updates cuts short.
+    @ObservationIgnored private var pollNap: Task<Void, Never>?
+    /// Changes waiting for the next push.
+    @ObservationIgnored private var pushWaiters: [UUID: CheckedContinuation<Bool, Never>] = [:]
     /// Numbers each refresh, so one that finishes after a newer one doesn't replace its readings.
     @ObservationIgnored private var refreshesStarted = 0
     @ObservationIgnored private var newestApplied = 0
     /// When the weather was last asked for, whether or not the server had any.
     @ObservationIgnored private var weatherCheckedAt: Date?
 
+    /// Without `live`, the store only polls.
     public init(serverAddress: String? = nil,
          defaults: UserDefaults = .standard,
          session: URLSession = .shared,
          credentials: CredentialStore = KeychainCredentialStore(),
+         live: (any LiveTransport)? = nil,
          sleep: @escaping Sleep = { try await Task.sleep(for: $0) }) {
         let address = serverAddress ?? defaults.string(forKey: SettingsKey.serverAddress) ?? ""
         self.serverAddress = address
         self.defaults = defaults
         self.session = session
+        self.live = live
         self.sleep = sleep
         auth = AuthSession(client: StatusClient(serverAddress: address, session: session), store: credentials)
     }
@@ -156,9 +174,23 @@ public final class StatusStore {
         serverAddress = address
     }
 
-    /// Refreshes while connected; after losing the server, retries every `reconnectSeconds`.
-    /// Runs until the calling task is cancelled.
+    /// Listens for live updates, and refreshes every `refreshSeconds` while connected, or
+    /// `liveRefreshSeconds` while live updates arrive; after losing the server, retries every
+    /// `reconnectSeconds`. Runs until the calling task is cancelled.
     public func poll(reconnectSeconds: Int) async {
+        await withDiscardingTaskGroup { group in
+            if let live {
+                group.addTask {
+                    await self.listen(using: live)
+                }
+            }
+            await pollEvery(reconnectSeconds: reconnectSeconds)
+            group.cancelAll()
+        }
+        isLive = false
+    }
+
+    private func pollEvery(reconnectSeconds: Int) async {
         while !Task.isCancelled {
             nextAttempt = nil
             await refresh()
@@ -166,12 +198,120 @@ public final class StatusStore {
                 await auth.refreshAccount()
             }
 
-            let wait = isConnected ? Self.refreshSeconds : reconnectSeconds
+            let wait = !isConnected ? reconnectSeconds : isLive ? Self.liveRefreshSeconds : Self.refreshSeconds
             if connection == .disconnected {
                 nextAttempt = .now.addingTimeInterval(TimeInterval(wait))
             }
-            try? await sleep(.seconds(wait))
+            let sleep = sleep
+            let nap = Task<Void, Never> {
+                try? await sleep(.seconds(wait))
+            }
+            pollNap = nap
+            await withTaskCancellationHandler {
+                await nap.value
+            } onCancel: {
+                nap.cancel()
+            }
+            pollNap = nil
         }
+    }
+
+    // MARK: Live updates
+
+    /// Keeps the live updates connected, reconnecting with backoff, until cancelled.
+    private func listen(using transport: any LiveTransport) async {
+        var retry = Self.firstLiveRetry
+        while !Task.isCancelled {
+            guard let url = try? client.liveURL() else {
+                return
+            }
+            if await follow(transport.open(url)) {
+                retry = Self.firstLiveRetry
+            }
+            setLive(false)
+            do {
+                try await sleep(retry)
+            } catch {
+                return
+            }
+            retry = min(retry * 2, Self.longestLiveRetry)
+        }
+    }
+
+    /// Applies what `socket` pushes until it closes or goes quiet; true if the server welcomed it.
+    private func follow(_ socket: any LiveSocket) async -> Bool {
+        defer { socket.close() }
+        var joined = false
+        var silence = Self.liveOpenTimeout
+        do {
+            while !Task.isCancelled {
+                switch LivePacket(try await socket.receive(timeout: silence)) {
+                case .open(let pingInterval, let pingTimeout):
+                    // the server pings every pingInterval and gives up after pingTimeout more
+                    silence = pingInterval + pingTimeout
+                    try await socket.send(LivePacket.join)
+                case .ping:
+                    try await socket.send(LivePacket.pong)
+                case .connect:
+                    joined = true
+                    setLive(true)
+                case .event(let name, let payload):
+                    if joined, let update = LiveUpdate(name: name, payload: payload) {
+                        apply(update)
+                    }
+                case .close, .disconnect, .refused:
+                    return joined
+                case nil:
+                    continue
+                }
+            }
+        } catch {
+            // closed, quiet or cancelled; the caller decides whether to try again
+        }
+        return joined
+    }
+
+    private func setLive(_ live: Bool) {
+        guard live != isLive else {
+            return
+        }
+        isLive = live
+        // refresh at once: joining may have missed a change, and losing the live updates means
+        // polling more often again, or finding the server is gone
+        pollNap?.cancel()
+    }
+
+    func apply(_ update: LiveUpdate) {
+        // a refresh that asked before this push mustn't put back what it replaced
+        refreshesStarted += 1
+        newestApplied = refreshesStarted
+        switch update {
+        case .readings(let pushed):
+            var byName = Dictionary(pushed.map { ($0.name, $0) }, uniquingKeysWith: { _, newer in newer })
+            var merged = readings.map { byName.removeValue(forKey: $0.name) ?? $0 }
+            merged += pushed.filter { byName[$0.name] != nil }
+            readings = merged
+            lastRefresh = .now
+            markConnected()
+        case .heating(let pushed):
+            heating = pushed
+        }
+        let waiters = pushWaiters.values
+        pushWaiters.removeAll()
+        waiters.forEach { $0.resume(returning: true) }
+    }
+
+    /// True when a push arrives within `limit`, false otherwise.
+    private func nextPush(within limit: Duration) async -> Bool {
+        let id = UUID()
+        let sleep = sleep
+        let timer = Task {
+            try? await sleep(limit)
+            self.pushWaiters.removeValue(forKey: id)?.resume(returning: false)
+        }
+        let pushed = await withCheckedContinuation { pushWaiters[id] = $0 }
+        timer.cancel()
+        return pushed
     }
 
     /// Replaces every reading with the server's current values. On failure the previous
@@ -253,17 +393,32 @@ public final class StatusStore {
         await refresh()
     }
 
-    /// Sends a change, then polls status until `confirmed` holds, the server stops answering, or
-    /// `timeout` passes, when `notConfirmed` is shown.
+    /// Sends a change, then waits until `confirmed` holds, the server stops answering, or
+    /// `timeout` passes, when `notConfirmed` is shown. While live, the controller's report
+    /// arrives as a push; otherwise it's polled for.
     private func requestChange(_ action: AuthSession.Action, timeout: Duration, notConfirmed: String,
                                send: (StatusClient, String) async throws -> Void,
                                confirmed: () -> Bool) async {
         do {
             try await auth.authorized(action, send)
-            let attempts = Int((timeout / Self.confirmationInterval).rounded(.up))
-            for _ in 0..<attempts {
-                try await sleep(Self.confirmationInterval)
-                await refresh()
+            var remaining = timeout
+            while remaining > .zero {
+                if isLive {
+                    if confirmed() {
+                        confirmedChanges += 1
+                        return
+                    }
+                    let started = ContinuousClock.now
+                    // a push missed while the connection changed is caught by asking now and then
+                    if await !nextPush(within: min(Self.liveConfirmationInterval, remaining)) {
+                        await refresh()
+                    }
+                    remaining -= max(started.duration(to: .now), .milliseconds(1))
+                } else {
+                    try await sleep(Self.confirmationInterval)
+                    await refresh()
+                    remaining -= Self.confirmationInterval
+                }
                 if confirmed() {
                     confirmedChanges += 1
                     return

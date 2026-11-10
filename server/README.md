@@ -57,6 +57,15 @@ To find servers on your local network:
     npm run find-servers                  # port 3000
     npm run find-servers -- --port 8080   # another port
 
+The apps get changes the moment the controller reports them from socket.io, on the same port
+at `/socket.io/`. Two events, each without signing in:
+
+ - `readings` `{ readings: [...] }`: entries as `GET /status` reports them; every switch when one
+   changes, or the display readings that changed
+ - `heating`: what `GET /heating` answers, once something it depends on changes
+
+The apps still poll, every minute while these arrive and every 15 seconds otherwise.
+
 This project is still in its infancy.  Some features I intend to add are:
 
  - full REST api control of all pool devices

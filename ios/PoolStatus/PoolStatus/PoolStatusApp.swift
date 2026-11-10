@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct PoolStatusApp: App {
-    @State private var store = StatusStore()
+    @State private var store = StatusStore(live: URLSessionLiveTransport())
 
     var body: some Scene {
         WindowGroup {

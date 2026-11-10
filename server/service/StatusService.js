@@ -36,14 +36,21 @@ var latestSwitches = async () => {
 
     // each status frame carries every switch bit, not only the ones that changed
     const raw = Buffer.from(doc.raw.buffer ? doc.raw.buffer : doc.raw);
+    return exports.switchesOf(new StatusEvent(raw), doc.timestamp);
+};
+
+/**
+ * every named switch in a status frame, as GET /status reports them
+ **/
+exports.switchesOf = function(statusEvent, timestamp) {
     const switches = [];
-    new StatusEvent(raw).bitsToName((name, isOn) => {
+    statusEvent.bitsToName((name, isOn) => {
         if (!name.startsWith('unknown')) {
             switches.push({
                 name: name,
                 category: 'status',
                 value: isOn,
-                timestamp: doc.timestamp
+                timestamp: timestamp
             });
         }
     });

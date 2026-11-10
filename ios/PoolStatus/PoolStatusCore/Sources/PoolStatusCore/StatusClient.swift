@@ -367,6 +367,20 @@ public nonisolated struct StatusClient: Sendable {
         return url
     }
 
+    /// Where the server's live updates are: its socket.io WebSocket, secure when the API is.
+    public func liveURL() throws -> URL {
+        guard var components = URLComponents(url: try url(for: "status"), resolvingAgainstBaseURL: false) else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        components.scheme = components.scheme == "https" ? "wss" : "ws"
+        components.path = LivePacket.path
+        components.queryItems = LivePacket.query
+        guard let url = components.url else {
+            throw StatusClientError.invalidAddress(serverAddress)
+        }
+        return url
+    }
+
     /// App Transport Security allows plain http only on the local network, so an address typed
     /// without a scheme gets https unless it's an IP address, a `.local` name or unqualified.
     public static func defaultScheme(for address: String) -> String {

@@ -19,6 +19,8 @@ const waterService = require('./service/WaterService');
 const heatingService = require('./service/HeatingService');
 const settingsService = require('./service/SettingsService');
 const externalAuthService = require('./service/ExternalAuthService');
+const liveService = require('./service/LiveService');
+const statusService = require('./service/StatusService');
 const scheduler = require('./jobs/scheduler');
 const rollupsJob = require('./jobs/rollups');
 const retentionJob = require('./jobs/retention');
@@ -105,6 +107,7 @@ if (argv.d !== 'file' && !argv.jobsOnly) {
     startupChecked.then(() => initializeServer((app, server) => {
         app.use(express.static(publicPath));
         io = socketIO(server);
+        liveService.attach(io, { heating: () => heatingService.getHeating() });
 
         io.on('connection', (socket) => {
             logger.debug('connecting from client', socket);
@@ -142,17 +145,21 @@ var saveStatus = (switchesEnabled, buf, category, timestamp) => {
         timestamp: timestamp
     });
 
-    dbStatusEvent.save().then((doc) => {
+    return dbStatusEvent.save().then((doc) => {
         logger.trace('saved ', doc);
     }, (e) => {
         logger.error(`failed saving ${category} Event: ${e}`);
     });
 };
 
+/**
+ * resolves once saved, or once saving failed
+ **/
 var saveSwitchState = (switchesEnabled, buf, category, timestamp) => {
     if (switchesEnabled.length > 0) {
-        saveStatus(switchesEnabled, buf, category, timestamp);
+        return saveStatus(switchesEnabled, buf, category, timestamp);
     }
+    return Promise.resolve();
 };
 
 var streamEvent = (kind, text, timestamp) => {
@@ -189,7 +196,10 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
             }
             logger.debug('info: ', event.clearText());
             if (stored) {
-                saveSwitchState(stored.status, wire, 'info', timestamp);
+                const at = new Date(timestamp);
+                const readings = stored.status.map((entry) => ({ name: entry.name, category: 'info', value: entry.value, timestamp: at }));
+                // pushed once saved, so an app asking GET /status after the push sees it too
+                saveSwitchState(stored.status, wire, 'info', timestamp).then(() => liveService.readings(readings));
                 streamEvent('info', stored.status, timestamp);
             }
             break;
@@ -197,7 +207,8 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
             logger.debug('status: ', event.asString(), ';', event.prettyBits(1));
             if (stored) {
                 logger.debug('storing changes', stored.diffs);
-                saveSwitchState(stored.status, wire, 'status', timestamp);
+                const switches = statusService.switchesOf(event, new Date(timestamp));
+                saveSwitchState(stored.status, wire, 'status', timestamp).then(() => liveService.readings(switches));
                 streamEvent('status', {
                     nowEnabled: stored.diffs.nowEnabled,
                     nowDisabled: stored.diffs.nowDisabled

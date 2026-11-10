@@ -568,6 +568,10 @@ a {
     color: var(--orange);
 }
 
+.freshness.live {
+    color: var(--green);
+}
+
 .temperature-divider {
     align-self: stretch;
     width: 0.5px;
