@@ -1,11 +1,9 @@
 'use strict';
 require('./config/config');
-// eslint and js-beautify fight about having scopes in a switch 'case'; if you make a scope, js-beautify
-// fails to properly indent it; if you don't make a scope, eslint complaints about it
-/* eslint-disable no-case-declarations */
 
 var socketIO = require('socket.io');
-const { FrameParser } = require('./protocol/parse');
+const { FrameParser, stuff } = require('./protocol/parse');
+const { FrameInterpreter } = require('./protocol/interpreter');
 const log4js = require('log4js');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
@@ -68,23 +66,9 @@ var parser = new FrameParser();
 var processingErrors = 0;
 // create factory and register all (currently) known events
 var factory = new EventFactory();
-// in reality, retrieve these from db at startup
-var presentTemp = {
-    'pool temp': -1,
-    'spa temp': -1,
-    'ambient': -1
-};
-var previousTemp = {
-    'pool temp': -1,
-    'spa temp': -1,
-    'ambient': -1
-};
-// really retrieve this from db at startup
-var currentStatusMask = 0;
-var currentEnabledSwitches = [];
+// what has been seen, so only changes are stored; it starts empty rather than from the database
+var interpreter = new FrameInterpreter();
 var latestDisplay;
-// 1 for auto, 0 for off, undefined until the panel displays the heater line
-var heaterAuto;
 
 // drops indexes the models no longer list, such as the old status.0.name ones, and builds new ones
 var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map((model) => model.syncIndexes().then((dropped) => {
@@ -171,40 +155,6 @@ var saveSwitchState = (switchesEnabled, buf, category, timestamp) => {
     }
 };
 
-var switchStates = (changed, enabled) => {
-    var switchesChanged = [];
-
-    // need to determine the last time a bit was turned on (keep cache); when it goes off, the event needs to include that bit changing state
-    changed.forEach(function(name) {
-        switchesChanged.push({
-            name: name,
-            value: enabled
-        });
-    });
-
-    return switchesChanged;
-};
-
-var addIfChanged = (statusChanges, newValue, statusName) => {
-    if (newValue) {
-        if (presentTemp[statusName] !== newValue) {
-            if ((typeof previousTemp[statusName] !== 'undefined') && (newValue === previousTemp[statusName]) && (Math.abs(presentTemp[statusName] - newValue) === 1)) {
-                logger.debug(`hystereses prevention for ${statusName} : ${newValue}, ${previousTemp[statusName]}, ${presentTemp[statusName]} `);
-            } else {
-                statusChanges.push({
-                    name: statusName,
-                    value: newValue
-                });
-                previousTemp[statusName] = presentTemp[statusName];
-            }
-        }
-        else {
-            logger.debug(`compressing ${statusName}`);
-        }
-        presentTemp[statusName] = newValue;
-    }
-};
-
 var streamEvent = (kind, text, timestamp) => {
     // send to sockets (if established)
     if (io) {
@@ -217,7 +167,10 @@ var streamEvent = (kind, text, timestamp) => {
     }
 };
 
-var dispatchEvent = (buf) => {
+/**
+ * buf is the frame with the bus's escaping undone; wire is how it arrived, which is stored
+ **/
+var dispatchEvent = (buf, wire = stuff(buf)) => {
     // maybe change to an observer pattern for action taken
     const event = factory.create(buf);
     if (!event) {
@@ -226,57 +179,28 @@ var dispatchEvent = (buf) => {
     }
 
     const timestamp = new Date().getTime();
+    const stored = interpreter.interpret(event);
     switch (event.constructor.name) {
         case 'DisplayUpdateEvent':
-            {
-                const salt = event.getSaltPPM();
-                const ambientTemp = event.getAmbientTemp();
-                const poolTemp = event.getPoolTemp();
-                const spaTemp = event.getSpaTemp();
-                const heaterMode = event.getHeater1Mode();
-                var statusChanges = [];
-
-                if (typeof heaterMode !== 'undefined') {
-                    const auto = /Off$/.test(heaterMode) ? 0 : 1;
-                    if (auto !== heaterAuto) {
-                        heaterAuto = auto;
-                        statusChanges.push({ name: 'heater1 mode', value: auto });
-                    }
-                }
-
+        case 'WirelessDisplayEvent':
+            // the remote's screens carry readings too, but the panel's display is what's shown
+            if (event.constructor.name === 'DisplayUpdateEvent') {
                 latestDisplay = Object.assign(event.panelLines(), { timestamp: new Date(timestamp).toISOString() });
-                logger.debug('info: ', event.clearText(), salt ? salt : '', ambientTemp ? ambientTemp : '', poolTemp ? poolTemp : '');
-
-                addIfChanged(statusChanges, poolTemp, 'pool temp');
-                addIfChanged(statusChanges, spaTemp, 'spa temp');
-                addIfChanged(statusChanges, salt, 'salt');
-                addIfChanged(statusChanges, ambientTemp, 'ambient');
-
-                if (statusChanges.length === 0) {
-                    // always update the lastUpdated timestamp
-                    // maybe update streamers with 'last updated'
-                } else {
-                    saveSwitchState(statusChanges, buf, 'info', timestamp);
-                    streamEvent('info', statusChanges, timestamp);
-                }
+            }
+            logger.debug('info: ', event.clearText());
+            if (stored) {
+                saveSwitchState(stored.status, wire, 'info', timestamp);
+                streamEvent('info', stored.status, timestamp);
             }
             break;
         case 'StatusEvent':
-            const eventDiffs = event.diff(currentStatusMask);
             logger.debug('status: ', event.asString(), ';', event.prettyBits(1));
-            currentStatusMask = event.rawMask();
-            currentEnabledSwitches = event.enabledSwitches();
-
-            logger.debug(eventDiffs);
-            if (eventDiffs.nowEnabled.length > 0 || eventDiffs.nowDisabled.length > 0) {
-                logger.debug('storing changes');
-                const nowEnabled = switchStates(eventDiffs.nowEnabled, 1);
-                const nowDisabled = switchStates(eventDiffs.nowDisabled, 0);
-
-                saveSwitchState(nowEnabled.concat(nowDisabled), buf, 'status', timestamp);
+            if (stored) {
+                logger.debug('storing changes', stored.diffs);
+                saveSwitchState(stored.status, wire, 'status', timestamp);
                 streamEvent('status', {
-                    nowEnabled: eventDiffs.nowEnabled,
-                    nowDisabled: eventDiffs.nowDisabled
+                    nowEnabled: stored.diffs.nowEnabled,
+                    nowDisabled: stored.diffs.nowDisabled
                 }, timestamp);
             }
             // always update the lastUpdated timestamp
@@ -293,7 +217,7 @@ var dispatchEvent = (buf) => {
                 const request = controlRequests.shift();
                 if (request.momentary) {
                     logger.debug(`sending panel key ${request.requestedChange} for ${request.requestedBy}`);
-                    driver.writeEvent(request.payload);
+                    driver.writeEvent(stuff(request.payload));
                 } else if (isSwitchOn(request.requestedChange) === request.desiredOn) {
                     logger.info(`${request.requestedChange} reached ${request.desiredOn ? 'on' : 'off'} before it was sent for ${request.requestedBy}; not sending`);
                 } else {
@@ -301,7 +225,7 @@ var dispatchEvent = (buf) => {
                     controlVerification.push(request);
 
                     logger.debug('ping calling queued callback');
-                    driver.writeEvent(request.payload);
+                    driver.writeEvent(stuff(request.payload));
                 }
             }
             break;
@@ -309,12 +233,11 @@ var dispatchEvent = (buf) => {
             logger.debug('motor: ', buf.toString('ascii', 4, buf.length - 2));
             break;
         case 'ControlEvent':
-            if (event.enabledSwitches().length === 0) {
+            if (!stored) {
                 logger.debug('control: zeroed out all bits');
             } else {
                 logger.debug('control: ', event.asString(), ' is toggling ', event.prettyBits(1));
-                const toggleBits = switchStates(event.enabledSwitches(), 1);
-                saveSwitchState(toggleBits, buf, 'control', timestamp);
+                saveSwitchState(stored.status, wire, 'control', timestamp);
                 streamEvent('control', event.enabledSwitches(), timestamp);
             }
             break;
@@ -325,18 +248,18 @@ var dispatchEvent = (buf) => {
             logger.debug('unidentified ping');
             break;
         default:
-            saveStatus([], buf, 'unrecognized', timestamp);
+            saveStatus([], wire, 'unrecognized', timestamp);
             return false;
     }
     return true;
 };
 
 var handleHunk = (data) => {
-    parser.parse(data, (buf) => {
+    parser.parse(data, (buf, length, wire) => {
         logger.debug(parser.toHexString());
         // maybe change Event to take the FrameParser instead of the buf?
         try {
-            if (!dispatchEvent(buf)) {
+            if (!dispatchEvent(buf, wire)) {
                 // if message is unrecognized, log out hex bytes
                 logger.warn('unrecognized message header bytes: ',
                     buf.readUInt8(2).toString(16).padStart(2, 0),
@@ -350,7 +273,7 @@ var handleHunk = (data) => {
             if (e === 'checksum failure') {
                 logger.error(e.stack);
             }
-            saveStatus([], buf, 'failed', new Date().getTime());
+            saveStatus([], wire, 'failed', new Date().getTime());
         }
     });
 };
@@ -358,7 +281,7 @@ var handleHunk = (data) => {
 // the heater's on/off is its mode from the display, not its status bit
 var labelled = (name) => panelLabels[name] ? `${name} (${panelLabels[name]})` : name;
 
-var isSwitchOn = (name) => name === 'heater1' ? heaterAuto === 1 : currentEnabledSwitches.includes(name);
+var isSwitchOn = (name) => name === 'heater1' ? interpreter.heaterAuto === 1 : interpreter.enabledSwitches.includes(name);
 
 // a keypress only toggles, so a request is confirmed by watching status frames rather than
 // pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it
@@ -385,7 +308,7 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
     if (whatChange === 'spillover') {
         throw new Error('the spillover key cycles the water flow mode; set the mode with PUT /water/mode/{mode}');
     }
-    if (whatChange === 'heater1' && typeof heaterAuto === 'undefined') {
+    if (whatChange === 'heater1' && typeof interpreter.heaterAuto === 'undefined') {
         throw new Error('the panel has not shown the heater mode yet; try again shortly');
     }
 
@@ -513,7 +436,7 @@ panelService.registerDisplaySource(() => latestDisplay);
 waterService.registerModeListener(waterModeListener);
 
 var knownTemp = (name) => {
-    const value = Number(presentTemp[name]);
+    const value = Number(interpreter.present[name]);
     return value > 0 ? value : undefined;
 };
 // the heater1 status bit is the heater firing; whether it is enabled is its Auto/Off mode
@@ -522,10 +445,10 @@ heatingService.registerStateSource(() => ({
     spaFilter: isSwitchOn('aux14'),
     waterMode: currentWaterMode(),
     enabled: {
-        heater1: typeof heaterAuto === 'undefined' ? undefined : heaterAuto === 1,
-        heatpump: currentStatusMask === 0 ? undefined : isSwitchOn('valve4')
+        heater1: typeof interpreter.heaterAuto === 'undefined' ? undefined : interpreter.heaterAuto === 1,
+        heatpump: interpreter.statusMask === 0 ? undefined : isSwitchOn('valve4')
     },
-    heaterFiring: currentEnabledSwitches.includes('heater1'),
+    heaterFiring: interpreter.enabledSwitches.includes('heater1'),
     temperatures: { pool: knownTemp('pool temp'), spa: knownTemp('spa temp') }
 }));
 if (driver && driver.setpoints) {
@@ -534,11 +457,8 @@ if (driver && driver.setpoints) {
 
 // after a factory reset, forget what has been seen so the next frames are stored as new history
 systemService.registerResetListener(() => {
-    Object.keys(presentTemp).forEach((name) => { presentTemp[name] = -1; previousTemp[name] = -1; });
-    currentStatusMask = 0;
-    currentEnabledSwitches = [];
+    interpreter.reset();
     latestDisplay = undefined;
-    heaterAuto = undefined;
     controlRequests = [];
     controlVerification = [];
     waterModeRequest = undefined;

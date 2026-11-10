@@ -54,17 +54,17 @@ var dropDatabase = async (uri) => {
 };
 
 /**
- * starts a server on an empty database named `database`, replaying the sample capture through
- * `driver` (sim by default; none for a server with no controller attached)
+ * starts a server on an empty database named `database`, replaying `capture` (the sample capture
+ * by default) through `driver` (sim by default; none for a server with no controller attached)
  **/
-var startServer = async ({ database, driver = 'sim', args: extraArgs = [], env: extraEnv = {} }) => {
+var startServer = async ({ database, driver = 'sim', capture = CAPTURE, args: extraArgs = [], env: extraEnv = {} }) => {
     const port = await freePort();
     const uri = `${MONGO_HOST}/${database}`;
     await dropDatabase(uri);
 
     const args = ['server.js', '-d', driver, ...extraArgs];
     if (driver !== 'none') {
-        args.push('-f', CAPTURE);
+        args.push('-f', capture);
     }
     const child = spawn(process.execPath, args, {
         cwd: SERVER_DIR,

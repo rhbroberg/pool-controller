@@ -2,7 +2,7 @@
 // switch state so control writes from the REST API take effect.
 const fs = require('fs');
 const log4js = require('log4js');
-const { FrameParser } = require('../protocol/parse');
+const { FrameParser, stuff, framesIn } = require('../protocol/parse');
 const { EventFactory } = require('../protocol/eventfactory');
 const { StatusEvent, ControlEvent, panelLabels } = require('../protocol/events');
 const heating = require('../protocol/heating');
@@ -190,7 +190,8 @@ var stepTemperatures = () => {
 };
 
 var listen = ((filename, cb) => {
-    emit = cb;
+    // frames go on the bus escaped, as the controller sends them
+    emit = (frame) => cb(stuff(frame));
     // frames that fail their checksum are dropped; don't log each one while loading
     const level = logger.level;
     logger.level = 'off';
@@ -238,7 +239,12 @@ var listen = ((filename, cb) => {
 });
 
 var writeEvent = ((message) => {
-    const control = new ControlEvent(Buffer.from(message));
+    const [sent] = framesIn(Buffer.from(message));
+    if (!sent) {
+        logger.warn('simulator received bytes that hold no frame');
+        return;
+    }
+    const control = new ControlEvent(sent.frame);
     const pressed = control.enabledSwitches();
     logger.debug('simulator received control event:', pressed.join(', '));
 

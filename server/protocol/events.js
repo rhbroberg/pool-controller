@@ -315,17 +315,11 @@ class StatusEvent extends ChecksummedEvent {
     }
 }
 
-//    wireless screen update header is: 0x04, 0x0a, need message for it to be tagged (even if discarded)
-
-// 10 02 01 03 .... ckmsb cklsb
-class DisplayUpdateEvent extends ChecksummedEvent {
-    constructor(frame) {
-        super(frame, DisplayUpdateEvent.header());
+// the readings the panel and the wireless remote show as text
+class TextDisplayEvent extends ChecksummedEvent {
+    constructor(frame, header) {
+        super(frame, header);
         this.text = frame.toString('ascii', 4);
-    }
-
-    static header() {
-        return [0x01, 0x03];
     }
 
     clearText() {
@@ -392,6 +386,29 @@ class DisplayUpdateEvent extends ChecksummedEvent {
 
     getCheckSystem() {
         return this.extractValue(/ +Check System +(.+)$/);
+    }
+}
+
+// 10 02 01 03 .... ckmsb cklsb
+class DisplayUpdateEvent extends TextDisplayEvent {
+    constructor(frame) {
+        super(frame, DisplayUpdateEvent.header());
+    }
+
+    static header() {
+        return [0x01, 0x03];
+    }
+}
+
+// 10 02 04 0a .... ckmsb cklsb: what the wireless remote shows. A few bytes the remote uses for
+// its own lights come before the text, which carries the same readings as the panel's
+class WirelessDisplayEvent extends TextDisplayEvent {
+    constructor(frame) {
+        super(frame, WirelessDisplayEvent.header());
+    }
+
+    static header() {
+        return [0x04, 0x0a];
     }
 }
 
@@ -555,4 +572,4 @@ Waterfall
 
 */
 
-module.exports = { PingEvent, DisplayUpdateEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels };
+module.exports = { PingEvent, DisplayUpdateEvent, WirelessDisplayEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels, statusMap };

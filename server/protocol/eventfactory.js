@@ -1,5 +1,5 @@
 'use strict';
-const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./events');
+const { PingEvent, StatusEvent, DisplayUpdateEvent, WirelessDisplayEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./events');
 
 // move the code from .register in each class to the constructor here instead
 class EventFactory {
@@ -14,6 +14,7 @@ class EventFactory {
     registerAll() {
         this.registerEvent(PingEvent.header(), ((buf) => { return new PingEvent(buf); }));
         this.registerEvent(DisplayUpdateEvent.header(), ((buf) => { return new DisplayUpdateEvent(buf); }));
+        this.registerEvent(WirelessDisplayEvent.header(), ((buf) => { return new WirelessDisplayEvent(buf); }));
         this.registerEvent(UnidentifiedPingEvent.header(), ((buf) => { return new UnidentifiedPingEvent(buf); }));
         this.registerEvent(UnidentifiedStatusEvent.header(), ((buf) => { return new UnidentifiedStatusEvent(buf); }));
         this.registerEvent(StatusEvent.header(), ((buf) => { return new StatusEvent(buf); }));
