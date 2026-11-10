@@ -3,17 +3,36 @@ import SwiftUI
 
 @main
 struct PoolStatusApp: App {
-    @State private var store = StatusStore(live: URLSessionLiveTransport())
+    @State private var store: StatusStore
+    @State private var watchLink: WatchLink
+    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
+
+    init() {
+        let store = StatusStore(live: URLSessionLiveTransport())
+        _store = State(initialValue: store)
+        // the watch app can wake this app in the background, before any view appears, to ask for this
+        let poolName = UserDefaults.standard.string(forKey: SettingsKey.poolName) ?? StatusView.defaultPoolName
+        _watchLink = State(initialValue: WatchLink(context: Self.watchContext(store: store, poolName: poolName)))
+    }
 
     var body: some Scene {
         WindowGroup {
-            if store.serverAddress.isEmpty {
-                ServerSetupView()
-                    .environment(store)
-            } else {
-                StatusView()
-                    .environment(store)
+            Group {
+                if store.serverAddress.isEmpty {
+                    ServerSetupView()
+                        .environment(store)
+                } else {
+                    StatusView()
+                        .environment(store)
+                }
+            }
+            .onChange(of: Self.watchContext(store: store, poolName: poolName)) { _, context in
+                watchLink.send(context)
             }
         }
+    }
+
+    private static func watchContext(store: StatusStore, poolName: String) -> WatchContext {
+        WatchContext(serverAddress: store.serverAddress, poolName: poolName, credentials: store.auth.credentials)
     }
 }
