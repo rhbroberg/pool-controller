@@ -347,7 +347,14 @@ var watermarks = async () => {
  * removed in the past
  **/
 var invalidateFrom = async (date) => {
-    await JobState.updateOne({ _id: ROLLUPS_JOB }, { $min: { 'data.rebuildFrom': new Date(date) } }, { upsert: true });
+    const from = new Date(date);
+    // the job clears it to null once it has rebuilt, and $min would keep a null, which sorts first
+    const earlier = await JobState.updateOne(
+        { _id: ROLLUPS_JOB, $or: [{ 'data.rebuildFrom': null }, { 'data.rebuildFrom': { $gt: from } }] },
+        { $set: { 'data.rebuildFrom': from } });
+    if (earlier.matchedCount === 0) {
+        await JobState.updateOne({ _id: ROLLUPS_JOB }, { $setOnInsert: { 'data.rebuildFrom': from } }, { upsert: true });
+    }
 };
 
 module.exports = {
