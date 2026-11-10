@@ -1664,6 +1664,73 @@ paths:
         - OAuth2:
             - admin
       x-swagger-router-controller: System
+  /system/reprocess:
+    post:
+      tags:
+        - System
+      description: reads the stored controller frames from `from` up to `to` again with the
+        server's current protocol code and stores what it makes of them now, as after a
+        parser fix. Readings and switches are stored only when they change, so events are
+        replayed in time order from what history held as the range opens. Events of the
+        chosen kinds are rewritten from their raw frames; the others stay as they are. A
+        frame that now changes nothing is removed, and one the server can't identify is
+        kept as unrecognized. The hourly and daily summaries are then redone from `from`
+        on. Answers at once; the run goes on in the maintenance job queue, and GET shows
+        how it is going. With dryRun, only counts what would change.
+      operationId: startReprocess
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReprocessRequest"
+        required: true
+      x-codegen-request-body-name: request
+      responses:
+        "202":
+          description: the run, waiting for or under way in the job queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReprocessRun"
+        "400":
+          description: a date that isn't one, a range that ends before it starts, or an
+            event type the server doesn't make from frames
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: history is already being reprocessed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: System
+    get:
+      tags:
+        - System
+      description: the reprocessing run under way, or the last one since the server started
+      operationId: getReprocess
+      responses:
+        "200":
+          description: the run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReprocessRun"
+        "404":
+          description: history hasn't been reprocessed since the server started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: System
   /system/restart:
     post:
       tags:
@@ -2551,6 +2618,134 @@ components:
           type: boolean
           description: only from a run; true when the job has more to do, as while
             catching up on old history, and runs again in a moment
+    ReprocessEventType:
+      type: string
+      description: a kind of event the server makes from controller frames
+      enum:
+        - info
+        - status
+        - control
+        - failed
+        - unrecognized
+    ReprocessRequest:
+      type: object
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: the first moment reprocessed
+        to:
+          type: string
+          format: date-time
+          description: reprocessing stops before this; a time after now is taken as now
+        eventTypes:
+          type: array
+          description: the kinds of event to rewrite from their frames; every kind when
+            left out or empty
+          items:
+            $ref: "#/components/schemas/ReprocessEventType"
+        dryRun:
+          type: boolean
+          default: false
+          description: count what would change without changing anything
+    ReprocessRun:
+      type: object
+      required:
+        - state
+        - from
+        - to
+        - eventTypes
+        - dryRun
+        - scanned
+        - examined
+        - unchanged
+        - updated
+        - removed
+        - unreadable
+        - transitions
+      properties:
+        state:
+          type: string
+          enum:
+            - waiting
+            - running
+            - finished
+            - failed
+          description: waiting for a maintenance job to finish, under way, done, or
+            stopped by an error
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        eventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReprocessEventType"
+        dryRun:
+          type: boolean
+        requestedBy:
+          type: string
+          nullable: true
+        requestedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        through:
+          type: string
+          format: date-time
+          nullable: true
+          description: how far through the range the run has got
+        scanned:
+          type: integer
+          description: events looked at, including those of other kinds that only carry
+            the state forward
+        examined:
+          type: integer
+          description: events of the chosen kinds read again from their frames
+        unchanged:
+          type: integer
+        updated:
+          type: integer
+          description: events whose kind or readings changed
+        removed:
+          type: integer
+          description: events whose frames change nothing, which the server would never
+            have stored
+        unreadable:
+          type: integer
+          description: events whose stored bytes hold no whole frame, left as they are
+        transitions:
+          type: array
+          description: how many events went from one kind to another, or were removed
+          items:
+            type: object
+            required:
+              - from
+              - to
+              - count
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+                description: the new kind, or removed
+              count:
+                type: integer
+        error:
+          type: string
+          nullable: true
     History:
       type: object
       properties:

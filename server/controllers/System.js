@@ -3,6 +3,7 @@
 var utils = require('../utils/writer.js');
 var System = require('../service/SystemService');
 var Settings = require('../service/SettingsService');
+var Reprocess = require('../service/ReprocessService');
 var scheduler = require('../jobs/scheduler');
 
 var answer = (res, promise) => promise
@@ -41,6 +42,18 @@ module.exports.runJob = function runJob (req, res) {
     }
     delete status.busy;
     return status;
+  }));
+};
+
+module.exports.startReprocess = function startReprocess (req, res) {
+  answer(res, Reprocess.start(req.swagger.params['request'].value, req.user).then(function (run) {
+    return utils.respondWithCode(202, run);
+  }));
+};
+
+module.exports.getReprocess = function getReprocess (req, res) {
+  answer(res, Reprocess.status().then(function (run) {
+    return run || utils.respondWithCode(404, { code: 404, message: 'history hasn’t been reprocessed since the server started' });
   }));
 };
 

@@ -109,6 +109,16 @@ exports.runNow = function(name, trigger = 'manual') {
 };
 
 /**
+ * runs work in this process's job queue, after any job already running and before the next, for
+ * work that must not overlap the jobs, such as rewriting the events the rollups are made from
+ **/
+exports.exclusive = function(work) {
+    const run = queue.then(() => work());
+    queue = run.catch(() => {});
+    return run;
+};
+
+/**
  * starts running every job on its interval; with enabled false, jobs only run when asked
  **/
 exports.start = function({ enabled }) {
