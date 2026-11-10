@@ -374,7 +374,41 @@ export class Client {
     async runJob(name, token) {
         return withJobDates(await this.send('POST', `system/jobs/${encodeURIComponent(name)}/run`, { token, timeout: 120000 }));
     }
+
+    /**
+     * reads stored frames from `from` up to `to` again, rewriting events of eventTypes (every kind
+     * when empty); with dryRun, only counts what would change. Answers at once with the run
+     **/
+    async startReprocess({ from, to, eventTypes, dryRun }, token) {
+        const body = { from: new Date(from).toISOString(), to: new Date(to).toISOString(), dryRun: Boolean(dryRun) };
+        if (eventTypes && eventTypes.length) {
+            body.eventTypes = eventTypes;
+        }
+        return withRunDates(await this.send('POST', 'system/reprocess', { token, body }));
+    }
+
+    /** the reprocessing run under way or the last one, or null when there hasn't been one */
+    async fetchReprocess(token) {
+        try {
+            return withRunDates(await this.send('GET', 'system/reprocess', { token }));
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 404) {
+                return null;
+            }
+            throw error;
+        }
+    }
 }
+
+const withRunDates = (run) => ({
+    ...run,
+    from: toDate(run.from),
+    to: toDate(run.to),
+    requestedAt: toDate(run.requestedAt),
+    startedAt: toDate(run.startedAt),
+    finishedAt: toDate(run.finishedAt),
+    through: toDate(run.through)
+});
 
 const withJobDates = (job) => ({
     ...job,

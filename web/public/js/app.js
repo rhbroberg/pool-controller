@@ -12,6 +12,7 @@ import { mountSettings, mountChangePassword } from './views/settings.js';
 import { mountEventLog } from './views/event-log.js';
 import { mountAccounts, mountAccountDetail } from './views/accounts.js';
 import { mountMaintenance } from './views/maintenance.js';
+import { mountReprocess } from './views/reprocess.js';
 import { watchCommissioning } from './views/commissioning.js';
 import { mountSignInComplete } from './views/signin-complete.js';
 import { mountSignInSettings } from './views/sign-in-settings.js';
@@ -27,6 +28,7 @@ const ROUTES = [
     [/^accounts$/, (root, app) => mountAccounts(root, app)],
     [/^accounts\/(.+)$/, (root, app, [name]) => mountAccountDetail(root, app, decodeURIComponent(name))],
     [/^maintenance$/, (root, app) => mountMaintenance(root, app)],
+    [/^maintenance\/reprocess$/, (root, app) => mountReprocess(root, app)],
     [/^sign-in$/, (root, app) => mountSignInSettings(root, app)],
     [/^signin\/complete$/, (root, app, _, query) => mountSignInComplete(root, app, query)]
 ];

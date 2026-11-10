@@ -373,6 +373,16 @@ export class StatusStore {
         return this.adminRequest((token) => this.client.runJob(name, token));
     }
 
+    /** starts reading stored frames again; resolves with the run, which goes on in the server */
+    startReprocess(request) {
+        return this.adminRequest((token) => this.client.startReprocess(request, token));
+    }
+
+    /** the reprocessing run under way or the last one, or null */
+    reprocessRun() {
+        return this.adminRequest((token) => this.client.fetchReprocess(token));
+    }
+
     /** a request needing the admin role; a rejected token signs out */
     async adminRequest(request) {
         try {

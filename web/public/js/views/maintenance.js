@@ -6,7 +6,7 @@ import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
 import { DEFAULT_ADMIN } from '../model.js';
 import { relative } from '../format.js';
-import { topbar, formSection, formRow, actionRow, select, spinner, renderer } from '../ui.js';
+import { topbar, formSection, formRow, actionRow, linkRow, select, spinner, renderer } from '../ui.js';
 
 const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
 // the server's own zone; the server takes null as "follow the host"
@@ -243,6 +243,10 @@ export const mountMaintenance = (root, app) => {
                         ? formSection({ header: 'Maintenance Jobs', footer: 'These run on their own. Run Now brings them up to date straight away.' }, ...jobs.map(jobRow))
                         : null,
                     settingsError ? formSection({}, h('div', { class: 'warning-line' }, icon('warning'), settingsError)) : null,
+                    store.isAdmin
+                        ? formSection({ footer: 'Reads stored history again with the server’s current decoding, as after a fix to how it reads the controller.' },
+                            linkRow('Reprocess History', '#/maintenance/reprocess'))
+                        : null,
                     formSection({ footer: 'The server stops and its container starts it again. This page reconnects when it’s back.' },
                         actionRow('Restart Server', restart, { disabled, busy: working })),
                     formSection({ footer: `Erases all history and accounts on the server and recreates the ${DEFAULT_ADMIN} / ${DEFAULT_ADMIN} account.` },

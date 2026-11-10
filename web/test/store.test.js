@@ -2,7 +2,7 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { StatusStore } from '../public/js/store.js';
-import { ApiError } from '../public/js/api.js';
+import { ApiError, Client } from '../public/js/api.js';
 import { EQUIPMENT } from '../public/js/model.js';
 import * as prefs from '../public/js/prefs.js';
 
@@ -250,5 +250,30 @@ describe('status store', () => {
     it('needs a sign-in for the server’s settings', async () => {
         const store = newStore(fakeClient());
         await assert.rejects(() => store.serverSettings(), (error) => error.kind === 'unauthorized');
+    });
+
+    it('asks the server to reprocess history, and reads how the run is going', async () => {
+        const requests = [];
+        let answer = { status: 404, body: { code: 404, message: 'not yet' } };
+        const client = new Client('http://pool', async (url, init) => {
+            requests.push({ url, method: init.method, body: init.body && JSON.parse(init.body), token: init.headers['x-auth'] });
+            return new Response(JSON.stringify(answer.body), { status: answer.status });
+        });
+        const store = newStore(client);
+        store.credentials = { email: 'owner', token: 'admin-token', role: 'admin' };
+        assert.equal(await store.reprocessRun(), null, 'none yet');
+
+        const run = { state: 'waiting', from: '2020-07-19T04:00:00.000Z', to: '2020-07-21T04:00:00.000Z', through: null, transitions: [] };
+        answer = { status: 202, body: run };
+        const started = await store.startReprocess({ from: new Date(run.from), to: new Date(run.to), eventTypes: ['failed'], dryRun: true });
+        assert.equal(started.from.getTime(), Date.parse(run.from));
+        assert.deepEqual(requests.at(-1), {
+            url: 'http://pool/rhbroberg/pool-api/1.0.0/system/reprocess',
+            method: 'POST',
+            body: { from: run.from, to: run.to, dryRun: true, eventTypes: ['failed'] },
+            token: 'admin-token'
+        });
+        await store.startReprocess({ from: new Date(run.from), to: new Date(run.to), eventTypes: [] });
+        assert.equal('eventTypes' in requests.at(-1).body, false, 'every kind');
     });
 });
