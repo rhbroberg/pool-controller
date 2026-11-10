@@ -12,7 +12,7 @@ let isolation: [SwiftSetting] = [
 let package = Package(
     name: "PoolStatusCore",
     defaultLocalization: "en",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .watchOS(.v10), .macOS(.v14)],
     products: [
         .library(name: "PoolStatusCore", targets: ["PoolStatusCore"])
     ],
