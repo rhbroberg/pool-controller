@@ -45,7 +45,7 @@ public nonisolated enum AccountRole: String, Codable, CaseIterable, Identifiable
 }
 
 /// The signed-in account, its `x-auth` token and role.
-public struct Credentials: Equatable {
+public nonisolated struct Credentials: Equatable, Sendable {
     public let name: String
     public let token: String
     /// Missing for sign-ins saved before roles existed, until the server is asked.

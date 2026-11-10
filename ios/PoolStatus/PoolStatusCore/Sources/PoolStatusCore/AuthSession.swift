@@ -173,6 +173,18 @@ public final class AuthSession {
         commissioning = nil
     }
 
+    /// Takes the sign-in the paired iPhone made, or forgets this one once the iPhone has signed out.
+    public func adopt(_ signedIn: Credentials?) {
+        guard signedIn != credentials else {
+            return
+        }
+        if let signedIn {
+            save(signedIn, methods: nil)
+        } else {
+            forget()
+        }
+    }
+
     /// Sets a new password for the signed-in account once `current` proves who is asking. The
     /// server signs the account out everywhere else, so this keeps the new token it returns.
     public func changePassword(current: String, new password: String) async throws {
