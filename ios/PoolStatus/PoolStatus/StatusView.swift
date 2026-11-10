@@ -133,7 +133,8 @@ struct StatusView: View {
                         secondary: [.spaTemperature, .airTemperature, .salt].map(store.measurement(named:)),
                         weather: store.weatherSummary,
                         lastRefresh: store.lastRefresh,
-                        isConnected: store.isConnected)
+                        isConnected: store.isConnected,
+                        isLive: store.isLive)
 
         Group {
             accessNote
@@ -276,6 +277,7 @@ private struct TemperatureCard: View {
     let weather: DashboardWeather?
     let lastRefresh: Date?
     let isConnected: Bool
+    let isLive: Bool
 
     @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 50
 
@@ -327,7 +329,7 @@ private struct TemperatureCard: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .foregroundStyle(pool.isDimmed ? .secondary : .primary)
-            FreshnessLine(lastRefresh: lastRefresh, isConnected: isConnected)
+            FreshnessLine(lastRefresh: lastRefresh, isConnected: isConnected, isLive: isLive)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
@@ -433,13 +435,19 @@ private struct WeatherRow: View {
     }
 }
 
-/// How old the readings on screen are, in words.
+/// How old the readings on screen are, in words; while live updates arrive, they're current.
 private struct FreshnessLine: View {
     let lastRefresh: Date?
     let isConnected: Bool
+    let isLive: Bool
 
     var body: some View {
-        if let lastRefresh {
+        if isConnected && isLive {
+            Text("Live")
+                .font(.caption)
+                .foregroundStyle(.green)
+                .accessibilityLabel("Live: changes appear as the controller reports them")
+        } else if let lastRefresh {
             TimelineView(.periodic(from: .now, by: 15)) { context in
                 let when = context.date.timeIntervalSince(lastRefresh) < 60
                     ? String(localized: "just now")

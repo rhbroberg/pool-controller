@@ -87,10 +87,13 @@ struct StubServer {
 
     var requests: [String] { StubURLProtocol.requests(to: host) }
 
-    /// A store for this server that keeps its sign-in in memory and never waits between polls.
-    func makeStore(credentials: InMemoryCredentialStore = InMemoryCredentialStore()) -> StatusStore {
+    /// A store for this server that keeps its sign-in in memory and, unless given `sleep`, never
+    /// waits between polls.
+    func makeStore(credentials: InMemoryCredentialStore = InMemoryCredentialStore(),
+                   live: (any LiveTransport)? = nil,
+                   sleep: @escaping StatusStore.Sleep = { _ in try Task.checkCancellation() }) -> StatusStore {
         StatusStore(serverAddress: address, defaults: Self.defaults, session: session,
-                    credentials: credentials, sleep: { _ in try Task.checkCancellation() })
+                    credentials: credentials, live: live, sleep: sleep)
     }
 
     private static let defaults = UserDefaults(suiteName: "PoolStatusTests")!
