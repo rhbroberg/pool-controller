@@ -1,10 +1,12 @@
 // The pool's state as the page shows it: readings, heating, the connection and the sign-in.
 
-import { ApiError, isAbort } from './api.js';
+import { ApiError, isAbort, toReading } from './api.js';
 import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo } from './model.js';
 import * as prefs from './prefs.js';
 
 export const REFRESH_SECONDS = 15;
+// while live updates arrive, polling only catches anything they missed
+export const LIVE_REFRESH_SECONDS = 60;
 // the server fetches the forecast every half hour, so the page needn't ask on every refresh
 export const WEATHER_REFRESH_SECONDS = 300;
 export const DEFAULT_RECONNECT_SECONDS = 30;
@@ -14,6 +16,8 @@ const CONFIRMATION_TIMEOUT_MS = 15000;
 // longer than for a switch, since stepping to a water flow mode may take two presses
 const WATER_MODE_TIMEOUT_MS = 45000;
 const CONFIRMATION_POLL_MS = 1000;
+// while live, how many confirmation polls' time to wait for a push before asking anyway
+const LIVE_CONFIRMATION_POLLS = 5;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,7 +30,11 @@ const signedInAs = (result) => ({
 });
 
 export class StatusStore {
-    constructor(client, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS } = {}) {
+    /**
+     * live, a LiveConnection, pushes changes as the controller reports them; without it, or while
+     * it can't reach the server, the store polls
+     **/
+    constructor(client, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS, live = null } = {}) {
         this.client = client;
         this.readings = [];
         // setpoints and what the heater and heat pump are doing; null from a server without them
@@ -59,6 +67,16 @@ export class StatusStore {
         this.wakePoll = null;
         this.pollSleep = pollSleep;
         this.confirmationPollMs = confirmationPollMs;
+        // whether live updates are arriving
+        this.isLive = false;
+        this.pushWaiters = new Set();
+        // counts pushes, so a refresh that asked before one doesn't put back what it replaced
+        this.pushesApplied = 0;
+        this.live = live;
+        if (live) {
+            live.onEvent = (name, data) => this.receivePush(name, data);
+            live.onStateChange = (isLive) => this.liveChanged(isLive);
+        }
 
         prefs.watch((key) => {
             if (key === 'credentials') {
@@ -143,11 +161,15 @@ export class StatusStore {
     // MARK: polling
 
     /**
-     * refreshes every REFRESH_SECONDS while connected; after losing the server, retries every
-     * reconnectSeconds. Starting again, as from Retry, restarts the cycle at once.
+     * refreshes every REFRESH_SECONDS while connected, or LIVE_REFRESH_SECONDS while live updates
+     * arrive; after losing the server, retries every reconnectSeconds. Starting again, as from
+     * Retry, restarts the cycle at once.
      **/
     startPolling() {
         this.stopPolling();
+        if (this.live) {
+            this.live.start();
+        }
         const generation = this.pollGeneration;
         const run = async () => {
             while (generation === this.pollGeneration) {
@@ -159,7 +181,7 @@ export class StatusStore {
                 if (this.isConnected && this.credentials && !this.accountChecked) {
                     await this.refreshAccount();
                 }
-                const wait = this.isConnected ? REFRESH_SECONDS : this.reconnectSeconds;
+                const wait = !this.isConnected ? this.reconnectSeconds : this.isLive ? LIVE_REFRESH_SECONDS : REFRESH_SECONDS;
                 if (this.connection === 'disconnected') {
                     this.nextAttempt = new Date(Date.now() + wait * 1000);
                     this.changed();
@@ -173,9 +195,63 @@ export class StatusStore {
     stopPolling() {
         this.pollGeneration += 1;
         this.nextAttempt = null;
+        if (this.live) {
+            this.live.stop();
+        }
         if (this.wakePoll) {
             this.wakePoll();
         }
+    }
+
+    // MARK: live updates
+
+    liveChanged(isLive) {
+        this.isLive = isLive;
+        // refresh at once: joining may have missed a change, and losing the live updates means
+        // polling more often again, or finding the server is gone
+        if (this.wakePoll) {
+            this.wakePoll();
+        }
+        this.changed();
+    }
+
+    receivePush(name, data) {
+        if (name === 'readings' && data && Array.isArray(data.readings)) {
+            this.applyReadings(data.readings.map(toReading));
+        } else if (name === 'heating' && data && typeof data === 'object') {
+            this.heating = data;
+            this.pushesApplied += 1;
+            this.changed();
+        }
+    }
+
+    /** replaces the readings the push carries, keeping the rest as they were */
+    applyReadings(pushed) {
+        const byName = new Map(pushed.map((reading) => [reading.name, reading]));
+        const readings = this.readings.map((reading) => {
+            const replacement = byName.get(reading.name);
+            byName.delete(reading.name);
+            return replacement || reading;
+        });
+        this.readings = readings.concat([...byName.values()]);
+        this.lastRefresh = new Date();
+        this.pushesApplied += 1;
+        this.markConnected();
+        this.pushWaiters.forEach((wake) => wake(true));
+        this.changed();
+    }
+
+    /** true when a push arrives within ms, false otherwise */
+    nextPush(ms) {
+        return new Promise((resolve) => {
+            const wake = (pushed) => {
+                clearTimeout(timer);
+                this.pushWaiters.delete(wake);
+                resolve(pushed);
+            };
+            const timer = setTimeout(() => wake(false), ms);
+            this.pushWaiters.add(wake);
+        });
     }
 
     waitForNextPoll(ms) {
@@ -201,6 +277,7 @@ export class StatusStore {
     async refresh() {
         this.isLoading = true;
         this.changed();
+        const pushesBefore = this.pushesApplied;
         try {
             // heating is extra detail; a server that doesn't offer it still counts as connected
             const heating = this.client.fetchHeating().catch(() => null);
@@ -212,8 +289,12 @@ export class StatusStore {
                     return answer;
                 })
                 : null;
-            this.readings = await this.client.fetchStatus();
-            this.heating = await heating;
+            const readings = await this.client.fetchStatus();
+            const fetchedHeating = await heating;
+            if (this.pushesApplied === pushesBefore) {
+                this.readings = readings;
+                this.heating = fetchedHeating;
+            }
             if (weather) {
                 this.weather = await weather;
             }
@@ -446,13 +527,26 @@ export class StatusStore {
     }
 
     /**
-     * true once reached() holds, false at the timeout, null if the server is lost meanwhile
+     * true once reached() holds, false at the timeout, null if the server is lost meanwhile.
+     * While live, the controller's report arrives as a push; otherwise it's polled for.
      **/
     async awaitConfirmation(reached, timeoutMs) {
         const deadline = Date.now() + timeoutMs;
         while (Date.now() < deadline) {
-            await sleep(this.confirmationPollMs);
-            await this.refresh();
+            if (this.isLive) {
+                if (reached()) {
+                    this.confirmedChanges += 1;
+                    return true;
+                }
+                // a push missed while the connection changed is caught by refreshing now and then
+                const pushed = await this.nextPush(Math.min(this.confirmationPollMs * LIVE_CONFIRMATION_POLLS, deadline - Date.now()));
+                if (!pushed) {
+                    await this.refresh();
+                }
+            } else {
+                await sleep(this.confirmationPollMs);
+                await this.refresh();
+            }
             if (reached()) {
                 this.confirmedChanges += 1;
                 return true;

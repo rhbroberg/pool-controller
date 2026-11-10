@@ -30,6 +30,9 @@ export const isAbort = (error) => error && (error.name === 'AbortError' || error
 
 const toDate = (value) => value ? new Date(value) : null;
 
+/** a reading as GET /status and the live updates send it, with its value a number */
+export const toReading = (reading) => ({ ...reading, value: Number(reading.value), timestamp: toDate(reading.timestamp) });
+
 const anySignal = (signals) => {
     if (AbortSignal.any) {
         return AbortSignal.any(signals);
@@ -124,7 +127,7 @@ export class Client {
 
     async fetchStatus() {
         const readings = await this.send('GET', 'status');
-        return readings.map((reading) => ({ ...reading, value: Number(reading.value), timestamp: toDate(reading.timestamp) }));
+        return readings.map(toReading);
     }
 
     async fetchSystemInfo() {

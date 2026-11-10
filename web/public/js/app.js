@@ -2,6 +2,7 @@
 
 import { Client } from './api.js';
 import { StatusStore } from './store.js';
+import { LiveConnection, liveUrl } from './live.js';
 import { DEFAULT_POOL_NAME } from './model.js';
 import * as prefs from './prefs.js';
 import { mountDashboard } from './views/dashboard.js';
@@ -34,7 +35,7 @@ const ROUTES = [
 ];
 
 const client = new Client();
-const store = new StatusStore(client);
+const store = new StatusStore(client, { live: new LiveConnection(liveUrl(location)) });
 const app = {
     client,
     store,

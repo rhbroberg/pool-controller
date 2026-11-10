@@ -83,6 +83,9 @@ export const mountDashboard = (root, app) => {
         if (!store.lastRefresh) {
             return null;
         }
+        if (store.isConnected && store.isLive) {
+            return h('span', { class: 'freshness live', title: 'Changes appear as the controller reports them' }, 'Live');
+        }
         const age = Date.now() - store.lastRefresh.getTime();
         const when = age < 60000 ? 'just now' : relative(store.lastRefresh);
         return h('span', { class: ['freshness', store.isConnected ? '' : 'stale'] },
