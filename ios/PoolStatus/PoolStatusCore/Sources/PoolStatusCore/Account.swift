@@ -50,6 +50,12 @@ public nonisolated struct Credentials: Equatable, Sendable {
     public let token: String
     /// Missing for sign-ins saved before roles existed, until the server is asked.
     public let role: AccountRole?
+
+    public init(name: String, token: String, role: AccountRole?) {
+        self.name = name
+        self.token = token
+        self.role = role
+    }
 }
 
 /// The server calls an account's name its `email`, though any name will do.

@@ -39,7 +39,9 @@ public final class StatusStore {
     /// Empty until the first server answers.
     public var serverAddress: String {
         didSet {
-            defaults.set(serverAddress, forKey: SettingsKey.serverAddress)
+            if remembersAddress {
+                defaults.set(serverAddress, forKey: SettingsKey.serverAddress)
+            }
             auth.client = client
         }
     }
@@ -69,6 +71,8 @@ public final class StatusStore {
     public private(set) var isLive = false
 
     @ObservationIgnored private let defaults: UserDefaults
+    /// False where a site list keeps the address, as on the iPhone.
+    @ObservationIgnored private let remembersAddress: Bool
     @ObservationIgnored private let session: URLSession
     @ObservationIgnored private let sleep: Sleep
     @ObservationIgnored private let live: (any LiveTransport)?
@@ -82,16 +86,19 @@ public final class StatusStore {
     /// When the weather was last asked for, whether or not the server had any.
     @ObservationIgnored private var weatherCheckedAt: Date?
 
-    /// Without `live`, the store only polls.
+    /// Without `live`, the store only polls. Unless `remembersAddress` is false, the address is
+    /// kept in `defaults` and read from there when none is given.
     public init(serverAddress: String? = nil,
          defaults: UserDefaults = .standard,
+         remembersAddress: Bool = true,
          session: URLSession = .shared,
          credentials: CredentialStore = KeychainCredentialStore(),
          live: (any LiveTransport)? = nil,
          sleep: @escaping Sleep = { try await Task.sleep(for: $0) }) {
-        let address = serverAddress ?? defaults.string(forKey: SettingsKey.serverAddress) ?? ""
+        let address = serverAddress ?? (remembersAddress ? defaults.string(forKey: SettingsKey.serverAddress) : nil) ?? ""
         self.serverAddress = address
         self.defaults = defaults
+        self.remembersAddress = remembersAddress
         self.session = session
         self.live = live
         self.sleep = sleep
