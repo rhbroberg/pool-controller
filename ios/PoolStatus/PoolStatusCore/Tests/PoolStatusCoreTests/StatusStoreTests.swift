@@ -192,6 +192,30 @@ struct SignedInTests {
         #expect(server.requests.contains("PUT devices/lights/true"))
     }
 
+    @Test("looks for the controller's confirmation straight away, without waiting first")
+    func confirmsAtOnce() async throws {
+        let lightsOn = Shared(false)
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): return .ok(Fixture.login("operator"))
+            case ("PUT", "devices/lights/true"):
+                lightsOn.value = true
+                return .ok("{}")
+            case ("GET", "status"):
+                return .ok(Fixture.status(Fixture.switches(lightsOn.value ? ["lights"] : [], off: lightsOn.value ? [] : ["lights"])))
+            default: return .status(404)
+            }
+        }
+        let waits = Shared([Duration]())
+        let store = server.makeStore(sleep: { waits.value.append($0) })
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+
+        let lights = try #require(EquipmentControl.control(named: .lights))
+        await store.setControl(lights, on: true)
+        #expect(store.isOn(lights))
+        #expect(waits.value.isEmpty)
+    }
+
     @Test("says so when the controller doesn't confirm a change in time")
     func unconfirmed() async throws {
         let server = StubServer { method, path, _ in
