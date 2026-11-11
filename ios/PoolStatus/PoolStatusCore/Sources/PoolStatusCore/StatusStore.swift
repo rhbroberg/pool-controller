@@ -27,7 +27,7 @@ public final class StatusStore {
     public static let weatherRefreshSeconds = 300
     public static let defaultReconnectSeconds = 30
     /// How often to ask for status while waiting for the controller to report a requested change.
-    public static let confirmationInterval: Duration = .seconds(1)
+    public static let confirmationInterval: Duration = .milliseconds(500)
     /// How long to wait for the controller to report a switched control.
     public static let confirmationTimeout: Duration = .seconds(15)
     /// How long to wait for the controller to step through to a requested water flow mode;
@@ -415,9 +415,13 @@ public final class StatusStore {
                     }
                     remaining -= max(started.duration(to: .now), .milliseconds(1))
                 } else {
-                    try await sleep(Self.confirmationInterval)
+                    // the controller usually reports a change well within a second of the request,
+                    // so look straight away rather than waiting first
                     await refresh()
-                    remaining -= Self.confirmationInterval
+                    if !confirmed() && isConnected {
+                        try await sleep(Self.confirmationInterval)
+                        remaining -= Self.confirmationInterval
+                    }
                 }
                 if confirmed() {
                     confirmedChanges += 1
