@@ -1,9 +1,15 @@
 import PoolStatusCore
 import SwiftUI
 
-/// First launch: asks for the server and keeps the address only once the server answers.
-struct ServerSetupView: View {
-    @Environment(StatusStore.self) private var store
+/// Adds a pool: finds its server on the network or takes its address, and keeps it only once the
+/// server answers.
+struct AddSiteView: View {
+    /// Called with the site once it's saved.
+    let added: (Site) -> Void
+
+    @Environment(SiteSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
     @State private var address = ""
     /// The address being tried; leaving the page cancels it.
     @State private var testing: String?
@@ -22,13 +28,23 @@ struct ServerSetupView: View {
                         Image(systemName: "figure.pool.swim")
                             .font(.largeTitle)
                             .foregroundStyle(Color.accentColor)
-                        Text("Connect to your pool")
+                        Text("Add a pool")
                             .font(.title2.weight(.semibold))
-                        Text("Find the server attached to your pool controller on this phone’s Wi‑Fi network, or enter its address.")
+                        Text("Find the server attached to the pool controller on this phone’s Wi‑Fi network, or enter its address.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
+                }
+
+                Section {
+                    TextField(SiteStore.defaultName, text: $name)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.next)
+                } header: {
+                    Text("Name")
+                } footer: {
+                    Text("What to call this pool in the app, like Home or Lake House.")
                 }
 
                 Section {
@@ -56,7 +72,7 @@ struct ServerSetupView: View {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)
                     } else {
-                        Text("From outside your home network, use the https address you set up for it.")
+                        Text("From outside the pool’s network, use the https address set up for it.")
                     }
                 }
 
@@ -73,7 +89,15 @@ struct ServerSetupView: View {
                     .disabled(trimmedAddress.isEmpty || testing != nil)
                 }
             }
+            .navigationTitle("Add Site")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if !session.sites.sites.isEmpty {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                }
+            }
             .sheet(isPresented: $isScanningNetwork) {
                 // a server the scan found has already answered, so connect to it straight away
                 NetworkScanView { found in
@@ -103,7 +127,11 @@ struct ServerSetupView: View {
 
     private func test(_ candidate: String) async {
         do {
-            try await store.connect(to: candidate)
+            let site = try await session.add(name: name, address: candidate)
+            dismiss()
+            added(site)
+        } catch let error as SiteError {
+            errorMessage = error.localizedDescription
         } catch {
             if !error.isCancellation {
                 errorMessage = String(localized: "Couldn’t reach \(ServerAddress.display(candidate)). \(error.localizedDescription)")
@@ -115,7 +143,7 @@ struct ServerSetupView: View {
 
 #if DEBUG
 #Preview {
-    ServerSetupView()
-        .environment(StatusStore.preview())
+    AddSiteView { _ in }
+        .environment(SiteSession.preview())
 }
 #endif

@@ -1,84 +1,35 @@
-import AuthenticationServices
 import PoolStatusCore
 import SwiftUI
 
+/// The open site's settings: its name and address, the account signed in to it, and its
+/// history and administration.
 struct SettingsView: View {
-    static let reconnectChoices = [10, 30, 60, 120, 300]
-
     private enum Route: Hashable {
-        case changePassword, signInMethods, eventLog, accounts, serverMaintenance
+        case site, changePassword, signInMethods, eventLog, accounts, serverMaintenance
     }
 
+    @Environment(SiteSession.self) private var session
     @Environment(StatusStore.self) private var store
-    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
-    @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
-    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
     @Environment(\.dismiss) private var dismiss
-    @State private var draftAddress = ""
-    @State private var draftPoolName = ""
-    @State private var accountName = ""
-    @State private var password = ""
-    @State private var isSigningIn = false
-    @State private var signInError: String?
-    @State private var isScanningNetwork = false
-    @FocusState private var passwordFocused: Bool
     /// nil from a server too old to have sign-in services.
     @State private var serverChoices: SignInChoices?
-    /// The service whose sign-in page is open.
-    @State private var signingInWith: SignInProvider?
-    /// What signing in with a service ended with, when it didn't simply sign in.
-    @State private var serviceMessage: String?
-    @State private var serviceFailed = false
     /// The server's build, for the about line; nil until it answers.
     @State private var serverInfo: SystemInfo?
 
     private var auth: AuthSession { store.auth }
     private var choices: SignInChoices { serverChoices ?? .passwordOnly }
 
-    private var trimmedAddress: String {
-        draftAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 // kept to few sections so Administration stays on screen without scrolling
                 Section {
-                    LabeledContent("Name") {
-                        TextField(StatusView.defaultPoolName, text: $draftPoolName)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.words)
-                            .submitLabel(.done)
-                    }
-                    LabeledContent("Server") {
-                        HStack(spacing: 12) {
-                            TextField("", text: $draftAddress)
-                                .accessibilityLabel("Server")
-                                .multilineTextAlignment(.trailing)
-                                .keyboardType(.URL)
-                                .textContentType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                            Button {
-                                isScanningNetwork = true
-                            } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            // borderless so tapping the text field doesn't also start a scan
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel("Scan Network")
-                        }
-                    }
-                    Picker("Retry Every", selection: $reconnectSeconds) {
-                        ForEach(Self.reconnectChoices, id: \.self) { seconds in
-                            Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
-                                .tag(seconds)
-                        }
+                    NavigationLink(value: Route.site) {
+                        LabeledContent(session.openSite?.name ?? SiteStore.defaultName,
+                                       value: ServerAddress.display(store.serverAddress))
                     }
                 } header: {
                     Text("Pool")
-                } footer: {
-                    Text("The server attached to your pool controller, with its port. Tap \(Image(systemName: "magnifyingglass")) to look for one on your network.")
                 }
 
                 Section {
@@ -99,58 +50,14 @@ struct SettingsView: View {
                             NavigationLink("Change Password", value: Route.changePassword)
                         }
                         Button("Sign Out", role: .destructive) {
+                            dismiss()
                             auth.signOut()
-                        }
-                    } else {
-                        if choices.passwordSignIn {
-                            TextField("Account Name", text: $accountName)
-                                .textContentType(.username)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .submitLabel(.next)
-                                .onSubmit { passwordFocused = true }
-                            PasswordField("Password", text: $password, contentType: .password, focused: $passwordFocused)
-                                .submitLabel(.go)
-                                .onSubmit(startPasswordSignIn)
-                            Button(action: startPasswordSignIn) {
-                                HStack {
-                                    Text("Sign In")
-                                    if isSigningIn {
-                                        Spacer()
-                                        ProgressView()
-                                    }
-                                }
-                            }
-                            .disabled(!canSignIn)
-                        }
-                        ForEach(choices.providers) { provider in
-                            Button {
-                                store.serverAddress = trimmedAddress
-                                signInError = nil
-                                serviceMessage = nil
-                                signingInWith = provider
-                            } label: {
-                                HStack {
-                                    Text("Continue with \(provider.displayName)")
-                                    if signingInWith == provider {
-                                        Spacer()
-                                        ProgressView()
-                                    }
-                                }
-                            }
-                            .disabled(trimmedAddress.isEmpty || signingInWith != nil)
                         }
                     }
                 } header: {
                     Text("Account")
                 } footer: {
-                    if let signInError {
-                        Text(signInError).foregroundStyle(.red)
-                    } else if auth.credentials == nil, let serviceMessage {
-                        Text(serviceMessage).foregroundStyle(serviceFailed ? .red : .secondary)
-                    } else if auth.credentials == nil {
-                        Text("Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.")
-                    }
+                    Text("You stay signed in to this pool on this iPhone until you sign out.")
                 }
 
                 Section {
@@ -169,6 +76,10 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationDestination(for: Route.self) { route in
                 switch route {
+                case .site:
+                    if let site = session.openSite {
+                        SiteEditorView(site: site)
+                    }
                 case .changePassword: ChangePasswordView()
                 case .signInMethods: SignInMethodsView(providers: choices.providers)
                 case .eventLog: EventLogView()
@@ -183,86 +94,12 @@ struct SettingsView: View {
                 serverInfo = nil
                 serverInfo = await store.systemInfo()
             }
-            .task(id: signingInWith) {
-                if let signingInWith {
-                    await signIn(with: signingInWith)
-                }
-            }
-            .fullScreenCover(isPresented: Binding(get: { auth.commissioning != nil },
-                                                  set: { if !$0 { auth.cancelCommissioning() } })) {
-                CommissioningView()
-            }
-            .sheet(isPresented: $isScanningNetwork) {
-                NetworkScanView { draftAddress = $0 }
-            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // every change applies: the picker and sign-in at once, the text fields on Done
-                // or when the sheet is swiped away, so there's nothing for a Cancel to undo
+                // every change applies as it's made, so there's nothing for a Cancel to undo
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .onAppear {
-                draftAddress = store.serverAddress
-                draftPoolName = poolName
-            }
-        }
-        .task(id: isSigningIn) {
-            if isSigningIn {
-                await signIn()
-            }
-        }
-        .onDisappear(perform: commitDrafts)
-    }
-
-    private func commitDrafts() {
-        if !trimmedAddress.isEmpty {
-            store.serverAddress = trimmedAddress
-        }
-        let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
-        poolName = name.isEmpty ? StatusView.defaultPoolName : name
-    }
-
-    private var canSignIn: Bool {
-        !accountName.isEmpty && !password.isEmpty && !trimmedAddress.isEmpty && !isSigningIn
-    }
-
-    private func startPasswordSignIn() {
-        guard canSignIn else {
-            return
-        }
-        signInError = nil
-        // signing in is to the server being typed, so it takes effect now rather than on Done
-        store.serverAddress = trimmedAddress
-        isSigningIn = true
-    }
-
-    private func signIn() async {
-        do {
-            try await auth.signIn(name: accountName.trimmingCharacters(in: .whitespacesAndNewlines),
-                                  password: password)
-            password = ""
-        } catch {
-            if !error.isCancellation {
-                signInError = error.localizedDescription
-            }
-        }
-        isSigningIn = false
-    }
-
-    private func signIn(with provider: SignInProvider) async {
-        defer { signingInWith = nil }
-        do {
-            let url = try auth.client.signInURL(provider: provider.id)
-            if let outcome = try await runSignInSession(url, in: webAuthenticationSession, auth: auth) {
-                serviceMessage = outcome.message
-                serviceFailed = outcome.isFailure
-            }
-        } catch {
-            if !error.isCancellation {
-                serviceMessage = error.localizedDescription
-                serviceFailed = true
             }
         }
     }

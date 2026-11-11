@@ -1,13 +1,13 @@
 import PoolStatusCore
 import SwiftUI
 
+/// A signed-in site's pool.
 struct StatusView: View {
-    static let defaultPoolName = "Pool"
     /// Keeps the page readable on iPad and in landscape.
     static let maximumWidth: CGFloat = 640
 
+    @Environment(SiteSession.self) private var session
     @Environment(StatusStore.self) private var store
-    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
     @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingSettings = false
@@ -73,8 +73,11 @@ struct StatusView: View {
                     }
                 }
             }
-            .navigationTitle(poolName.isEmpty ? Self.defaultPoolName : poolName)
+            .navigationTitle(session.openSite?.name ?? SiteStore.defaultName)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleMenu {
+                SiteSwitcherMenu()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if store.connection != .connected {
@@ -166,11 +169,7 @@ struct StatusView: View {
 
     @ViewBuilder
     private var accessNote: some View {
-        if store.auth.credentials == nil {
-            SignInPrompt(text: "Sign in to change equipment and water flow") {
-                showingSettings = true
-            }
-        } else if !store.auth.canControl {
+        if !store.auth.canControl {
             Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -193,10 +192,6 @@ struct StatusView: View {
     }
 
     private func request(_ control: EquipmentControl) {
-        if store.auth.credentials == nil {
-            showingSettings = true
-            return
-        }
         guard store.auth.canControl else {
             return
         }
@@ -881,6 +876,7 @@ private struct UpdateFooter: View {
 #if DEBUG
 #Preview {
     StatusView()
+        .environment(SiteSession.preview())
         .environment(StatusStore.preview())
 }
 #endif

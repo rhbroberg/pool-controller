@@ -3,36 +3,46 @@ import SwiftUI
 
 @main
 struct PoolStatusApp: App {
-    @State private var store: StatusStore
+    @State private var session: SiteSession
     @State private var watchLink: WatchLink
-    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
 
     init() {
-        let store = StatusStore(live: URLSessionLiveTransport())
-        _store = State(initialValue: store)
+        let session = SiteSession()
+        _session = State(initialValue: session)
         // the watch app can wake this app in the background, before any view appears, to ask for this
-        let poolName = UserDefaults.standard.string(forKey: SettingsKey.poolName) ?? StatusView.defaultPoolName
-        _watchLink = State(initialValue: WatchLink(context: Self.watchContext(store: store, poolName: poolName)))
+        _watchLink = State(initialValue: WatchLink(context: session.watchContext))
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if store.serverAddress.isEmpty {
-                    ServerSetupView()
+                if let store = session.store, let site = session.openSite {
+                    SiteView()
                         .environment(store)
+                        // a fresh page for each site, so nothing typed or scrolled carries over
+                        .id(site.id)
                 } else {
-                    StatusView()
-                        .environment(store)
+                    SitesView()
                 }
             }
-            .onChange(of: Self.watchContext(store: store, poolName: poolName)) { _, context in
+            .environment(session)
+            .animation(.default, value: session.openID)
+            .onChange(of: session.watchContext) { _, context in
                 watchLink.send(context)
             }
         }
     }
+}
 
-    private static func watchContext(store: StatusStore, poolName: String) -> WatchContext {
-        WatchContext(serverAddress: store.serverAddress, poolName: poolName, credentials: store.auth.credentials)
+/// One site: its dashboard once signed in, and until then only its sign-in page.
+struct SiteView: View {
+    @Environment(StatusStore.self) private var store
+
+    var body: some View {
+        if store.auth.credentials != nil {
+            StatusView()
+        } else {
+            SiteSignInView()
+        }
     }
 }
