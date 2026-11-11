@@ -34,6 +34,20 @@
                ReferencedContainer = "container:PoolStatusCore">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "7C0A00000000000000000032"
+               BuildableName = "PoolStatusUITests.xctest"
+               BlueprintName = "PoolStatusUITests"
+               ReferencedContainer = "container:PoolStatus.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -61,6 +75,16 @@
                BuildableName = "PoolStatusCoreTests"
                BlueprintName = "PoolStatusCoreTests"
                ReferencedContainer = "container:PoolStatusCore">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "7C0A00000000000000000032"
+               BuildableName = "PoolStatusUITests.xctest"
+               BlueprintName = "PoolStatusUITests"
+               ReferencedContainer = "container:PoolStatus.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>

@@ -7,7 +7,11 @@ struct PoolStatusApp: App {
     @State private var watchLink: WatchLink
 
     init() {
+        #if DEBUG
+        let session = UITestMode.isActive ? UITestMode.makeSession() : SiteSession()
+        #else
         let session = SiteSession()
+        #endif
         _session = State(initialValue: session)
         // the watch app can wake this app in the background, before any view appears, to ask for this
         _watchLink = State(initialValue: WatchLink(context: session.watchContext))
