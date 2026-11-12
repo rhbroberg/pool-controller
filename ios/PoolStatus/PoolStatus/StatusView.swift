@@ -13,10 +13,6 @@ struct StatusView: View {
     @State private var showingSettings = false
     /// Bumped to restart polling immediately, as from Retry.
     @State private var pollGeneration = 0
-    /// A change waiting for the user to confirm it.
-    @State private var confirming: ChangeRequest?
-    /// The heater or heat pump whose setpoints are open.
-    @State private var setpointDevice: HeatingDevice?
     /// Whether the details of the heating estimate are open.
     @State private var showingEstimate = false
 
@@ -105,22 +101,8 @@ struct StatusView: View {
                 }
             }
             .sensoryFeedback(.success, trigger: store.confirmedChanges)
-            .confirmationDialog(confirming?.title ?? "",
-                                isPresented: Binding(isPresent: $confirming),
-                                titleVisibility: .visible,
-                                presenting: confirming) { request in
-                Button(request.action) {
-                    perform(request)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { request in
-                Text(request.message)
-            }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
-            }
-            .sheet(item: $setpointDevice) { device in
-                SetpointView(device: device)
             }
             .sheet(isPresented: $showingEstimate) {
                 HeatingEstimateView()
@@ -129,6 +111,7 @@ struct StatusView: View {
                 switch route {
                 case .temperatureHistory(let water): TemperatureHistoryView(water: water)
                 case .saltHistory: SaltHistoryView()
+                case .equipment: EquipmentView()
                 case .panel: PanelView()
                 }
             }
@@ -144,46 +127,112 @@ struct StatusView: View {
                         isConnected: store.isConnected,
                         isLive: store.isLive)
 
-        Group {
-            accessNote
-
-            ControlSection(title: EquipmentControl.Area.heating.title) {
-                equipmentGrid(.heating)
-            } trailing: {
-                if let estimate = store.heating?.estimate, estimate.isShown {
-                    HeatingEstimateButton(estimate: estimate) {
-                        showingEstimate = true
-                    }
-                }
+        ControlSection(title: String(localized: "Tasks")) {
+            if !store.auth.canControl {
+                AccessNote()
             }
-
-            ControlSection(title: EquipmentControl.Area.circulation.title) {
-                WaterFlowControl(current: store.waterMode,
-                                 pending: store.pendingWaterMode,
-                                 isLocked: !store.auth.canControl) { mode in
-                    confirming = .waterMode(mode)
+            TaskRows()
+        } trailing: {
+            if let estimate = store.heating?.estimate, estimate.isShown {
+                HeatingEstimateButton(estimate: estimate) {
+                    showingEstimate = true
                 }
-                equipmentGrid(.circulation)
-            }
-
-            ControlSection(title: EquipmentControl.Area.features.title) {
-                equipmentGrid(.features)
             }
         }
-        .disabled(!store.isConnected)
         .opacity(store.isConnected ? 1 : 0.5)
 
-        PanelControlLink()
+        VStack(spacing: 8) {
+            DashboardLink(route: .equipment, systemImage: "switch.2", title: String(localized: "Equipment"),
+                          subtitle: String(localized: "Every switch, the water flow and the heaters"))
+            DashboardLink(route: .panel, systemImage: "dpad.fill", title: String(localized: "Panel Control"),
+                          subtitle: String(localized: "Every menu and setting on the controller"))
+        }
 
         UpdateFooter(lastChange: store.lastSwitchChange)
     }
+}
 
-    @ViewBuilder
-    private var accessNote: some View {
-        if !store.auth.canControl {
-            Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+/// Every switch the app offers, the water flow, and the heaters with their setpoints: what the
+/// main page showed before tasks.
+struct EquipmentView: View {
+    @Environment(StatusStore.self) private var store
+    /// A change waiting for the user to confirm it.
+    @State private var confirming: ChangeRequest?
+    /// The heater or heat pump whose setpoints are open.
+    @State private var setpointDevice: HeatingDevice?
+    @State private var showingEstimate = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                if let errorMessage = store.errorMessage, store.isConnected {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .cardBackground()
+                }
+                if !store.auth.canControl {
+                    AccessNote()
+                }
+
+                Group {
+                    ControlSection(title: EquipmentControl.Area.heating.title) {
+                        equipmentGrid(.heating)
+                    } trailing: {
+                        if let estimate = store.heating?.estimate, estimate.isShown {
+                            HeatingEstimateButton(estimate: estimate) {
+                                showingEstimate = true
+                            }
+                        }
+                    }
+
+                    ControlSection(title: EquipmentControl.Area.circulation.title) {
+                        WaterFlowControl(current: store.waterMode,
+                                         pending: store.pendingWaterMode,
+                                         isLocked: !store.auth.canControl) { mode in
+                            confirming = .waterMode(mode)
+                        }
+                        equipmentGrid(.circulation)
+                    }
+
+                    ControlSection(title: EquipmentControl.Area.features.title) {
+                        equipmentGrid(.features)
+                    }
+                }
+                .disabled(!store.isConnected)
+                .opacity(store.isConnected ? 1 : 0.5)
+
+                UpdateFooter(lastChange: store.lastSwitchChange)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .frame(maxWidth: StatusView.maximumWidth)
+            .frame(maxWidth: .infinity)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Equipment")
+        .navigationBarTitleDisplayMode(.inline)
+        .refreshable {
+            await store.refresh()
+        }
+        .confirmationDialog(confirming?.title ?? "",
+                            isPresented: Binding(isPresent: $confirming),
+                            titleVisibility: .visible,
+                            presenting: confirming) { request in
+            Button(request.action) {
+                perform(request)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { request in
+            Text(request.message)
+        }
+        .sheet(item: $setpointDevice) { device in
+            SetpointView(device: device)
+        }
+        .sheet(isPresented: $showingEstimate) {
+            HeatingEstimateView()
         }
     }
 
@@ -234,7 +283,18 @@ struct StatusView: View {
 private enum DashboardRoute: Hashable {
     case temperatureHistory(WaterBody)
     case saltHistory
+    case equipment
     case panel
+}
+
+/// Shown above controls a view-only account can't use.
+private struct AccessNote: View {
+    var body: some View {
+        Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 /// A change the user confirms before it's sent.
@@ -712,21 +772,27 @@ private struct TileButtonStyle: ButtonStyle {
 }
 
 /// The way into the controller's own menus, for everything the app doesn't show itself.
-private struct PanelControlLink: View {
+/// A page the dashboard opens, such as Equipment or Panel Control.
+private struct DashboardLink: View {
+    let route: DashboardRoute
+    let systemImage: String
+    let title: String
+    let subtitle: String
+
     @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 36
 
     var body: some View {
-        NavigationLink(value: DashboardRoute.panel) {
+        NavigationLink(value: route) {
             HStack(spacing: 12) {
-                Image(systemName: "dpad.fill")
+                Image(systemName: systemImage)
                     .font(.title3)
                     .foregroundStyle(.white)
                     .frame(width: iconSize, height: iconSize)
                     .background(Color.accentColor, in: .rect(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Panel Control")
+                    Text(title)
                         .font(.subheadline.weight(.semibold))
-                    Text("Every menu and setting on the controller")
+                    Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

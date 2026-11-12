@@ -165,6 +165,17 @@ public nonisolated struct StatusClient: Sendable {
         try await perform(.put, "water/mode/\(mode.rawValue)", token: token)
     }
 
+    /// Whether each task is on, and a spa preheat waiting for its time.
+    public func fetchTasks() async throws -> TaskStatus {
+        try await send(.get, "tasks")
+    }
+
+    /// Turns a task on or off; a spa preheat with `readyAt` waits until it must start to be
+    /// ready by then. Answers with the tasks as they are once the switches are asked for.
+    public func setTask(_ task: PoolTask, on: Bool, readyAt: Date? = nil, token: String) async throws -> TaskStatus {
+        try await send(.put, "tasks/\(task.rawValue)", token: token, body: TaskChange(on: on, readyAt: readyAt))
+    }
+
     /// Sets the temperature `device` drives `body` toward.
     public func setSetpoint(_ degrees: Int, device: HeatingDevice, body: WaterBody, token: String) async throws {
         try await perform(.put, "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)", token: token)

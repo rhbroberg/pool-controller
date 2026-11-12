@@ -39,17 +39,22 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
         public var rawRetentionDays: Int?
         public var zipCode: ZipCodeChoice?
         public var heatingEstimateDisplay: HeatingEstimate.Display?
+        public var spaHeatingRate: Double?
+        public var preheatMarginMinutes: Int?
 
         public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil, zipCode: ZipCodeChoice? = nil,
-                    heatingEstimateDisplay: HeatingEstimate.Display? = nil) {
+                    heatingEstimateDisplay: HeatingEstimate.Display? = nil, spaHeatingRate: Double? = nil,
+                    preheatMarginMinutes: Int? = nil) {
             self.timeZone = timeZone
             self.rawRetentionDays = rawRetentionDays
             self.zipCode = zipCode
             self.heatingEstimateDisplay = heatingEstimateDisplay
+            self.spaHeatingRate = spaHeatingRate
+            self.preheatMarginMinutes = preheatMarginMinutes
         }
 
         private enum CodingKeys: String, CodingKey {
-            case timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay
+            case timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, spaHeatingRate, preheatMarginMinutes
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -67,6 +72,8 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
             case nil: break
             }
             try container.encodeIfPresent(heatingEstimateDisplay?.rawValue, forKey: .heatingEstimateDisplay)
+            try container.encodeIfPresent(spaHeatingRate, forKey: .spaHeatingRate)
+            try container.encodeIfPresent(preheatMarginMinutes, forKey: .preheatMarginMinutes)
         }
     }
 
@@ -85,6 +92,11 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
     public let location: Location?
     /// How every app shows when heating will be done; nil from a server too old to estimate.
     public let heatingEstimateDisplay: HeatingEstimate.Display?
+    /// °F per hour the spa warms, for timing a scheduled preheat without a spa model; nil from a
+    /// server without tasks.
+    public let spaHeatingRate: Double?
+    /// Minutes a scheduled preheat starts earlier than it needs to; nil from a server without tasks.
+    public let preheatMarginMinutes: Int?
 }
 
 /// `GET /system/jobs`: one of the server's maintenance jobs and how its last run went.

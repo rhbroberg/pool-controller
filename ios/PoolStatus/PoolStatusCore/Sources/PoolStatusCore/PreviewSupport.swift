@@ -39,6 +39,52 @@ public nonisolated enum PreviewServer {
 
     /// The token signing in as `name` gets.
     public static func token(for name: String) -> String { "token-\(name)" }
+
+    /// Sets a task as PUT /tasks/{task} would, so a test can start from it.
+    public static func setTask(_ task: String, on: Bool, readyAt: Date? = nil) {
+        PreviewTasks.set(task, on: on, readyAt: readyAt)
+    }
+}
+
+/// The pretend server's tasks, which PUT /tasks/{task} changes: a spa preheat starts at once
+/// unless it's asked to be ready more than an hour from now, when it waits.
+private nonisolated enum PreviewTasks {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var on = ["pool": false, "spaPreheat": false, "spaParty": false]
+    nonisolated(unsafe) private static var readyAt: Date?
+    private static let lead: TimeInterval = 3600
+
+    static func set(_ task: String, on value: Bool, readyAt: Date?) {
+        lock.withLock {
+            switch (task, value) {
+            case ("spaPreheat", true) where (readyAt?.timeIntervalSinceNow ?? 0) > lead:
+                self.readyAt = readyAt
+            case ("spaPreheat", false), ("spaParty", false):
+                on["spaPreheat"] = false
+                on["spaParty"] = false
+                self.readyAt = nil
+            case ("spaParty", true):
+                on["spaPreheat"] = true
+                on["spaParty"] = true
+                self.readyAt = nil
+            default:
+                on[task] = value
+                if task == "spaPreheat" {
+                    self.readyAt = nil
+                }
+            }
+        }
+    }
+
+    static func json() -> String {
+        lock.withLock {
+            let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+            let scheduled = readyAt.map {
+                #"{"readyAt":"\#(iso.format($0))","startAt":"\#(iso.format($0.addingTimeInterval(-lead)))","leadMinutes":60,"leadFrom":"rate","fromTemperature":82,"setpoint":102,"requestedBy":"preview"}"#
+            } ?? "null"
+            return #"{"pool":{"on":\#(on["pool"] ?? false)},"spaPreheat":{"on":\#(on["spaPreheat"] ?? false),"scheduled":\#(scheduled)},"spaParty":{"on":\#(on["spaParty"] ?? false)},"dark":true}"#
+        }
+    }
 }
 
 /// Answers the API's GET routes with plausible readings for an evening with the filter running
@@ -113,6 +159,13 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
             }
             let name = token.hasPrefix("token-") ? String(token.dropFirst("token-".count)) : "preview"
             return (200, #"{"email":"\#(name)","role":"admin"}"#)
+        case ("GET", "tasks"):
+            return (200, PreviewTasks.json())
+        case ("PUT", _) where path.hasPrefix("tasks/"):
+            let fields = sent.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any] ?? [:]
+            let readyAt = (fields["readyAt"] as? String).flatMap { try? iso.parse($0) }
+            PreviewTasks.set(String(path.dropFirst("tasks/".count)), on: fields["on"] as? Bool ?? false, readyAt: readyAt)
+            return (200, PreviewTasks.json())
         case ("GET", _):
             return body(for: path, query: query).map { (200, $0) } ?? (404, #"{"message":"not in the preview"}"#)
         default:

@@ -54,6 +54,10 @@ public final class StatusStore {
     public private(set) var heating: HeatingStatus?
     /// Today's forecast; nil until it's been asked for, and from a server without weather.
     public private(set) var weather: WeatherReport?
+    /// Whether each task is on, and a spa preheat waiting for its time; nil from a server without tasks.
+    public private(set) var tasks: TaskStatus?
+    /// The state asked for each task the controller hasn't confirmed yet.
+    public private(set) var pendingTasks: [PoolTask: Bool] = [:]
     public private(set) var lastRefresh: Date?
     public private(set) var errorMessage: String?
     public private(set) var connection = Connection.connecting
@@ -309,6 +313,8 @@ public final class StatusStore {
             markConnected()
         case .heating(let pushed):
             heating = pushed
+        case .tasks(let pushed):
+            tasks = pushed
         }
         let waiters = pushWaiters.values
         pushWaiters.removeAll()
@@ -344,15 +350,19 @@ public final class StatusStore {
             // waits before asking again, so a server without weather isn't pestered
             let checkWeather = weatherCheckedAt.map { Date.now.timeIntervalSince($0) >= TimeInterval(Self.weatherRefreshSeconds) } ?? true
             async let weatherReport = checkWeather ? try? client.fetchWeather() : nil
+            // and so are tasks
+            async let taskStatus = try? client.fetchTasks()
             let fetched = try await client.fetchStatus()
             let fetchedHeating = await heatingStatus
             let fetchedWeather = await weatherReport
+            let fetchedTasks = await taskStatus
             guard number > newestApplied else {
                 return
             }
             newestApplied = number
             readings = fetched
             heating = fetchedHeating
+            tasks = fetchedTasks
             if checkWeather {
                 weatherCheckedAt = .now
                 weather = fetchedWeather ?? weather
@@ -394,6 +404,25 @@ public final class StatusStore {
                             notConfirmed: String(localized: "The controller hasn’t switched to \(mode.title) yet.", bundle: .module),
                             send: { client, token in try await client.setWaterMode(mode, token: token) },
                             confirmed: { waterMode == mode })
+    }
+
+    /// Turns `task` on or off, then waits for the controller to report its switches; a spa
+    /// preheat with `readyAt` may instead wait on the server until it must start.
+    public func setTask(_ task: PoolTask, on: Bool, readyAt: Date? = nil) async {
+        pendingTasks[task] = on
+        defer { pendingTasks[task] = nil }
+
+        let title = task.title
+        let notConfirmed = on
+            ? String(localized: "The controller hasn’t finished turning on \(title) yet.", bundle: .module)
+            : String(localized: "The controller hasn’t finished turning off \(title) yet.", bundle: .module)
+        // the pool may need two presses of the water flow key
+        await requestChange(.changeEquipment, timeout: task == .pool ? Self.waterModeTimeout : Self.confirmationTimeout,
+                            notConfirmed: notConfirmed,
+                            send: { client, token in
+                                tasks = try await client.setTask(task, on: on, readyAt: readyAt, token: token)
+                            },
+                            confirmed: { tasks?.isOn(task) == on || (on && task == .spaPreheat && tasks?.scheduledPreheat != nil) })
     }
 
     /// Saves each changed setpoint for `device`, then refreshes so the tiles show the new targets.
