@@ -16,6 +16,8 @@ const fakeClient = (overrides = {}) => {
         readings: [switchReading('pool', 1), switchReading('filter', 0)],
         fetchStatus: async () => client.readings,
         fetchHeating: async () => null,
+        tasks: null,
+        fetchTasks: async () => client.tasks,
         weatherRequests: 0,
         fetchWeather: async () => {
             client.weatherRequests += 1;
@@ -177,6 +179,65 @@ describe('status store', () => {
         assert.equal(store.isOn(filter), true);
         assert.equal(store.confirmedChanges, 1);
         assert.equal(store.errorMessage, null);
+    });
+
+    it('turns a task on and waits for the controller to report its switches', async () => {
+        const tasks = (pool) => ({ pool: { on: pool }, spaPreheat: { on: false, scheduled: null }, spaParty: { on: false }, dark: false });
+        const client = fakeClient({
+            setTask: async (task, on, readyAt, token) => {
+                client.calls.push(['setTask', task, on, readyAt, token]);
+                return tasks(false);
+            }
+        });
+        client.tasks = tasks(false);
+        const store = newStore(client);
+        store.save({ email: 'rick', token: 't', role: 'user' });
+        await store.refresh();
+
+        const change = store.setTask('pool', true);
+        assert.equal(store.pendingTasks.pool, true);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        client.tasks = tasks(true);
+        await change;
+
+        assert.deepEqual(client.calls, [['setTask', 'pool', true, null, 't']]);
+        assert.equal(store.pendingTasks.pool, undefined);
+        assert.equal(store.tasks.pool.on, true);
+        assert.equal(store.confirmedChanges, 1);
+        assert.equal(store.errorMessage, null);
+    });
+
+    it('takes a scheduled preheat as done once the server has it waiting', async () => {
+        const readyAt = new Date(Date.now() + 5 * 3600 * 1000);
+        const scheduled = { pool: { on: false }, spaParty: { on: false }, dark: true,
+            spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: new Date(readyAt - 3600000).toISOString(), leadMinutes: 60, leadFrom: 'rate' } } };
+        const client = fakeClient({
+            setTask: async (task, on, when, token) => {
+                client.calls.push(['setTask', task, on, when, token]);
+                return scheduled;
+            }
+        });
+        client.tasks = scheduled;
+        const store = newStore(client);
+        store.save({ email: 'rick', token: 't', role: 'user' });
+        await store.setTask('spaPreheat', true, readyAt);
+        assert.deepEqual(client.calls, [['setTask', 'spaPreheat', true, readyAt, 't']]);
+        assert.equal(store.tasks.spaPreheat.scheduled.leadMinutes, 60);
+        assert.equal(store.errorMessage, null);
+    });
+
+    it('says what the server couldn’t do with a task, and that signing in comes first', async () => {
+        const client = fakeClient({
+            setTask: async () => { throw new ApiError('server', { status: 409, message: 'the panel has not shown the heater mode yet; try again shortly' }); }
+        });
+        const store = newStore(client);
+        await store.setTask('spaParty', true);
+        assert.match(store.errorMessage, /sign in/i);
+
+        store.save({ email: 'rick', token: 't', role: 'user' });
+        await store.setTask('spaParty', true);
+        assert.match(store.errorMessage, /heater mode/);
+        assert.deepEqual(store.pendingTasks, {});
     });
 
     it('signs out when the server no longer accepts the token, and says so until the next sign-in', async () => {

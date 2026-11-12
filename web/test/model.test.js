@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -159,5 +159,41 @@ describe('about line', () => {
     it('shows a dash for a build it doesn’t know', () => {
         assert.equal(aboutLine(null, null), 'Web — · Server — · API —');
         assert.equal(aboutLine('a1b2c3d', { service: 'pool-controller', version: '1.0.0' }), 'Web a1b2c3d · Server — · API —');
+    });
+});
+
+describe('tasks', () => {
+    const scheduled = (readyAt, startAt) => ({
+        pool: { on: true },
+        spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: startAt.toISOString(), leadMinutes: 90, leadFrom: 'rate' } },
+        spaParty: { on: false },
+        dark: true
+    });
+
+    it('lists pool, spa preheat and spa party, each on as the server says', () => {
+        assert.deepEqual(TASKS.map((task) => task.id), ['pool', 'spaPreheat', 'spaParty']);
+        const now = new Date(2026, 10, 12, 15, 0);
+        const tasks = scheduled(new Date(2026, 10, 12, 19, 30), new Date(2026, 10, 12, 18, 0));
+        assert.equal(taskOn(tasks, 'pool'), true);
+        assert.equal(taskOn(tasks, 'spaPreheat'), false);
+        assert.equal(taskOn(null, 'pool'), false);
+        assert.ok(scheduledPreheat(tasks));
+        const text = scheduleText(scheduledPreheat(tasks), now);
+        assert.match(text.ready, /^Ready by 7:30/);
+        assert.match(text.start, /^Starts about 6:00/);
+    });
+
+    it('says when a preheat is ready on another day, and when it is starting now', () => {
+        const now = new Date(2026, 10, 12, 18, 30);
+        const tasks = scheduled(new Date(2026, 10, 13, 7, 0), new Date(2026, 10, 12, 18, 0));
+        const text = scheduleText(scheduledPreheat(tasks), now);
+        assert.match(text.ready, /^Ready by Fri 7:00/);
+        assert.equal(text.start, 'Starting now');
+    });
+
+    it('has no schedule once the preheat is on', () => {
+        const tasks = scheduled(new Date(), new Date());
+        tasks.spaPreheat.on = true;
+        assert.equal(scheduledPreheat(tasks), null);
     });
 });

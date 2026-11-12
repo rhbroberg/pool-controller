@@ -145,6 +145,44 @@ export const WATER_MODES = [
 export const waterModeInfo = (id) => WATER_MODES.find((mode) => mode.id === id) || null;
 
 /**
+ * the everyday jobs offered in place of single switches, each on while the switches behind it
+ * are, as the server reads them
+ **/
+export const TASKS = [
+    { id: 'pool', title: 'Pool', summary: 'Filter running, water in spillover', icon: 'waves', tint: 'blue' },
+    { id: 'spaPreheat', title: 'Spa Preheat', summary: 'Spa filter, heater and heat pump', icon: 'thermometer', tint: 'orange' },
+    { id: 'spaParty', title: 'Spa Party', summary: 'Spa preheat with the blower, and lights after dark', icon: 'bubbles', tint: 'pink' }
+];
+
+export const taskInfo = (id) => TASKS.find((task) => task.id === id) || null;
+
+/** whether `id` is on in GET /tasks's answer */
+export const taskOn = (tasks, id) => Boolean(tasks && tasks[id] && tasks[id].on);
+
+/** a spa preheat waiting for its time, or null; not once it has started */
+export const scheduledPreheat = (tasks) => tasks && tasks.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
+    ? tasks.spaPreheat.scheduled
+    : null;
+
+/** "7:30 PM", or "Sat 7:30 AM" when it isn't the same day as now */
+export const taskTime = (date, now = new Date()) => {
+    const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return date.toDateString() === now.toDateString()
+        ? time
+        : `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`;
+};
+
+/** { ready: "Ready by 7:30 PM", start: "Starts about 6:00 PM" } for a scheduled preheat */
+export const scheduleText = (scheduled, now = new Date()) => {
+    const readyAt = new Date(scheduled.readyAt);
+    const startAt = new Date(scheduled.startAt);
+    return {
+        ready: `Ready by ${taskTime(readyAt, now)}`,
+        start: startAt <= now ? 'Starting now' : `Starts about ${taskTime(startAt, now)}`
+    };
+};
+
+/**
  * spillover if that switch is on, otherwise spa if it is, otherwise pool; unknown until the
  * server has reported the pool switch
  **/

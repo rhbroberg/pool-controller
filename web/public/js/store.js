@@ -1,7 +1,7 @@
 // The pool's state as the page shows it: readings, heating, the connection and the sign-in.
 
 import { ApiError, isAbort, toReading } from './api.js';
-import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo } from './model.js';
+import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo, taskInfo, taskOn, scheduledPreheat } from './model.js';
 import * as prefs from './prefs.js';
 
 export const REFRESH_SECONDS = 15;
@@ -41,6 +41,10 @@ export class StatusStore {
         this.heating = null;
         // today's forecast; null until it's been asked for or from a server without weather
         this.weather = null;
+        // whether each task is on, and a spa preheat waiting for its time; null from a server without tasks
+        this.tasks = null;
+        // the state asked for each task the controller hasn't confirmed yet
+        this.pendingTasks = {};
         this.weatherCheckedAt = 0;
         this.lastRefresh = null;
         this.errorMessage = null;
@@ -236,6 +240,12 @@ export class StatusStore {
             this.heating = data;
             this.pushesApplied += 1;
             this.changed();
+        } else if (name === 'tasks' && data && typeof data === 'object') {
+            this.tasks = data;
+            this.pushesApplied += 1;
+            // a task is confirmed by this push rather than the readings before it
+            this.pushWaiters.forEach((wake) => wake(true));
+            this.changed();
         }
     }
 
@@ -295,6 +305,8 @@ export class StatusStore {
         try {
             // heating is extra detail; a server that doesn't offer it still counts as connected
             const heating = this.client.fetchHeating().catch(() => null);
+            // and so are tasks
+            const tasks = this.client.fetchTasks().catch(() => null);
             // weather is extra detail too; a failed check keeps the last forecast and, like a
             // successful one, waits before asking again, so a server without weather isn't pestered
             const weather = Date.now() - this.weatherCheckedAt >= WEATHER_REFRESH_SECONDS * 1000
@@ -305,9 +317,11 @@ export class StatusStore {
                 : null;
             const readings = await this.client.fetchStatus();
             const fetchedHeating = await heating;
+            const fetchedTasks = await tasks;
             if (this.pushesApplied === pushesBefore) {
                 this.readings = readings;
                 this.heating = fetchedHeating;
+                this.tasks = fetchedTasks;
             }
             if (weather) {
                 this.weather = await weather;
@@ -533,6 +547,36 @@ export class StatusStore {
         } finally {
             const { [control.name]: _, ...rest } = this.pending; // eslint-disable-line no-unused-vars
             this.pending = rest;
+            this.changed();
+        }
+    }
+
+    /**
+     * turns a task on or off, then waits for the controller to report its switches; a spa
+     * preheat with readyAt (a Date) may instead wait on the server until it must start
+     **/
+    async setTask(task, on, readyAt = null) {
+        if (!this.credentials) {
+            this.errorMessage = new ApiError('unauthorized').message;
+            this.changed();
+            return;
+        }
+        this.pendingTasks = { ...this.pendingTasks, [task]: on };
+        this.changed();
+        const title = taskInfo(task) ? taskInfo(task).title : task;
+        const reached = () => taskOn(this.tasks, task) === on || (on && task === 'spaPreheat' && scheduledPreheat(this.tasks) !== null);
+        try {
+            this.tasks = await this.client.setTask(task, on, readyAt, this.credentials.token);
+            // the pool may need two presses of the water flow key
+            const confirmed = await this.awaitConfirmation(reached, task === 'pool' ? WATER_MODE_TIMEOUT_MS : CONFIRMATION_TIMEOUT_MS);
+            if (confirmed === false) {
+                this.errorMessage = `The controller hasn’t finished turning ${on ? 'on' : 'off'} ${title} yet.`;
+            }
+        } catch (error) {
+            await this.handleControlError(error, 'Sign in again to control equipment.', 'Your account can’t change equipment.');
+        } finally {
+            const { [task]: _, ...rest } = this.pendingTasks; // eslint-disable-line no-unused-vars
+            this.pendingTasks = rest;
             this.changed();
         }
     }

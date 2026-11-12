@@ -9,6 +9,8 @@ import { relative } from '../format.js';
 import { topbar, formSection, formRow, actionRow, linkRow, select, spinner, renderer } from '../ui.js';
 
 const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
+const SPA_RATE_CHOICES = [5, 10, 15, 20, 30, 40, 60];
+const PREHEAT_MARGIN_CHOICES = [0, 10, 15, 30, 45, 60];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
 
@@ -172,6 +174,33 @@ export const mountMaintenance = (root, app) => {
                 })));
     };
 
+    /** what times a scheduled spa preheat; a server without tasks doesn't say */
+    const preheatSection = () => {
+        if (typeof settings.spaHeatingRate !== 'number' || typeof settings.preheatMarginMinutes !== 'number') {
+            return null;
+        }
+        const keeping = (choices, current) => [...new Set([...choices, current])].sort((a, b) => a - b);
+        const minutes = (count) => count === 0 ? 'No margin' : count % 60 === 0 ? `${count / 60} hr` : `${count} min`;
+        return formSection({
+            header: 'Spa Preheat',
+            footer: 'A preheat scheduled to be ready by a time starts only as early as it must. Until the server learns how the spa warms, it times it with this rate, and always starts this much earlier.'
+        },
+        formRow(h('span', { class: 'label' }, 'Spa Heats'),
+            select({
+                label: 'Spa heats',
+                value: String(settings.spaHeatingRate),
+                options: keeping(SPA_RATE_CHOICES, settings.spaHeatingRate).map((rate) => ({ value: String(rate), label: `${rate}° an hour` })),
+                onChange: (value) => apply({ spaHeatingRate: Number(value) })
+            })),
+        formRow(h('span', { class: 'label' }, 'Start Early By'),
+            select({
+                label: 'Start early by',
+                value: String(settings.preheatMarginMinutes),
+                options: keeping(PREHEAT_MARGIN_CHOICES, settings.preheatMarginMinutes).map((count) => ({ value: String(count), label: minutes(count) })),
+                onChange: (value) => apply({ preheatMarginMinutes: Number(value) })
+            })));
+    };
+
     const locationSection = () => {
         const saved = settings.location ? settings.location.zipCode : '';
         const draft = zipDraft === null ? saved : zipDraft;
@@ -239,6 +268,7 @@ export const mountMaintenance = (root, app) => {
                 h('div', { class: 'form' },
                     settings ? locationSection() : null,
                     settings ? historySection() : null,
+                    settings ? preheatSection() : null,
                     jobs.length
                         ? formSection({ header: 'Maintenance Jobs', footer: 'These run on their own. Run Now brings them up to date straight away.' }, ...jobs.map(jobRow))
                         : null,

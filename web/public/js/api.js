@@ -139,6 +139,17 @@ export class Client {
         return this.send('GET', 'heating');
     }
 
+    /** whether each task is on, and a spa preheat waiting for its time */
+    fetchTasks() {
+        return this.send('GET', 'tasks');
+    }
+
+    /** turns a task on or off; a spa preheat with readyAt (a Date) waits until it must start */
+    setTask(task, on, readyAt, token) {
+        const body = readyAt ? { on, readyAt: readyAt.toISOString() } : { on };
+        return this.send('PUT', `tasks/${task}`, { token, body });
+    }
+
     /** today's forecast at the pool's zip code: { configured, location, today, fetchedAt, stale } */
     async fetchWeather() {
         const weather = await this.send('GET', 'weather');

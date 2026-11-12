@@ -294,6 +294,7 @@ const fakeClient = (readings) => {
             return client.readings;
         },
         fetchHeating: async () => ({ minimum: 65 }),
+        fetchTasks: async () => null,
         fetchWeather: async () => null,
         setDevice: async (name, on) => client.calls.push(['setDevice', name, on])
     };

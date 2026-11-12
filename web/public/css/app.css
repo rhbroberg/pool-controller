@@ -427,8 +427,16 @@ a {
         align-items: start;
     }
 
-    .dashboard-controls > .span-all {
+    .dashboard-controls > .span-all,
+    .dashboard-controls > .task-section {
         grid-column: 1 / -1;
+    }
+
+    /* the three tasks side by side, each as wide as a group of controls */
+    .task-section > .section-body {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
     }
 
     .dashboard-controls .tile-grid {
@@ -886,6 +894,125 @@ a {
 
 .segmented button:disabled {
     color: var(--secondary);
+}
+
+/* MARK: tasks */
+
+.task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--tile-radius);
+}
+
+.task-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 9px;
+    color: var(--tint);
+    background: color-mix(in srgb, var(--tint) 15%, transparent);
+}
+
+.task-row.on .task-icon,
+.task-row.scheduled .task-icon {
+    color: #fff;
+    background: var(--tint);
+}
+
+.task-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.task-text strong {
+    font-size: 17px;
+}
+
+.task-status {
+    font-size: 12px;
+    color: var(--secondary);
+}
+
+.task-status.on {
+    color: var(--green);
+    font-weight: 600;
+}
+
+.task-status.scheduled {
+    color: var(--blue);
+    font-weight: 600;
+}
+
+.link-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.link-button:disabled {
+    color: var(--secondary);
+    cursor: default;
+}
+
+.task-note {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--secondary);
+}
+
+.switch {
+    position: relative;
+    width: 51px;
+    height: 31px;
+    flex: none;
+    padding: 0;
+    border: none;
+    border-radius: 16px;
+    background: var(--separator);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.switch.on {
+    background: var(--tint, var(--green));
+}
+
+.switch .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.switch.on .knob {
+    transform: translateX(20px);
+}
+
+.switch:disabled {
+    opacity: 0.5;
+    cursor: default;
 }
 
 .panel-link {
