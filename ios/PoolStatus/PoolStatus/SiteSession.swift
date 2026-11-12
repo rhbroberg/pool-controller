@@ -13,6 +13,9 @@ final class SiteSession {
     private(set) var openID: Site.ID?
     /// The open site's store, made fresh each time a site opens.
     private(set) var store: StatusStore?
+    /// Whether the page for adding a site is up, over whatever is on screen, so adding works the
+    /// same from the list, a site's sign-in page or its dashboard.
+    var isAddingSite = false
 
     @ObservationIgnored private let makeStore: MakeStore
     /// What checks that a new site's server answers.

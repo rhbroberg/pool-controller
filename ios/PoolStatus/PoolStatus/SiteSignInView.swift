@@ -178,7 +178,8 @@ struct SiteSignInView: View {
     }
 }
 
-/// Every site, the open one checked, and the way back to the list; the menu under a site's title.
+/// Every site, the open one checked, a way to add another, and the way back to the list; the
+/// menu under a site's title, the same with one site as with many.
 struct SiteSwitcherMenu: View {
     @Environment(SiteSession.self) private var session
 
@@ -195,6 +196,9 @@ struct SiteSwitcherMenu: View {
             }
         }
         Divider()
+        Button("Add Site…", systemImage: "plus") {
+            session.isAddingSite = true
+        }
         Button("All Sites", systemImage: "list.bullet") {
             session.showSites()
         }

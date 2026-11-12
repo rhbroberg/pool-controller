@@ -8,7 +8,6 @@ struct SitesView: View {
 
     @Environment(SiteSession.self) private var session
     @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
-    @State private var adding = false
     @State private var editing: Site?
     @State private var removing: Site?
 
@@ -61,7 +60,7 @@ struct SitesView: View {
                     } description: {
                         Text("Add the server attached to your pool controller to get started.")
                     } actions: {
-                        Button("Add Site") { adding = true }
+                        Button("Add Site") { session.isAddingSite = true }
                             .buttonStyle(.borderedProminent)
                     }
                 }
@@ -69,12 +68,7 @@ struct SitesView: View {
             .navigationTitle("Sites")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Add Site", systemImage: "plus") { adding = true }
-                }
-            }
-            .sheet(isPresented: $adding) {
-                AddSiteView { site in
-                    session.open(site)
+                    Button("Add Site", systemImage: "plus") { session.isAddingSite = true }
                 }
             }
             .sheet(item: $editing) { site in

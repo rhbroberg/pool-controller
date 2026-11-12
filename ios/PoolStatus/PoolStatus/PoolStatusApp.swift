@@ -31,6 +31,12 @@ struct PoolStatusApp: App {
             }
             .environment(session)
             .animation(.default, value: session.openID)
+            .sheet(isPresented: Binding(get: { session.isAddingSite }, set: { session.isAddingSite = $0 })) {
+                AddSiteView { site in
+                    session.open(site)
+                }
+                .environment(session)
+            }
             .onChange(of: session.watchContext) { _, context in
                 watchLink.send(context)
             }

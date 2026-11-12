@@ -92,10 +92,8 @@ struct AddSiteView: View {
             .navigationTitle("Add Site")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !session.sites.sites.isEmpty {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                    }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
             }
             .sheet(isPresented: $isScanningNetwork) {

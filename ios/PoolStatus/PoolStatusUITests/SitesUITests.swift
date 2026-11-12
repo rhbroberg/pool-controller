@@ -27,6 +27,30 @@ final class SitesUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
     }
 
+    func testAddingASecondPoolKeepsTheFirstSignedIn() {
+        let app = launch(reset: true)
+        app.buttons["Add Site"].firstMatch.tap()
+        type("Home", into: app.textFields["Pool"])
+        type("home.test:3000", into: app.textFields["192.168.1.20:3000"])
+        app.buttons["Connect"].tap()
+        signIn(app, as: "tester", password: "secret")
+        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+
+        // with one pool, another is added from its menu as it would be with several, and no
+        // warning comes first
+        openFromMenu(app, current: "Home", choose: "Add Site…")
+        type("Lake", into: app.textFields["Pool"])
+        type("lake.test:3000", into: app.textFields["192.168.1.20:3000"])
+        app.buttons["Connect"].tap()
+        XCTAssertTrue(app.navigationBars["Lake"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.textFields["Account Name"].exists)
+
+        openFromMenu(app, current: "Lake", choose: "All Sites")
+        XCTAssertTrue(row(app, "Home").waitForExistence(timeout: timeout))
+        XCTAssertTrue(row(app, "Home").label.contains("Signed in as tester"))
+        XCTAssertTrue(row(app, "Lake").label.contains("Signed out"))
+    }
+
     func testAPoolWhoseServerDoesNotAnswerIsNotAdded() {
         let app = launch(reset: true)
         app.buttons["Add Site"].firstMatch.tap()
