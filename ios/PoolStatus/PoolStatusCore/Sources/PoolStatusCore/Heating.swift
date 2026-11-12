@@ -1,7 +1,7 @@
 import Foundation
 
 /// The pool and the spa.
-public nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Sendable {
+public nonisolated enum WaterBody: String, CaseIterable, Identifiable, Codable, Sendable {
     case pool, spa
 
     public var id: String { rawValue }
@@ -225,8 +225,8 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
 }
 
 /// `GET /heating`: every setpoint, and what each heating device is doing with them.
-public nonisolated struct HeatingStatus: Decodable, Sendable {
-    public struct Device: Decodable, Sendable {
+public nonisolated struct HeatingStatus: Decodable, Sendable, Equatable {
+    public struct Device: Decodable, Sendable, Equatable {
         /// Switched on (the heater in Auto); nil until the controller reports it.
         public let enabled: Bool?
         /// Producing heat. An enabled device stops once its water reaches the setpoint and
@@ -275,5 +275,10 @@ public nonisolated struct HeatingStatus: Decodable, Sendable {
 
     public func device(_ device: HeatingDevice) -> Device? {
         devices[device.rawValue]
+    }
+
+    /// The water temperature the heating devices see for `body`, while water flows to it.
+    public func temperature(of body: WaterBody) -> Double? {
+        HeatingDevice.allCases.lazy.compactMap { self.device($0) }.first { $0.body == body && $0.temperature != nil }?.temperature
     }
 }
