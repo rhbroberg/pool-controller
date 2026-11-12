@@ -2834,16 +2834,19 @@ components:
           enum:
             - ready
             - unreachable
-            - settling
             - noModel
             - noReading
             - insufficientData
           description: "ready: minutes and readyAt say when. unreachable: the air is too
-            cold for the sources to reach the setpoint (reachesAtMost). settling: the
-            pump has only just started and the sensor still shows the water from
-            before. noModel: no model has been saved for this body. noReading: the
-            water or air temperature isn't known. insufficientData: the model has
-            nothing for a source that is on."
+            cold for the sources to reach the setpoint (reachesAtMost). noModel: no
+            model has been saved for this body. noReading: the water or air
+            temperature isn't known. insufficientData: the model has nothing for a
+            source that is on. Older servers sent settling, with no estimate, for the
+            first minutes after the pump started."
+        settling:
+          type: boolean
+          description: the pump has only just started, so the sensor may still show the
+            water that sat in the pipes and the estimate may change once it settles
         body:
           type: string
         temperature:

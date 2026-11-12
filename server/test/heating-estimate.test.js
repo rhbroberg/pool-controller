@@ -220,21 +220,24 @@ describe('heating estimates', () => {
     });
 
     it('estimates the time to the setpoint while a heat source is calling for heat', async () => {
-        // the water has not settled for the first few seconds after the pump starts
+        // for the first few seconds after the pump starts the water hasn't settled, but there's
+        // an estimate all the same
         await api('PUT', '/devices/filter/false', { token: admin });
         await eventually(async () => (await reading(api, 'filter')) === false, { message: 'the filter to stop' });
         assert.equal((await api('GET', '/heating')).body.estimate, null, 'nothing to estimate with the pump off');
         await api('PUT', '/devices/filter/true', { token: admin });
         const settling = await eventually(async () => {
             const body = (await api('GET', '/heating')).body;
-            return body.estimate && body.estimate.status === 'settling' ? body.estimate : undefined;
-        }, { message: 'the estimate to wait for the water to settle', timeoutMs: 5000, intervalMs: 50 });
+            return body.estimate && body.estimate.settling ? body.estimate : undefined;
+        }, { message: 'the estimate while the water settles', timeoutMs: 5000, intervalMs: 50 });
+        assert.equal(settling.status, 'ready', JSON.stringify(settling));
+        assert.ok(settling.minutes > 0, `${settling.minutes} minutes while settling`);
         assert.equal(settling.model.windows > 100, true);
         assert.equal(typeof settling.rate.net, 'number');
 
         const estimate = await eventually(async () => {
             const body = (await api('GET', '/heating')).body;
-            return body.estimate && body.estimate.status !== 'settling' ? body.estimate : undefined;
+            return body.estimate && !body.estimate.settling ? body.estimate : undefined;
         }, { message: 'the settled estimate', timeoutMs: 15000 });
         assert.equal(estimate.status, 'ready', JSON.stringify(estimate));
         assert.equal(estimate.body, 'pool');
