@@ -11,8 +11,10 @@ public final class StatusStore {
         case disconnected
     }
 
-    /// Waits for a duration; the tests pass one that doesn't.
-    public typealias Sleep = (Duration) async throws -> Void
+    /// Waits for a duration; the tests pass one that doesn't. Concurrent so the caller hops back
+    /// to the main actor afterwards: called as a nonsending function, a wait that really suspended
+    /// carried on on a background thread and crashed the next read of the store.
+    public typealias Sleep = @concurrent (Duration) async throws -> Void
 
     public static let refreshSeconds = 15
     /// While live updates arrive, polling only catches anything they missed.
@@ -88,7 +90,7 @@ public final class StatusStore {
          session: URLSession = .shared,
          credentials: CredentialStore = KeychainCredentialStore(),
          live: (any LiveTransport)? = nil,
-         sleep: @escaping Sleep = { try await Task.sleep(for: $0) }) {
+         sleep: @escaping Sleep = clockSleep) {
         let address = serverAddress ?? defaults.string(forKey: SettingsKey.serverAddress) ?? ""
         self.serverAddress = address
         self.defaults = defaults
@@ -96,6 +98,11 @@ public final class StatusStore {
         self.live = live
         self.sleep = sleep
         auth = AuthSession(client: StatusClient(serverAddress: address, session: session), store: credentials)
+    }
+
+    /// Waits on the real clock.
+    @concurrent public nonisolated static func clockSleep(_ duration: Duration) async throws {
+        try await Task.sleep(for: duration)
     }
 
     public var client: StatusClient { StatusClient(serverAddress: serverAddress, session: session) }

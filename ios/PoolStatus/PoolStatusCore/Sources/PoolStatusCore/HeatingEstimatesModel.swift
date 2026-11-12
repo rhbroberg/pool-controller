@@ -30,10 +30,10 @@ public final class HeatingEstimatesModel {
     /// Said once after saving.
     public private(set) var savedMessage: String?
     @ObservationIgnored private var rangeChosen = false
-    @ObservationIgnored private let sleep: (Duration) async throws -> Void
+    @ObservationIgnored private let sleep: StatusStore.Sleep
 
     public init(now: Date = .now, calendar: Calendar = .current,
-                sleep: @escaping (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+                sleep: @escaping StatusStore.Sleep = StatusStore.clockSleep) {
         from = calendar.date(byAdding: .year, value: -1, to: now) ?? now
         to = now
         self.sleep = sleep

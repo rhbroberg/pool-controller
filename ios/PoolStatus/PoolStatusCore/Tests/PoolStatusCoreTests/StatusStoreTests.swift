@@ -216,6 +216,30 @@ struct SignedInTests {
         #expect(waits.value.isEmpty)
     }
 
+    @Test("waits for a slow controller with the real clock, as the watch does without live updates")
+    func confirmsAfterWaiting() async throws {
+        let statusChecks = Shared(0)
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/login"): return .ok(Fixture.login("operator"))
+            case ("PUT", "devices/lights/true"): return .ok("{}")
+            case ("GET", "status"):
+                statusChecks.value += 1
+                let on = statusChecks.value > 1
+                return .ok(Fixture.status(Fixture.switches(on ? ["lights"] : [], off: on ? [] : ["lights"])))
+            default: return .status(404)
+            }
+        }
+        let store = StatusStore(serverAddress: server.address, defaults: UserDefaults(suiteName: "PoolStatusTests")!,
+                                session: server.session, credentials: InMemoryCredentialStore())
+        try await store.auth.signIn(name: "operator", password: "operator-password")
+
+        let lights = try #require(EquipmentControl.control(named: .lights))
+        await store.setControl(lights, on: true)
+        #expect(store.isOn(lights))
+        #expect(store.confirmedChanges == 1)
+    }
+
     @Test("says so when the controller doesn't confirm a change in time")
     func unconfirmed() async throws {
         let server = StubServer { method, path, _ in
