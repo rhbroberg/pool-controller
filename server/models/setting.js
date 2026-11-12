@@ -22,7 +22,9 @@ var SettingSchema = new mongoose.Schema({
     // whether accounts may sign in with a name and password
     passwordSignIn: { type: Boolean, default: true },
     // ask: someone without an account or invitation becomes a request for an admin; refuse: turned away
-    signInRequests: { type: String, enum: ['ask', 'refuse'], default: 'ask' }
+    signInRequests: { type: String, enum: ['ask', 'refuse'], default: 'ask' },
+    // how apps show when heating will be done: the minutes left, or the time of day it will be ready
+    heatingEstimateDisplay: { type: String, enum: ['remaining', 'readyAt'], default: 'remaining' }
 });
 
 var Setting = mongoose.model('settings', SettingSchema);

@@ -17,6 +17,7 @@ const panelService = require('./service/PanelService');
 const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
 const heatingService = require('./service/HeatingService');
+const heatingModelService = require('./service/HeatingModelService');
 const settingsService = require('./service/SettingsService');
 const externalAuthService = require('./service/ExternalAuthService');
 const liveService = require('./service/LiveService');
@@ -82,8 +83,11 @@ var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map
 // the API waits for this, so the default admin account exists before the first sign-in and
 // history uses the configured time zone
 const startupChecked = mongoose.connection.asPromise()
-    .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), externalAuthService.load(), syncIndexes()]))
+    .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), externalAuthService.load(), heatingModelService.load(), syncIndexes()]))
     .catch((e) => logger.error(`startup checks failed: ${e}`));
+
+// a new model changes every estimate at once
+heatingModelService.onChange(() => liveService.heatingChanged());
 
 scheduler.register(rollupsJob);
 scheduler.register(retentionJob);
@@ -92,6 +96,10 @@ startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
 // days begin at a different time in a new zone, so the daily rollups are redone right away, and
 // the weather's days with them; a new zip code needs its forecast straight away too
 settingsService.onChange((changes) => {
+    // apps show the estimate as the server's settings say, and the zone sets the time of day it ends
+    if (changes.heatingEstimateDisplay || changes.timeZone) {
+        liveService.heatingChanged();
+    }
     if (changes.timeZone) {
         scheduler.runNow(rollupsJob.name, 'time zone change').catch((e) => logger.error(`rollups after a time zone change: ${e.message}`));
     }
@@ -227,6 +235,8 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
                     nowDisabled: stored.diffs.nowDisabled
                 }, timestamp);
             }
+            // the moment a pump starts matters to the heating estimate
+            heatingService.stateChanged();
             // always update the lastUpdated timestamp
             // maybe update streamers with 'last updated'
             verifyControlRequests();
@@ -473,7 +483,8 @@ heatingService.registerStateSource(() => ({
         heatpump: interpreter.statusMask === 0 ? undefined : isSwitchOn('valve4')
     },
     heaterFiring: interpreter.enabledSwitches.includes('heater1'),
-    temperatures: { pool: knownTemp('pool temp'), spa: knownTemp('spa temp') }
+    temperatures: { pool: knownTemp('pool temp'), spa: knownTemp('spa temp') },
+    ambient: knownTemp('ambient')
 }));
 if (driver && driver.setpoints) {
     heatingService.registerSetpoints(driver.setpoints);
@@ -488,6 +499,7 @@ systemService.registerResetListener(() => {
     waterModeRequest = undefined;
     // the reset erased the settings along with everything else
     settingsService.load().catch((e) => logger.error(`could not reload settings: ${e.message}`));
+    heatingModelService.load().then(() => liveService.heatingChanged()).catch((e) => logger.error(`could not reload the heating model: ${e.message}`));
     externalAuthService.load().catch((e) => logger.error(`could not reload sign-in settings: ${e.message}`));
 });
 

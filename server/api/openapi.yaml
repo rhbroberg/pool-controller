@@ -423,6 +423,184 @@ paths:
               schema:
                 $ref: "#/components/schemas/Heating"
       x-swagger-router-controller: Heating
+  /heating/model:
+    get:
+      tags:
+        - Heating
+      description: "what the server has learned from history about how each body of
+        water warms and cools, which every heating estimate uses, with the range a
+        scan covers by default (all of history except what the simulator made, from
+        2026 on). model is null until one has been saved."
+      operationId: getHeatingModel
+      responses:
+        "200":
+          description: the model in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingModelState"
+      x-swagger-router-controller: Heating
+    put:
+      tags:
+        - Heating
+      description: keeps a previewed model, exactly as previewed, as the one every
+        estimate uses from now on. The model it replaces is kept as a record.
+      operationId: saveHeatingModel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeatingModelSave"
+        required: true
+      x-codegen-request-body-name: request
+      responses:
+        "200":
+          description: the model now in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingModelState"
+        "400":
+          description: the preview has no body of water with enough windows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
+          description: no such preview; it may have been replaced or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Heating
+  /heating/model/scan:
+    post:
+      tags:
+        - Heating
+      description: looks through stored history from `from` up to `to` for the windows
+        to learn from, stretches in which a body of water had the same heat sources
+        running while its temperature was followed. By default the range is all of
+        history before the simulator's (2026). Answers at once; the scan goes on in
+        the maintenance job queue and GET shows how it is going.
+      operationId: startHeatingScan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeatingScanRequest"
+        required: false
+      x-codegen-request-body-name: request
+      responses:
+        "202":
+          description: the scan, waiting for or under way in the job queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingScan"
+        "400":
+          description: a date that isn't one, or a range that ends before it starts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: history is already being scanned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Heating
+    get:
+      tags:
+        - Heating
+      description: the scan under way, or the last one since the server started
+      operationId: getHeatingScan
+      responses:
+        "200":
+          description: the scan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingScan"
+        "404":
+          description: history hasn't been scanned since the server started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Heating
+  /heating/model/scan/windows:
+    get:
+      tags:
+        - Heating
+      description: every window the last finished scan found, with whether it is
+        suitable to learn from and, if not, why
+      operationId: getHeatingWindows
+      responses:
+        "200":
+          description: the windows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingWindows"
+        "409":
+          description: there is no finished scan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Heating
+  /heating/model/preview:
+    post:
+      tags:
+        - Heating
+      description: "fits a model to the suitable windows of the last scan that aren't
+        left out and answers with it beside the model in use and what it says about
+        warming at a few air temperatures. Nothing is kept until a preview is saved
+        with PUT /heating/model."
+      operationId: previewHeatingModel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeatingModelRequest"
+        required: true
+      x-codegen-request-body-name: request
+      responses:
+        "200":
+          description: the calculated model, held for saving
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatingModelPreview"
+        "400":
+          description: a kind of window the server doesn't know
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: there is no finished scan, or it has been replaced by a newer one
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: Heating
   "/heating/setpoints/{body}/{device}":
     get:
       tags:
@@ -2284,6 +2462,13 @@ components:
               $ref: "#/components/schemas/HeatingDevice"
             heatpump:
               $ref: "#/components/schemas/HeatingDevice"
+        estimate:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/HeatingEstimate"
+          nullable: true
+          description: how long until the water reaches its setpoint; null unless the
+            pump runs and a heat source is calling for heat
     DeviceSetpoints:
       type: object
       properties:
@@ -2482,6 +2667,13 @@ components:
             - $ref: "#/components/schemas/Location"
           nullable: true
           description: where weather is fetched for, or null when no zip code is set
+        heatingEstimateDisplay:
+          type: string
+          enum:
+            - remaining
+            - readyAt
+          description: how every app shows when heating will be done; the minutes left,
+            or the time of day it will be ready
     SettingsUpdate:
       type: object
       properties:
@@ -2496,6 +2688,11 @@ components:
           nullable: true
           description: a five-digit US zip code to fetch weather for, or null or empty to
             stop
+        heatingEstimateDisplay:
+          type: string
+          enum:
+            - remaining
+            - readyAt
     Location:
       type: object
       properties:
@@ -2627,6 +2824,460 @@ components:
         - control
         - failed
         - unrecognized
+    HeatingEstimate:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - unreachable
+            - settling
+            - noModel
+            - noReading
+            - insufficientData
+          description: "ready: minutes and readyAt say when. unreachable: the air is too
+            cold for the sources to reach the setpoint (reachesAtMost). settling: the
+            pump has only just started and the sensor still shows the water from
+            before. noModel: no model has been saved for this body. noReading: the
+            water or air temperature isn't known. insufficientData: the model has
+            nothing for a source that is on."
+        body:
+          type: string
+        temperature:
+          type: number
+        setpoint:
+          type: integer
+          description: the highest setpoint among the sources calling for heat
+        airTemperature:
+          type: number
+          nullable: true
+        minutes:
+          type: integer
+          nullable: true
+          description: minutes until the setpoint is reached, when ready
+        readyAt:
+          type: string
+          format: date-time
+          nullable: true
+        reachesAtMost:
+          type: number
+          nullable: true
+        sources:
+          type: array
+          description: the heat sources calling for heat
+          items:
+            type: string
+            enum:
+              - heater1
+              - heatpump
+        rate:
+          type: object
+          nullable: true
+          description: the water's rate of change now in °F per hour, and what makes it up
+          properties:
+            net:
+              type: number
+            heater:
+              type: number
+              nullable: true
+            heatPump:
+              type: number
+              nullable: true
+            solar:
+              type: number
+            loss:
+              type: number
+        model:
+          type: object
+          nullable: true
+          properties:
+            calculatedAt:
+              type: string
+              format: date-time
+            windows:
+              type: integer
+            rSquared:
+              type: number
+              nullable: true
+            rmse:
+              type: number
+              nullable: true
+            airRange:
+              type: array
+              nullable: true
+              items:
+                type: number
+            notes:
+              type: array
+              items:
+                type: string
+        display:
+          type: string
+          enum:
+            - remaining
+            - readyAt
+          description: how the server is set to have apps show it
+        timeZone:
+          type: string
+          description: the zone readyAt is shown in
+    HeatingModelState:
+      type: object
+      properties:
+        model:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/HeatingModel"
+          nullable: true
+        defaultRange:
+          $ref: "#/components/schemas/HeatingRange"
+    HeatingRange:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+    HeatingModel:
+      type: object
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          nullable: true
+        range:
+          $ref: "#/components/schemas/HeatingRange"
+        timeZone:
+          type: string
+          nullable: true
+        bodies:
+          type: object
+          properties:
+            pool:
+              $ref: "#/components/schemas/HeatingBodyModel"
+            spa:
+              $ref: "#/components/schemas/HeatingBodyModel"
+    HeatingBodyModel:
+      type: object
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          description: why there is no model for this body, when there isn't
+        heater:
+          type: number
+          nullable: true
+          description: °F per hour the heater adds; null when not known
+        heatPump:
+          type: object
+          nullable: true
+          properties:
+            base:
+              type: number
+              description: °F per hour at 60°F air
+            slope:
+              type: number
+              description: °F per hour for each °F of air above 60
+            referenceAirTemperature:
+              type: number
+            minimumAirTemperature:
+              type: number
+              nullable: true
+              description: the air below which it adds nothing
+        loss:
+          type: number
+          description: the share per hour of the water's excess over the air that is lost
+        solar:
+          type: number
+          description: °F per hour full sun adds
+        windows:
+          $ref: "#/components/schemas/HeatingWindowCounts"
+        outliers:
+          type: integer
+        rSquared:
+          type: number
+          nullable: true
+        rmse:
+          type: number
+        airRange:
+          type: array
+          nullable: true
+          items:
+            type: number
+        waterRange:
+          type: array
+          nullable: true
+          items:
+            type: number
+        heatPumpAirRange:
+          type: array
+          nullable: true
+          items:
+            type: number
+        notes:
+          type: array
+          items:
+            type: string
+    HeatingWindowCounts:
+      type: object
+      properties:
+        heater:
+          type: integer
+        heatpump:
+          type: integer
+        both:
+          type: integer
+        cooling:
+          type: integer
+        total:
+          type: integer
+    HeatingScanRequest:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: the first moment looked at; the start of history by default
+        to:
+          type: string
+          format: date-time
+          description: where looking ends; 2026, when the simulator began, by default
+    HeatingScan:
+      type: object
+      required:
+        - id
+        - state
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+            - waiting
+            - running
+            - finished
+            - failed
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        requestedBy:
+          type: string
+          nullable: true
+        requestedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        through:
+          type: string
+          format: date-time
+          nullable: true
+        scanned:
+          type: integer
+        gaps:
+          type: integer
+          description: stretches with no events from the controller, where nothing is known
+        summary:
+          type: object
+          nullable: true
+          description: what was found, once finished
+          properties:
+            windows:
+              type: integer
+            suitable:
+              type: integer
+            bodies:
+              type: object
+              description: for each body, for each kind of window, the windows found, the
+                suitable ones and their hours
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    windows:
+                      type: integer
+                    suitable:
+                      type: integer
+                    hours:
+                      type: number
+            reasons:
+              type: array
+              items:
+                type: object
+                properties:
+                  reason:
+                    type: string
+                  count:
+                    type: integer
+        error:
+          type: string
+          nullable: true
+    HeatingWindows:
+      type: object
+      properties:
+        scanId:
+          type: string
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeatingWindow"
+    HeatingWindow:
+      type: object
+      properties:
+        id:
+          type: string
+        body:
+          type: string
+          enum:
+            - pool
+            - spa
+        sources:
+          type: string
+          enum:
+            - heater
+            - heatpump
+            - both
+            - cooling
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        hours:
+          type: number
+        readings:
+          type: integer
+        startTemperature:
+          type: number
+          nullable: true
+        endTemperature:
+          type: number
+          nullable: true
+        waterTemperature:
+          type: number
+          nullable: true
+          description: the average over the window
+        airTemperature:
+          type: number
+          nullable: true
+        sun:
+          type: number
+          nullable: true
+        slope:
+          type: number
+          nullable: true
+          description: °F per hour the water changed
+        scatter:
+          type: number
+          nullable: true
+        suitable:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+    HeatingModelRequest:
+      type: object
+      required:
+        - scanId
+      properties:
+        scanId:
+          type: string
+        excludeWindowIds:
+          type: array
+          items:
+            type: string
+        includeSources:
+          type: array
+          items:
+            type: string
+            enum:
+              - heater
+              - heatpump
+              - both
+              - cooling
+    HeatingModelPreview:
+      type: object
+      properties:
+        previewId:
+          type: string
+        scanId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        range:
+          $ref: "#/components/schemas/HeatingRange"
+        timeZone:
+          type: string
+        windowsUsed:
+          type: integer
+        excludedWindows:
+          type: integer
+        sources:
+          type: array
+          items:
+            type: string
+        bodies:
+          type: object
+          properties:
+            pool:
+              $ref: "#/components/schemas/HeatingBodyModel"
+            spa:
+              $ref: "#/components/schemas/HeatingBodyModel"
+        current:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/HeatingModel"
+          nullable: true
+        samples:
+          type: array
+          items:
+            type: object
+            properties:
+              body:
+                type: string
+              sources:
+                type: string
+              from:
+                type: number
+              to:
+                type: number
+              airTemperature:
+                type: number
+              status:
+                type: string
+              minutes:
+                type: integer
+                nullable: true
+    HeatingModelSave:
+      type: object
+      required:
+        - previewId
+      properties:
+        previewId:
+          type: string
     ReprocessRequest:
       type: object
       required:
