@@ -55,8 +55,11 @@ export const mountDashboard = (root, app) => {
     const connectionIndicator = () => h('span', { class: ['connection-indicator', store.connection], 'aria-label': `Server ${CONNECTION_TITLES[store.connection]}` },
         h('span', { class: 'dot' }), CONNECTION_TITLES[store.connection]);
 
-    const checkSystemBar = () => h('div', { class: 'check-system-bar', role: 'alert', 'aria-label': 'Check system: the controller reports a fault' },
-        icon('warning'), 'Check System');
+    const checkSystemBar = () => {
+        const reason = store.checkSystemReason;
+        return h('div', { class: 'check-system-bar', role: 'alert', 'aria-label': reason ? `Check system: ${reason}` : 'Check system: the controller reports a fault' },
+            icon('warning'), reason ? `Check System: ${reason}` : 'Check System');
+    };
 
     const offlineBanner = () => {
         const host = app.apiServer || 'the pool server';

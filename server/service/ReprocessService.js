@@ -68,8 +68,9 @@ var asBuffer = (raw) => {
 };
 
 /**
- * what the server makes of a stored frame now: { eventType, status }, or null when it changes
- * nothing; undefined when the bytes hold no whole frame, which leaves the event alone
+ * what the server makes of a stored frame now: { eventType, status }, with message when the panel
+ * gave a new reason to check the system, or null when it changes nothing; undefined when the bytes
+ * hold no whole frame, which leaves the event alone
  **/
 var reinterpret = (raw, factory, interpreter) => {
     const bytes = asBuffer(raw);
@@ -93,9 +94,13 @@ var reinterpret = (raw, factory, interpreter) => {
         }
         const stored = interpreter.interpret(event);
         if (stored) {
+            const message = (result && result.message) || stored.message;
             result = result && result.status.length
                 ? { eventType: result.eventType, status: result.status.concat(stored.status) }
                 : { eventType: stored.eventType, status: stored.status };
+            if (message) {
+                result.message = message;
+            }
         }
     }
     return result;
@@ -131,7 +136,7 @@ var stateBefore = async (from) => {
 var cursorFor = (eventType, from, to, withRaw) => Event.find({ eventType, timestamp: { $gte: from, $lt: to } })
     .sort({ timestamp: 1 })
     .hint('eventType_timestamp')
-    .select(withRaw ? { timestamp: 1, eventType: 1, status: 1, raw: 1 } : { timestamp: 1, eventType: 1, status: 1 })
+    .select(withRaw ? { timestamp: 1, eventType: 1, status: 1, message: 1, raw: 1 } : { timestamp: 1, eventType: 1, status: 1, message: 1 })
     .lean()
     .cursor({ batchSize: 1000 });
 
@@ -196,7 +201,7 @@ var replay = async (run) => {
             run.through = doc.timestamp;
         }
         if (!eventTypes.includes(doc.eventType)) {
-            interpreter.adopt(doc.eventType, doc.status);
+            interpreter.adopt(doc.eventType, doc.status, doc.message);
             continue;
         }
 
@@ -208,7 +213,7 @@ var replay = async (run) => {
             run.removed++;
             transition(doc.eventType, 'removed');
             removals.push(doc._id);
-        } else if (result.eventType === doc.eventType && statusKey(result.status) === statusKey(doc.status)) {
+        } else if (result.eventType === doc.eventType && statusKey(result.status) === statusKey(doc.status) && (result.message || null) === (doc.message || null)) {
             run.unchanged++;
         } else {
             run.updated++;
@@ -216,7 +221,10 @@ var replay = async (run) => {
             if (result.eventType !== doc.eventType) {
                 rewritten.add(id);
             }
-            updates.push({ updateOne: { filter: { _id: doc._id }, update: { $set: { eventType: result.eventType, status: result.status } } } });
+            const update = result.message
+                ? { $set: { eventType: result.eventType, status: result.status, message: result.message } }
+                : { $set: { eventType: result.eventType, status: result.status }, $unset: { message: '' } };
+            updates.push({ updateOne: { filter: { _id: doc._id }, update } });
         }
         await flush(false);
     }

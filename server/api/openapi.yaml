@@ -2824,7 +2824,12 @@ components:
             - info
         value:
           type: number
-          description: 1 or 0 for switches; the measured value for info readings
+          description: 1 or 0 for switches; the measured value for info readings; for check
+            system reason, how many reasons the panel has given since check system went on
+        message:
+          type: string
+          description: only on check system reason, while there are any; the panel's words for
+            each reason, separated by commas, such as "Low Salt, No Flow-Filter Pump"
         timestamp:
           type: string
           format: date-time

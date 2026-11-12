@@ -384,8 +384,12 @@ class TextDisplayEvent extends ChecksummedEvent {
         return match ? match[1] : undefined;
     }
 
+    // what the "Check System" screen says is wrong, such as "Low Salt" or "No Flow-Filter Pump";
+    // the reason may be blinking, so the high bits are cleared first
     getCheckSystem() {
-        return this.extractValue(/ +Check System +(.+)$/);
+        const plain = Buffer.from(this.frame.subarray(4, this.frame.length - 5).map((c) => c & 0x7f)).toString('latin1');
+        const match = plain.match(/Check System +(\S.*?) *$/);
+        return match ? match[1] : undefined;
     }
 }
 

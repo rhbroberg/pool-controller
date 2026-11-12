@@ -130,6 +130,12 @@ export class StatusStore {
         return isOn(this.reading('check system'));
     }
 
+    /** what the panel says is wrong, as "Low Salt"; null before it has said, or from an older server */
+    get checkSystemReason() {
+        const reason = this.reading('check system reason');
+        return this.needsAttention && reason && reason.value > 0 && reason.message ? reason.message : null;
+    }
+
     get lastSwitchChange() {
         const status = this.readings.find((reading) => reading.category === 'status');
         return status ? status.timestamp : null;

@@ -9,6 +9,10 @@ const { StatusEvent } = require('./events');
 const READINGS = { poolTemp: 'pool temp', spaTemp: 'spa temp', salt: 'salt', ambientTemp: 'ambient' };
 const UNKNOWN = -1;
 const HEATER_MODE = 'heater1 mode';
+// stored with the panel's words as the event's message; the panel cycles between the reasons for
+// one fault, so each is stored once until the check system switch goes off
+const CHECK_SYSTEM_REASON = 'check system reason';
+const CHECK_SYSTEM_BIT = StatusEvent.bitPosition('check system');
 
 var isTextDisplay = (event) => event && typeof event.getPoolTemp === 'function' && typeof event.getHeater1Mode === 'function';
 
@@ -25,6 +29,16 @@ class FrameInterpreter {
         this.enabledSwitches = [];
         // 1 for auto, 0 for off, undefined until the panel displays the heater line
         this.heaterAuto = undefined;
+        this.reasons = [];
+    }
+
+    isCheckSystemOn() {
+        return ((this.statusMask >> CHECK_SYSTEM_BIT) & 0x01) === 1;
+    }
+
+    /** what the panel has said is wrong since the check system switch went on, in order */
+    checkSystemReasons() {
+        return this.reasons.slice();
     }
 
     /**
@@ -65,11 +79,18 @@ class FrameInterpreter {
 
     /**
      * what to store for an event the factory made: { eventType, status }, or null when it changes
-     * nothing. A status frame also says which switches went on and off
+     * nothing. A status frame also says which switches went on and off; a new reason for checking
+     * the system comes with its words as message
      **/
     interpret(event) {
         if (isTextDisplay(event)) {
             const changes = [];
+            const reason = event.getCheckSystem();
+            const isNewReason = typeof reason !== 'undefined' && this.isCheckSystemOn() && !this.reasons.includes(reason);
+            if (isNewReason) {
+                this.reasons.push(reason);
+                changes.push({ name: CHECK_SYSTEM_REASON, value: 1 });
+            }
             const heaterMode = event.getHeater1Mode();
             if (typeof heaterMode !== 'undefined') {
                 const auto = /Off$/.test(heaterMode) ? 0 : 1;
@@ -82,12 +103,18 @@ class FrameInterpreter {
             this.addIfChanged(changes, event.getSpaTemp(), READINGS.spaTemp);
             this.addIfChanged(changes, event.getSaltPPM(), READINGS.salt);
             this.addIfChanged(changes, event.getAmbientTemp(), READINGS.ambientTemp);
-            return changes.length ? { eventType: 'info', status: changes } : null;
+            if (!changes.length) {
+                return null;
+            }
+            return isNewReason ? { eventType: 'info', status: changes, message: reason } : { eventType: 'info', status: changes };
         }
         if (event instanceof StatusEvent) {
             const diffs = event.diff(this.statusMask);
             this.statusMask = event.rawMask();
             this.enabledSwitches = event.enabledSwitches();
+            if (!this.isCheckSystemOn()) {
+                this.reasons = [];
+            }
             if (diffs.nowEnabled.length === 0 && diffs.nowDisabled.length === 0) {
                 return null;
             }
@@ -105,12 +132,16 @@ class FrameInterpreter {
     /**
      * follows an event already stored as it is, as if this had decided to store it
      **/
-    adopt(eventType, status) {
+    adopt(eventType, status, message) {
         for (const entry of status || []) {
             if (typeof entry.value !== 'number') {
                 continue;
             }
-            if (eventType === 'info' && entry.name === HEATER_MODE) {
+            if (eventType === 'info' && entry.name === CHECK_SYSTEM_REASON) {
+                if (message && !this.reasons.includes(message)) {
+                    this.reasons.push(message);
+                }
+            } else if (eventType === 'info' && entry.name === HEATER_MODE) {
                 this.heaterAuto = entry.value;
             } else if (eventType === 'info') {
                 this.previous[entry.name] = this.present[entry.name];
@@ -120,9 +151,12 @@ class FrameInterpreter {
                 if (typeof bit !== 'undefined') {
                     this.statusMask = (entry.value ? (this.statusMask | (1 << bit)) : (this.statusMask & ~(1 << bit))) | 0;
                 }
+                if (bit === CHECK_SYSTEM_BIT && !entry.value) {
+                    this.reasons = [];
+                }
             }
         }
     }
 }
 
-module.exports = { FrameInterpreter, isTextDisplay, HEATER_MODE };
+module.exports = { FrameInterpreter, isTextDisplay, HEATER_MODE, CHECK_SYSTEM_REASON };

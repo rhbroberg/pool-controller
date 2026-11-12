@@ -19,8 +19,10 @@ var badRequest = (message) => utils.respondWithCode(400, { code: 400, message: m
 
 var onOff = (value) => value ? 'on' : 'off';
 
-var readingText = ({ name, value }) => {
+var readingText = ({ name, value }, message) => {
     switch (name) {
+    case 'check system reason':
+        return `Check System: ${message}`;
     case 'pool temp':
     case 'spa temp':
     case 'ambient':
@@ -42,7 +44,7 @@ var summarize = (doc) => {
     case 'status':
         return entries.map((entry) => `${activity.label(entry.name)} ${onOff(entry.value)}`).join(', ');
     case 'info':
-        return entries.map(readingText).join(', ');
+        return entries.map((entry) => readingText(entry, doc.message)).join(', ');
     case 'control':
         return `Pressed ${entries.map((entry) => activity.label(entry.name)).join(' + ')}`;
     case 'failed':

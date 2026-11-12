@@ -8,6 +8,8 @@ const { FrameInterpreter } = require('../protocol/interpreter');
 
 // a wireless remote screen recorded on 2020-07-19, whose checksum 08 10 went on the bus as 08 10 00
 const WIRELESS_AIR = Buffer.from('EAIECoMAAyAgQWlyIFRlbXAgIDEwMl9GICAgICAgICAgICAgICAgICAgICAgICAACBAAEAM=', 'base64');
+// the remote's "Check System / Low Salt" screen, from mystic-pool-rs485-various
+const WIRELESS_LOW_SALT = Buffer.from('1002040a8300020c000000000000000320202020436865636b2053797374656d202020202020202020204c6f772053616c74202020202020000a9d1003', 'hex');
 
 var frame = (type, body) => {
     const bytes = [0x10, 0x02, ...type, ...body];
@@ -85,6 +87,38 @@ describe('interpreting frames', () => {
         assert.deepEqual(read(interpreter, status([0x30, 0, 0, 0])).status, [{ name: 'spa', value: 1 }, { name: 'filter', value: 1 }]);
         assert.deepEqual(read(interpreter, status([0x20, 0, 0, 0])).status, [{ name: 'spa', value: 0 }]);
         assert.equal(read(interpreter, status([0x20, 0, 0, 0])), null);
+    });
+
+    it('reads what the panel and the remote say is wrong, even while it blinks', () => {
+        const [{ frame: wireless }] = framesIn(WIRELESS_LOW_SALT);
+        assert.equal(factory.create(wireless).getCheckSystem(), 'Low Salt');
+        assert.equal(factory.create(display('    Check System    No Flow-Filter Pump')).getCheckSystem(), 'No Flow-Filter Pump');
+        const blinking = [...Buffer.from('    Check System          Low Salt      ', 'ascii')].map((c, i) => (i >= 20 && c !== 0x20 ? c | 0x80 : c));
+        assert.equal(factory.create(frame([0x01, 0x03], [...blinking, 0x00])).getCheckSystem(), 'Low Salt');
+        assert.equal(factory.create(display('  Pool Temp   80_F')).getCheckSystem(), undefined);
+    });
+
+    it('stores each reason to check the system once while the fault lasts', () => {
+        const interpreter = new FrameInterpreter();
+        const lowSalt = display('    Check System          Low Salt');
+        const noFlow = display('    Check System    No Flow-Filter Pump');
+        assert.equal(read(interpreter, lowSalt), null, 'not before the check system switch is on');
+
+        read(interpreter, status([0x04, 0, 0, 0]));
+        assert.deepEqual(read(interpreter, lowSalt), { eventType: 'info', status: [{ name: 'check system reason', value: 1 }], message: 'Low Salt' });
+        assert.equal(read(interpreter, noFlow).message, 'No Flow-Filter Pump');
+        assert.equal(read(interpreter, lowSalt), null, 'the panel cycles between the reasons');
+        assert.deepEqual(interpreter.checkSystemReasons(), ['Low Salt', 'No Flow-Filter Pump']);
+
+        read(interpreter, status([0, 0, 0, 0]));
+        assert.deepEqual(interpreter.checkSystemReasons(), []);
+        read(interpreter, status([0x04, 0, 0, 0]));
+        assert.equal(read(interpreter, lowSalt).message, 'Low Salt', 'a new fault');
+
+        interpreter.adopt('status', [{ name: 'check system', value: 0 }]);
+        interpreter.adopt('status', [{ name: 'check system', value: 1 }]);
+        interpreter.adopt('info', [{ name: 'check system reason', value: 1 }], 'Low Salt');
+        assert.equal(read(interpreter, lowSalt), null, 'a stored reason is followed');
     });
 
     it('starts from what history held, and follows events kept as they are', () => {

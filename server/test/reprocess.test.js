@@ -12,6 +12,7 @@ const MINUTE_MS = 60 * 1000;
 const WIRELESS_AIR = Buffer.from('EAIECoMAAyAgQWlyIFRlbXAgIDEwMl9GICAgICAgICAgICAgICAgICAgICAgICAACBAAEAM=', 'base64');
 const SPA = [0x10, 0, 0, 0];
 const SPA_AND_FILTER = [0x30, 0, 0, 0];
+const CHECK_SYSTEM = [0x04, 0, 0, 0];
 
 var frame = (type, body) => {
     const bytes = [0x10, 0x02, ...type, ...body];
@@ -52,6 +53,7 @@ describe('reprocessing history', () => {
     const readings = async (name) => (await doc(name)).status.map((entry) => [entry.name, entry.value]);
     const transition = (run, from, to) => (run.transitions.find((each) => each.from === from && each.to === to) || { count: 0 }).count;
     const first = { from: at(-1).toISOString(), to: at(10).toISOString() };
+    const fault = { from: at(39).toISOString(), to: at(44).toISOString() };
     const second = { from: at(95).toISOString(), to: at(110).toISOString() };
 
     before(async () => {
@@ -73,6 +75,11 @@ describe('reprocessing history', () => {
             add('mystery', 'failed', 5, stuff(frame([0x09, 0x09], [0x10, 0x01]))),
             add('reassert', 'status', 6, status(SPA), [{ name: 'spa', value: 1 }]),
             { _id: new mongoose.Types.ObjectId(), eventType: 'action', source: 'rest', user: 'someone', message: 'Turned Lights on', timestamp: at(7), status: [] },
+            // a fault, and the panel saying why while it lasts; it clears before the second window
+            add('faultOn', 'status', 40, status(CHECK_SYSTEM), [{ name: 'check system', value: 1 }]),
+            add('reason', 'failed', 41, display('    Check System          Low Salt')),
+            add('sameReason', 'failed', 42, display('    Check System          Low Salt')),
+            add('faultOff', 'status', 45, status([0, 0, 0, 0]), [{ name: 'check system', value: 0 }]),
             // what history held before the second window
             add('heldPool', 'info', 90, display('  Pool Temp   85_F'), [{ name: 'pool temp', value: 85 }]),
             add('heldFilter', 'status', 91, status(SPA_AND_FILTER), [{ name: 'filter', value: 1 }]),
@@ -146,6 +153,21 @@ describe('reprocessing history', () => {
         const run = await reprocess({ ...first, eventTypes: ['failed'] });
         assert.equal(run.updated, 0);
         assert.equal(run.removed, 0);
+    });
+
+    it('keeps the panel’s reason to check the system, once for each fault', async () => {
+        const run = await reprocess({ ...fault, eventTypes: ['failed'] });
+        assert.equal(run.examined, 2);
+        assert.equal((await doc('reason')).eventType, 'info');
+        assert.deepEqual(await readings('reason'), [['check system reason', 1]]);
+        assert.equal((await doc('reason')).message, 'Low Salt');
+        assert.equal(await doc('sameReason'), null, 'the panel showing the same reason again');
+
+        const log = await api('GET', `/events?types=info&order=asc&cursor=${encodeURIComponent(`${at(40).toISOString()}|`)}`, { token: admin });
+        assert.equal(log.body.events[0].summary, 'Check System: Low Salt');
+
+        const again = await reprocess({ ...fault, eventTypes: ['info', 'failed'] });
+        assert.equal(again.updated + again.removed, 0, 'the message is kept as it is');
     });
 
     it('starts from what history held before the range, and rewrites every kind at once', async () => {

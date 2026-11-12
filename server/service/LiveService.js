@@ -3,7 +3,8 @@
 // needn't wait for their next poll:
 //
 //   readings  { readings }  entries as GET /status reports them: every switch when a status frame
-//                           changes, or the readings that changed on the display
+//                           changes, the readings that changed on the display, or the check
+//                           system reason when it or the check system switch changes
 //   heating   the same body as GET /heating, once the switches or temperatures behind it change
 //
 // The apps keep polling, less often, in case a push is missed.
