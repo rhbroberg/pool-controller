@@ -49,7 +49,7 @@ public nonisolated struct TaskStatus: Decodable, Sendable, Equatable {
         /// When it will start; the server works it out again every minute.
         public let startAt: Date
         public let leadMinutes: Int
-        /// "model" or "rate": the spa's heating model timed it, or the admin's heating rate.
+        /// What timed it, as an estimate's basis says: "history", "rule" or "mixed".
         public let leadFrom: String
         public let fromTemperature: Double?
         public let setpoint: Int?

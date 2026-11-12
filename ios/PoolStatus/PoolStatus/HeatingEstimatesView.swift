@@ -11,6 +11,7 @@ struct HeatingEstimatesView: View {
 
     var body: some View {
         Form {
+            HeatingRulesSections(model: model.state?.model)
             rangeSection
             findSection
             ForEach(model.bodiesWithWindows) { water in

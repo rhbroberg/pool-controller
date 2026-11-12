@@ -6,12 +6,14 @@ import Testing
 struct HeatingEstimateTests {
     nonisolated private static func estimate(status: String = "ready", display: String = "remaining", minutes: Int? = 80,
                                  readyAt: String? = "2026-11-10T20:45:00.000Z", reachesAtMost: Double? = nil,
-                                 settling: Bool? = nil) -> String {
+                                 settling: Bool? = nil, basis: String? = nil, ruleSources: [String] = []) -> String {
         let minutesJSON = minutes.map(String.init) ?? "null"
         let readyJSON = readyAt.map { "\"\($0)\"" } ?? "null"
         let mostJSON = reachesAtMost.map { String($0) } ?? "null"
         let settlingJSON = settling.map { #""settling":\#($0),"# } ?? ""
-        return #"{"status":"\#(status)",\#(settlingJSON)"body":"pool","temperature":78,"setpoint":84,"airTemperature":70,"minutes":\#(minutesJSON),"readyAt":\#(readyJSON),"reachesAtMost":\#(mostJSON),"sources":["heater1"],"rate":{"net":1.1,"heater":1.2,"heatPump":null,"solar":0.2,"loss":-0.3},"model":{"calculatedAt":"2026-11-01T12:00:00.000Z","windows":412,"rSquared":0.62,"rmse":0.33,"airRange":[38,99],"notes":["a note"]},"display":"\#(display)","timeZone":"America/New_York"}"#
+        let sourcesJSON = ruleSources.map { "\"\($0)\"" }.joined(separator: ",")
+        let basisJSON = basis.map { #""basis":"\#($0)","ruleSources":[\#(sourcesJSON)],"# } ?? ""
+        return #"{"status":"\#(status)",\#(settlingJSON)\#(basisJSON)"body":"pool","temperature":78,"setpoint":84,"airTemperature":70,"minutes":\#(minutesJSON),"readyAt":\#(readyJSON),"reachesAtMost":\#(mostJSON),"sources":["heater1"],"rate":{"net":1.1,"heater":1.2,"heatPump":null,"solar":0.2,"loss":-0.3},"model":{"calculatedAt":"2026-11-01T12:00:00.000Z","windows":412,"rSquared":0.62,"rmse":0.33,"airRange":[38,99],"notes":["a note"]},"display":"\#(display)","timeZone":"America/New_York"}"#
     }
 
     nonisolated private static func heating(estimate: String?) -> String {
@@ -122,6 +124,53 @@ struct HeatingEstimateTests {
             #expect(!quiet.explanation.isEmpty)
         }
         #expect(try Self.decoded(Self.estimate()).isShown)
+    }
+
+    @Test("says when a heating rule timed it, in whole or in part")
+    func byRule() throws {
+        let learned = try Self.decoded(Self.estimate(basis: "history"))
+        #expect(learned.basis == .history)
+        #expect(learned.summary(now: Self.now) == "Pool ready in 1 h 20 min")
+        #expect(learned.explanation == "Worked out from how this pool has warmed in the past.")
+
+        let ruled = try Self.decoded(Self.estimate(basis: "rule", ruleSources: ["heater1"]))
+        #expect(ruled.summary(now: Self.now) == "Pool ready in 1 h 20 min (by rule)")
+        #expect(ruled.explanation.contains("timed by the heating rules"))
+        #expect(ruled.explanation.contains("Server Maintenance › Heating Estimates"))
+
+        let mixed = try Self.decoded(Self.estimate(basis: "mixed", ruleSources: ["heater1"]))
+        #expect(mixed.summary(now: Self.now) == "Pool ready in 1 h 20 min (partly by rule)")
+        #expect(mixed.explanation.contains("except the heater’s rate"))
+
+        let settlingByRule = try Self.decoded(Self.estimate(settling: true, basis: "rule", ruleSources: ["heater1"]))
+        #expect(settlingByRule.summary(now: Self.now) == "Pool ready in about 1 h 20 min, settling… (by rule)")
+        #expect(try Self.decoded(Self.estimate()).basis == nil, "an older server says nothing about it")
+    }
+
+    @Test("the heating rules are read, and one is changed, through the settings")
+    func rules() throws {
+        let settings = #"{"timeZone":"UTC","timeZoneSource":"system","detectedTimeZone":"UTC","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"location":null,"heatingRules":{"pool":{"heater":1,"heatPump":0.5},"spa":{"heater":20,"heatPump":4}},"preheatMarginMinutes":15}"#
+        let decoded = try StatusClient.decoder.decode(ServerSettings.self, from: Data(settings.utf8))
+        let rules = try #require(decoded.heatingRules)
+        #expect(rules.rate(.heater1, for: .spa) == 20)
+        #expect(rules.rate(.heatpump, for: .pool) == 0.5)
+        #expect(decoded.preheatMarginMinutes == 15)
+
+        let change = ServerSettings.Changes(heatingRule: HeatingRuleChange(body: .spa, device: .heatpump, rate: 6))
+        let sent = try JSONSerialization.jsonObject(with: JSONEncoder().encode(change)) as? [String: Any]
+        #expect((sent?["heatingRules"] as? [String: [String: Double]]) == ["spa": ["heatPump": 6]])
+        #expect(sent?.count == 1, "nothing else changes")
+    }
+
+    @Test("says for each source whether history taught its rate or a rule stands in, and why")
+    func ruleBasis() throws {
+        #expect(HeatingRules.basis(of: .heater1, for: .pool, in: nil) == .rule(why: "No model has been saved yet."))
+
+        let json = #"{"id":"m1","createdAt":"2026-11-12T02:18:39.407Z","createdBy":"rick","range":{"from":"2019-06-06T17:34:18.937Z","to":"2026-01-01T00:00:00.000Z"},"timeZone":"America/New_York","bodies":{"pool":{"available":true,"heater":null,"heatPump":{"base":0.55,"slope":0,"referenceAirTemperature":60,"minimumAirTemperature":null},"loss":0.012,"solar":0.41},"spa":{"available":false,"reason":"needs at least 5 windows; has 1"}}}"#
+        let model = try StatusClient.decoder.decode(HeatingModel.self, from: Data(json.utf8))
+        #expect(HeatingRules.basis(of: .heatpump, for: .pool, in: model) == .learned(perHour: 0.55))
+        #expect(HeatingRules.basis(of: .heater1, for: .pool, in: model) == .rule(why: "History doesn’t show the heater warming this water."))
+        #expect(HeatingRules.basis(of: .heater1, for: .spa, in: model) == .rule(why: "Needs at least 5 windows; has 1."))
     }
 
     @Test("the server's display setting is read and changed through the settings")

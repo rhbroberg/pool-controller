@@ -172,31 +172,6 @@ struct ServerMaintenanceView: View {
                         Text("How every app shows when the water will be warm: the time left, or the time of day it will be ready.")
                     }
                 }
-
-                // a server without tasks doesn't say
-                if let rate = settings.spaHeatingRate, let margin = settings.preheatMarginMinutes {
-                    Section {
-                        Picker("Spa Heats", selection: Binding(
-                            get: { rate },
-                            set: { choice in Task { await apply(.init(spaHeatingRate: choice)) } })) {
-                            ForEach(Self.choices(Self.rateChoices, keeping: rate), id: \.self) { choice in
-                                Text("\(choice, format: .number)° an hour").tag(choice)
-                            }
-                        }
-                        Picker("Start Early By", selection: Binding(
-                            get: { margin },
-                            set: { choice in Task { await apply(.init(preheatMarginMinutes: choice)) } })) {
-                            ForEach(Self.choices(Self.marginChoices, keeping: margin), id: \.self) { minutes in
-                                Text(Duration.seconds(minutes * 60), format: .units(allowed: [.hours, .minutes], width: .abbreviated))
-                                    .tag(minutes)
-                            }
-                        }
-                    } header: {
-                        Text("Spa Preheat")
-                    } footer: {
-                        Text("A preheat scheduled to be ready by a time starts only as early as it must. Until the server learns how the spa warms, it times it with this rate, and always starts this much earlier.")
-                    }
-                }
             }
 
             if !jobs.isEmpty {
@@ -406,14 +381,6 @@ struct ServerMaintenanceView: View {
         let usual = [30, 90, 180, 365, 730, 1095, 1825, 3650]
             .filter { $0 >= settings.minimumRetentionDays && $0 <= settings.maximumRetentionDays }
         return Array(Set(usual + [settings.rawRetentionDays])).sorted()
-    }
-
-    static let rateChoices: [Double] = [5, 10, 15, 20, 30, 40, 60]
-    static let marginChoices = [0, 10, 15, 30, 45, 60]
-
-    /// The usual choices, with the current one among them even when it was set some other way.
-    static func choices<Value: Hashable & Comparable>(_ usual: [Value], keeping current: Value) -> [Value] {
-        Array(Set(usual + [current])).sorted()
     }
 
     static func retentionTitle(_ days: Int) -> String {

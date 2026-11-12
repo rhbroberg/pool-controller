@@ -42,6 +42,34 @@ final class TasksUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Circulation"].waitForExistence(timeout: timeout))
     }
 
+    func testHeatingEstimatesSaysWhatIsLearnedAndWhatIsByRule() {
+        let app = launch()
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: timeout))
+        settings.tap()
+        let maintenance = app.buttons["Server Maintenance"]
+        XCTAssertTrue(maintenance.waitForExistence(timeout: timeout))
+        maintenance.tap()
+        // the link is below the jobs, and the list only makes the rows on screen
+        XCTAssertTrue(app.navigationBars["Server Maintenance"].waitForExistence(timeout: timeout))
+        let estimates = app.buttons.matching(NSPredicate(format: "label == %@", "Heating Estimates")).firstMatch
+        for _ in 0..<6 where !(estimates.exists && estimates.isHittable) {
+            app.swipeUp()
+        }
+        estimates.tap()
+
+        XCTAssertTrue(app.staticTexts["How the Pool Is Timed"].waitForExistence(timeout: timeout)
+                      || app.staticTexts["HOW THE POOL IS TIMED"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Learned from history"].exists, "the pool's heat pump")
+        XCTAssertTrue(app.staticTexts["By rule · History doesn’t show the heater warming this water."].exists)
+        XCTAssertTrue(app.staticTexts["By rule · Needs at least 5 windows; has 1."].firstMatch.exists)
+
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "heating-estimates"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     // MARK: Helpers
 
     private func launch(seedTasks: Bool = false) -> XCUIApplication {

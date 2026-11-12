@@ -90,6 +90,16 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         public let loss: Double
     }
 
+    /// What timed it.
+    public enum Basis: String, Decodable, Sendable {
+        /// Learned from history.
+        case history
+        /// The body has no model yet, so the heating rules an admin sets timed it.
+        case rule
+        /// A source at work has no learned rate, so it borrowed its heating rule.
+        case mixed
+    }
+
     /// The model it was worked out from.
     public struct Model: Decodable, Sendable, Equatable {
         public let calculatedAt: Date
@@ -111,6 +121,10 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
     public let reachesAtMost: Double?
     /// Nil from an older server, which says `.settling` instead.
     private let settling: Bool?
+    /// Nil from a server without heating rules, whose estimates are all learned.
+    public let basis: Basis?
+    /// The server's names of the sources at work whose rate came from a heating rule.
+    public let ruleSources: [String]?
     /// The server's names of the sources calling for heat.
     public let sources: [String]
     public let rate: Rate?
@@ -164,8 +178,20 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         return "\(day) \(time)"
     }
 
-    /// The line for the dashboard, in the style the server is set to, or nil when there's nothing to say.
+    /// The line for the dashboard, in the style the server is set to, or nil when there's nothing
+    /// to say; one timed by a heating rule says so.
     public func summary(now: Date = .now) -> String? {
+        guard let text = plainSummary(now: now) else {
+            return nil
+        }
+        switch basis {
+        case .rule: return String(localized: "\(text) (by rule)", bundle: .module)
+        case .mixed: return String(localized: "\(text) (partly by rule)", bundle: .module)
+        case .history, nil: return text
+        }
+    }
+
+    private func plainSummary(now: Date) -> String? {
         let water = body.title
         switch status {
         case .ready:
@@ -202,10 +228,23 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         return "\(reason) \(settlingNote)"
     }
 
+    /// "heater", or "heater and heat pump".
+    private var ruleSourceNames: String {
+        (ruleSources ?? []).compactMap { HeatingDevice(rawValue: $0)?.title.lowercased() }
+            .formatted(.list(type: .and))
+    }
+
     private var reason: String {
         switch status {
         case .ready:
-            String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past.", bundle: .module)
+            switch basis {
+            case .rule:
+                String(localized: "History doesn’t show how this \(body.title.lowercased()) warms yet, so this is timed by the heating rules an admin sets in Server Maintenance › Heating Estimates.", bundle: .module)
+            case .mixed:
+                String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past, except the \(ruleSourceNames)’s rate, which history doesn’t show and comes from its heating rule.", bundle: .module)
+            case .history, nil:
+                String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past.", bundle: .module)
+            }
         case .unreachable:
             if let reachesAtMost {
                 String(localized: "With the air at this temperature the heat sources can only bring the water to about \(Int(reachesAtMost.rounded()))°.", bundle: .module)

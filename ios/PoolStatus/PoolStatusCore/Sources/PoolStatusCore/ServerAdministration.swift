@@ -39,22 +39,23 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
         public var rawRetentionDays: Int?
         public var zipCode: ZipCodeChoice?
         public var heatingEstimateDisplay: HeatingEstimate.Display?
-        public var spaHeatingRate: Double?
+        /// One heating rule to change; the others stay as they are.
+        public var heatingRule: HeatingRuleChange?
         public var preheatMarginMinutes: Int?
 
         public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil, zipCode: ZipCodeChoice? = nil,
-                    heatingEstimateDisplay: HeatingEstimate.Display? = nil, spaHeatingRate: Double? = nil,
+                    heatingEstimateDisplay: HeatingEstimate.Display? = nil, heatingRule: HeatingRuleChange? = nil,
                     preheatMarginMinutes: Int? = nil) {
             self.timeZone = timeZone
             self.rawRetentionDays = rawRetentionDays
             self.zipCode = zipCode
             self.heatingEstimateDisplay = heatingEstimateDisplay
-            self.spaHeatingRate = spaHeatingRate
+            self.heatingRule = heatingRule
             self.preheatMarginMinutes = preheatMarginMinutes
         }
 
         private enum CodingKeys: String, CodingKey {
-            case timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, spaHeatingRate, preheatMarginMinutes
+            case timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, heatingRules, preheatMarginMinutes
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -72,7 +73,11 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
             case nil: break
             }
             try container.encodeIfPresent(heatingEstimateDisplay?.rawValue, forKey: .heatingEstimateDisplay)
-            try container.encodeIfPresent(spaHeatingRate, forKey: .spaHeatingRate)
+            if let heatingRule {
+                // {"spa": {"heater": 25}}
+                let key = heatingRule.device == .heater1 ? "heater" : "heatPump"
+                try container.encode([heatingRule.body.rawValue: [key: heatingRule.rate]], forKey: .heatingRules)
+            }
             try container.encodeIfPresent(preheatMarginMinutes, forKey: .preheatMarginMinutes)
         }
     }
@@ -92,11 +97,73 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
     public let location: Location?
     /// How every app shows when heating will be done; nil from a server too old to estimate.
     public let heatingEstimateDisplay: HeatingEstimate.Display?
-    /// °F per hour the spa warms, for timing a scheduled preheat without a spa model; nil from a
-    /// server without tasks.
-    public let spaHeatingRate: Double?
+    /// How fast each heat source warms each body of water where history hasn't taught the
+    /// server; nil from a server without heating rules.
+    public let heatingRules: HeatingRules?
     /// Minutes a scheduled preheat starts earlier than it needs to; nil from a server without tasks.
     public let preheatMarginMinutes: Int?
+}
+
+/// °F per hour each heat source warms each body of water, standing in for what history hasn't
+/// taught the server: a body without a model is timed by its rules alone, and a model without a
+/// rate for a source borrows that source's rule.
+public nonisolated struct HeatingRules: Decodable, Sendable, Equatable {
+    public struct Rule: Decodable, Sendable, Equatable {
+        public let heater: Double
+        public let heatPump: Double
+    }
+
+    public let pool: Rule
+    public let spa: Rule
+
+    public func rate(_ device: HeatingDevice, for body: WaterBody) -> Double {
+        let rule = body == .pool ? pool : spa
+        return device == .heater1 ? rule.heater : rule.heatPump
+    }
+
+    /// Where a source's rate for a body of water comes from.
+    public enum Basis: Equatable, Sendable {
+        /// Learned from history: °F per hour, the heat pump's at its reference air temperature.
+        case learned(perHour: Double)
+        /// The rule stands in, for this reason.
+        case rule(why: String)
+    }
+
+    /// Whether `model` learned how fast `device` warms `body`, or its rule stands in.
+    public static func basis(of device: HeatingDevice, for body: WaterBody, in model: HeatingModel?) -> Basis {
+        guard let model else {
+            return .rule(why: String(localized: "No model has been saved yet.", bundle: .module))
+        }
+        guard let learned = model.bodies[body], learned.available else {
+            let reason = model.bodies[body]?.reason.map { $0.prefix(1).uppercased() + $0.dropFirst() + "." }
+            return .rule(why: reason ?? String(localized: "The model in use has nothing for this water.", bundle: .module))
+        }
+        switch device {
+        case .heater1:
+            if let heater = learned.heater {
+                return .learned(perHour: heater)
+            }
+            return .rule(why: String(localized: "History doesn’t show the heater warming this water.", bundle: .module))
+        case .heatpump:
+            if let heatPump = learned.heatPump {
+                return .learned(perHour: heatPump.base)
+            }
+            return .rule(why: String(localized: "History doesn’t show the heat pump warming this water.", bundle: .module))
+        }
+    }
+}
+
+/// A new heating rule for one source and body of water.
+public nonisolated struct HeatingRuleChange: Sendable, Equatable {
+    public let body: WaterBody
+    public let device: HeatingDevice
+    public let rate: Double
+
+    public init(body: WaterBody, device: HeatingDevice, rate: Double) {
+        self.body = body
+        self.device = device
+        self.rate = rate
+    }
 }
 
 /// `GET /system/jobs`: one of the server's maintenance jobs and how its last run went.

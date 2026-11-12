@@ -7,7 +7,7 @@ struct TasksTests {
     nonisolated private static func tasks(pool: Bool = false, preheat: Bool = false, party: Bool = false,
                                           readyAt: String? = nil, dark: Bool = true) -> String {
         let scheduled = readyAt.map {
-            #"{"readyAt":"\#($0)","startAt":"2026-11-12T22:30:00.000Z","leadMinutes":90,"leadFrom":"rate","fromTemperature":81,"setpoint":102,"requestedBy":"owner"}"#
+            #"{"readyAt":"\#($0)","startAt":"2026-11-12T22:30:00.000Z","leadMinutes":90,"leadFrom":"rule","fromTemperature":81,"setpoint":102,"requestedBy":"owner"}"#
         } ?? "null"
         return #"{"pool":{"on":\#(pool)},"spaPreheat":{"on":\#(preheat),"scheduled":\#(scheduled)},"spaParty":{"on":\#(party)},"dark":\#(dark)}"#
     }
@@ -21,7 +21,7 @@ struct TasksTests {
         #expect(waiting.dark)
         let scheduled = try #require(waiting.scheduledPreheat)
         #expect(scheduled.leadMinutes == 90)
-        #expect(scheduled.leadFrom == "rate")
+        #expect(scheduled.leadFrom == "rule")
         #expect(scheduled.readyAt.timeIntervalSince(scheduled.startAt) == 90 * 60)
         #expect(scheduled.requestedBy == "owner")
 

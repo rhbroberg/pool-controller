@@ -80,7 +80,7 @@ private nonisolated enum PreviewTasks {
         lock.withLock {
             let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
             let scheduled = readyAt.map {
-                #"{"readyAt":"\#(iso.format($0))","startAt":"\#(iso.format($0.addingTimeInterval(-lead)))","leadMinutes":60,"leadFrom":"rate","fromTemperature":82,"setpoint":102,"requestedBy":"preview"}"#
+                #"{"readyAt":"\#(iso.format($0))","startAt":"\#(iso.format($0.addingTimeInterval(-lead)))","leadMinutes":60,"leadFrom":"rule","fromTemperature":82,"setpoint":102,"requestedBy":"preview"}"#
             } ?? "null"
             return #"{"pool":{"on":\#(on["pool"] ?? false)},"spaPreheat":{"on":\#(on["spaPreheat"] ?? false),"scheduled":\#(scheduled)},"spaParty":{"on":\#(on["spaParty"] ?? false)},"dark":true}"#
         }
@@ -230,7 +230,10 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
             }
             return #"{"timeZone":"\#(TimeZone.current.identifier)","earliest":null,"days":[\#(days.joined(separator: ","))]}"#
         case "system/settings":
-            return #"{"timeZone":"\#(TimeZone.current.identifier)","timeZoneSource":"system","detectedTimeZone":"\#(TimeZone.current.identifier)","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650}"#
+            return #"{"timeZone":"\#(TimeZone.current.identifier)","timeZoneSource":"system","detectedTimeZone":"\#(TimeZone.current.identifier)","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"heatingEstimateDisplay":"remaining","heatingRules":{"pool":{"heater":1,"heatPump":0.5},"spa":{"heater":20,"heatPump":4}},"preheatMarginMinutes":15}"#
+        case "heating/model":
+            // the pool learned, except the heater; the spa without enough windows
+            return #"{"model":{"id":"preview","createdAt":"\#(now)","createdBy":"preview","range":{"from":"2019-06-06T17:34:18.937Z","to":"2026-01-01T00:00:00.000Z"},"timeZone":"\#(TimeZone.current.identifier)","bodies":{"pool":{"available":true,"heater":null,"heatPump":{"base":0.55,"slope":0,"referenceAirTemperature":60,"minimumAirTemperature":null},"loss":0.012,"solar":0.41,"windows":{"heater":3,"heatpump":404,"both":60,"cooling":1061,"total":1528},"rSquared":0.45,"rmse":0.34,"notes":["the windows with the heater on show no warming from it, so how fast it heats is not known"]},"spa":{"available":false,"reason":"needs at least 5 windows; has 1","windows":{"heater":0,"heatpump":0,"both":1,"cooling":0,"total":1}}}},"defaultRange":{"from":"2019-06-06T17:34:18.937Z","to":"2026-01-01T00:00:00.000Z"}}"#
         case "system/jobs":
             let finished = iso.format(.now.addingTimeInterval(-240))
             return """
