@@ -10,6 +10,7 @@ const fixedLabels = {
     heater1: 'Heater',
     superchlorinate: 'Super Chlorinate',
     'check system': 'Check System',
+    'check system reason': 'Check System reason',
     'pool temp': 'Pool',
     'spa temp': 'Spa',
     ambient: 'Air',

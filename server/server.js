@@ -3,7 +3,7 @@ require('./config/config');
 
 var socketIO = require('socket.io');
 const { FrameParser, stuff } = require('./protocol/parse');
-const { FrameInterpreter } = require('./protocol/interpreter');
+const { FrameInterpreter, CHECK_SYSTEM_REASON } = require('./protocol/interpreter');
 const log4js = require('log4js');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
@@ -135,14 +135,15 @@ if (argv.d !== 'file' && !argv.jobsOnly) {
     }));
 }
 
-var saveStatus = (switchesEnabled, buf, category, timestamp) => {
+var saveStatus = (switchesEnabled, buf, category, timestamp, message) => {
     var dbStatusEvent = new Event({
         _id: new mongoose.Types.ObjectId,
         source: 'panel',
         raw: buf,
         eventType: category,
         status: switchesEnabled,
-        timestamp: timestamp
+        timestamp: timestamp,
+        message: message
     });
 
     return dbStatusEvent.save().then((doc) => {
@@ -155,9 +156,9 @@ var saveStatus = (switchesEnabled, buf, category, timestamp) => {
 /**
  * resolves once saved, or once saving failed
  **/
-var saveSwitchState = (switchesEnabled, buf, category, timestamp) => {
+var saveSwitchState = (switchesEnabled, buf, category, timestamp, message) => {
     if (switchesEnabled.length > 0) {
-        return saveStatus(switchesEnabled, buf, category, timestamp);
+        return saveStatus(switchesEnabled, buf, category, timestamp, message);
     }
     return Promise.resolve();
 };
@@ -197,9 +198,14 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
             logger.debug('info: ', event.clearText());
             if (stored) {
                 const at = new Date(timestamp);
-                const readings = stored.status.map((entry) => ({ name: entry.name, category: 'info', value: entry.value, timestamp: at }));
+                const readings = stored.status.map((entry) => entry.name === CHECK_SYSTEM_REASON
+                    ? statusService.reasonReading(interpreter.checkSystemReasons(), at)
+                    : { name: entry.name, category: 'info', value: entry.value, timestamp: at });
+                if (stored.message) {
+                    logger.info(`the panel says to check the system: ${stored.message}`);
+                }
                 // pushed once saved, so an app asking GET /status after the push sees it too
-                saveSwitchState(stored.status, wire, 'info', timestamp).then(() => liveService.readings(readings));
+                saveSwitchState(stored.status, wire, 'info', timestamp, stored.message).then(() => liveService.readings(readings));
                 streamEvent('info', stored.status, timestamp);
             }
             break;
@@ -208,7 +214,14 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
             if (stored) {
                 logger.debug('storing changes', stored.diffs);
                 const switches = statusService.switchesOf(event, new Date(timestamp));
-                saveSwitchState(stored.status, wire, 'status', timestamp).then(() => liveService.readings(switches));
+                // the last fault's reasons don't belong to the next one
+                const reason = stored.status.some((entry) => entry.name === 'check system')
+                    ? [statusService.reasonReading(interpreter.checkSystemReasons(), new Date(timestamp))]
+                    : [];
+                saveSwitchState(stored.status, wire, 'status', timestamp).then(() => {
+                    liveService.readings(switches);
+                    liveService.readings(reason);
+                });
                 streamEvent('status', {
                     nowEnabled: stored.diffs.nowEnabled,
                     nowDisabled: stored.diffs.nowDisabled

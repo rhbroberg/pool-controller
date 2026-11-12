@@ -56,6 +56,24 @@ describe('status store', () => {
         assert.equal(store.readings.length, 2, 'the last readings stay on screen');
     });
 
+    it('says why the system needs checking, once the panel has said and only while it does', async () => {
+        const client = fakeClient();
+        const store = newStore(client);
+        const reason = (value, message) => ({ name: 'check system reason', category: 'info', value, message, timestamp: new Date() });
+        client.readings = [switchReading('check system', 1)];
+        await store.refresh();
+        assert.equal(store.needsAttention, true);
+        assert.equal(store.checkSystemReason, null, 'an older server, or before the panel has said');
+
+        store.applyReadings([reason(2, 'Low Salt, No Flow-Filter Pump')]);
+        assert.equal(store.checkSystemReason, 'Low Salt, No Flow-Filter Pump');
+
+        store.applyReadings([switchReading('check system', 0)]);
+        assert.equal(store.checkSystemReason, null, 'the fault cleared');
+        store.applyReadings([switchReading('check system', 1), reason(0)]);
+        assert.equal(store.checkSystemReason, null, 'the last fault’s reasons are gone');
+    });
+
     it('asks for the weather now and then rather than on every refresh, keeping it through a failure', async () => {
         const client = fakeClient();
         const store = newStore(client);

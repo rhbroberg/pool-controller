@@ -300,4 +300,18 @@ describe('controller', () => {
             });
         }
     });
+
+    // last, since waiting for the recording's fault moves the replay on for the tests above
+    describe('faults', () => {
+        it('says why the panel asks for the system to be checked', async () => {
+            const reason = await eventually(async () => {
+                const entry = ((await api('GET', '/status')).body || []).find((each) => each.name === 'check system reason');
+                return entry && entry.value > 0 ? entry : undefined;
+            }, { message: 'a reason to check the system' });
+            assert.equal(reason.category, 'info');
+            assert.equal(reason.message, 'Low Salt', 'the recording’s fault');
+            const log = await api('GET', '/events?types=info&order=asc&limit=200');
+            assert.ok(log.body.events.some((event) => event.summary === 'Check System: Low Salt'), 'in the event log');
+        });
+    });
 });
