@@ -17,6 +17,8 @@ struct StatusView: View {
     @State private var confirming: ChangeRequest?
     /// The heater or heat pump whose setpoints are open.
     @State private var setpointDevice: HeatingDevice?
+    /// Whether the details of the heating estimate are open.
+    @State private var showingEstimate = false
 
     private struct PollKey: Equatable {
         let serverAddress: String
@@ -117,6 +119,9 @@ struct StatusView: View {
             .sheet(item: $setpointDevice) { device in
                 SetpointView(device: device)
             }
+            .sheet(isPresented: $showingEstimate) {
+                HeatingEstimateView()
+            }
             .navigationDestination(for: DashboardRoute.self) { route in
                 switch route {
                 case .temperatureHistory(let water): TemperatureHistoryView(water: water)
@@ -141,6 +146,12 @@ struct StatusView: View {
 
             ControlSection(title: EquipmentControl.Area.heating.title) {
                 equipmentGrid(.heating)
+            } trailing: {
+                if let estimate = store.heating?.estimate, estimate.isShown {
+                    HeatingEstimateButton(estimate: estimate) {
+                        showingEstimate = true
+                    }
+                }
             }
 
             ControlSection(title: EquipmentControl.Area.circulation.title) {

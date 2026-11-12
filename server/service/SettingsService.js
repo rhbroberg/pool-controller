@@ -13,11 +13,13 @@ const SETTINGS_ID = 'server';
 const DEFAULT_RETENTION_DAYS = 365;
 const MIN_RETENTION_DAYS = 7;
 const MAX_RETENTION_DAYS = 3650;
+const ESTIMATE_DISPLAYS = ['remaining', 'readyAt'];
+const DEFAULT_ESTIMATE_DISPLAY = 'remaining';
 
 // five digits, optionally with the ZIP+4 extension, which the lookup doesn't need
 const ZIP_CODE = /^(\d{5})(?:-\d{4})?$/;
 
-var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS, location: null };
+var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS, location: null, heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY };
 var detected;
 var listeners = [];
 
@@ -65,7 +67,8 @@ exports.load = async function() {
     stored = {
         timeZone: doc && doc.timeZone ? doc.timeZone : null,
         rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS,
-        location: doc && doc.location && doc.location.zipCode ? doc.location : null
+        location: doc && doc.location && doc.location.zipCode ? doc.location : null,
+        heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY
     };
     const where = stored.location ? `weather for ${stored.location.placeName} (${stored.location.zipCode})` : 'no zip code for weather';
     logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
@@ -87,6 +90,11 @@ exports.timeZoneSource = function() {
 
 exports.rawRetentionDays = function() {
     return stored.rawRetentionDays;
+};
+
+/** 'remaining' (minutes until ready) or 'readyAt' (the time it will be ready) */
+exports.heatingEstimateDisplay = function() {
+    return stored.heatingEstimateDisplay;
 };
 
 /**
@@ -148,7 +156,8 @@ exports.getSettings = async function() {
         rawRetentionDays: stored.rawRetentionDays,
         minimumRetentionDays: MIN_RETENTION_DAYS,
         maximumRetentionDays: MAX_RETENTION_DAYS,
-        location: publicLocation(stored.location)
+        location: publicLocation(stored.location),
+        heatingEstimateDisplay: stored.heatingEstimateDisplay
     };
 };
 
@@ -178,12 +187,19 @@ exports.updateSettings = async function(changes, user) {
     if (Object.prototype.hasOwnProperty.call(changes || {}, 'zipCode')) {
         update.location = await locate(changes.zipCode);
     }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'heatingEstimateDisplay')) {
+        if (!ESTIMATE_DISPLAYS.includes(changes.heatingEstimateDisplay)) {
+            throw validationError(`show the heating estimate as ${ESTIMATE_DISPLAYS.join(' or ')}`);
+        }
+        update.heatingEstimateDisplay = changes.heatingEstimateDisplay;
+    }
     if (Object.keys(update).length === 0) {
-        throw validationError('give a timeZone, rawRetentionDays or zipCode to change');
+        throw validationError('give a timeZone, rawRetentionDays, zipCode or heatingEstimateDisplay to change');
     }
 
     const previousZone = exports.timeZone();
     const previousZip = stored.location ? stored.location.zipCode : null;
+    const previousDisplay = stored.heatingEstimateDisplay;
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
     stored = Object.assign({}, stored, update);
 
@@ -199,6 +215,10 @@ exports.updateSettings = async function(changes, user) {
     if ('location' in update && (update.location ? update.location.zipCode : null) !== previousZip) {
         changed.location = publicLocation(update.location);
         notes.push(update.location ? `weather for ${update.location.placeName} (${update.location.zipCode})` : 'no zip code for weather');
+    }
+    if ('heatingEstimateDisplay' in update && update.heatingEstimateDisplay !== previousDisplay) {
+        changed.heatingEstimateDisplay = update.heatingEstimateDisplay;
+        notes.push(update.heatingEstimateDisplay === 'readyAt' ? 'heating estimates show the time it will be ready' : 'heating estimates show the minutes left');
     }
     if (notes.length > 0) {
         logger.info(`REST ${who}: ${notes.join('; ')}`);

@@ -66,6 +66,43 @@ at `/socket.io/`. Two events, each without signing in:
 
 The apps still poll, every minute while these arrive and every 15 seconds otherwise.
 
+## Heating estimates
+
+While the pump runs and a heat source is calling for heat, `GET /heating` carries an `estimate`:
+the time until the water reaches the highest setpoint calling for heat, from the water and air
+temperatures now and a model learned from history.
+
+The model is, for each body of water, in °F per hour
+
+    dT/dt = H·heater + (a + b·(air − 60))·heat pump − k·(T − air) + S·sun
+
+the heater and heat pump add heat (the heat pump less in cold air), the water loses heat to the
+air in proportion to how much warmer it is, and the sun warms it in the daytime. The numbers
+come from windows of history: stretches in which the pump ran and the heat sources on stayed the
+same, each with how fast the water's temperature changed and the average water and air
+temperatures. A least-squares fit that keeps every number non-negative gives H, a, b, k and S;
+a source the windows can't tell about is reported as not known instead of made up. The time to
+the setpoint then follows from the closed form (the water approaches where heat in equals heat
+out exponentially), in stages when the heater and heat pump have different setpoints, and says
+"unreachable" when the air is too cold for them to get there. The sun is worked out again for
+the time the estimate came to, so an estimate late in the day allows for sunset. The air
+temperature is the one stored with the water's.
+
+An admin finds the windows, previews the model, and saves it, from the apps' server maintenance:
+
+    POST /heating/model/scan              look through history (by default, all of it before 2026,
+                                          when the simulator began) for windows; goes on in the job queue
+    GET  /heating/model/scan              progress, and what was found
+    GET  /heating/model/scan/windows      each window, suitable or why not
+    POST /heating/model/preview           fit the windows left ticked; nothing is kept
+    PUT  /heating/model                   keep exactly what was previewed
+    GET  /heating/model                   the model in use, and the default range
+
+Whether apps show the minutes left or the time it will be ready is the server's setting
+`heatingEstimateDisplay` (`remaining` or `readyAt`), shared by every app. Right after the pump
+starts the sensor still shows what was in the plumbing, so the estimate waits (`settling`) for
+15 minutes; `POOL_ESTIMATE_SETTLE_MINUTES` changes that for testing.
+
 This project is still in its infancy.  Some features I intend to add are:
 
  - full REST api control of all pool devices

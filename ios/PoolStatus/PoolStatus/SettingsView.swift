@@ -318,6 +318,23 @@ struct ServerMaintenanceView: View {
                 } footer: {
                     Text(historyFooter(settings))
                 }
+
+                // a server too old to estimate doesn't say
+                if let display = settings.heatingEstimateDisplay {
+                    Section {
+                        Picker("Show Heating As", selection: Binding(
+                            get: { display },
+                            set: { choice in Task { await apply(.init(heatingEstimateDisplay: choice)) } })) {
+                            ForEach(HeatingEstimate.Display.allCases) { choice in
+                                Text(choice.title).tag(choice)
+                            }
+                        }
+                    } header: {
+                        Text("Heating Estimates")
+                    } footer: {
+                        Text("How every app shows when the water will be warm: the time left, or the time of day it will be ready.")
+                    }
+                }
             }
 
             if !jobs.isEmpty {
@@ -334,11 +351,14 @@ struct ServerMaintenanceView: View {
 
             if store.auth.isAdmin {
                 Section {
+                    NavigationLink("Heating Estimates") {
+                        HeatingEstimatesView()
+                    }
                     NavigationLink("Reprocess History") {
                         ReprocessHistoryView()
                     }
                 } footer: {
-                    Text("Reads stored history again with the server’s current decoding, as after a fix to how it reads the controller.")
+                    Text("Heating Estimates teaches the server how long the water takes to warm from its history. Reprocess History reads stored history again with the server’s current decoding, as after a fix to how it reads the controller.")
                 }
             }
 

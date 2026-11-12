@@ -346,6 +346,43 @@ public nonisolated struct StatusClient: Sendable {
         }
     }
 
+    // MARK: Heating estimates
+
+    /// The model every estimate comes from, and where a scan starts by default; no sign-in needed.
+    public func fetchHeatingModel() async throws -> HeatingModelState {
+        try await send(.get, "heating/model")
+    }
+
+    /// Starts looking through history for windows; answers at once with the scan, which goes on
+    /// in the server.
+    public func startHeatingScan(_ request: HeatingScanRequest, token: String) async throws -> HeatingScan {
+        try await send(.post, "heating/model/scan", token: token, body: request)
+    }
+
+    /// The scan under way or the last one; nil when there hasn't been one since the server started.
+    public func fetchHeatingScan(token: String) async throws -> HeatingScan? {
+        do {
+            let scan: HeatingScan = try await send(.get, "heating/model/scan", token: token)
+            return scan
+        } catch StatusClientError.server(code: 404, _) {
+            return nil
+        }
+    }
+
+    public func fetchHeatingWindows(token: String) async throws -> HeatingWindows {
+        try await send(.get, "heating/model/scan/windows", token: token, timeout: 60)
+    }
+
+    /// Calculates a model from the windows left ticked and holds it, unsaved.
+    public func previewHeatingModel(_ request: HeatingModelRequest, token: String) async throws -> HeatingModelPreview {
+        try await send(.post, "heating/model/preview", token: token, body: request, timeout: 30)
+    }
+
+    /// Keeps a previewed model as the one every estimate uses.
+    public func saveHeatingModel(previewId: String, token: String) async throws -> HeatingModelState {
+        try await send(.put, "heating/model", token: token, body: HeatingModelSave(previewId: previewId))
+    }
+
     // MARK: Requests
 
     public func url(for path: String, query: [URLQueryItem]? = nil) throws -> URL {

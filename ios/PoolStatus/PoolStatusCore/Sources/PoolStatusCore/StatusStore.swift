@@ -510,6 +510,46 @@ public final class StatusStore {
         }
     }
 
+    // MARK: Heating estimates
+
+    /// The model in use and where a scan starts by default.
+    public func heatingModel() async throws -> HeatingModelState {
+        try await client.fetchHeatingModel()
+    }
+
+    public func startHeatingScan(_ request: HeatingScanRequest) async throws -> HeatingScan {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.startHeatingScan(request, token: token)
+        }
+    }
+
+    /// The scan under way or the last one, or nil.
+    public func heatingScan() async throws -> HeatingScan? {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.fetchHeatingScan(token: token)
+        }
+    }
+
+    public func heatingWindows() async throws -> HeatingWindows {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.fetchHeatingWindows(token: token)
+        }
+    }
+
+    public func previewHeatingModel(_ request: HeatingModelRequest) async throws -> HeatingModelPreview {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.previewHeatingModel(request, token: token)
+        }
+    }
+
+    /// Keeps a previewed model; every estimate uses it from then on, and the server pushes the
+    /// new heating state to the apps.
+    public func saveHeatingModel(previewId: String) async throws -> HeatingModelState {
+        try await auth.authorized(.configureServer) { client, token in
+            try await client.saveHeatingModel(previewId: previewId, token: token)
+        }
+    }
+
     // MARK: Errors
 
     private func markConnected() {

@@ -38,15 +38,18 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
         public var timeZone: TimeZoneChoice?
         public var rawRetentionDays: Int?
         public var zipCode: ZipCodeChoice?
+        public var heatingEstimateDisplay: HeatingEstimate.Display?
 
-        public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil, zipCode: ZipCodeChoice? = nil) {
+        public init(timeZone: TimeZoneChoice? = nil, rawRetentionDays: Int? = nil, zipCode: ZipCodeChoice? = nil,
+                    heatingEstimateDisplay: HeatingEstimate.Display? = nil) {
             self.timeZone = timeZone
             self.rawRetentionDays = rawRetentionDays
             self.zipCode = zipCode
+            self.heatingEstimateDisplay = heatingEstimateDisplay
         }
 
         private enum CodingKeys: String, CodingKey {
-            case timeZone, rawRetentionDays, zipCode
+            case timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -63,6 +66,7 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
             case .clear: try container.encodeNil(forKey: .zipCode)
             case nil: break
             }
+            try container.encodeIfPresent(heatingEstimateDisplay?.rawValue, forKey: .heatingEstimateDisplay)
         }
     }
 
@@ -79,6 +83,8 @@ public nonisolated struct ServerSettings: Decodable, Sendable, Equatable {
     public let maximumRetentionDays: Int
     /// Nil until an admin gives a zip code, and from a server without weather.
     public let location: Location?
+    /// How every app shows when heating will be done; nil from a server too old to estimate.
+    public let heatingEstimateDisplay: HeatingEstimate.Display?
 }
 
 /// `GET /system/jobs`: one of the server's maintenance jobs and how its last run went.
