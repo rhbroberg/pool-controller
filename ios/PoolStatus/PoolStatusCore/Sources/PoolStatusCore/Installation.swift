@@ -72,8 +72,8 @@ extension EquipmentControl {
     ]
 
     /// The few controls the watch offers: everyday switches that are safe to flip from the
-    /// wrist. Nothing that asks for confirmation, and not the main filter.
+    /// wrist, so nothing that asks for confirmation.
     public static var watch: [EquipmentControl] {
-        [.spaFilter, .blower, .heatPump, .heater, .lights, .yardLights].compactMap { control(named: $0) }
+        [.filter, .spaFilter, .blower, .heatPump, .heater, .lights, .yardLights].compactMap { control(named: $0) }
     }
 }
