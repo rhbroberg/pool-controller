@@ -34,7 +34,7 @@ struct WatchStatusView: View {
             } else {
                 TabView {
                     GlancePage(title: poolName.isEmpty ? Self.defaultPoolName : poolName)
-                    ControlsPage()
+                    TasksPage()
                 }
                 .tabViewStyle(.verticalPage)
             }
@@ -159,6 +159,20 @@ private struct GlancePage: View {
                 HeatingRow(device: device, tint: control.tint.color, status: store.heating(for: control))
             }
         }
+        if let scheduled = store.tasks?.scheduledPreheat, store.tasks?.spaPreheat == false {
+            Label {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Spa preheat scheduled")
+                    Text(scheduled.readyText())
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.blue)
+            }
+            .font(.footnote)
+        }
         if let estimate = store.heating?.estimate, estimate.isShown, let summary = estimate.summary() {
             Label {
                 Text(summary)
@@ -282,10 +296,11 @@ private struct FreshnessLine: View {
     }
 }
 
-// MARK: - Controls
+// MARK: - Tasks
 
-/// The few switches the watch offers, for accounts that may change equipment.
-private struct ControlsPage: View {
+/// Pool, Spa Preheat and Spa Party, for accounts that may change equipment; a preheat scheduled
+/// on the iPhone shows as scheduled, with when it will be ready.
+private struct TasksPage: View {
     @Environment(StatusStore.self) private var store
 
     var body: some View {
@@ -295,22 +310,26 @@ private struct ControlsPage: View {
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
-            Section {
-                ForEach(EquipmentControl.watch) { control in
-                    ControlRow(control: control,
-                               isOn: store.isOn(control),
-                               pending: store.pendingState(control.name),
-                               isLocked: !store.auth.canControl) {
-                        // the store's change outlives this view, so the watch can go back to sleep
-                        Task { await store.setControl(control, on: !store.isOn(control)) }
+            if let tasks = store.tasks {
+                Section {
+                    ForEach(PoolTask.allCases) { task in
+                        TaskRow(task: task, tasks: tasks, pending: store.pendingTasks[task],
+                                isLocked: !store.auth.canControl) { on in
+                            // the store's change outlives this view, so the watch can go back to sleep
+                            Task { await store.setTask(task, on: on) }
+                        }
                     }
+                } header: {
+                    accessNote
                 }
-            } header: {
-                accessNote
+                .disabled(!store.isConnected)
+            } else {
+                Text("This server doesn’t offer tasks yet.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            .disabled(!store.isConnected)
         }
-        .navigationTitle("Controls")
+        .navigationTitle("Tasks")
     }
 
     @ViewBuilder
@@ -321,33 +340,58 @@ private struct ControlsPage: View {
     }
 }
 
-private struct ControlRow: View {
-    let control: EquipmentControl
-    /// The state the controller last reported.
-    let isOn: Bool
-    /// The state requested and not yet confirmed.
+private struct TaskRow: View {
+    let task: PoolTask
+    let tasks: TaskStatus
+    /// The state asked for and not yet confirmed.
     let pending: Bool?
     let isLocked: Bool
-    let toggle: () -> Void
+    let set: (Bool) -> Void
+
+    private var isOn: Bool { tasks.isOn(task) }
+    private var scheduled: TaskStatus.ScheduledPreheat? { task == .spaPreheat && !isOn ? tasks.scheduledPreheat : nil }
+
+    private var tint: Color {
+        switch task {
+        case .pool: .blue
+        case .spaPreheat: .orange
+        case .spaParty: .pink
+        }
+    }
+
+    private var status: String {
+        if let pending {
+            return pending ? String(localized: "Turning on…") : String(localized: "Turning off…")
+        }
+        if let scheduled {
+            return String(localized: "Scheduled · \(scheduled.readyText())")
+        }
+        return isOn ? String(localized: "On") : String(localized: "Off")
+    }
 
     var body: some View {
-        Toggle(isOn: Binding(get: { pending ?? isOn }, set: { _ in toggle() })) {
+        Toggle(isOn: Binding(get: { pending ?? (isOn || scheduled != nil) }, set: { set($0) })) {
             HStack(spacing: 8) {
-                Image(systemName: control.systemImage)
-                    .symbolVariant(isOn ? .fill : .none)
-                    .foregroundStyle(isOn ? control.tint.color : Color.secondary)
+                Image(systemName: scheduled != nil ? "clock.fill" : task.systemImage)
+                    .foregroundStyle(scheduled != nil ? Color.blue : isOn ? tint : Color.secondary)
                     .frame(width: 22)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(control.title)
+                    Text(task.title)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Text(pending.map { control.pendingText($0) } ?? control.stateText(isOn))
+                    Text(status)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(scheduled != nil ? Color.blue : .secondary)
+                        .lineLimit(2)
+                    if let scheduled, pending == nil {
+                        Text(scheduled.startText())
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
-        .tint(control.tint.color)
+        .tint(scheduled != nil ? .blue : tint)
         .disabled(isLocked || pending != nil)
     }
 }
@@ -377,4 +421,5 @@ extension Tint {
 #Preview("Viewer") {
     WatchStatusView()
         .environment(StatusStore.preview(role: .viewer))
-}#endif
+}
+#endif

@@ -70,10 +70,4 @@ extension EquipmentControl {
                             message: String(localized: "The chlorinator runs at full output until the controller ends the cycle or you turn it off.", bundle: .module),
                             action: String(localized: "Super Chlorinate", bundle: .module)))
     ]
-
-    /// The few controls the watch offers: everyday switches that are safe to flip from the
-    /// wrist, so nothing that asks for confirmation.
-    public static var watch: [EquipmentControl] {
-        [.filter, .spaFilter, .blower, .heatPump, .heater, .lights, .yardLights].compactMap { control(named: $0) }
-    }
 }
