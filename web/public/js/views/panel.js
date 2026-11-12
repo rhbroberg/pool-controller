@@ -99,7 +99,7 @@ export const mountPanel = (root, app) => {
             mark(id, 'failed');
             if (error instanceof ApiError && error.kind === 'unauthorized') {
                 errorMessage = 'Your sign-in is no longer valid. Sign in again to use the panel keys.';
-                store.signOut();
+                store.expire();
             } else if (error instanceof ApiError && error.status === 403) {
                 store.refreshAccount();
                 errorMessage = 'Your account can’t press the panel keys.';
