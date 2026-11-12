@@ -23,10 +23,10 @@ public final class ReprocessModel {
     public private(set) var run: ReprocessRun?
     public private(set) var starting = false
     public private(set) var errorMessage: String?
-    @ObservationIgnored private let sleep: (Duration) async throws -> Void
+    @ObservationIgnored private let sleep: StatusStore.Sleep
 
     public init(now: Date = .now, calendar: Calendar = .current,
-                sleep: @escaping (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+                sleep: @escaping StatusStore.Sleep = StatusStore.clockSleep) {
         from = calendar.date(byAdding: .day, value: -30, to: now) ?? now
         to = now
         self.sleep = sleep

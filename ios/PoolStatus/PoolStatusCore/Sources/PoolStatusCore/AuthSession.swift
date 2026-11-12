@@ -71,16 +71,25 @@ public final class AuthSession {
     /// How the signed-in account signs in: password and/or services' ids; nil until the server
     /// has said since launch.
     public private(set) var methods: [String]?
+    /// True once the server has stopped accepting the saved sign-in, until the next sign-in, so
+    /// the sign-in page can say why it's showing.
+    public private(set) var signInExpired = false
+    /// The account last signed in, which the sign-in page offers again after signing out.
+    public private(set) var lastAccountName: String?
     /// The client for the current server; the status store replaces it when the address changes.
     @ObservationIgnored public var client: StatusClient
     @ObservationIgnored private let store: CredentialStore
+    /// Keeps `lastAccountName` between launches; nil keeps it for this launch only.
+    @ObservationIgnored private let defaults: UserDefaults?
     /// Whether the saved account's role has been checked with the server since launch.
     @ObservationIgnored private var accountChecked = false
 
-    public init(client: StatusClient, store: CredentialStore) {
+    public init(client: StatusClient, store: CredentialStore, defaults: UserDefaults? = nil) {
         self.client = client
         self.store = store
+        self.defaults = defaults
         credentials = store.load()
+        lastAccountName = credentials?.name ?? defaults?.string(forKey: SettingsKey.lastAccountName)
     }
 
     public var role: AccountRole? { credentials?.role }
@@ -102,7 +111,7 @@ public final class AuthSession {
         do {
             return try await request(client, credentials.token)
         } catch StatusClientError.unauthorized {
-            forget()
+            expire()
             throw AuthError.expired(action)
         } catch StatusClientError.server(code: 403, message: _) {
             await refreshAccount()
@@ -210,7 +219,7 @@ public final class AuthSession {
             let account = try await client.fetchAccount(token: credentials.token)
             save(Credentials(name: account.name, token: credentials.token, role: account.role), methods: account.methods)
         } catch StatusClientError.unauthorized {
-            forget()
+            expire()
         } catch {
             return
         }
@@ -223,6 +232,7 @@ public final class AuthSession {
             Task { try? await client.signOut(token: token) }
         }
         forget()
+        signInExpired = false
     }
 
     /// Forgets the sign-in without telling the server, which has already ended it.
@@ -233,11 +243,20 @@ public final class AuthSession {
         accountChecked = false
     }
 
+    /// Forgets a sign-in the server no longer accepts, as after a password change elsewhere.
+    private func expire() {
+        forget()
+        signInExpired = true
+    }
+
     private func save(_ signedIn: Credentials, methods: [String]?) {
         store.save(signedIn)
         credentials = signedIn
         self.methods = methods
         accountChecked = signedIn.role != nil
+        signInExpired = false
+        lastAccountName = signedIn.name
+        defaults?.set(signedIn.name, forKey: SettingsKey.lastAccountName)
     }
 
     // MARK: Accounts (admin)

@@ -2,7 +2,8 @@ import PoolStatusCore
 import SwiftUI
 
 /// The pool at a glance, then the few switches the watch offers. Everything else, setup and
-/// signing in included, stays on the iPhone.
+/// signing in included, stays on the iPhone, and nothing from the pool shows until the iPhone
+/// has sent both a server and a sign-in.
 struct WatchStatusView: View {
     static let defaultPoolName = "Pool"
 
@@ -14,13 +15,22 @@ struct WatchStatusView: View {
 
     private struct PollKey: Equatable {
         let serverAddress: String
+        let isSignedIn: Bool
         let generation: Int
     }
+
+    private var isSignedIn: Bool { store.auth.credentials != nil }
 
     var body: some View {
         NavigationStack {
             if store.serverAddress.isEmpty {
-                SetUpOnPhone()
+                OnPhone(systemImage: "iphone",
+                        title: "Set Up on iPhone",
+                        message: "Open Pool Status on your iPhone and connect it to your pool’s server.")
+            } else if !isSignedIn {
+                OnPhone(systemImage: "lock.fill",
+                        title: "Sign In on iPhone",
+                        message: "Open Pool Status on your iPhone and sign in to see and control the pool.")
             } else {
                 TabView {
                     GlancePage(title: poolName.isEmpty ? Self.defaultPoolName : poolName)
@@ -29,8 +39,8 @@ struct WatchStatusView: View {
                 .tabViewStyle(.verticalPage)
             }
         }
-        .task(id: PollKey(serverAddress: store.serverAddress, generation: pollGeneration)) {
-            guard !store.serverAddress.isEmpty else {
+        .task(id: PollKey(serverAddress: store.serverAddress, isSignedIn: isSignedIn, generation: pollGeneration)) {
+            guard !store.serverAddress.isEmpty, isSignedIn else {
                 return
             }
             await store.poll(reconnectSeconds: StatusStore.defaultReconnectSeconds)
@@ -44,19 +54,23 @@ struct WatchStatusView: View {
     }
 }
 
-/// Shown until the iPhone app has sent a server, with why asking it hasn't worked yet.
-private struct SetUpOnPhone: View {
+/// Shown until the iPhone app has sent a server and a sign-in, with why asking it hasn't worked yet.
+private struct OnPhone: View {
+    let systemImage: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+
     @Environment(PhoneLink.self) private var phone
 
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
-                Image(systemName: "iphone")
+                Image(systemName: systemImage)
                     .font(.title2)
                     .foregroundStyle(.secondary)
-                Text("Set Up on iPhone")
+                Text(title)
                     .font(.headline)
-                Text("Open Pool Status on your iPhone and connect it to your pool’s server.")
+                Text(message)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 if phone.isAsking {
@@ -291,9 +305,7 @@ private struct ControlsPage: View {
 
     @ViewBuilder
     private var accessNote: some View {
-        if store.auth.credentials == nil {
-            Label("Sign in on your iPhone to switch equipment.", systemImage: "lock.fill")
-        } else if !store.auth.canControl {
+        if !store.auth.canControl {
             Label("View only. Your account can’t change equipment.", systemImage: "eye")
         }
     }
@@ -355,5 +367,4 @@ extension Tint {
 #Preview("Viewer") {
     WatchStatusView()
         .environment(StatusStore.preview(role: .viewer))
-}
-#endif
+}#endif

@@ -4,6 +4,7 @@ import Foundation
 public enum SettingsKey {
     public static let serverAddress = "serverAddress"
     public static let poolName = "poolName"
+    public static let lastAccountName = "lastAccountName"
     public static let reconnectSeconds = "reconnectSeconds"
     public static let networkScanPort = "networkScanPort"
     public static let scanTimeoutSeconds = "scanTimeoutSeconds"

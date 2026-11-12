@@ -67,13 +67,6 @@ struct ReprocessHistoryView: View {
             if let run = model.run {
                 runSection(run)
             }
-
-            if store.auth.credentials == nil {
-                Section {
-                    Text("Sign in as an admin to reprocess history.")
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .disabled(!store.auth.isAdmin)
         .navigationTitle("Reprocess History")

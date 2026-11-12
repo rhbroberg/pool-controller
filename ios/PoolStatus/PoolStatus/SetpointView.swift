@@ -86,9 +86,7 @@ struct SetpointView: View {
         if heating?.setpointsReachController == false {
             parts.append(String(localized: "For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet."))
         }
-        if store.auth.credentials == nil {
-            parts.append(String(localized: "Sign in to change them."))
-        } else if !store.auth.canControl {
+        if !store.auth.canControl {
             parts.append(String(localized: "Your account can see the setpoints but not change them."))
         }
         return parts.joined(separator: " ")
