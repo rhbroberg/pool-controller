@@ -37,12 +37,6 @@ struct HeatingEstimatesView: View {
                         .foregroundStyle(.green)
                 }
             }
-            if store.auth.credentials == nil {
-                Section {
-                    Text("Sign in as an admin to change heating estimates.")
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .disabled(!store.auth.isAdmin)
         .navigationTitle("Heating Estimates")

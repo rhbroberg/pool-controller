@@ -97,7 +97,7 @@ public final class StatusStore {
         self.session = session
         self.live = live
         self.sleep = sleep
-        auth = AuthSession(client: StatusClient(serverAddress: address, session: session), store: credentials)
+        auth = AuthSession(client: StatusClient(serverAddress: address, session: session), store: credentials, defaults: defaults)
     }
 
     /// Waits on the real clock.

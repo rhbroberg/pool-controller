@@ -177,11 +177,7 @@ struct StatusView: View {
 
     @ViewBuilder
     private var accessNote: some View {
-        if store.auth.credentials == nil {
-            SignInPrompt(text: "Sign in to change equipment and water flow") {
-                showingSettings = true
-            }
-        } else if !store.auth.canControl {
+        if !store.auth.canControl {
             Label("View only. Your account can see equipment but not change it.", systemImage: "eye")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -204,10 +200,6 @@ struct StatusView: View {
     }
 
     private func request(_ control: EquipmentControl) {
-        if store.auth.credentials == nil {
-            showingSettings = true
-            return
-        }
         guard store.auth.canControl else {
             return
         }

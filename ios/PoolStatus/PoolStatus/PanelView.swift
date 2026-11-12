@@ -7,7 +7,6 @@ import UIKit
 struct PanelView: View {
     @Environment(StatusStore.self) private var store
     @State private var model = PanelModel()
-    @State private var showingSettings = false
 
     private static let margin: CGFloat = 16
     private static let spacing: CGFloat = 24
@@ -18,13 +17,10 @@ struct PanelView: View {
     private static let displayColumns: CGFloat = 20
 
     private enum Access {
-        case signedOut, viewOnly, unreachable, ready
+        case viewOnly, unreachable, ready
     }
 
     private var access: Access {
-        if store.auth.credentials == nil {
-            return .signedOut
-        }
         if !store.auth.canControl {
             return .viewOnly
         }
@@ -74,9 +70,6 @@ struct PanelView: View {
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-        }
     }
 
     private static func padDiameter(for size: CGSize, wide: Bool) -> CGFloat {
@@ -106,17 +99,6 @@ struct PanelView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-        case .signedOut:
-            VStack(spacing: 12) {
-                Text("Sign in to press the panel keys and change the controller’s settings.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                SignInPrompt(text: "Sign In") {
-                    showingSettings = true
-                }
-            }
-            .frame(maxWidth: diameter)
         case .viewOnly:
             Label("View only. Your account can watch the panel but not press its keys.", systemImage: "eye")
                 .font(.subheadline)

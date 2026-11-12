@@ -17,15 +17,17 @@ struct PoolStatusApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // the server first, then a sign-in; nothing from the pool shows before both
             Group {
                 if store.serverAddress.isEmpty {
                     ServerSetupView()
-                        .environment(store)
+                } else if store.auth.credentials == nil {
+                    SignInView()
                 } else {
                     StatusView()
-                        .environment(store)
                 }
             }
+            .environment(store)
             .onChange(of: Self.watchContext(store: store, poolName: poolName)) { _, context in
                 watchLink.send(context)
             }
