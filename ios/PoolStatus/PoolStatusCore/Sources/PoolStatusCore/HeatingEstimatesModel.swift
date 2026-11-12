@@ -78,14 +78,18 @@ public final class HeatingEstimatesModel {
     }
 
     /// Reads the scan under way or the last one, and its windows once finished.
+    ///
+    /// A finished scan is only taken once its windows are in hand. The screen follows the scan
+    /// while it's active, and that stops, cancelling this very call, the moment a finished scan is
+    /// stored; keeping it until the windows were read left a finished scan with none, and the
+    /// next look had no reason to fetch them again.
     public func loadScan(store: StatusStore) async {
         do {
             let latest = try await store.heatingScan()
-            let finishedNow = latest?.state == .finished && (scan?.id != latest?.id || scan?.state != .finished)
-            scan = latest
-            if finishedNow || (latest?.state == .finished && windows.isEmpty) {
+            if latest?.state == .finished && (scan?.id != latest?.id || scan?.state != .finished || windows.isEmpty) {
                 try await loadWindows(store: store)
             }
+            scan = latest
             errorMessage = nil
         } catch {
             if !error.isCancellation {

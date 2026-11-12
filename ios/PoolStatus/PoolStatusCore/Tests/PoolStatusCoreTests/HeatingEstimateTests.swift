@@ -154,8 +154,10 @@ struct HeatingEstimatesModelTests {
     }
 
     /// A signed-in admin's store; `scans` are handed out in turn for each look at the scan.
-    private func harness(scans: [String] = [Self.scan()], saved: String? = nil, previewReply: String = Self.preview()) async throws -> Harness {
+    private func harness(scans: [String] = [Self.scan()], saved: String? = nil, previewReply: String = Self.preview(),
+                         windowsFailing: Int = 0) async throws -> Harness {
         let looks = Shared(scans)
+        let failing = Shared(windowsFailing)
         let kept = Shared<String?>(saved)
         let server = StubServer { method, path, _ in
             switch (method, path) {
@@ -172,7 +174,14 @@ struct HeatingEstimatesModelTests {
                 }
                 return next.isEmpty ? .status(404, message: "no scan") : .ok(next)
             case ("GET", "heating/model/scan/windows"):
-                return .ok(Self.windows)
+                var fail = false
+                failing.modify { remaining in
+                    if remaining > 0 {
+                        remaining -= 1
+                        fail = true
+                    }
+                }
+                return fail ? .status(500, message: "try again") : .ok(Self.windows)
             case ("POST", "heating/model/preview"):
                 return .ok(previewReply)
             case ("PUT", "heating/model"):
@@ -224,6 +233,29 @@ struct HeatingEstimatesModelTests {
         #expect(!model.canCalculate(isAdmin: false))
         #expect(HeatingEstimatesModel.stateText(try #require(model.scan)) == "Found 4 windows in 165,000 events")
         #expect(model.scan?.summary?.count(.pool, .cooling)?.suitable == 1)
+    }
+
+    @Test("a finished scan is only taken with its windows, so a failed or cancelled read is tried again")
+    func windowsNotLostWithTheScan() async throws {
+        let h = try await harness(scans: [Self.scan("running"), Self.scan()], windowsFailing: 1)
+        let model = HeatingEstimatesModel(sleep: { _ in })
+        await model.load(store: h.store)
+        await model.find(store: h.store)
+        await model.follow(store: h.store)
+        #expect(model.scan?.state == .finished)
+        #expect(model.windows.count == 4, "the windows came with the scan that finished")
+        #expect(model.canCalculate(isAdmin: true))
+
+        let failed = try await harness(scans: [Self.scan()], windowsFailing: 1)
+        let other = HeatingEstimatesModel()
+        await other.loadScan(store: failed.store)
+        #expect(other.scan == nil, "not finished as far as the screen is concerned without the windows")
+        #expect(!other.canCalculate(isAdmin: true))
+        #expect(other.errorMessage != nil)
+        await other.loadScan(store: failed.store)
+        #expect(other.scan?.state == .finished)
+        #expect(other.windows.count == 4)
+        #expect(other.errorMessage == nil)
     }
 
     @Test("ticks the suitable windows, and turning off a kind or a window changes what is used")
