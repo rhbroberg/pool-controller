@@ -19,13 +19,30 @@ extension StatusStore {
     public static func preview(role: AccountRole? = .user) -> StatusStore {
         StatusStore(serverAddress: "preview.local:3000",
                     defaults: UserDefaults(suiteName: "PoolStatusPreviews") ?? .standard,
-                    session: PreviewURLProtocol.session,
+                    session: previewSession,
                     credentials: InMemoryCredentialStore(role.map { Credentials(name: "preview", token: "preview", role: $0) }))
     }
+
+    /// Requests through this reach a pretend pool server at any host but `PreviewServer.unreachableHost`:
+    /// for previews, and for the UI tests, which can't count on a real server.
+    public static var previewSession: URLSession { PreviewURLProtocol.session }
+}
+
+/// How the pretend server behaves, for tests that drive the app through it.
+public nonisolated enum PreviewServer {
+    /// Any account signs in with this password; any other is refused.
+    public static let password = "secret"
+    /// A token the server has stopped accepting, as after a password change elsewhere.
+    public static let expiredToken = "expired"
+    /// A host that never answers.
+    public static let unreachableHost = "offline.test"
+
+    /// The token signing in as `name` gets.
+    public static func token(for name: String) -> String { "token-\(name)" }
 }
 
 /// Answers the API's GET routes with plausible readings for an evening with the filter running
-/// and the heater warming the pool.
+/// and the heater warming the pool, and signs anyone in with `PreviewServer.password`.
 private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Sendable {
     static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
@@ -41,14 +58,66 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
         guard let url = request.url else {
             return
         }
+        guard url.host() != PreviewServer.unreachableHost else {
+            client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
+            return
+        }
         let path = url.path().replacingOccurrences(of: "/\(StatusClient.apiPath)/", with: "")
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let body = request.httpMethod == "GET" ? Self.body(for: path, query: query) : #"{"message":"ok"}"#
-        let response = HTTPURLResponse(url: url, statusCode: body == nil ? 404 : 200, httpVersion: nil,
+        let (status, body) = Self.reply(method: request.httpMethod ?? "GET", path: path, query: query,
+                                        token: request.value(forHTTPHeaderField: "x-auth"), sent: requestBody)
+        let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil,
                                        headerFields: ["Content-Type": "application/json"])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data((body ?? #"{"message":"not in the preview"}"#).utf8))
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
         client?.urlProtocolDidFinishLoading(self)
+    }
+
+    /// A URL loading system hands a protocol the body as a stream.
+    private var requestBody: Data? {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
+
+    private static let ok = #"{"message":"ok"}"#
+
+    private static func reply(method: String, path: String, query: [URLQueryItem], token: String?,
+                              sent: Data?) -> (Int, String) {
+        switch (method, path) {
+        case ("POST", "users/login"):
+            let fields = sent.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: String] ?? [:]
+            let name = fields["email"] ?? ""
+            guard fields["password"] == PreviewServer.password else {
+                return (401, #"{"message":"incorrect name or password"}"#)
+            }
+            return (200, #"{"email":"\#(name)","token":"\#(PreviewServer.token(for: name))","role":"admin"}"#)
+        case ("GET", "users/me"):
+            guard let token, token != PreviewServer.expiredToken else {
+                return (401, #"{"message":"sign in again"}"#)
+            }
+            let name = token.hasPrefix("token-") ? String(token.dropFirst("token-".count)) : "preview"
+            return (200, #"{"email":"\#(name)","role":"admin"}"#)
+        case ("GET", _):
+            return body(for: path, query: query).map { (200, $0) } ?? (404, #"{"message":"not in the preview"}"#)
+        default:
+            return (200, ok)
+        }
     }
 
     private static let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)

@@ -161,4 +161,25 @@ struct KeychainTests {
         keychain.delete()
         #expect(keychain.load() == nil)
     }
+
+    @Test("keeps one sign-in per site under the same service",
+          .enabled("needs a keychain this test process may use") { await keychainAvailable() })
+    func perSite() {
+        let service = "com.rhbroberg.PoolStatus.tests.\(UUID().uuidString)"
+        let home = KeychainCredentialStore(service: service, account: UUID().uuidString)
+        let lake = KeychainCredentialStore(service: service, account: UUID().uuidString)
+        defer {
+            home.delete()
+            lake.delete()
+        }
+
+        home.save(Credentials(name: "owner", token: "home", role: .admin))
+        lake.save(Credentials(name: "guest", token: "lake", role: .viewer))
+        #expect(home.load() == Credentials(name: "owner", token: "home", role: .admin))
+        #expect(lake.load() == Credentials(name: "guest", token: "lake", role: .viewer))
+
+        home.delete()
+        #expect(home.load() == nil)
+        #expect(lake.load() == Credentials(name: "guest", token: "lake", role: .viewer))
+    }
 }

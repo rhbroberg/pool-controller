@@ -1,6 +1,7 @@
 #!/bin/bash
-# Runs the iOS unit tests, which live in the PoolStatusCore package, with coverage and writes
-# ios/coverage/lcov.info for Cursor.
+# Runs the iOS tests with coverage and writes ios/coverage/lcov.info for Cursor: the unit tests,
+# which live in the PoolStatusCore package, and the UI tests, which drive the app against its
+# pretend server. --unit skips the UI tests, which take a minute or two.
 #
 # The tests run on a simulator of their own, "PoolStatus Tests", created on first use, so the
 # app installed on your everyday simulator, its settings and its sign-in are left alone.
@@ -9,6 +10,10 @@ cd "$(dirname "$0")/.."
 
 DEVICE_NAME="PoolStatus Tests"
 RESULT=build/TestResults.xcresult
+skip=()
+if [ "${1:-}" = "--unit" ]; then
+    skip=(-skip-testing:PoolStatusUITests)
+fi
 
 udid=$(xcrun simctl list devices available -j | node -e '
     const { devices } = JSON.parse(require("fs").readFileSync(0));
@@ -42,6 +47,7 @@ xcodebuild test \
     -derivedDataPath build/TestDerivedData \
     -resultBundlePath "$RESULT" \
     -enableCodeCoverage YES \
+    ${skip[@]+"${skip[@]}"} \
     -quiet
 status=$?
 
