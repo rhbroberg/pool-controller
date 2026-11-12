@@ -4,12 +4,12 @@
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
-import { DEFAULT_ADMIN } from '../model.js';
+import { DEFAULT_ADMIN, HEATING_SOURCES, WATER_BODIES, rateBasis } from '../model.js';
 import { relative } from '../format.js';
 import { topbar, formSection, formRow, actionRow, linkRow, select, spinner, renderer } from '../ui.js';
 
 const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
-const SPA_RATE_CHOICES = [5, 10, 15, 20, 30, 40, 60];
+const RULE_CHOICES = { pool: [0.25, 0.5, 0.75, 1, 1.5, 2, 3], spa: [2, 4, 6, 10, 15, 20, 30, 40, 60] };
 const PREHEAT_MARGIN_CHOICES = [0, 10, 15, 30, 45, 60];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
@@ -38,6 +38,8 @@ export const mountMaintenance = (root, app) => {
     let working = false;
     let message = null;
     let settings = null;
+    // the heating model in use, to say which rates it learned; null until one is saved
+    let heatingModel = null;
     let jobs = [];
     // settings or jobs that couldn't be read or changed
     let settingsError = null;
@@ -67,7 +69,11 @@ export const mountMaintenance = (root, app) => {
             return;
         }
         try {
-            [settings, jobs] = await Promise.all([store.serverSettings(), store.maintenanceJobs()]);
+            [settings, jobs, heatingModel] = await Promise.all([
+                store.serverSettings(),
+                store.maintenanceJobs(),
+                store.client.fetchHeatingModel().then((state) => state.model).catch(() => null)
+            ]);
             settingsError = null;
         } catch (error) {
             settingsError = error.message;
@@ -174,31 +180,52 @@ export const mountMaintenance = (root, app) => {
                 })));
     };
 
-    /** what times a scheduled spa preheat; a server without tasks doesn't say */
-    const preheatSection = () => {
-        if (typeof settings.spaHeatingRate !== 'number' || typeof settings.preheatMarginMinutes !== 'number') {
-            return null;
+    const perHour = (rate) => `${rate}°F an hour`;
+
+    /**
+     * how each body of water is timed: each source's rate as learned from history, or the rule
+     * standing in for it and why, which is set here; a server without heating rules doesn't say
+     **/
+    const heatingSections = () => {
+        if (!settings.heatingRules) {
+            return [];
         }
         const keeping = (choices, current) => [...new Set([...choices, current])].sort((a, b) => a - b);
         const minutes = (count) => count === 0 ? 'No margin' : count % 60 === 0 ? `${count / 60} hr` : `${count} min`;
-        return formSection({
-            header: 'Spa Preheat',
-            footer: 'A preheat scheduled to be ready by a time starts only as early as it must. Until the server learns how the spa warms, it times it with this rate, and always starts this much earlier.'
-        },
-        formRow(h('span', { class: 'label' }, 'Spa Heats'),
-            select({
-                label: 'Spa heats',
-                value: String(settings.spaHeatingRate),
-                options: keeping(SPA_RATE_CHOICES, settings.spaHeatingRate).map((rate) => ({ value: String(rate), label: `${rate}° an hour` })),
-                onChange: (value) => apply({ spaHeatingRate: Number(value) })
-            })),
-        formRow(h('span', { class: 'label' }, 'Start Early By'),
-            select({
-                label: 'Start early by',
-                value: String(settings.preheatMarginMinutes),
-                options: keeping(PREHEAT_MARGIN_CHOICES, settings.preheatMarginMinutes).map((count) => ({ value: String(count), label: minutes(count) })),
-                onChange: (value) => apply({ preheatMarginMinutes: Number(value) })
-            })));
+        const footer = 'A rule stands in for what history hasn’t shown yet, and its estimates say “by rule”. A model that learns the rate takes over from it.';
+        const sourceRow = (body, source) => {
+            const basis = rateBasis(heatingModel, body.id, source.id);
+            const caption = basis.why
+                ? h('small', { class: 'warning' }, `By rule · ${basis.why}`)
+                : h('small', { class: 'learned' }, 'Learned from history');
+            const label = h('div', { class: 'row-text' }, h('span', null, source.title), caption);
+            if (!basis.why) {
+                return formRow(label, h('span', { class: 'value' }, `${Math.round(basis.learned * 100) / 100}°F an hour`));
+            }
+            const current = settings.heatingRules[body.id][source.id];
+            return formRow(label, select({
+                label: `${body.title} ${source.title.toLowerCase()} rule`,
+                value: String(current),
+                options: keeping(RULE_CHOICES[body.id], current).map((rate) => ({ value: String(rate), label: perHour(rate) })),
+                onChange: (value) => apply({ heatingRules: { [body.id]: { [source.id]: Number(value) } } })
+            }));
+        };
+        return WATER_BODIES.map((body) => {
+            const rows = HEATING_SOURCES.map((source) => sourceRow(body, source));
+            if (body.id === 'spa' && typeof settings.preheatMarginMinutes === 'number') {
+                rows.push(formRow(h('span', { class: 'label' }, 'Preheat Starts Early By'),
+                    select({
+                        label: 'Preheat starts early by',
+                        value: String(settings.preheatMarginMinutes),
+                        options: keeping(PREHEAT_MARGIN_CHOICES, settings.preheatMarginMinutes).map((count) => ({ value: String(count), label: minutes(count) })),
+                        onChange: (value) => apply({ preheatMarginMinutes: Number(value) })
+                    })));
+            }
+            return formSection({
+                header: `How the ${body.title} Is Timed`,
+                footer: body.id === 'spa' ? `${footer} A spa preheat scheduled to be ready by a time starts this much earlier than it needs to.` : footer
+            }, ...rows);
+        });
     };
 
     const locationSection = () => {
@@ -268,7 +295,7 @@ export const mountMaintenance = (root, app) => {
                 h('div', { class: 'form' },
                     settings ? locationSection() : null,
                     settings ? historySection() : null,
-                    settings ? preheatSection() : null,
+                    ...(settings ? heatingSections() : []),
                     jobs.length
                         ? formSection({ header: 'Maintenance Jobs', footer: 'These run on their own. Run Now brings them up to date straight away.' }, ...jobs.map(jobRow))
                         : null,

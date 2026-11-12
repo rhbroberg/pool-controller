@@ -139,6 +139,11 @@ export class Client {
         return this.send('GET', 'heating');
     }
 
+    /** the heating model in use, { model, defaultRange }; model is null until one is saved */
+    fetchHeatingModel() {
+        return this.send('GET', 'heating/model');
+    }
+
     /** whether each task is on, and a spa preheat waiting for its time */
     fetchTasks() {
         return this.send('GET', 'tasks');

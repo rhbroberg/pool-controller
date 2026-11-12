@@ -384,3 +384,28 @@ export const PANEL_KEYS = {
     minus: { title: 'Minus', label: '−' },
     plus: { title: 'Plus', label: '+' }
 };
+
+/** the heat sources the heating rules cover, as the settings and the estimates name them */
+export const HEATING_SOURCES = [
+    { id: 'heater', device: 'heater1', title: 'Heater' },
+    { id: 'heatPump', device: 'heatpump', title: 'Heat Pump' }
+];
+
+/**
+ * whether the heating model in use learned how fast `source` ('heater' or 'heatPump') warms
+ * `body`: { learned: °F per hour }, or { why } its rule stands in
+ **/
+export const rateBasis = (model, body, source) => {
+    if (!model) {
+        return { why: 'No model has been saved yet.' };
+    }
+    const learned = model.bodies ? model.bodies[body] : null;
+    if (!learned || !learned.available) {
+        const reason = learned && learned.reason ? learned.reason : 'the model in use has nothing for this water';
+        return { why: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.` };
+    }
+    if (source === 'heater') {
+        return typeof learned.heater === 'number' ? { learned: learned.heater } : { why: 'History doesn’t show the heater warming this water.' };
+    }
+    return learned.heatPump ? { learned: learned.heatPump.base } : { why: 'History doesn’t show the heat pump warming this water.' };
+};

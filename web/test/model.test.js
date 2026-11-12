@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -195,5 +195,22 @@ describe('tasks', () => {
         const tasks = scheduled(new Date(), new Date());
         tasks.spaPreheat.on = true;
         assert.equal(scheduledPreheat(tasks), null);
+    });
+});
+
+describe('heating rules', () => {
+    const model = {
+        bodies: {
+            pool: { available: true, heater: null, heatPump: { base: 0.55, slope: 0, referenceAirTemperature: 60 } },
+            spa: { available: false, reason: 'needs at least 5 windows; has 1' }
+        }
+    };
+
+    it('says which rates history taught, and why a rule stands in for the rest', () => {
+        assert.deepEqual(rateBasis(model, 'pool', 'heatPump'), { learned: 0.55 });
+        assert.deepEqual(rateBasis(model, 'pool', 'heater'), { why: 'History doesn’t show the heater warming this water.' });
+        assert.deepEqual(rateBasis(model, 'spa', 'heater'), { why: 'Needs at least 5 windows; has 1.' });
+        assert.deepEqual(rateBasis(null, 'pool', 'heater'), { why: 'No model has been saved yet.' });
+        assert.deepEqual(HEATING_SOURCES.map((source) => source.id), ['heater', 'heatPump']);
     });
 });

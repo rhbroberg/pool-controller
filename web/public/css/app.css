@@ -1291,6 +1291,10 @@ button.form-row:disabled {
     color: var(--orange);
 }
 
+.row-text small.learned {
+    color: var(--green);
+}
+
 /* MARK: dialogs */
 
 .dialog {
