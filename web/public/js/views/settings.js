@@ -1,4 +1,5 @@
 // Settings: the pool's name, the account signed in, and the way to history and administration.
+// Signing in is the sign-in page's; Settings shows only once someone has.
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
@@ -6,23 +7,18 @@ import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable, about
 import { RECONNECT_CHOICES, DEFAULT_RECONNECT_SECONDS } from '../store.js';
 import { formatDurationSeconds } from '../format.js';
 import * as prefs from '../prefs.js';
-import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, textInput, passwordInput, revealer, select, spinner, renderer } from '../ui.js';
+import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, passwordInput, revealer, select, spinner, renderer } from '../ui.js';
 
 export const mountSettings = (root, app) => {
     const { store, client } = app;
     let poolName = prefs.read('poolName', DEFAULT_POOL_NAME);
-    let email = '';
-    let password = '';
-    let signingIn = false;
-    let signInError = null;
-    // what the sign-in form offers: passwords and/or services; null until the server says
+    // the sign-in services the server offers; null until it says
     let choices = null;
     let pendingRequests = 0;
     let methodsError = null;
     let linking = null;
     // the pool server's build, for the about line; null until it answers
     let serverInfo = null;
-    const reveal = revealer(() => redraw());
 
     const token = () => store.credentials ? store.credentials.token : '';
 
@@ -104,25 +100,6 @@ export const mountSettings = (root, app) => {
         redraw();
     };
 
-    const signIn = async () => {
-        if (!email.trim() || !password || signingIn) {
-            return;
-        }
-        signingIn = true;
-        signInError = null;
-        redraw();
-        try {
-            await store.signIn(email.trim(), password);
-            password = '';
-            email = '';
-        } catch (error) {
-            signInError = error.message;
-        } finally {
-            signingIn = false;
-            redraw();
-        }
-    };
-
     const poolSection = () => formSection({
         header: 'Pool',
         footer: 'This page reaches the pool server through the web service it came from. The server it talks to is set where the web service is installed.'
@@ -170,44 +147,18 @@ export const mountSettings = (root, app) => {
             : actionRow(`Link ${provider.displayName}`, () => link(provider), { busy: linking === provider.id })));
     };
 
-    const servicesSection = () => providers().length === 0 ? null : formSection({
-        header: choices.passwordSignIn ? 'Or Sign In With' : 'Account',
-        footer: choices.passwordSignIn ? null : 'Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.'
-    },
-    ...providers().map((provider) => h('a', { class: 'form-row', href: client.signInUrl(provider.id) },
-        h('span', { class: 'action-text' }, `Continue with ${provider.displayName}`),
-        icon('chevronRight'))));
-
     const accountSection = () => {
         const credentials = store.credentials;
-        if (credentials) {
-            const role = roleInfo(credentials.role);
-            return [formSection({ header: 'Account' },
-                formRow(h('span', { class: 'label' }, 'Signed In'), h('span', { class: 'value' }, role ? `${credentials.email} · ${role.title}` : credentials.email)),
-                store.hasPassword ? linkRow('Change Password', '#/settings/password') : null,
-                actionRow('Sign Out', () => store.signOut({ endSession: true }), { destructive: true })),
-            methodsSection()];
+        if (!credentials) {
+            return null;
         }
-        if (choices && !choices.passwordSignIn) {
-            return servicesSection();
-        }
-        // a form, so the browser offers to save and fill the password
-        return [h('form', {
-            onSubmit: (event) => {
-                event.preventDefault();
-                signIn();
-            }
-        }, formSection({
-            header: 'Account',
-            footer: signInError || 'Signing in lets you change equipment, water flow and the controller’s settings. Status is visible without an account.',
-            footerClass: signInError ? 'error' : ''
-        },
-        formRow(textInput({ label: 'Account Name', name: 'username', value: email, autocomplete: 'username', onInput: (v) => { email = v; redraw(); } })),
-        formRow(passwordInput({ reveal, label: 'Password', name: 'password', value: password, autocomplete: 'current-password', onInput: (v) => { password = v; redraw(); }, onEnter: signIn })),
-        h('button', { class: 'form-row action', type: 'submit', disabled: !email.trim() || !password || signingIn },
-            h('span', null, 'Sign In'),
-            signingIn ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null))),
-        servicesSection()];
+        const role = roleInfo(credentials.role);
+        return [formSection({ header: 'Account', footer: 'You stay signed in on this browser until you sign out.' },
+            formRow(h('span', { class: 'label' }, 'Signed In'), h('span', { class: 'value' }, role ? `${credentials.email} · ${role.title}` : credentials.email)),
+            store.hasPassword ? linkRow('Change Password', '#/settings/password') : null,
+            // the page goes back to the sign-in page
+            actionRow('Sign Out', () => store.signOut({ endSession: true }), { destructive: true })),
+        methodsSection()];
     };
 
     const historySection = () => formSection({

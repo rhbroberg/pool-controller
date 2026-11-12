@@ -15,8 +15,13 @@ export const mountSignInComplete = (root, app, query) => {
     // the ticket is spent once used; keep it out of the history and off the screen
     history.replaceState(null, '', '#/signin/complete');
 
+    // linking a service comes from Settings, signed in; signing in comes from the sign-in page
+    const back = () => store.credentials
+        ? h('a', { href: '#/settings' }, 'Go to Settings')
+        : h('a', { href: '#/' }, 'Back to Sign In');
+
     const render = () => [
-        topbar({ title: 'Sign In', back: 'settings', backTitle: 'Settings' }),
+        topbar({ title: 'Sign In', back: store.credentials ? 'settings' : '', backTitle: store.credentials ? 'Settings' : 'Sign In' }),
         h('main', { class: 'page' },
             working
                 ? h('div', { class: 'center-message' }, spinner('large'), 'Signing in…')
@@ -24,7 +29,7 @@ export const mountSignInComplete = (root, app, query) => {
                     icon(failure || outcome.failed ? 'warning' : outcome.linked ? 'check' : 'lock'),
                     h('h2', null, failure ? 'Couldn’t Sign In' : outcome.title),
                     failure || outcome.message,
-                    h('a', { href: '#/settings' }, 'Go to Settings')))
+                    back()))
     ];
 
     const redraw = renderer(root, render);
@@ -32,8 +37,8 @@ export const mountSignInComplete = (root, app, query) => {
     redraw();
 
     if (outcome.ticket) {
+        // once signed in, the page opens the dashboard
         store.signInWithTicket(outcome.ticket)
-            .then(() => location.replace('#/settings'))
             .catch((error) => {
                 failure = error.message;
                 working = false;
