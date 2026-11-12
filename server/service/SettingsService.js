@@ -15,11 +15,24 @@ const MIN_RETENTION_DAYS = 7;
 const MAX_RETENTION_DAYS = 3650;
 const ESTIMATE_DISPLAYS = ['remaining', 'readyAt'];
 const DEFAULT_ESTIMATE_DISPLAY = 'remaining';
+// a heater and heat pump together on a typical spa; an admin sets this one's own
+const DEFAULT_SPA_HEATING_RATE = 20;
+const MIN_SPA_HEATING_RATE = 1;
+const MAX_SPA_HEATING_RATE = 120;
+const DEFAULT_PREHEAT_MARGIN_MINUTES = 15;
+const MAX_PREHEAT_MARGIN_MINUTES = 240;
 
 // five digits, optionally with the ZIP+4 extension, which the lookup doesn't need
 const ZIP_CODE = /^(\d{5})(?:-\d{4})?$/;
 
-var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS, location: null, heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY };
+var stored = {
+    timeZone: null,
+    rawRetentionDays: DEFAULT_RETENTION_DAYS,
+    location: null,
+    heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY,
+    spaHeatingRate: DEFAULT_SPA_HEATING_RATE,
+    preheatMarginMinutes: DEFAULT_PREHEAT_MARGIN_MINUTES
+};
 var detected;
 var listeners = [];
 
@@ -68,7 +81,9 @@ exports.load = async function() {
         timeZone: doc && doc.timeZone ? doc.timeZone : null,
         rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS,
         location: doc && doc.location && doc.location.zipCode ? doc.location : null,
-        heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY
+        heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY,
+        spaHeatingRate: doc && typeof doc.spaHeatingRate === 'number' ? doc.spaHeatingRate : DEFAULT_SPA_HEATING_RATE,
+        preheatMarginMinutes: doc && Number.isInteger(doc.preheatMarginMinutes) ? doc.preheatMarginMinutes : DEFAULT_PREHEAT_MARGIN_MINUTES
     };
     const where = stored.location ? `weather for ${stored.location.placeName} (${stored.location.zipCode})` : 'no zip code for weather';
     logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
@@ -95,6 +110,16 @@ exports.rawRetentionDays = function() {
 /** 'remaining' (minutes until ready) or 'readyAt' (the time it will be ready) */
 exports.heatingEstimateDisplay = function() {
     return stored.heatingEstimateDisplay;
+};
+
+/** °F per hour the spa warms with both heat sources, for timing a preheat without a spa model */
+exports.spaHeatingRate = function() {
+    return stored.spaHeatingRate;
+};
+
+/** minutes added to a scheduled preheat's lead time */
+exports.preheatMarginMinutes = function() {
+    return stored.preheatMarginMinutes;
 };
 
 /**
@@ -157,7 +182,9 @@ exports.getSettings = async function() {
         minimumRetentionDays: MIN_RETENTION_DAYS,
         maximumRetentionDays: MAX_RETENTION_DAYS,
         location: publicLocation(stored.location),
-        heatingEstimateDisplay: stored.heatingEstimateDisplay
+        heatingEstimateDisplay: stored.heatingEstimateDisplay,
+        spaHeatingRate: stored.spaHeatingRate,
+        preheatMarginMinutes: stored.preheatMarginMinutes
     };
 };
 
@@ -193,8 +220,22 @@ exports.updateSettings = async function(changes, user) {
         }
         update.heatingEstimateDisplay = changes.heatingEstimateDisplay;
     }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'spaHeatingRate')) {
+        const rate = changes.spaHeatingRate;
+        if (typeof rate !== 'number' || !Number.isFinite(rate) || rate < MIN_SPA_HEATING_RATE || rate > MAX_SPA_HEATING_RATE) {
+            throw validationError(`the spa heating rate must be ${MIN_SPA_HEATING_RATE} to ${MAX_SPA_HEATING_RATE}°F per hour`);
+        }
+        update.spaHeatingRate = rate;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'preheatMarginMinutes')) {
+        const minutes = changes.preheatMarginMinutes;
+        if (!Number.isInteger(minutes) || minutes < 0 || minutes > MAX_PREHEAT_MARGIN_MINUTES) {
+            throw validationError(`the preheat margin must be 0 to ${MAX_PREHEAT_MARGIN_MINUTES} minutes`);
+        }
+        update.preheatMarginMinutes = minutes;
+    }
     if (Object.keys(update).length === 0) {
-        throw validationError('give a timeZone, rawRetentionDays, zipCode or heatingEstimateDisplay to change');
+        throw validationError('give a timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, spaHeatingRate or preheatMarginMinutes to change');
     }
 
     const previousZone = exports.timeZone();
@@ -219,6 +260,14 @@ exports.updateSettings = async function(changes, user) {
     if ('heatingEstimateDisplay' in update && update.heatingEstimateDisplay !== previousDisplay) {
         changed.heatingEstimateDisplay = update.heatingEstimateDisplay;
         notes.push(update.heatingEstimateDisplay === 'readyAt' ? 'heating estimates show the time it will be ready' : 'heating estimates show the minutes left');
+    }
+    if ('spaHeatingRate' in update) {
+        changed.spaHeatingRate = update.spaHeatingRate;
+        notes.push(`spa heats ${update.spaHeatingRate}°F per hour for preheat timing`);
+    }
+    if ('preheatMarginMinutes' in update) {
+        changed.preheatMarginMinutes = update.preheatMarginMinutes;
+        notes.push(`preheats start ${update.preheatMarginMinutes} minutes early`);
     }
     if (notes.length > 0) {
         logger.info(`REST ${who}: ${notes.join('; ')}`);

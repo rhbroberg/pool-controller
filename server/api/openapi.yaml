@@ -652,6 +652,128 @@ paths:
         - OAuth2:
             - control
       x-swagger-router-controller: Heating
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      description: "the everyday jobs offered in place of single switches, each on when
+        its switches are: pool (spillover water flow with the filter pump), spa preheat
+        (the spa filter with the heater and heat pump enabled) and spa party (a preheat
+        with the blower); with a spa preheat waiting to start in time for when it should
+        be ready, and whether it's dark at the pool"
+      operationId: getTasks
+      responses:
+        "200":
+          description: the tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+      x-swagger-router-controller: Tasks
+  /tasks/pool:
+    put:
+      tags:
+        - Tasks
+      description: on puts the water flow in spillover and runs the filter pump; off stops
+        the filter pump and leaves the water flow as it is. The controller confirms each
+        switch on a later status frame, so GET /tasks shows the task on once it has.
+      operationId: setPoolTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
+  /tasks/spaPreheat:
+    put:
+      tags:
+        - Tasks
+      description: on turns on the spa filter, heater and heat pump, now or, given readyAt,
+        as late as the spa can still reach its setpoint by then; off stops the spa filter
+        and drops a scheduled preheat
+      operationId: setSpaPreheatTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaPreheatChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for, or the preheat is scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "400":
+          description: readyAt is not a time
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
+  /tasks/spaParty:
+    put:
+      tags:
+        - Tasks
+      description: on does what a spa preheat does now, and turns on the blower, and the
+        lights when it's dark; off stops the spa filter, the blower and the lights
+      operationId: setSpaPartyTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
   /panel/display:
     get:
       tags:
@@ -2674,6 +2796,81 @@ components:
             - readyAt
           description: how every app shows when heating will be done; the minutes left,
             or the time of day it will be ready
+        spaHeatingRate:
+          type: number
+          description: °F per hour the spa warms with the heater and heat pump, for timing a
+            scheduled preheat while there's no spa model
+        preheatMarginMinutes:
+          type: integer
+          description: minutes a scheduled preheat starts earlier than it needs to
+    TaskChange:
+      type: object
+      required:
+        - "on"
+      properties:
+        "on":
+          type: boolean
+    SpaPreheatChange:
+      type: object
+      required:
+        - "on"
+      properties:
+        "on":
+          type: boolean
+        readyAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when the spa should be at its setpoint; absent, null or a time it
+            can't make starts the preheat now
+    Tasks:
+      type: object
+      properties:
+        pool:
+          type: object
+          properties:
+            "on":
+              type: boolean
+        spaPreheat:
+          type: object
+          properties:
+            "on":
+              type: boolean
+            scheduled:
+              type: object
+              nullable: true
+              description: a preheat waiting to start, or null
+              properties:
+                readyAt:
+                  type: string
+                  format: date-time
+                startAt:
+                  type: string
+                  format: date-time
+                  description: when it will start, worked out again every minute
+                leadMinutes:
+                  type: integer
+                leadFrom:
+                  type: string
+                  enum:
+                    - model
+                    - rate
+                  description: whether the spa model or the spa heating rate setting timed it
+                fromTemperature:
+                  type: number
+                setpoint:
+                  type: integer
+                requestedBy:
+                  type: string
+                  nullable: true
+        spaParty:
+          type: object
+          properties:
+            "on":
+              type: boolean
+        dark:
+          type: boolean
+          description: whether it's dark at the pool, so a spa party turns the lights on
     SettingsUpdate:
       type: object
       properties:
@@ -2693,6 +2890,10 @@ components:
           enum:
             - remaining
             - readyAt
+        spaHeatingRate:
+          type: number
+        preheatMarginMinutes:
+          type: integer
     Location:
       type: object
       properties:

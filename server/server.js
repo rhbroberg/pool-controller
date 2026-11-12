@@ -18,6 +18,7 @@ const systemService = require('./service/SystemService');
 const waterService = require('./service/WaterService');
 const heatingService = require('./service/HeatingService');
 const heatingModelService = require('./service/HeatingModelService');
+const taskService = require('./service/TaskService');
 const settingsService = require('./service/SettingsService');
 const externalAuthService = require('./service/ExternalAuthService');
 const liveService = require('./service/LiveService');
@@ -88,6 +89,8 @@ const startupChecked = mongoose.connection.asPromise()
 
 // a new model changes every estimate at once
 heatingModelService.onChange(() => liveService.heatingChanged());
+// a preheat scheduled, cancelled or started shows on every app at once
+taskService.onChange(() => liveService.tasksChanged());
 
 scheduler.register(rollupsJob);
 scheduler.register(retentionJob);
@@ -99,6 +102,10 @@ settingsService.onChange((changes) => {
     // apps show the estimate as the server's settings say, and the zone sets the time of day it ends
     if (changes.heatingEstimateDisplay || changes.timeZone) {
         liveService.heatingChanged();
+    }
+    // a scheduled preheat's start time, and whether it's dark, follow these
+    if (changes.spaHeatingRate || changes.preheatMarginMinutes || changes.location || changes.timeZone) {
+        liveService.tasksChanged();
     }
     if (changes.timeZone) {
         scheduler.runNow(rollupsJob.name, 'time zone change').catch((e) => logger.error(`rollups after a time zone change: ${e.message}`));
@@ -112,10 +119,13 @@ settingsService.onChange((changes) => {
 if (argv.d !== 'file' && !argv.jobsOnly) {
     logger.info('web server is active');
 
+    // only the process that talks to the controller starts scheduled preheats
+    startupChecked.then(() => taskService.load()).catch((e) => logger.error(`could not load scheduled tasks: ${e.message}`));
+
     startupChecked.then(() => initializeServer((app, server) => {
         app.use(express.static(publicPath));
         io = socketIO(server);
-        liveService.attach(io, { heating: () => heatingService.getHeating() });
+        liveService.attach(io, { heating: () => heatingService.getHeating(), tasks: () => taskService.getTasks() });
 
         io.on('connection', (socket) => {
             logger.debug('connecting from client', socket);
@@ -489,6 +499,12 @@ heatingService.registerStateSource(() => ({
 if (driver && driver.setpoints) {
     heatingService.registerSetpoints(driver.setpoints);
 }
+// heater1 counts as on in Auto, as isSwitchOn has it
+taskService.registerStateSource(() => ({
+    isOn: isSwitchOn,
+    waterMode: currentWaterMode(),
+    ambient: knownTemp('ambient')
+}));
 
 // after a factory reset, forget what has been seen so the next frames are stored as new history
 systemService.registerResetListener(() => {
@@ -501,6 +517,7 @@ systemService.registerResetListener(() => {
     settingsService.load().catch((e) => logger.error(`could not reload settings: ${e.message}`));
     heatingModelService.load().then(() => liveService.heatingChanged()).catch((e) => logger.error(`could not reload the heating model: ${e.message}`));
     externalAuthService.load().catch((e) => logger.error(`could not reload sign-in settings: ${e.message}`));
+    taskService.load().then(() => liveService.tasksChanged()).catch((e) => logger.error(`could not reload scheduled tasks: ${e.message}`));
 });
 
 // docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish
