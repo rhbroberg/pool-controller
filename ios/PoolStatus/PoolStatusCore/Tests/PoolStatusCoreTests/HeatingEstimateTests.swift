@@ -5,11 +5,13 @@ import Testing
 @Suite("Heating estimates")
 struct HeatingEstimateTests {
     nonisolated private static func estimate(status: String = "ready", display: String = "remaining", minutes: Int? = 80,
-                                 readyAt: String? = "2026-11-10T20:45:00.000Z", reachesAtMost: Double? = nil) -> String {
+                                 readyAt: String? = "2026-11-10T20:45:00.000Z", reachesAtMost: Double? = nil,
+                                 settling: Bool? = nil) -> String {
         let minutesJSON = minutes.map(String.init) ?? "null"
         let readyJSON = readyAt.map { "\"\($0)\"" } ?? "null"
         let mostJSON = reachesAtMost.map { String($0) } ?? "null"
-        return #"{"status":"\#(status)","body":"pool","temperature":78,"setpoint":84,"airTemperature":70,"minutes":\#(minutesJSON),"readyAt":\#(readyJSON),"reachesAtMost":\#(mostJSON),"sources":["heater1"],"rate":{"net":1.1,"heater":1.2,"heatPump":null,"solar":0.2,"loss":-0.3},"model":{"calculatedAt":"2026-11-01T12:00:00.000Z","windows":412,"rSquared":0.62,"rmse":0.33,"airRange":[38,99],"notes":["a note"]},"display":"\#(display)","timeZone":"America/New_York"}"#
+        let settlingJSON = settling.map { #""settling":\#($0),"# } ?? ""
+        return #"{"status":"\#(status)",\#(settlingJSON)"body":"pool","temperature":78,"setpoint":84,"airTemperature":70,"minutes":\#(minutesJSON),"readyAt":\#(readyJSON),"reachesAtMost":\#(mostJSON),"sources":["heater1"],"rate":{"net":1.1,"heater":1.2,"heatPump":null,"solar":0.2,"loss":-0.3},"model":{"calculatedAt":"2026-11-01T12:00:00.000Z","windows":412,"rSquared":0.62,"rmse":0.33,"airRange":[38,99],"notes":["a note"]},"display":"\#(display)","timeZone":"America/New_York"}"#
     }
 
     nonisolated private static func heating(estimate: String?) -> String {
@@ -71,6 +73,27 @@ struct HeatingEstimateTests {
         #expect(readyAt.contains("3:45"), "20:45 UTC is 3:45 PM in New York: \(readyAt)")
     }
 
+    @Test("shows the time straight away while the water settles, marked as settling")
+    func settling() throws {
+        let remaining = try Self.decoded(Self.estimate(settling: true))
+        #expect(remaining.isSettling)
+        #expect(remaining.isShown)
+        #expect(remaining.summary(now: Self.now) == "Pool ready in about 1 h 20 min, settling…")
+        #expect(remaining.explanation.contains("may change once it settles"))
+
+        let readyAt = try #require(try Self.decoded(Self.estimate(display: "readyAt", settling: true)).summary(now: Self.now))
+        #expect(readyAt.hasPrefix("Pool ready about "))
+        #expect(readyAt.hasSuffix(", settling…"))
+
+        let cold = try Self.decoded(Self.estimate(status: "unreachable", minutes: nil, readyAt: nil, reachesAtMost: 81.4, settling: true))
+        #expect(cold.summary(now: Self.now) == "Pool may not reach 84°, settling…")
+
+        let settled = try Self.decoded(Self.estimate(settling: false))
+        #expect(!settled.isSettling)
+        #expect(settled.summary(now: Self.now) == "Pool ready in 1 h 20 min")
+        #expect(!settled.explanation.contains("settles"))
+    }
+
     @Test("puts the day with a ready time that isn't today, in the server's time zone")
     func readyTime() throws {
         let sameDay = try Self.decoded(Self.estimate(display: "readyAt"))
@@ -89,8 +112,9 @@ struct HeatingEstimateTests {
         let cold = try Self.decoded(Self.estimate(status: "unreachable", minutes: nil, readyAt: nil, reachesAtMost: 81.4))
         #expect(cold.summary(now: Self.now) == "Pool won’t reach 84° in this weather")
         #expect(cold.explanation.contains("81"))
-        let settling = try Self.decoded(Self.estimate(status: "settling", minutes: nil, readyAt: nil))
-        #expect(settling.summary(now: Self.now) == "Pool: estimating…")
+        let olderServerSettling = try Self.decoded(Self.estimate(status: "settling", minutes: nil, readyAt: nil))
+        #expect(olderServerSettling.summary(now: Self.now) == "Pool: estimating…")
+        #expect(olderServerSettling.isSettling)
         for status in ["noModel", "noReading", "insufficientData"] {
             let quiet = try Self.decoded(Self.estimate(status: status, minutes: nil, readyAt: nil))
             #expect(quiet.summary(now: Self.now) == nil)

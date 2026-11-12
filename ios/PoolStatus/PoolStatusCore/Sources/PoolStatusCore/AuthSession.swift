@@ -74,22 +74,16 @@ public final class AuthSession {
     /// True once the server has stopped accepting the saved sign-in, until the next sign-in, so
     /// the sign-in page can say why it's showing.
     public private(set) var signInExpired = false
-    /// The account last signed in, which the sign-in page offers again after signing out.
-    public private(set) var lastAccountName: String?
     /// The client for the current server; the status store replaces it when the address changes.
     @ObservationIgnored public var client: StatusClient
     @ObservationIgnored private let store: CredentialStore
-    /// Keeps `lastAccountName` between launches; nil keeps it for this launch only.
-    @ObservationIgnored private let defaults: UserDefaults?
     /// Whether the saved account's role has been checked with the server since launch.
     @ObservationIgnored private var accountChecked = false
 
-    public init(client: StatusClient, store: CredentialStore, defaults: UserDefaults? = nil) {
+    public init(client: StatusClient, store: CredentialStore) {
         self.client = client
         self.store = store
-        self.defaults = defaults
         credentials = store.load()
-        lastAccountName = credentials?.name ?? defaults?.string(forKey: SettingsKey.lastAccountName)
     }
 
     public var role: AccountRole? { credentials?.role }
@@ -255,8 +249,6 @@ public final class AuthSession {
         self.methods = methods
         accountChecked = signedIn.role != nil
         signInExpired = false
-        lastAccountName = signedIn.name
-        defaults?.set(signedIn.name, forKey: SettingsKey.lastAccountName)
     }
 
     // MARK: Accounts (admin)

@@ -101,6 +101,7 @@ var estimateFor = (state, target, devices) => {
         minutes: null,
         readyAt: null,
         reachesAtMost: null,
+        settling: false,
         sources: calling,
         rate: null,
         model: null,
@@ -142,10 +143,8 @@ var estimateFor = (state, target, devices) => {
         solar: round(rate.solar, 3),
         loss: round(rate.loss, 3)
     };
-    if (targetSince !== null && now - targetSince < settleMs()) {
-        estimate.status = 'settling';
-        return estimate;
-    }
+    // worked out all the same, from a reading that may still be the water that sat in the pipes
+    estimate.settling = targetSince !== null && now - targetSince < settleMs();
     const outcome = timeToReach(model, {
         temperature,
         airTemperature: air,

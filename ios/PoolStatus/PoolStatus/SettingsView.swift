@@ -1,21 +1,16 @@
 import PoolStatusCore
 import SwiftUI
 
-/// Only shown signed in: the pool, the account, and history and administration.
+/// The open site's settings: its name and address, the account signed in to it, and its
+/// history and administration.
 struct SettingsView: View {
-    static let reconnectChoices = [10, 30, 60, 120, 300]
-
     private enum Route: Hashable {
-        case changePassword, signInMethods, eventLog, accounts, serverMaintenance
+        case site, changePassword, signInMethods, eventLog, accounts, serverMaintenance
     }
 
+    @Environment(SiteSession.self) private var session
     @Environment(StatusStore.self) private var store
-    @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
-    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
     @Environment(\.dismiss) private var dismiss
-    @State private var draftAddress = ""
-    @State private var draftPoolName = ""
-    @State private var isScanningNetwork = false
     /// nil from a server too old to have sign-in services.
     @State private var serverChoices: SignInChoices?
     /// The server's build, for the about line; nil until it answers.
@@ -24,50 +19,17 @@ struct SettingsView: View {
     private var auth: AuthSession { store.auth }
     private var choices: SignInChoices { serverChoices ?? .passwordOnly }
 
-    private var trimmedAddress: String {
-        draftAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 // kept to few sections so Administration stays on screen without scrolling
                 Section {
-                    LabeledContent("Name") {
-                        TextField(StatusView.defaultPoolName, text: $draftPoolName)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.words)
-                            .submitLabel(.done)
-                    }
-                    LabeledContent("Server") {
-                        HStack(spacing: 12) {
-                            TextField("", text: $draftAddress)
-                                .accessibilityLabel("Server")
-                                .multilineTextAlignment(.trailing)
-                                .keyboardType(.URL)
-                                .textContentType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                            Button {
-                                isScanningNetwork = true
-                            } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            // borderless so tapping the text field doesn't also start a scan
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel("Scan Network")
-                        }
-                    }
-                    Picker("Retry Every", selection: $reconnectSeconds) {
-                        ForEach(Self.reconnectChoices, id: \.self) { seconds in
-                            Text(Duration.seconds(seconds), format: .units(allowed: [.minutes, .seconds], width: .wide))
-                                .tag(seconds)
-                        }
+                    NavigationLink(value: Route.site) {
+                        LabeledContent(session.openSite?.name ?? SiteStore.defaultName,
+                                       value: ServerAddress.display(store.serverAddress))
                     }
                 } header: {
                     Text("Pool")
-                } footer: {
-                    Text("The server attached to your pool controller, with its port. Tap \(Image(systemName: "magnifyingglass")) to look for one on your network. Changing it signs you out, so you sign in to the new one.")
                 }
 
                 Section {
@@ -95,7 +57,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Account")
                 } footer: {
-                    Text("You stay signed in on this iPhone until you sign out.")
+                    Text("You stay signed in to this pool on this iPhone until you sign out.")
                 }
 
                 Section {
@@ -114,6 +76,10 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationDestination(for: Route.self) { route in
                 switch route {
+                case .site:
+                    if let site = session.openSite {
+                        SiteEditorView(site: site)
+                    }
                 case .changePassword: ChangePasswordView()
                 case .signInMethods: SignInMethodsView(providers: choices.providers)
                 case .eventLog: EventLogView()
@@ -128,34 +94,14 @@ struct SettingsView: View {
                 serverInfo = nil
                 serverInfo = await store.systemInfo()
             }
-            .sheet(isPresented: $isScanningNetwork) {
-                NetworkScanView { draftAddress = $0 }
-            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // every change applies: the picker at once, the text fields on Done or when the
-                // sheet is swiped away, so there's nothing for a Cancel to undo
+                // every change applies as it's made, so there's nothing for a Cancel to undo
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
-            .onAppear {
-                draftAddress = store.serverAddress
-                draftPoolName = poolName
-            }
         }
-        .onDisappear(perform: commitDrafts)
-    }
-
-    private func commitDrafts() {
-        let name = draftPoolName.trimmingCharacters(in: .whitespacesAndNewlines)
-        poolName = name.isEmpty ? StatusView.defaultPoolName : name
-        guard !trimmedAddress.isEmpty, trimmedAddress != store.serverAddress else {
-            return
-        }
-        // the sign-in belongs to the old server, which is told before the address changes
-        auth.signOut()
-        store.serverAddress = trimmedAddress
     }
 }
 

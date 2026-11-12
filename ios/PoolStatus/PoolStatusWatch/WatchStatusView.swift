@@ -159,6 +159,16 @@ private struct GlancePage: View {
                 HeatingRow(device: device, tint: control.tint.color, status: store.heating(for: control))
             }
         }
+        if let estimate = store.heating?.estimate, estimate.isShown, let summary = estimate.summary() {
+            Label {
+                Text(summary)
+                    .monospacedDigit()
+            } icon: {
+                Image(systemName: estimate.status == .unreachable ? "thermometer.snowflake" : "clock")
+                    .foregroundStyle(Color.accentColor)
+            }
+            .font(.footnote)
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// The pool and the spa.
-public nonisolated enum WaterBody: String, CaseIterable, Identifiable, Decodable, Sendable {
+public nonisolated enum WaterBody: String, CaseIterable, Identifiable, Codable, Sendable {
     case pool, spa
 
     public var id: String { rawValue }
@@ -51,7 +51,8 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         case ready
         /// The air is too cold for the sources to reach the setpoint; `reachesAtMost` is as far as they go.
         case unreachable
-        /// The pump has only just started and the sensor still shows the water from before.
+        /// From an older server: the pump has only just started, and it says nothing more until
+        /// the water settles. Newer servers estimate anyway and set `isSettling`.
         case settling
         /// No model has been saved for this body of water.
         case noModel
@@ -108,6 +109,8 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
     public let minutes: Int?
     public let readyAt: Date?
     public let reachesAtMost: Double?
+    /// Nil from an older server, which says `.settling` instead.
+    private let settling: Bool?
     /// The server's names of the sources calling for heat.
     public let sources: [String]
     public let rate: Rate?
@@ -115,6 +118,10 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
     public let display: Display
     /// The zone `readyAt` is shown in.
     public let timeZone: String
+
+    /// The pump has only just started, so the water sensor may still show the water that sat in
+    /// the pipes and the estimate may change once it settles.
+    public var isSettling: Bool { status == .settling || settling == true }
 
     /// Whether the dashboard has something to say; the other statuses are explained in the details.
     public var isShown: Bool {
@@ -165,14 +172,20 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
             guard let minutes else {
                 return nil
             }
-            switch display {
-            case .remaining:
+            switch (display, isSettling) {
+            case (.remaining, false):
                 return String(localized: "\(water) ready in \(Self.duration(minutes: minutes))", bundle: .module)
-            case .readyAt:
+            case (.remaining, true):
+                return String(localized: "\(water) ready in about \(Self.duration(minutes: minutes)), settling…", bundle: .module)
+            case (.readyAt, false):
                 return readyText(now: now).map { String(localized: "\(water) ready about \($0)", bundle: .module) }
+            case (.readyAt, true):
+                return readyText(now: now).map { String(localized: "\(water) ready about \($0), settling…", bundle: .module) }
             }
         case .unreachable:
-            return String(localized: "\(water) won’t reach \(setpoint)° in this weather", bundle: .module)
+            return isSettling
+                ? String(localized: "\(water) may not reach \(setpoint)°, settling…", bundle: .module)
+                : String(localized: "\(water) won’t reach \(setpoint)° in this weather", bundle: .module)
         case .settling:
             return String(localized: "\(water): estimating…", bundle: .module)
         case .noModel, .noReading, .insufficientData:
@@ -180,8 +193,16 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         }
     }
 
-    /// Why there's no time yet, in a sentence, for the details.
+    /// How the time was worked out, or why there's none, for the details.
     public var explanation: String {
+        guard isSettling, status != .settling else {
+            return reason
+        }
+        let settlingNote = String(localized: "The pump has just started, so the water sensor may still show the water that sat in the pipes; this may change once it settles.", bundle: .module)
+        return "\(reason) \(settlingNote)"
+    }
+
+    private var reason: String {
         switch status {
         case .ready:
             String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past.", bundle: .module)
@@ -192,7 +213,7 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
                 String(localized: "The heat sources can’t bring the water to the setpoint in this weather.", bundle: .module)
             }
         case .settling:
-            String(localized: "The pump has just started, and the water sensor still shows the water that sat in the pipes. An estimate follows in a few minutes.", bundle: .module)
+            String(localized: "The pump has just started, and the water sensor still shows the water that sat in the pipes. An estimate follows within 15 minutes.", bundle: .module)
         case .noModel:
             String(localized: "The server hasn’t learned how this body of water warms yet. An admin can do that in Server Maintenance › Heating Estimates.", bundle: .module)
         case .noReading:
@@ -204,8 +225,8 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
 }
 
 /// `GET /heating`: every setpoint, and what each heating device is doing with them.
-public nonisolated struct HeatingStatus: Decodable, Sendable {
-    public struct Device: Decodable, Sendable {
+public nonisolated struct HeatingStatus: Decodable, Sendable, Equatable {
+    public struct Device: Decodable, Sendable, Equatable {
         /// Switched on (the heater in Auto); nil until the controller reports it.
         public let enabled: Bool?
         /// Producing heat. An enabled device stops once its water reaches the setpoint and
@@ -254,5 +275,10 @@ public nonisolated struct HeatingStatus: Decodable, Sendable {
 
     public func device(_ device: HeatingDevice) -> Device? {
         devices[device.rawValue]
+    }
+
+    /// The water temperature the heating devices see for `body`, while water flows to it.
+    public func temperature(of body: WaterBody) -> Double? {
+        HeatingDevice.allCases.lazy.compactMap { self.device($0) }.first { $0.body == body && $0.temperature != nil }?.temperature
     }
 }

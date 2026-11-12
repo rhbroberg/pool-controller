@@ -2,16 +2,15 @@ import AuthenticationServices
 import PoolStatusCore
 import SwiftUI
 
-/// The server is known but nobody is signed in: nothing from the pool shows until someone is.
-struct SignInView: View {
+/// A site that isn't signed in: nothing from the pool shows until it is.
+struct SiteSignInView: View {
+    @Environment(SiteSession.self) private var session
     @Environment(StatusStore.self) private var store
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
-    @AppStorage(SettingsKey.poolName) private var poolName = StatusView.defaultPoolName
     @State private var accountName = ""
     @State private var password = ""
     @State private var isSigningIn = false
     @State private var signInError: String?
-    @State private var confirmingChangeServer = false
     @FocusState private var passwordFocused: Bool
     /// nil from a server too old to have sign-in services, or one that can't be reached.
     @State private var serverChoices: SignInChoices?
@@ -23,6 +22,7 @@ struct SignInView: View {
 
     private var auth: AuthSession { store.auth }
     private var choices: SignInChoices { serverChoices ?? .passwordOnly }
+    private var site: Site? { session.openSite }
 
     private var canSignIn: Bool {
         !accountName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty && !isSigningIn
@@ -36,7 +36,7 @@ struct SignInView: View {
                         Image(systemName: "figure.pool.swim")
                             .font(.largeTitle)
                             .foregroundStyle(Color.accentColor)
-                        Text(poolName.isEmpty ? StatusView.defaultPoolName : poolName)
+                        Text(site?.name ?? SiteStore.defaultName)
                             .font(.title2.weight(.semibold))
                         Text(ServerAddress.display(store.serverAddress))
                             .font(.subheadline)
@@ -101,25 +101,23 @@ struct SignInView: View {
                         Text("Sign in to see and control this pool. You stay signed in on this iPhone until you sign out.")
                     }
                 }
-
-                Section {
-                    Button("Use a Different Server") {
-                        confirmingChangeServer = true
-                    }
-                    .disabled(isSigningIn || signingInWith != nil)
-                }
             }
-            .navigationTitle("Sign In")
+            .navigationTitle(site?.name ?? SiteStore.defaultName)
             .navigationBarTitleDisplayMode(.inline)
-            .confirmationDialog("Use a different server?", isPresented: $confirmingChangeServer, titleVisibility: .visible) {
-                Button("Use a Different Server") {
-                    store.serverAddress = ""
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("You’ll choose the server attached to your pool controller again.")
+            .toolbarTitleMenu {
+                SiteSwitcherMenu()
             }
-            .task(id: store.serverAddress) {
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        session.showSites()
+                    } label: {
+                        Label("Sites", systemImage: "chevron.left")
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
+            }
+            .task {
                 serverChoices = await auth.signInChoices()
             }
             .task(id: isSigningIn) {
@@ -137,7 +135,7 @@ struct SignInView: View {
                 CommissioningView()
             }
             .onAppear {
-                accountName = auth.lastAccountName ?? ""
+                accountName = site?.accountName ?? ""
                 passwordFocused = !accountName.isEmpty
             }
         }
@@ -180,9 +178,29 @@ struct SignInView: View {
     }
 }
 
-#if DEBUG
-#Preview {
-    SignInView()
-        .environment(StatusStore.preview())
+/// Every site, the open one checked, a way to add another, and the way back to the list; the
+/// menu under a site's title, the same with one site as with many.
+struct SiteSwitcherMenu: View {
+    @Environment(SiteSession.self) private var session
+
+    var body: some View {
+        ForEach(session.sites.sites) { site in
+            Button {
+                session.open(site)
+            } label: {
+                if site.id == session.openID {
+                    Label(site.name, systemImage: "checkmark")
+                } else {
+                    Text(site.name)
+                }
+            }
+        }
+        Divider()
+        Button("Add Site…", systemImage: "plus") {
+            session.isAddingSite = true
+        }
+        Button("All Sites", systemImage: "list.bullet") {
+            session.showSites()
+        }
+    }
 }
-#endif
