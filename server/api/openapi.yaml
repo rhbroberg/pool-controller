@@ -2796,13 +2796,32 @@ components:
             - readyAt
           description: how every app shows when heating will be done; the minutes left,
             or the time of day it will be ready
-        spaHeatingRate:
-          type: number
-          description: °F per hour the spa warms with the heater and heat pump, for timing a
-            scheduled preheat while there's no spa model
+        heatingRules:
+          $ref: "#/components/schemas/HeatingRules"
         preheatMarginMinutes:
           type: integer
           description: minutes a scheduled preheat starts earlier than it needs to
+    HeatingRules:
+      type: object
+      description: °F per hour each heat source warms each body of water, standing in for
+        what history hasn't taught the model; a body without a model is timed by its rules
+        alone, and a model without a rate for a source borrows that source's rule
+      properties:
+        pool:
+          $ref: "#/components/schemas/HeatingRule"
+        spa:
+          $ref: "#/components/schemas/HeatingRule"
+    HeatingRule:
+      type: object
+      properties:
+        heater:
+          type: number
+          minimum: 0.1
+          maximum: 120
+        heatPump:
+          type: number
+          minimum: 0.1
+          maximum: 120
     TaskChange:
       type: object
       required:
@@ -2853,9 +2872,10 @@ components:
                 leadFrom:
                   type: string
                   enum:
-                    - model
-                    - rate
-                  description: whether the spa model or the spa heating rate setting timed it
+                    - history
+                    - rule
+                    - mixed
+                  description: what timed it, as an estimate's basis says
                 fromTemperature:
                   type: number
                 setpoint:
@@ -2890,8 +2910,15 @@ components:
           enum:
             - remaining
             - readyAt
-        spaHeatingRate:
-          type: number
+        heatingRules:
+          type: object
+          description: 'the rules to change, such as {"spa": {"heater": 25}}; the rest stay
+            as they are'
+          properties:
+            pool:
+              $ref: "#/components/schemas/HeatingRule"
+            spa:
+              $ref: "#/components/schemas/HeatingRule"
         preheatMarginMinutes:
           type: integer
     Location:
@@ -3043,11 +3070,29 @@ components:
             model has been saved for this body. noReading: the water or air
             temperature isn't known. insufficientData: the model has nothing for a
             source that is on. Older servers sent settling, with no estimate, for the
-            first minutes after the pump started."
+            first minutes after the pump started; with heating rules, noModel and
+            insufficientData no longer happen."
         settling:
           type: boolean
           description: the pump has only just started, so the sensor may still show the
             water that sat in the pipes and the estimate may change once it settles
+        basis:
+          type: string
+          enum:
+            - history
+            - rule
+            - mixed
+          description: "history: learned from history; rule: the body has no model, so the
+            admin's heating rules timed it; mixed: a source at work has no learned rate and
+            borrowed its rule"
+        ruleSources:
+          type: array
+          description: the sources at work whose rate came from a rule
+          items:
+            type: string
+            enum:
+              - heater1
+              - heatpump
         body:
           type: string
         temperature:

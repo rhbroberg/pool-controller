@@ -19,6 +19,7 @@ const heatingModels = require('./HeatingModelService');
 const settings = require('./SettingsService');
 const activity = require('./ActivityService');
 const { timeToReach } = require('../heating/estimate');
+const heatingRules = require('../heating/rules');
 const sun = require('../heating/sun');
 const { isDark } = require('../utils/daylight');
 const log4js = require('log4js');
@@ -123,9 +124,8 @@ var spaStartingTemperature = async (air) => {
 };
 
 /**
- * how long, in minutes, the spa takes from cold to its setpoint, and how that was worked out:
- * the spa model when there is one that can say, otherwise the admin's heating rate; both with
- * the admin's margin added
+ * how long, in minutes, the spa takes from cold to its setpoint with both heat sources, and what
+ * timed it: the spa's model, the admin's rules where the model can't say, and the admin's margin
  **/
 var leadTime = async () => {
     const state = stateSource();
@@ -134,24 +134,28 @@ var leadTime = async () => {
     const setpoint = spaSetpoint();
     const margin = settings.preheatMarginMinutes();
     const saved = heatingModels.model();
-    const model = saved && saved.bodies && saved.bodies.spa;
-    if (model && model.available) {
-        const now = clock();
-        const sunAt = sun.forTimeZone(saved.timeZone || settings.timeZone());
-        const outcome = timeToReach(model, {
-            temperature,
-            airTemperature: air === undefined ? temperature : air,
-            sources: [{ name: 'heater1', setpoint }, { name: 'heatpump', setpoint }],
-            sun: (hours) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
-        });
-        if (outcome.status === 'ready' || outcome.status === 'atSetpoint') {
-            const minutes = outcome.status === 'ready' ? Math.ceil(outcome.hours * 60) : 0;
-            return { minutes: minutes + margin, from: 'model', temperature, setpoint };
-        }
+    const effective = heatingRules.effectiveModel(saved && saved.bodies && saved.bodies.spa, settings.heatingRules().spa);
+    const { basis } = heatingRules.basisFor(effective, ['heater1', 'heatpump']);
+    const now = clock();
+    const sunAt = sun.forTimeZone((saved && saved.timeZone) || settings.timeZone());
+    const outcome = timeToReach(effective.model, {
+        temperature,
+        airTemperature: air === undefined ? temperature : air,
+        sources: [{ name: 'heater1', setpoint }, { name: 'heatpump', setpoint }],
+        sun: (hours) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
+    });
+    let minutes;
+    if (outcome.status === 'ready') {
+        minutes = Math.ceil(outcome.hours * 60);
+    } else if (outcome.status === 'atSetpoint') {
+        minutes = 0;
+    } else {
+        // the model says it can't get there in this weather; the rules, which lose nothing to
+        // the air, give the soonest it might
+        const rules = settings.heatingRules().spa;
+        minutes = Math.ceil(Math.max(0, setpoint - temperature) / (rules.heater + rules.heatPump) * 60);
     }
-    const rate = settings.spaHeatingRate();
-    const minutes = Math.ceil(Math.max(0, setpoint - temperature) / rate * 60);
-    return { minutes: minutes + margin, from: 'rate', temperature, setpoint };
+    return { minutes: minutes + margin, from: basis, temperature, setpoint };
 };
 
 var scheduleView = async () => {

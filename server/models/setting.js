@@ -25,8 +25,9 @@ var SettingSchema = new mongoose.Schema({
     signInRequests: { type: String, enum: ['ask', 'refuse'], default: 'ask' },
     // how apps show when heating will be done: the minutes left, or the time of day it will be ready
     heatingEstimateDisplay: { type: String, enum: ['remaining', 'readyAt'], default: 'remaining' },
-    // how fast the spa warms, in °F per hour, for timing a preheat while there's no spa model
-    spaHeatingRate: Number,
+    // °F per hour each heat source warms each body where history hasn't taught the model:
+    // { pool: { heater, heatPump }, spa: { heater, heatPump } }
+    heatingRules: { type: mongoose.Schema.Types.Mixed, default: null },
     // added to a scheduled preheat's lead time, so the spa is ready by then rather than just at it
     preheatMarginMinutes: Number,
     // a spa preheat waiting to start in time for readyAt: { readyAt, requestedBy }

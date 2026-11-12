@@ -6,6 +6,7 @@ const heating = require('../protocol/heating');
 const heatingModels = require('./HeatingModelService');
 const settings = require('./SettingsService');
 const { timeToReach, currentRate } = require('../heating/estimate');
+const heatingRules = require('../heating/rules');
 const sun = require('../heating/sun');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -102,6 +103,10 @@ var estimateFor = (state, target, devices) => {
         readyAt: null,
         reachesAtMost: null,
         settling: false,
+        // history: learned; rule: the body has no model, so the admin's rules timed it; mixed: a
+        // source at work borrowed its rule
+        basis: 'history',
+        ruleSources: [],
         sources: calling,
         rate: null,
         model: null,
@@ -112,26 +117,29 @@ var estimateFor = (state, target, devices) => {
         return estimate;
     }
     const saved = heatingModels.model();
-    const model = saved && saved.bodies && saved.bodies[target];
-    if (!model || !model.available) {
-        estimate.status = 'noModel';
+    const learned = saved && saved.bodies && saved.bodies[target];
+    const effective = heatingRules.effectiveModel(learned, settings.heatingRules()[target]);
+    const model = effective.model;
+    Object.assign(estimate, heatingRules.basisFor(effective, calling));
+    if (!effective.fromRules) {
+        estimate.model = {
+            calculatedAt: saved.createdAt,
+            windows: learned.windows ? learned.windows.total : 0,
+            rSquared: round(learned.rSquared, 3),
+            rmse: round(learned.rmse, 3),
+            airRange: learned.airRange || null,
+            notes: learned.notes || []
+        };
+    }
+    // the rules lose nothing to the air, so they don't need it
+    if (typeof air !== 'number' && !effective.fromRules) {
         return estimate;
     }
-    estimate.model = {
-        calculatedAt: saved.createdAt,
-        windows: model.windows ? model.windows.total : 0,
-        rSquared: round(model.rSquared, 3),
-        rmse: round(model.rmse, 3),
-        airRange: model.airRange || null,
-        notes: model.notes || []
-    };
-    if (typeof air !== 'number') {
-        return estimate;
-    }
-    const sunAt = sun.forTimeZone(saved.timeZone || settings.timeZone());
+    const airTemperature = typeof air === 'number' ? air : temperature;
+    const sunAt = sun.forTimeZone((saved && saved.timeZone) || settings.timeZone());
     const rate = currentRate(model, {
         temperature,
-        airTemperature: air,
+        airTemperature,
         heater: calling.includes('heater1'),
         heatPump: calling.includes('heatpump'),
         sun: sunAt(now)
@@ -147,7 +155,7 @@ var estimateFor = (state, target, devices) => {
     estimate.settling = targetSince !== null && now - targetSince < settleMs();
     const outcome = timeToReach(model, {
         temperature,
-        airTemperature: air,
+        airTemperature,
         sources,
         sun: (hours) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
     });

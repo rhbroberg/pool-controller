@@ -100,11 +100,11 @@ startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
 // the weather's days with them; a new zip code needs its forecast straight away too
 settingsService.onChange((changes) => {
     // apps show the estimate as the server's settings say, and the zone sets the time of day it ends
-    if (changes.heatingEstimateDisplay || changes.timeZone) {
+    if (changes.heatingEstimateDisplay || changes.timeZone || changes.heatingRules) {
         liveService.heatingChanged();
     }
     // a scheduled preheat's start time, and whether it's dark, follow these
-    if (changes.spaHeatingRate || changes.preheatMarginMinutes || changes.location || changes.timeZone) {
+    if (changes.heatingRules || changes.preheatMarginMinutes || changes.location || changes.timeZone) {
         liveService.tasksChanged();
     }
     if (changes.timeZone) {

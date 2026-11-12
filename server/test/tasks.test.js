@@ -95,14 +95,14 @@ describe('tasks', () => {
     });
 
     it('schedules a preheat to be ready by a time, starting only as early as it must', async () => {
-        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { spaHeatingRate: 120, preheatMarginMinutes: 0 } })).status, 200);
+        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { spa: { heater: 100, heatPump: 20 } }, preheatMarginMinutes: 0 } })).status, 200);
         const far = new Date(Date.now() + 10 * 3600 * 1000);
         const scheduledFar = await put('spaPreheat', { on: true, readyAt: far.toISOString() });
         assert.equal(scheduledFar.status, 200, scheduledFar.text);
         const waiting = scheduledFar.body.spaPreheat;
         assert.equal(waiting.on, false, 'nothing starts yet');
         assert.equal(Date.parse(waiting.scheduled.readyAt), far.getTime());
-        assert.equal(waiting.scheduled.leadFrom, 'rate', 'no spa model, so the heating rate times it');
+        assert.equal(waiting.scheduled.leadFrom, 'rule', 'no spa model, so the heating rules time it');
         assert.equal(Date.parse(waiting.scheduled.startAt), far.getTime() - waiting.scheduled.leadMinutes * 60000);
         await expectSwitch('aux14', false);
 
@@ -133,11 +133,13 @@ describe('tasks', () => {
         await put('spaPreheat', { on: false });
     });
 
-    it('keeps the admin settings that time a preheat, within limits', async () => {
+    it('keeps the admin’s heating rules and margin that time a preheat, within limits', async () => {
         const settings = (await api('GET', '/system/settings', { token: admin })).body;
-        assert.equal(settings.spaHeatingRate, 120);
+        assert.deepEqual(settings.heatingRules.spa, { heater: 100, heatPump: 20 });
+        assert.equal(typeof settings.heatingRules.pool.heater, 'number', 'the pool keeps its default');
         assert.equal(settings.preheatMarginMinutes, 0);
-        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { spaHeatingRate: 0 } })).status, 400);
+        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { spa: { heater: 0 } } } })).status, 400);
+        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { hottub: { heater: 5 } } } })).status, 400);
         assert.equal((await api('PUT', '/system/settings', { token: admin, body: { preheatMarginMinutes: 1.5 } })).status, 400);
     });
 });
