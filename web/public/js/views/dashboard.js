@@ -4,7 +4,7 @@ import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
 import { GROUPS, WATER_MODES, controlsIn, heatingDeviceFor, measurement, tileState, waterModeInfo, weatherSummary } from '../model.js';
 import { relative, countdown } from '../format.js';
-import { topbar, barButton, navigate, signInPrompt, spinner, renderer } from '../ui.js';
+import { topbar, barButton, navigate, spinner, renderer } from '../ui.js';
 import { openSetpoints } from './setpoints.js';
 
 const CONNECTION_TITLES = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Offline' };
@@ -15,10 +15,6 @@ export const mountDashboard = (root, app) => {
     const { store } = app;
 
     const request = (control) => {
-        if (!store.credentials) {
-            navigate('settings');
-            return;
-        }
         if (!store.canControl) {
             return;
         }
@@ -141,9 +137,6 @@ export const mountDashboard = (root, app) => {
     };
 
     const accessNote = () => {
-        if (!store.credentials) {
-            return h('div', { class: 'span-all' }, signInPrompt('Sign in to change equipment and water flow', () => navigate('settings')));
-        }
         if (!store.canControl) {
             return h('div', { class: 'access-note span-all' }, icon('eye'), 'View only. Your account can see equipment but not change it.');
         }

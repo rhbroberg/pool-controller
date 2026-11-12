@@ -1670,6 +1670,39 @@ button.form-row:disabled {
     margin-top: 2px;
 }
 
+/* MARK: sign-in */
+
+.site-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.site-intro .site-icon {
+    width: 34px;
+    height: 34px;
+    color: var(--accent);
+}
+
+.site-intro h2 {
+    margin: 6px 0 0;
+    font-size: 22px;
+}
+
+.site-intro .detail {
+    color: var(--secondary);
+    font-size: 15px;
+}
+
+.card.expired-notice {
+    color: var(--orange);
+    padding: 12px 16px;
+    margin-bottom: 24px;
+}
+
 /* MARK: event log */
 
 .filter-bar {

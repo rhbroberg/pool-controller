@@ -15,8 +15,12 @@ import { mountAccounts, mountAccountDetail } from './views/accounts.js';
 import { mountMaintenance } from './views/maintenance.js';
 import { mountReprocess } from './views/reprocess.js';
 import { watchCommissioning } from './views/commissioning.js';
+import { mountSignIn } from './views/sign-in.js';
 import { mountSignInComplete } from './views/signin-complete.js';
 import { mountSignInSettings } from './views/sign-in-settings.js';
+
+// a sign-in through a service comes back here, so it shows whether or not anyone is signed in
+const SIGNED_OUT_ROUTE = /^signin\/complete$/;
 
 const ROUTES = [
     [/^$/, (root, app) => mountDashboard(root, app)],
@@ -57,6 +61,8 @@ const app = {
 
 const root = document.getElementById('app');
 let unmount = null;
+// whether the page on screen was drawn for someone signed in
+let shownSignedIn = null;
 
 const route = () => {
     const [hashPath, hashQuery = ''] = location.hash.replace(/^#\/?/, '').split('?');
@@ -72,6 +78,12 @@ const route = () => {
     }
     root.replaceChildren();
     window.scrollTo(0, 0);
+    shownSignedIn = Boolean(store.credentials);
+    // nothing from the pool shows until someone signs in
+    if (!store.credentials && !SIGNED_OUT_ROUTE.test(path)) {
+        unmount = mountSignIn(root, app) || null;
+        return;
+    }
     if (!found) {
         location.replace('#/');
         return;
@@ -80,6 +92,22 @@ const route = () => {
 };
 
 window.addEventListener('hashchange', route);
+
+// signing in shows the page asked for; signing out, or a sign-in the server stops accepting,
+// starts over at the sign-in page, and a service's sign-in, once finished, opens the dashboard
+store.subscribe(() => {
+    const signedIn = Boolean(store.credentials);
+    if (signedIn === shownSignedIn) {
+        return;
+    }
+    const path = location.hash.replace(/^#\/?/, '').split('?')[0];
+    if ((!signedIn || SIGNED_OUT_ROUTE.test(path)) && path !== '') {
+        // the hash change routes
+        location.replace('#/');
+        return;
+    }
+    route();
+});
 
 // polling stops while the page is hidden and starts over, with a fresh reading, when it's back
 document.addEventListener('visibilitychange', () => {

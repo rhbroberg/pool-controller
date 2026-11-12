@@ -51,6 +51,9 @@ export class StatusStore {
         // when the next reconnection attempt is due, while disconnected
         this.nextAttempt = null;
         this.credentials = prefs.read('credentials', null);
+        // true once the server has stopped accepting the saved sign-in, until the next sign-in,
+        // so the sign-in page can say why it's showing
+        this.signInExpired = false;
         // the default admin account, signed in but not yet renamed; its token only works for
         // commissioning, so it isn't saved
         this.commissioning = null;
@@ -143,6 +146,11 @@ export class StatusStore {
 
     get reconnectSeconds() {
         return prefs.read('reconnectSeconds', DEFAULT_RECONNECT_SECONDS);
+    }
+
+    /** the account last signed in, kept after signing out so the sign-in page can offer it again */
+    get lastAccountName() {
+        return prefs.read('lastAccount', null);
     }
 
     reading(name) {
@@ -387,7 +395,7 @@ export class StatusStore {
             this.save(signedInAs({ ...account, token: credentials.token }));
         } catch (error) {
             if (error instanceof ApiError && error.kind === 'unauthorized') {
-                this.signOut();
+                this.expire();
             }
         }
     }
@@ -397,16 +405,34 @@ export class StatusStore {
         if (endSession && this.credentials) {
             this.client.signOut(this.credentials.token).catch(() => {});
         }
+        this.forget();
+        this.signInExpired = false;
+        this.changed();
+    }
+
+    /** forgets a sign-in the server no longer accepts, as after a password change elsewhere */
+    expire() {
+        this.forget();
+        this.signInExpired = true;
+        this.changed();
+    }
+
+    forget() {
+        // sign-ins saved before the account was remembered on its own
+        if (this.credentials) {
+            prefs.write('lastAccount', this.credentials.email);
+        }
         prefs.remove('credentials');
         this.credentials = null;
         this.accountChecked = false;
-        this.changed();
     }
 
     save(credentials) {
         prefs.write('credentials', credentials);
+        prefs.write('lastAccount', credentials.email);
         this.credentials = credentials;
         this.accountChecked = Boolean(credentials.role);
+        this.signInExpired = false;
         this.changed();
     }
 
@@ -476,7 +502,7 @@ export class StatusStore {
             return await request(this.requireCredentials().token);
         } catch (error) {
             if (error instanceof ApiError && error.kind === 'unauthorized' && this.credentials) {
-                this.signOut();
+                this.expire();
             }
             throw error;
         }
@@ -566,7 +592,7 @@ export class StatusStore {
 
     async handleControlError(error, signInAgain, notAllowed) {
         if (error instanceof ApiError && error.kind === 'unauthorized') {
-            this.signOut();
+            this.expire();
             this.errorMessage = `Your sign-in is no longer valid. ${signInAgain}`;
         } else if (error instanceof ApiError && error.status === 403) {
             // an admin may have changed this account's role
@@ -593,7 +619,7 @@ export class StatusStore {
             }
         } catch (error) {
             if (error instanceof ApiError && error.kind === 'unauthorized') {
-                this.signOut();
+                this.expire();
                 throw new Error('Your sign-in is no longer valid. Sign in again to change setpoints.');
             }
             if (error instanceof ApiError && error.status === 403) {

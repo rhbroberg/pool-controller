@@ -39,7 +39,10 @@ const fakeClient = (overrides = {}) => {
 const newStore = (client) => new StatusStore(client, { confirmationPollMs: 5 });
 
 describe('status store', () => {
-    beforeEach(() => prefs.remove('credentials'));
+    beforeEach(() => {
+        prefs.remove('credentials');
+        prefs.remove('lastAccount');
+    });
 
     it('is connected once the server answers, and disconnected when it can’t be reached', async () => {
         const client = fakeClient();
@@ -176,12 +179,44 @@ describe('status store', () => {
         assert.equal(store.errorMessage, null);
     });
 
-    it('signs out when the server no longer accepts the token', async () => {
+    it('signs out when the server no longer accepts the token, and says so until the next sign-in', async () => {
         const store = newStore(fakeClient({ setDevice: async () => { throw new ApiError('unauthorized'); } }));
         store.save({ email: 'rick', token: 'stale', role: 'user' });
         await store.setControl(filter, true);
         assert.equal(store.credentials, null);
+        assert.equal(store.signInExpired, true);
+        assert.equal(store.lastAccountName, 'rick', 'the sign-in page offers the account again');
         assert.match(store.errorMessage, /no longer valid/);
+
+        await store.signIn('rick', 'secret');
+        assert.equal(store.signInExpired, false);
+    });
+
+    it('notices an expired sign-in when it checks the account, still offering the account', async () => {
+        // saved before the account was remembered on its own
+        prefs.write('credentials', { email: 'rick', token: 'stale', role: null });
+        const store = newStore(fakeClient({ fetchAccount: async () => { throw new ApiError('unauthorized'); } }));
+        await store.refreshAccount();
+        assert.equal(store.credentials, null);
+        assert.equal(store.signInExpired, true);
+        assert.equal(store.lastAccountName, 'rick');
+    });
+
+    it('keeps the sign-in until signing out, which isn’t the server refusing it', async () => {
+        prefs.write('credentials', { email: 'rick', token: 't', role: 'user' });
+        const client = fakeClient({
+            signOut: async (token) => {
+                client.calls.push(['signOut', token]);
+            }
+        });
+        const store = newStore(client);
+        assert.equal(store.credentials.email, 'rick', 'a saved sign-in is used when the page opens');
+
+        store.signOut({ endSession: true });
+        assert.deepEqual(client.calls, [['signOut', 't']]);
+        assert.equal(store.credentials, null);
+        assert.equal(prefs.read('credentials', null), null);
+        assert.equal(store.signInExpired, false);
     });
 
     it('rechecks the role when a change is refused', async () => {
