@@ -2,10 +2,13 @@ import PoolStatusCore
 import SwiftUI
 
 /// Pool, Spa Preheat and Spa Party, each a switch; a preheat can instead be scheduled to be
-/// ready by a time, which shows plainly as scheduled until it starts.
+/// ready by a time, which shows plainly as scheduled until it starts. After dark the lights and
+/// yard lights join them, and stay while they're on.
 struct TaskRows: View {
     @Environment(StatusStore.self) private var store
     @State private var schedulingPreheat = false
+
+    private static let lights = [ReadingName.lights, .yardLights].compactMap { EquipmentControl.control(named: $0) }
 
     private var isLocked: Bool { !store.auth.canControl || !store.isConnected }
 
@@ -19,6 +22,12 @@ struct TaskRows: View {
             .sheet(isPresented: $schedulingPreheat) {
                 PreheatScheduleView(current: tasks.scheduledPreheat?.readyAt) { readyAt in
                     set(.spaPreheat, on: true, readyAt: readyAt)
+                }
+            }
+            ForEach(Self.lights.filter { tasks.dark || store.isOn($0) }) { control in
+                LightRow(control: control, isOn: store.isOn(control), pending: store.pendingState(control.name),
+                         isLocked: isLocked) { on in
+                    Task { await store.setControl(control, on: on) }
                 }
             }
         } else {
@@ -117,6 +126,53 @@ private struct TaskRow: View {
         .cardBackground(cornerRadius: Card.tileCornerRadius)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("task-\(task.rawValue)")
+    }
+}
+
+/// A light offered as a task once it's dark: its switch, as on the Equipment page.
+private struct LightRow: View {
+    let control: EquipmentControl
+    let isOn: Bool
+    let pending: Bool?
+    let isLocked: Bool
+    let set: (Bool) -> Void
+
+    @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 36
+
+    private var tint: Color { control.tint.color }
+
+    private var status: (text: String, color: Color) {
+        if let pending {
+            return (pending ? String(localized: "Turning on…") : String(localized: "Turning off…"), .secondary)
+        }
+        return isOn ? (String(localized: "On"), .green) : (String(localized: "It’s dark out"), .secondary)
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: control.systemImage)
+                .symbolVariant(isOn ? .fill : .none)
+                .font(.title3)
+                .foregroundStyle(isOn ? .white : tint)
+                .frame(width: iconSize, height: iconSize)
+                .background(isOn ? tint : tint.opacity(0.15), in: .rect(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(control.title)
+                    .font(.headline)
+                Text(status.text)
+                    .font(.caption.weight(isOn ? .semibold : .regular))
+                    .foregroundStyle(status.color)
+            }
+            Spacer(minLength: 8)
+            Toggle(control.title, isOn: Binding(get: { pending ?? isOn }, set: { set($0) }))
+                .labelsHidden()
+                .tint(tint)
+                .disabled(isLocked || pending != nil)
+        }
+        .padding(12)
+        .cardBackground(cornerRadius: Card.tileCornerRadius)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("task-\(control.name.rawValue)")
     }
 }
 

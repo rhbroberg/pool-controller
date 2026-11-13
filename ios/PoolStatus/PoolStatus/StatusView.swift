@@ -60,6 +60,11 @@ struct StatusView: View {
                     CheckSystemBar()
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !store.readings.isEmpty {
+                    DashboardBar(isAdmin: store.auth.isAdmin)
+                }
+            }
             .animation(.default, value: store.needsAttention)
             .overlay {
                 if store.readings.isEmpty {
@@ -80,10 +85,12 @@ struct StatusView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     if store.connection != .connected {
                         ConnectionIndicator(connection: store.connection)
+                    } else if !store.readings.isEmpty {
+                        WeatherButton(air: store.measurement(named: .airTemperature), weather: store.weatherSummary)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Settings", systemImage: "gearshape") {
+                    Button("Settings", systemImage: "person.crop.circle") {
                         showingSettings = true
                     }
                 }
@@ -113,6 +120,8 @@ struct StatusView: View {
                 case .saltHistory: SaltHistoryView()
                 case .equipment: EquipmentView()
                 case .panel: PanelView()
+                case .eventLog: EventLogView()
+                case .serverMaintenance: ServerMaintenanceView()
                 }
             }
         }
@@ -120,9 +129,11 @@ struct StatusView: View {
 
     @ViewBuilder
     private var dashboard: some View {
-        TemperatureCard(pool: store.measurement(named: .poolTemperature),
-                        secondary: [.spaTemperature, .airTemperature, .salt].map(store.measurement(named:)),
-                        weather: store.weatherSummary,
+        TemperatureCard(waters: WaterBody.allCases.map { body in
+                            WaterStatus(body: body,
+                                        reading: store.measurement(named: body.temperatureName),
+                                        heating: store.heating?.heating(of: body))
+                        },
                         lastRefresh: store.lastRefresh,
                         isConnected: store.isConnected,
                         isLive: store.isLive)
@@ -140,13 +151,6 @@ struct StatusView: View {
             }
         }
         .opacity(store.isConnected ? 1 : 0.5)
-
-        VStack(spacing: 8) {
-            DashboardLink(route: .equipment, systemImage: "switch.2", title: String(localized: "Equipment"),
-                          subtitle: String(localized: "Every switch, the water flow and the heaters"))
-            DashboardLink(route: .panel, systemImage: "dpad.fill", title: String(localized: "Panel Control"),
-                          subtitle: String(localized: "Every menu and setting on the controller"))
-        }
 
         UpdateFooter(lastChange: store.lastSwitchChange)
     }
@@ -199,6 +203,9 @@ struct EquipmentView: View {
 
                     ControlSection(title: EquipmentControl.Area.features.title) {
                         equipmentGrid(.features)
+                        DashboardLink(route: .saltHistory, systemImage: "circle.hexagongrid.fill", title: String(localized: "Salt"),
+                                      subtitle: String(localized: "The chlorinator’s salt over time"),
+                                      value: store.measurement(named: .salt).value)
                     }
                 }
                 .disabled(!store.isConnected)
@@ -285,6 +292,8 @@ private enum DashboardRoute: Hashable {
     case saltHistory
     case equipment
     case panel
+    case eventLog
+    case serverMaintenance
 }
 
 /// Shown above controls a view-only account can't use.
@@ -336,172 +345,215 @@ private extension WaterMode {
 
 // MARK: - Temperatures
 
-/// The pool temperature large on the left; spa, air, today's weather and salt in a column beside it.
+/// One body of water as the temperature card shows it.
+private struct WaterStatus: Identifiable {
+    let body: WaterBody
+    let reading: DashboardReading
+    /// The heater and heat pump at work on it; nil unless one is on and a pump sends water to it.
+    let heating: BodyHeating?
+
+    var id: WaterBody { body }
+}
+
+/// The pool and the spa side by side, alike: each temperature, and while a pump sends water to
+/// it with the heater or heat pump on, those and the setpoint they're heading for.
 private struct TemperatureCard: View {
-    let pool: DashboardReading
-    let secondary: [DashboardReading]
-    let weather: DashboardWeather?
+    let waters: [WaterStatus]
     let lastRefresh: Date?
     let isConnected: Bool
     let isLive: Bool
 
-    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 50
-
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            NavigationLink(value: DashboardRoute.temperatureHistory(.pool)) {
-                hero
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Shows the temperature history")
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(secondary) { measurement in
-                    secondaryRow(measurement)
-                    if measurement.name == .airTemperature, let weather {
-                        WeatherRow(weather: weather)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 14) {
+                ForEach(waters) { water in
+                    if water.body != waters.first?.body {
+                        Divider()
                     }
+                    NavigationLink(value: DashboardRoute.temperatureHistory(water.body)) {
+                        WaterColumn(water: water)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the temperature history")
                 }
             }
-            .frame(maxWidth: 170)
+            .fixedSize(horizontal: false, vertical: true)
+            FreshnessLine(lastRefresh: lastRefresh, isConnected: isConnected, isLive: isLive)
         }
-        .fixedSize(horizontal: false, vertical: true)
         .padding(14)
         .cardBackground()
     }
+}
 
-    private var hero: some View {
+private struct WaterColumn: View {
+    let water: WaterStatus
+
+    @ScaledMetric(relativeTo: .largeTitle) private var temperatureSize: CGFloat = 44
+
+    private var reading: DashboardReading { water.reading }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 4) {
-                Text(pool.title)
+                Text(reading.title)
                     .foregroundStyle(Color.accentColor)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
-                if pool.isDimmed {
-                    Label("Pump off", systemImage: "pause.circle.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 4)
+                Spacer(minLength: 4)
+                ForEach(water.heating?.sources ?? []) { source in
+                    SourceIcon(source: source)
                 }
             }
             .font(.subheadline.weight(.semibold))
-            Text(pool.value)
-                .font(.system(size: heroSize, weight: .semibold, design: .rounded))
+            Text(reading.value)
+                .font(.system(size: temperatureSize, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-                .foregroundStyle(pool.isDimmed ? .secondary : .primary)
-            FreshnessLine(lastRefresh: lastRefresh, isConnected: isConnected, isLive: isLive)
+                .foregroundStyle(reading.isDimmed ? .secondary : .primary)
+            detail
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private func secondaryRow(_ measurement: DashboardReading) -> some View {
-        switch measurement.name {
-        case .spaTemperature:
-            NavigationLink(value: DashboardRoute.temperatureHistory(.spa)) {
-                row(measurement, linked: true)
-            }
-            .buttonStyle(.plain)
-        case .salt:
-            NavigationLink(value: DashboardRoute.saltHistory) {
-                row(measurement, linked: true)
-            }
-            .buttonStyle(.plain)
-        default:
-            row(measurement, linked: false)
-        }
-    }
-
-    private func row(_ measurement: DashboardReading, linked: Bool) -> some View {
-        HStack(spacing: 4) {
-            Text(measurement.title)
-                .font(.subheadline.weight(linked ? .medium : .regular))
-                .foregroundStyle(linked ? Color.accentColor : Color.secondary)
-            if measurement.isDimmed {
-                Image(systemName: "pause.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("Pump off")
-            }
-            Spacer(minLength: 6)
-            Text(measurement.value)
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .foregroundStyle(measurement.isDimmed ? .secondary : .primary)
-            if linked {
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-            } else {
-                // keeps the values lined up with the linked rows
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .hidden()
-            }
-        }
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(linked ? "Shows the history" : "")
-    }
-}
-
-/// Today's forecast at the pool's zip code: its condition, and the high and low.
-private struct WeatherRow: View {
-    let weather: DashboardWeather
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: weather.symbolName)
-                .symbolRenderingMode(.multicolor)
-                .font(.subheadline)
-                .accessibilityHidden(true)
-            Text(weather.title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Spacer(minLength: 6)
-            Text(weather.highLow)
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .foregroundStyle(weather.isStale ? .secondary : .primary)
-            // keeps the values lined up with the linked rows
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .hidden()
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
     }
 
+    /// Where the water is headed and by when, or that its pump is off; a line is kept either way
+    /// so the card doesn't change height as heating starts and stops.
+    @ViewBuilder
+    private var detail: some View {
+        if let heating = water.heating, let setpoint = heating.setpoint {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Label("\(setpoint)°", systemImage: "target")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(heating.sources.first.map { $0.device.tint.color } ?? .orange)
+                if let ready = heating.readyText {
+                    Text("by \(ready)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        } else {
+            Label("Pump off", systemImage: "pause.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .opacity(reading.isDimmed ? 1 : 0)
+        }
+    }
+
     private var accessibilityText: String {
-        var parts = [String(localized: "Today: \(weather.title), high \(weather.high), low \(weather.low)")]
-        if let place = weather.place {
-            parts.append(place)
-        }
-        if let rain = weather.rainChance {
-            parts.append(String(localized: "\(rain)% chance of rain"))
-        }
-        if weather.isStale {
-            parts.append(String(localized: "Forecast out of date"))
+        var parts = [reading.title, reading.value]
+        if let heating = water.heating {
+            if let setpoint = heating.setpoint {
+                parts.append(heating.readyText.map { String(localized: "heading for \(setpoint) degrees by \($0)") }
+                             ?? String(localized: "heading for \(setpoint) degrees"))
+            }
+            parts += heating.sources.map { source in
+                source.isHeating ? String(localized: "\(source.device.title) heating") : String(localized: "\(source.device.title) on")
+            }
+        } else if reading.isDimmed {
+            parts.append(String(localized: "Pump off"))
         }
         return parts.joined(separator: ", ")
     }
 }
 
-/// How old the readings on screen are, in words; while live updates arrive, they're current.
+/// The heater's flame or the heat pump's waves in its colour, filled while it's producing heat.
+private struct SourceIcon: View {
+    let source: BodyHeating.Source
+
+    var body: some View {
+        Image(systemName: source.device.systemImage)
+            .symbolVariant(source.isHeating ? .fill : .none)
+            .foregroundStyle(source.device.tint.color)
+    }
+}
+
+private extension HeatingDevice {
+    var control: EquipmentControl? { EquipmentControl.control(named: controlName) }
+    var systemImage: String { control?.systemImage ?? "flame" }
+    var tint: Tint { control?.tint ?? .orange }
+}
+
+/// The air at the pool and today's forecast, in the bar beside the pool's name; the rest of the
+/// forecast opens from it.
+private struct WeatherButton: View {
+    let air: DashboardReading
+    let weather: DashboardWeather?
+
+    @State private var showingDetails = false
+
+    var body: some View {
+        Button {
+            showingDetails = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: weather?.symbolName ?? "thermometer.medium")
+                    .symbolRenderingMode(.multicolor)
+                Text(air.value)
+                    .monospacedDigit()
+            }
+            .fixedSize()
+        }
+        .accessibilityLabel(accessibilityText)
+        .accessibilityHint("Shows today’s forecast")
+        .popover(isPresented: $showingDetails) {
+            details
+                .padding()
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let weather {
+                Label(weather.title, systemImage: weather.symbolName)
+                    .symbolRenderingMode(.multicolor)
+                    .font(.headline)
+                Text("High \(weather.high) · Low \(weather.low)")
+                    .monospacedDigit()
+                if let rain = weather.rainChance {
+                    Text("\(rain)% chance of rain")
+                }
+            }
+            Text("Air at the pool \(air.value)")
+                .monospacedDigit()
+            if let place = weather?.place {
+                Text(place)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if weather?.isStale == true {
+                Text("Forecast out of date")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .font(.subheadline)
+        .fixedSize()
+    }
+
+    private var accessibilityText: String {
+        var parts = [String(localized: "Air \(air.value)")]
+        if let weather {
+            parts.append(String(localized: "Today: \(weather.title), high \(weather.high), low \(weather.low)"))
+            if let rain = weather.rainChance {
+                parts.append(String(localized: "\(rain)% chance of rain"))
+            }
+            if weather.isStale {
+                parts.append(String(localized: "Forecast out of date"))
+            }
+        }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// How old the readings on screen are, in words; nothing while live updates keep them current.
 private struct FreshnessLine: View {
     let lastRefresh: Date?
     let isConnected: Bool
@@ -509,10 +561,7 @@ private struct FreshnessLine: View {
 
     var body: some View {
         if isConnected && isLive {
-            Text("Live")
-                .font(.caption)
-                .foregroundStyle(.green)
-                .accessibilityLabel("Live: changes appear as the controller reports them")
+            EmptyView()
         } else if let lastRefresh {
             TimelineView(.periodic(from: .now, by: 15)) { context in
                 let when = context.date.timeIntervalSince(lastRefresh) < 60
@@ -771,13 +820,60 @@ private struct TileButtonStyle: ButtonStyle {
     }
 }
 
-/// The way into the controller's own menus, for everything the app doesn't show itself.
-/// A page the dashboard opens, such as Equipment or Panel Control.
+/// The pages the dashboard opens, as a row of icons along the bottom: the equipment, the
+/// controller's own menus, the event log, and for admins, server maintenance.
+private struct DashboardBar: View {
+    let isAdmin: Bool
+
+    @ScaledMetric(relativeTo: .title3) private var iconHeight: CGFloat = 26
+
+    var body: some View {
+        HStack(spacing: 0) {
+            item(.equipment, systemImage: "switch.2", title: String(localized: "Equipment"))
+            item(.panel, systemImage: "dpad", title: String(localized: "Remote Menu"))
+            item(.eventLog, systemImage: "list.bullet.rectangle", title: String(localized: "Event Log"))
+            if isAdmin {
+                item(.serverMaintenance, systemImage: "wrench.and.screwdriver", title: String(localized: "Maintenance"))
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .frame(maxWidth: StatusView.maximumWidth)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+        .overlay(alignment: .top) {
+            Divider()
+        }
+    }
+
+    private func item(_ route: DashboardRoute, systemImage: String, title: String) -> some View {
+        NavigationLink(value: route) {
+            VStack(spacing: 3) {
+                Image(systemName: systemImage)
+                    .font(.title3)
+                    .frame(height: iconHeight)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(Color.accentColor)
+            .frame(maxWidth: .infinity)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A page another page opens, such as the salt history, with the reading it's about, if any,
+/// beside the chevron.
 private struct DashboardLink: View {
     let route: DashboardRoute
     let systemImage: String
     let title: String
     let subtitle: String
+    var value: String?
 
     @ScaledMetric(relativeTo: .title3) private var iconSize: CGFloat = 36
 
@@ -799,6 +895,13 @@ private struct DashboardLink: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 Spacer(minLength: 8)
+                if let value {
+                    Text(value)
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.tertiary)

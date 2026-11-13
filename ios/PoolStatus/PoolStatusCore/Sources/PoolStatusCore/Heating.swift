@@ -320,4 +320,38 @@ public nonisolated struct HeatingStatus: Decodable, Sendable, Equatable {
     public func temperature(of body: WaterBody) -> Double? {
         HeatingDevice.allCases.lazy.compactMap { self.device($0) }.first { $0.body == body && $0.temperature != nil }?.temperature
     }
+
+    /// What the heater and heat pump are doing for `body`; nil unless one is on and a pump sends
+    /// water to it.
+    public func heating(of body: WaterBody, now: Date = .now) -> BodyHeating? {
+        let sources = HeatingDevice.allCases.compactMap { device -> BodyHeating.Source? in
+            guard let status = self.device(device), status.enabled == true, status.body == body else {
+                return nil
+            }
+            return BodyHeating.Source(device: device, isHeating: status.heating, setpoint: status.setpoint)
+        }
+        guard !sources.isEmpty else {
+            return nil
+        }
+        let readyText = estimate.flatMap { $0.body == body && $0.status == .ready ? $0.readyText(now: now) : nil }
+        return BodyHeating(sources: sources, setpoint: sources.compactMap(\.setpoint).max(), readyText: readyText)
+    }
+}
+
+/// The heater and heat pump at work on one body of water, as the temperature card shows them.
+public nonisolated struct BodyHeating: Sendable, Equatable {
+    public struct Source: Sendable, Equatable, Identifiable {
+        public let device: HeatingDevice
+        /// Producing heat, rather than on and waiting for the water to cool below its setpoint.
+        public let isHeating: Bool
+        public let setpoint: Int?
+
+        public var id: HeatingDevice { device }
+    }
+
+    public let sources: [Source]
+    /// The highest setpoint among them: where the water is headed.
+    public let setpoint: Int?
+    /// "7:30 PM" when the estimate says it will get there, with the day when it isn't today.
+    public let readyText: String?
 }

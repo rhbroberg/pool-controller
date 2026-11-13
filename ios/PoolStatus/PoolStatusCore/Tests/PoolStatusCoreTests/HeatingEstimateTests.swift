@@ -187,6 +187,53 @@ struct HeatingEstimateTests {
     }
 }
 
+@Suite("Heating on the temperature card")
+struct BodyHeatingTests {
+    nonisolated private static let now = try! Date.ISO8601FormatStyle().parse("2026-11-10T17:00:00Z")
+
+    /// The spa filter running with the heater firing toward 102 and the heat pump on toward 100,
+    /// unless the pump is off.
+    nonisolated private static func heating(target: String? = "spa", heaterOn: Bool = true,
+                                            estimate: String? = "ready") -> HeatingStatus {
+        let body = target.map { "\"\($0)\"" } ?? "null"
+        let estimateJSON = estimate.map {
+            #"{"status":"\#($0)","body":"spa","temperature":90,"setpoint":102,"airTemperature":60,"minutes":90,"readyAt":"2026-11-10T18:30:00Z","reachesAtMost":null,"sources":["heater1","heatpump"],"rate":null,"model":null,"display":"remaining","timeZone":"UTC"}"#
+        } ?? "null"
+        let json = """
+        {"units":"fahrenheit","target":\(body),"minimum":65,"maximum":104,"setpointsReachController":true,
+         "setpoints":{"pool":{"heater1":84,"heatpump":86},"spa":{"heater1":102,"heatpump":100}},
+         "devices":{
+           "heater1":{"enabled":\(heaterOn),"heating":\(heaterOn),"callingForHeat":\(heaterOn),"body":\(body),"setpoint":102,"temperature":90},
+           "heatpump":{"enabled":true,"heating":false,"callingForHeat":true,"body":\(body),"setpoint":100,"temperature":90}},
+         "estimate":\(estimateJSON)}
+        """
+        return try! StatusClient.decoder.decode(HeatingStatus.self, from: Data(json.utf8))
+    }
+
+    @Test("shows the sources that are on, the highest setpoint and when it will be there")
+    func heating() {
+        let spa = Self.heating().heating(of: .spa, now: Self.now)
+        #expect(spa?.sources.map(\.device) == [.heater1, .heatpump])
+        #expect(spa?.sources.map(\.isHeating) == [true, false])
+        #expect(spa?.setpoint == 102)
+        #expect(spa?.readyText?.hasPrefix("6:30") == true)
+        #expect(Self.heating().heating(of: .pool, now: Self.now) == nil, "no water flows to the pool")
+    }
+
+    @Test("leaves out a source that is off, and the time when there's no estimate")
+    func partial() {
+        let spa = Self.heating(heaterOn: false, estimate: "unreachable").heating(of: .spa, now: Self.now)
+        #expect(spa?.sources.map(\.device) == [.heatpump])
+        #expect(spa?.setpoint == 100)
+        #expect(spa?.readyText == nil)
+    }
+
+    @Test("is nothing while no pump runs")
+    func pumpOff() {
+        #expect(Self.heating(target: nil, estimate: nil).heating(of: .spa, now: Self.now) == nil)
+    }
+}
+
 @Suite("Heating estimates screen")
 struct HeatingEstimatesModelTests {
     nonisolated private static let range = #"{"from":"2019-06-06T17:34:15.833Z","to":"2026-01-01T00:00:00.000Z"}"#
