@@ -5,6 +5,7 @@ var { Setting } = require('../models/setting');
 var utils = require('../utils/writer.js');
 const { isValidTimeZone } = require('../utils/timezone');
 const activity = require('./ActivityService');
+const heatingRules = require('../heating/rules');
 const weatherProviders = require('./WeatherProviders');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -15,11 +16,20 @@ const MIN_RETENTION_DAYS = 7;
 const MAX_RETENTION_DAYS = 3650;
 const ESTIMATE_DISPLAYS = ['remaining', 'readyAt'];
 const DEFAULT_ESTIMATE_DISPLAY = 'remaining';
+const DEFAULT_PREHEAT_MARGIN_MINUTES = 15;
+const MAX_PREHEAT_MARGIN_MINUTES = 240;
 
 // five digits, optionally with the ZIP+4 extension, which the lookup doesn't need
 const ZIP_CODE = /^(\d{5})(?:-\d{4})?$/;
 
-var stored = { timeZone: null, rawRetentionDays: DEFAULT_RETENTION_DAYS, location: null, heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY };
+var stored = {
+    timeZone: null,
+    rawRetentionDays: DEFAULT_RETENTION_DAYS,
+    location: null,
+    heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY,
+    heatingRules: heatingRules.complete(null),
+    preheatMarginMinutes: DEFAULT_PREHEAT_MARGIN_MINUTES
+};
 var detected;
 var listeners = [];
 
@@ -68,7 +78,9 @@ exports.load = async function() {
         timeZone: doc && doc.timeZone ? doc.timeZone : null,
         rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS,
         location: doc && doc.location && doc.location.zipCode ? doc.location : null,
-        heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY
+        heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY,
+        heatingRules: heatingRules.complete(doc && doc.heatingRules),
+        preheatMarginMinutes: doc && Number.isInteger(doc.preheatMarginMinutes) ? doc.preheatMarginMinutes : DEFAULT_PREHEAT_MARGIN_MINUTES
     };
     const where = stored.location ? `weather for ${stored.location.placeName} (${stored.location.zipCode})` : 'no zip code for weather';
     logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
@@ -95,6 +107,19 @@ exports.rawRetentionDays = function() {
 /** 'remaining' (minutes until ready) or 'readyAt' (the time it will be ready) */
 exports.heatingEstimateDisplay = function() {
     return stored.heatingEstimateDisplay;
+};
+
+/**
+ * how fast each heat source warms each body of water, in °F per hour, where history hasn't
+ * taught the model: { pool: { heater, heatPump }, spa: { heater, heatPump } }
+ **/
+exports.heatingRules = function() {
+    return stored.heatingRules;
+};
+
+/** minutes added to a scheduled preheat's lead time */
+exports.preheatMarginMinutes = function() {
+    return stored.preheatMarginMinutes;
 };
 
 /**
@@ -157,7 +182,9 @@ exports.getSettings = async function() {
         minimumRetentionDays: MIN_RETENTION_DAYS,
         maximumRetentionDays: MAX_RETENTION_DAYS,
         location: publicLocation(stored.location),
-        heatingEstimateDisplay: stored.heatingEstimateDisplay
+        heatingEstimateDisplay: stored.heatingEstimateDisplay,
+        heatingRules: stored.heatingRules,
+        preheatMarginMinutes: stored.preheatMarginMinutes
     };
 };
 
@@ -193,8 +220,25 @@ exports.updateSettings = async function(changes, user) {
         }
         update.heatingEstimateDisplay = changes.heatingEstimateDisplay;
     }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'heatingRules')) {
+        const { valid, problem } = heatingRules.validate(changes.heatingRules);
+        if (problem) {
+            throw validationError(problem);
+        }
+        // a change to one rule leaves the others as they were
+        const merged = JSON.parse(JSON.stringify(stored.heatingRules));
+        Object.entries(valid).forEach(([body, rates]) => Object.assign(merged[body], rates));
+        update.heatingRules = merged;
+    }
+    if (Object.prototype.hasOwnProperty.call(changes || {}, 'preheatMarginMinutes')) {
+        const minutes = changes.preheatMarginMinutes;
+        if (!Number.isInteger(minutes) || minutes < 0 || minutes > MAX_PREHEAT_MARGIN_MINUTES) {
+            throw validationError(`the preheat margin must be 0 to ${MAX_PREHEAT_MARGIN_MINUTES} minutes`);
+        }
+        update.preheatMarginMinutes = minutes;
+    }
     if (Object.keys(update).length === 0) {
-        throw validationError('give a timeZone, rawRetentionDays, zipCode or heatingEstimateDisplay to change');
+        throw validationError('give a timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, heatingRules or preheatMarginMinutes to change');
     }
 
     const previousZone = exports.timeZone();
@@ -219,6 +263,16 @@ exports.updateSettings = async function(changes, user) {
     if ('heatingEstimateDisplay' in update && update.heatingEstimateDisplay !== previousDisplay) {
         changed.heatingEstimateDisplay = update.heatingEstimateDisplay;
         notes.push(update.heatingEstimateDisplay === 'readyAt' ? 'heating estimates show the time it will be ready' : 'heating estimates show the minutes left');
+    }
+    if ('heatingRules' in update) {
+        changed.heatingRules = update.heatingRules;
+        const described = Object.entries(changes.heatingRules).map(([body, rates]) =>
+            Object.entries(rates).map(([source, rate]) => `${body} ${source === 'heatPump' ? 'heat pump' : source} ${rate}°F per hour`).join(', ')).join(', ');
+        notes.push(`heating rules: ${described}`);
+    }
+    if ('preheatMarginMinutes' in update) {
+        changed.preheatMarginMinutes = update.preheatMarginMinutes;
+        notes.push(`preheats start ${update.preheatMarginMinutes} minutes early`);
     }
     if (notes.length > 0) {
         logger.info(`REST ${who}: ${notes.join('; ')}`);

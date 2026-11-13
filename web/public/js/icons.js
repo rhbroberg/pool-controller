@@ -65,6 +65,9 @@ const ICONS = {
     chevronLeft: [path('m15 18-6-6 6-6')],
     chevronDown: [path('m6 9 6 6 6-6')],
     thermometer: [path('M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z')],
+    target: [circle(12, 12, 9), circle(12, 12, 5), circle(12, 12, 1)],
+    wrench: [path('M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z')],
+    grains: [circle(7, 7, 2.2), circle(17, 7, 2.2), circle(12, 12, 2.2), circle(7, 17, 2.2), circle(17, 17, 2.2)],
     dpad: [path('M9 3h6v6h6v6h-6v6H9v-6H3V9h6z')],
     branch: [path('M6 3v12'), circle(18, 6, 3), circle(6, 18, 3), path('M18 9a9 9 0 0 1-9 9')],
     plus: [path('M5 12h14'), path('M12 5v14')],
@@ -74,6 +77,7 @@ const ICONS = {
     zoomIn: [circle(11, 11, 7), path('m20 20-4-4'), path('M11 8v6'), path('M8 11h6')],
     zoomOut: [circle(11, 11, 7), path('m20 20-4-4'), path('M8 11h6')],
     user: [circle(12, 7, 4), path('M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2')],
+    userCircle: [circle(12, 12, 10), circle(12, 10, 3), path('M7 20.66V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.66')],
     users: [
         circle(9, 7, 4),
         path('M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'),

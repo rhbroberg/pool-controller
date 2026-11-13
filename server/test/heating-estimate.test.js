@@ -183,16 +183,27 @@ describe('heating estimates', () => {
         assert.equal((await api('POST', '/heating/model/preview', { token: admin, body: { scanId: 'someone-elses' } })).status, 409);
     });
 
-    it('shows no estimate until there is a model to make one from', async () => {
+    it('times the heating by the admin’s rules until there is a model, and says so', async () => {
         await api('PUT', '/heating/setpoints/pool/heater1/84', { token: admin });
         await api('PUT', '/devices/filter/true', { token: admin });
         await eventually(async () => (await reading(api, 'filter')) === true, { message: 'the filter to run' });
         const heating = await eventually(async () => {
             const body = (await api('PUT', '/devices/heater1/true', { token: admin })).status === 200 && (await api('GET', '/heating')).body;
-            return body && body.devices.heater1.callingForHeat && body.devices.heater1.temperature !== null ? body : undefined;
+            return body && body.devices.heater1.callingForHeat && body.estimate && body.estimate.temperature !== null ? body : undefined;
         }, { message: 'the heater to call for heat' });
-        assert.ok(heating.estimate, 'an estimate while it heats');
-        assert.ok(['noModel', 'noReading'].includes(heating.estimate.status), heating.estimate.status);
+        const estimate = heating.estimate;
+        assert.equal(estimate.basis, 'rule', JSON.stringify(estimate));
+        assert.deepEqual(estimate.ruleSources, ['heater1']);
+        assert.equal(estimate.model, null, 'no model to describe');
+        assert.equal(estimate.status, 'ready');
+        const rule = (await api('GET', '/system/settings', { token: admin })).body.heatingRules.pool.heater;
+        near(estimate.minutes, Math.ceil((84 - estimate.temperature) / rule * 60), 1, 'minutes at the rule’s rate');
+
+        // a faster rule is a shorter wait
+        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { pool: { heater: rule * 2 } } } })).status, 200);
+        const faster = (await api('GET', '/heating')).body.estimate;
+        assert.ok(faster.minutes < estimate.minutes, `${faster.minutes} vs ${estimate.minutes}`);
+        assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { pool: { heater: rule } } } })).status, 200);
     });
 
     it('saves exactly what was previewed, and every estimate uses it', async () => {
@@ -240,6 +251,8 @@ describe('heating estimates', () => {
             return body.estimate && !body.estimate.settling ? body.estimate : undefined;
         }, { message: 'the settled estimate', timeoutMs: 15000 });
         assert.equal(estimate.status, 'ready', JSON.stringify(estimate));
+        assert.equal(estimate.basis, 'history', 'the model learned the heater');
+        assert.deepEqual(estimate.ruleSources, []);
         assert.equal(estimate.body, 'pool');
         assert.equal(estimate.setpoint, 84);
         assert.deepEqual(estimate.sources, ['heater1']);

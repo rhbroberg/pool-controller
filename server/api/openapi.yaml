@@ -652,6 +652,128 @@ paths:
         - OAuth2:
             - control
       x-swagger-router-controller: Heating
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      description: "the everyday jobs offered in place of single switches, each on when
+        its switches are: pool (spillover water flow with the filter pump), spa preheat
+        (the spa filter with the heater or heat pump enabled) and spa party (a preheat
+        with the blower); with a spa preheat waiting to start in time for when it should
+        be ready, and whether it's dark at the pool"
+      operationId: getTasks
+      responses:
+        "200":
+          description: the tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+      x-swagger-router-controller: Tasks
+  /tasks/pool:
+    put:
+      tags:
+        - Tasks
+      description: on puts the water flow in spillover and runs the filter pump; off stops
+        the filter pump and leaves the water flow as it is. The controller confirms each
+        switch on a later status frame, so GET /tasks shows the task on once it has.
+      operationId: setPoolTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
+  /tasks/spaPreheat:
+    put:
+      tags:
+        - Tasks
+      description: on turns on the spa filter, heater and heat pump, now or, given readyAt,
+        as late as the spa can still reach its setpoint by then; off stops the spa filter
+        and drops a scheduled preheat
+      operationId: setSpaPreheatTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaPreheatChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for, or the preheat is scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "400":
+          description: readyAt is not a time
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
+  /tasks/spaParty:
+    put:
+      tags:
+        - Tasks
+      description: on does what a spa preheat does now, and turns on the blower, and the
+        lights when it's dark; off stops the spa filter, the blower and the lights
+      operationId: setSpaPartyTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskChange"
+        required: true
+      x-codegen-request-body-name: change
+      responses:
+        "200":
+          description: the switches are asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks"
+        "409":
+          description: the controller couldn't take one of the switches yet; the others
+            were asked for
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - control
+      x-swagger-router-controller: Tasks
   /panel/display:
     get:
       tags:
@@ -2674,6 +2796,101 @@ components:
             - readyAt
           description: how every app shows when heating will be done; the minutes left,
             or the time of day it will be ready
+        heatingRules:
+          $ref: "#/components/schemas/HeatingRules"
+        preheatMarginMinutes:
+          type: integer
+          description: minutes a scheduled preheat starts earlier than it needs to
+    HeatingRules:
+      type: object
+      description: °F per hour each heat source warms each body of water, standing in for
+        what history hasn't taught the model; a body without a model is timed by its rules
+        alone, and a model without a rate for a source borrows that source's rule
+      properties:
+        pool:
+          $ref: "#/components/schemas/HeatingRule"
+        spa:
+          $ref: "#/components/schemas/HeatingRule"
+    HeatingRule:
+      type: object
+      properties:
+        heater:
+          type: number
+          minimum: 0.1
+          maximum: 120
+        heatPump:
+          type: number
+          minimum: 0.1
+          maximum: 120
+    TaskChange:
+      type: object
+      required:
+        - "on"
+      properties:
+        "on":
+          type: boolean
+    SpaPreheatChange:
+      type: object
+      required:
+        - "on"
+      properties:
+        "on":
+          type: boolean
+        readyAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when the spa should be at its setpoint; absent, null or a time it
+            can't make starts the preheat now
+    Tasks:
+      type: object
+      properties:
+        pool:
+          type: object
+          properties:
+            "on":
+              type: boolean
+        spaPreheat:
+          type: object
+          properties:
+            "on":
+              type: boolean
+            scheduled:
+              type: object
+              nullable: true
+              description: a preheat waiting to start, or null
+              properties:
+                readyAt:
+                  type: string
+                  format: date-time
+                startAt:
+                  type: string
+                  format: date-time
+                  description: when it will start, worked out again every minute
+                leadMinutes:
+                  type: integer
+                leadFrom:
+                  type: string
+                  enum:
+                    - history
+                    - rule
+                    - mixed
+                  description: what timed it, as an estimate's basis says
+                fromTemperature:
+                  type: number
+                setpoint:
+                  type: integer
+                requestedBy:
+                  type: string
+                  nullable: true
+        spaParty:
+          type: object
+          properties:
+            "on":
+              type: boolean
+        dark:
+          type: boolean
+          description: whether it's dark at the pool, so a spa party turns the lights on
     SettingsUpdate:
       type: object
       properties:
@@ -2693,6 +2910,17 @@ components:
           enum:
             - remaining
             - readyAt
+        heatingRules:
+          type: object
+          description: 'the rules to change, such as {"spa": {"heater": 25}}; the rest stay
+            as they are'
+          properties:
+            pool:
+              $ref: "#/components/schemas/HeatingRule"
+            spa:
+              $ref: "#/components/schemas/HeatingRule"
+        preheatMarginMinutes:
+          type: integer
     Location:
       type: object
       properties:
@@ -2842,11 +3070,29 @@ components:
             model has been saved for this body. noReading: the water or air
             temperature isn't known. insufficientData: the model has nothing for a
             source that is on. Older servers sent settling, with no estimate, for the
-            first minutes after the pump started."
+            first minutes after the pump started; with heating rules, noModel and
+            insufficientData no longer happen."
         settling:
           type: boolean
           description: the pump has only just started, so the sensor may still show the
             water that sat in the pipes and the estimate may change once it settles
+        basis:
+          type: string
+          enum:
+            - history
+            - rule
+            - mixed
+          description: "history: learned from history; rule: the body has no model, so the
+            admin's heating rules timed it; mixed: a source at work has no learned rate and
+            borrowed its rule"
+        ruleSources:
+          type: array
+          description: the sources at work whose rate came from a rule
+          items:
+            type: string
+            enum:
+              - heater1
+              - heatpump
         body:
           type: string
         temperature:

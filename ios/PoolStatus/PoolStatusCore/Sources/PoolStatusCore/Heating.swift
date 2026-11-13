@@ -90,6 +90,16 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         public let loss: Double
     }
 
+    /// What timed it.
+    public enum Basis: String, Decodable, Sendable {
+        /// Learned from history.
+        case history
+        /// The body has no model yet, so the heating rules an admin sets timed it.
+        case rule
+        /// A source at work has no learned rate, so it borrowed its heating rule.
+        case mixed
+    }
+
     /// The model it was worked out from.
     public struct Model: Decodable, Sendable, Equatable {
         public let calculatedAt: Date
@@ -111,6 +121,10 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
     public let reachesAtMost: Double?
     /// Nil from an older server, which says `.settling` instead.
     private let settling: Bool?
+    /// Nil from a server without heating rules, whose estimates are all learned.
+    public let basis: Basis?
+    /// The server's names of the sources at work whose rate came from a heating rule.
+    public let ruleSources: [String]?
     /// The server's names of the sources calling for heat.
     public let sources: [String]
     public let rate: Rate?
@@ -164,8 +178,20 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         return "\(day) \(time)"
     }
 
-    /// The line for the dashboard, in the style the server is set to, or nil when there's nothing to say.
+    /// The line for the dashboard, in the style the server is set to, or nil when there's nothing
+    /// to say; one timed by a heating rule says so.
     public func summary(now: Date = .now) -> String? {
+        guard let text = plainSummary(now: now) else {
+            return nil
+        }
+        switch basis {
+        case .rule: return String(localized: "\(text) (by rule)", bundle: .module)
+        case .mixed: return String(localized: "\(text) (partly by rule)", bundle: .module)
+        case .history, nil: return text
+        }
+    }
+
+    private func plainSummary(now: Date) -> String? {
         let water = body.title
         switch status {
         case .ready:
@@ -202,10 +228,23 @@ public nonisolated struct HeatingEstimate: Decodable, Sendable, Equatable {
         return "\(reason) \(settlingNote)"
     }
 
+    /// "heater", or "heater and heat pump".
+    private var ruleSourceNames: String {
+        (ruleSources ?? []).compactMap { HeatingDevice(rawValue: $0)?.title.lowercased() }
+            .formatted(.list(type: .and))
+    }
+
     private var reason: String {
         switch status {
         case .ready:
-            String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past.", bundle: .module)
+            switch basis {
+            case .rule:
+                String(localized: "History doesn’t show how this \(body.title.lowercased()) warms yet, so this is timed by the heating rules an admin sets in Server Maintenance › Heating Estimates.", bundle: .module)
+            case .mixed:
+                String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past, except the \(ruleSourceNames)’s rate, which history doesn’t show and comes from its heating rule.", bundle: .module)
+            case .history, nil:
+                String(localized: "Worked out from how this \(body.title.lowercased()) has warmed in the past.", bundle: .module)
+            }
         case .unreachable:
             if let reachesAtMost {
                 String(localized: "With the air at this temperature the heat sources can only bring the water to about \(Int(reachesAtMost.rounded()))°.", bundle: .module)
@@ -281,4 +320,38 @@ public nonisolated struct HeatingStatus: Decodable, Sendable, Equatable {
     public func temperature(of body: WaterBody) -> Double? {
         HeatingDevice.allCases.lazy.compactMap { self.device($0) }.first { $0.body == body && $0.temperature != nil }?.temperature
     }
+
+    /// What the heater and heat pump are doing for `body`; nil unless one is on and a pump sends
+    /// water to it.
+    public func heating(of body: WaterBody, now: Date = .now) -> BodyHeating? {
+        let sources = HeatingDevice.allCases.compactMap { device -> BodyHeating.Source? in
+            guard let status = self.device(device), status.enabled == true, status.body == body else {
+                return nil
+            }
+            return BodyHeating.Source(device: device, isHeating: status.heating, setpoint: status.setpoint)
+        }
+        guard !sources.isEmpty else {
+            return nil
+        }
+        let readyText = estimate.flatMap { $0.body == body && $0.status == .ready ? $0.readyText(now: now) : nil }
+        return BodyHeating(sources: sources, setpoint: sources.compactMap(\.setpoint).max(), readyText: readyText)
+    }
+}
+
+/// The heater and heat pump at work on one body of water, as the temperature card shows them.
+public nonisolated struct BodyHeating: Sendable, Equatable {
+    public struct Source: Sendable, Equatable, Identifiable {
+        public let device: HeatingDevice
+        /// Producing heat, rather than on and waiting for the water to cool below its setpoint.
+        public let isHeating: Bool
+        public let setpoint: Int?
+
+        public var id: HeatingDevice { device }
+    }
+
+    public let sources: [Source]
+    /// The highest setpoint among them: where the water is headed.
+    public let setpoint: Int?
+    /// "7:30 PM" when the estimate says it will get there, with the day when it isn't today.
+    public let readyText: String?
 }

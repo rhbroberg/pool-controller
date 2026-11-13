@@ -7,7 +7,7 @@ import { TimeChart } from '../chart.js';
 import { extended, valueAt, MAX_POINTS } from '../history.js';
 import { openHistoryCalendar } from './history-calendar.js';
 import { formatMonthDayYear, formatMonthDay, formatMonthYear, formatSpan } from '../format.js';
-import { topbar, barButton, spinner, renderer } from '../ui.js';
+import { topbar, barButton, backTo, spinner, renderer } from '../ui.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const RANGES = [
@@ -21,7 +21,7 @@ const COLOR = 'var(--teal)';
 const RANGE_OPACITY = 0.16;
 const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
 
-export const mountSaltHistory = (root, app) => {
+export const mountSaltHistory = (root, app, query) => {
     // null while showing days picked in the calendar, held in custom as [from, to]
     let range = RANGES[1];
     let custom = null;
@@ -141,8 +141,7 @@ export const mountSaltHistory = (root, app) => {
         return [
             topbar({
                 title: 'Salt Level',
-                back: '',
-                backTitle: app.poolName(),
+                ...backTo(query, { back: '', backTitle: app.poolName() }),
                 trailing: barButton({ label: 'Choose Dates', iconName: 'calendar', onClick: chooseDates })
             }),
             h('main', { class: 'page full history-page' },

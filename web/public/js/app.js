@@ -7,6 +7,7 @@ import { DEFAULT_POOL_NAME } from './model.js';
 import * as prefs from './prefs.js';
 import { mountDashboard } from './views/dashboard.js';
 import { mountPanel } from './views/panel.js';
+import { mountEquipment } from './views/equipment.js';
 import { mountTemperatureHistory } from './views/temperature-history.js';
 import { mountSaltHistory } from './views/salt-history.js';
 import { mountSettings, mountChangePassword } from './views/settings.js';
@@ -24,9 +25,10 @@ const SIGNED_OUT_ROUTE = /^signin\/complete$/;
 
 const ROUTES = [
     [/^$/, (root, app) => mountDashboard(root, app)],
+    [/^equipment$/, (root, app) => mountEquipment(root, app)],
     [/^panel$/, (root, app) => mountPanel(root, app)],
     [/^history\/(pool|spa)$/, (root, app, [water]) => mountTemperatureHistory(root, app, water)],
-    [/^history\/salt$/, (root, app) => mountSaltHistory(root, app)],
+    [/^history\/salt$/, (root, app, _, query) => mountSaltHistory(root, app, query)],
     [/^settings$/, (root, app) => mountSettings(root, app)],
     [/^settings\/password$/, (root, app) => mountChangePassword(root, app)],
     [/^events$/, (root, app) => mountEventLog(root, app)],

@@ -1,14 +1,16 @@
-// The pool's location for weather, the time zone and history settings, the maintenance jobs,
-// restart and factory reset, kept off the main Settings page because they affect the server
-// rather than this page.
+// The accounts and how people sign in, the pool's location for weather, the time zone and
+// history settings, the maintenance jobs, restart and factory reset: everything an admin keeps
+// the server running with.
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
-import { DEFAULT_ADMIN } from '../model.js';
+import { DEFAULT_ADMIN, HEATING_SOURCES, WATER_BODIES, rateBasis } from '../model.js';
 import { relative } from '../format.js';
 import { topbar, formSection, formRow, actionRow, linkRow, select, spinner, renderer } from '../ui.js';
 
 const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
+const RULE_CHOICES = { pool: [0.25, 0.5, 0.75, 1, 1.5, 2, 3], spa: [2, 4, 6, 10, 15, 20, 30, 40, 60] };
+const PREHEAT_MARGIN_CHOICES = [0, 10, 15, 30, 45, 60];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
 
@@ -32,10 +34,15 @@ const allTimeZones = (current) => {
 };
 
 export const mountMaintenance = (root, app) => {
-    const { store } = app;
+    const { store, client } = app;
+    // whether the server has sign-in services to set up; null until it says, or from one too old
+    let choices = null;
+    let pendingRequests = 0;
     let working = false;
     let message = null;
     let settings = null;
+    // the heating model in use, to say which rates it learned; null until one is saved
+    let heatingModel = null;
     let jobs = [];
     // settings or jobs that couldn't be read or changed
     let settingsError = null;
@@ -60,12 +67,38 @@ export const mountMaintenance = (root, app) => {
         }
     };
 
+    const loadChoices = async () => {
+        try {
+            choices = await client.fetchSignInChoices();
+        } catch {
+            choices = null;
+        }
+        redraw();
+    };
+
+    const loadPendingRequests = async () => {
+        if (!store.isAdmin) {
+            return;
+        }
+        try {
+            const requests = await client.listRequests(store.credentials.token);
+            pendingRequests = requests.filter((request) => request.status === 'pending').length;
+            redraw();
+        } catch {
+            // the count is a hint; Accounts shows any error
+        }
+    };
+
     const loadSettings = async () => {
         if (!store.isAdmin) {
             return;
         }
         try {
-            [settings, jobs] = await Promise.all([store.serverSettings(), store.maintenanceJobs()]);
+            [settings, jobs, heatingModel] = await Promise.all([
+                store.serverSettings(),
+                store.maintenanceJobs(),
+                store.client.fetchHeatingModel().then((state) => state.model).catch(() => null)
+            ]);
             settingsError = null;
         } catch (error) {
             settingsError = error.message;
@@ -172,6 +205,54 @@ export const mountMaintenance = (root, app) => {
                 })));
     };
 
+    const perHour = (rate) => `${rate}°F an hour`;
+
+    /**
+     * how each body of water is timed: each source's rate as learned from history, or the rule
+     * standing in for it and why, which is set here; a server without heating rules doesn't say
+     **/
+    const heatingSections = () => {
+        if (!settings.heatingRules) {
+            return [];
+        }
+        const keeping = (choices, current) => [...new Set([...choices, current])].sort((a, b) => a - b);
+        const minutes = (count) => count === 0 ? 'No margin' : count % 60 === 0 ? `${count / 60} hr` : `${count} min`;
+        const footer = 'A rule stands in for what history hasn’t shown yet, and its estimates say “by rule”. A model that learns the rate takes over from it.';
+        const sourceRow = (body, source) => {
+            const basis = rateBasis(heatingModel, body.id, source.id);
+            const caption = basis.why
+                ? h('small', { class: 'warning' }, `By rule · ${basis.why}`)
+                : h('small', { class: 'learned' }, 'Learned from history');
+            const label = h('div', { class: 'row-text' }, h('span', null, source.title), caption);
+            if (!basis.why) {
+                return formRow(label, h('span', { class: 'value' }, `${Math.round(basis.learned * 100) / 100}°F an hour`));
+            }
+            const current = settings.heatingRules[body.id][source.id];
+            return formRow(label, select({
+                label: `${body.title} ${source.title.toLowerCase()} rule`,
+                value: String(current),
+                options: keeping(RULE_CHOICES[body.id], current).map((rate) => ({ value: String(rate), label: perHour(rate) })),
+                onChange: (value) => apply({ heatingRules: { [body.id]: { [source.id]: Number(value) } } })
+            }));
+        };
+        return WATER_BODIES.map((body) => {
+            const rows = HEATING_SOURCES.map((source) => sourceRow(body, source));
+            if (body.id === 'spa' && typeof settings.preheatMarginMinutes === 'number') {
+                rows.push(formRow(h('span', { class: 'label' }, 'Preheat Starts Early By'),
+                    select({
+                        label: 'Preheat starts early by',
+                        value: String(settings.preheatMarginMinutes),
+                        options: keeping(PREHEAT_MARGIN_CHOICES, settings.preheatMarginMinutes).map((count) => ({ value: String(count), label: minutes(count) })),
+                        onChange: (value) => apply({ preheatMarginMinutes: Number(value) })
+                    })));
+            }
+            return formSection({
+                header: `How the ${body.title} Is Timed`,
+                footer: body.id === 'spa' ? `${footer} A spa preheat scheduled to be ready by a time starts this much earlier than it needs to.` : footer
+            }, ...rows);
+        });
+    };
+
     const locationSection = () => {
         const saved = settings.location ? settings.location.zipCode : '';
         const draft = zipDraft === null ? saved : zipDraft;
@@ -231,14 +312,23 @@ export const mountMaintenance = (root, app) => {
                     : h('button', { class: 'button', type: 'button', disabled: runningJob !== null, onClick: () => runJob(job) }, 'Run Now')));
     };
 
+    const accountsSection = () => formSection({ footer: 'Who can sign in, what each may do, and how they sign in.' },
+        h('a', { class: 'form-row', href: '#/accounts' },
+            h('span', null, 'Accounts'),
+            pendingRequests > 0 ? h('span', { class: 'count-badge', title: `${pendingRequests} waiting for approval` }, String(pendingRequests)) : null,
+            icon('chevronRight')),
+        choices ? linkRow('Sign-In', '#/sign-in') : null);
+
     const render = () => {
         const disabled = !store.isAdmin || working;
         return [
-            topbar({ title: 'Server Maintenance', back: 'settings', backTitle: 'Settings' }),
+            topbar({ title: 'Server Maintenance', back: '', backTitle: app.poolName() }),
             h('main', { class: 'page' },
                 h('div', { class: 'form' },
+                    store.isAdmin ? accountsSection() : null,
                     settings ? locationSection() : null,
                     settings ? historySection() : null,
+                    ...(settings ? heatingSections() : []),
                     jobs.length
                         ? formSection({ header: 'Maintenance Jobs', footer: 'These run on their own. Run Now brings them up to date straight away.' }, ...jobs.map(jobRow))
                         : null,
@@ -265,6 +355,7 @@ export const mountMaintenance = (root, app) => {
         // signing in as an admin on this page shows the settings without leaving it
         if (store.isAdmin && !wasAdmin) {
             loadSettings();
+            loadPendingRequests();
         }
         wasAdmin = store.isAdmin;
         redraw();
@@ -272,5 +363,7 @@ export const mountMaintenance = (root, app) => {
     document.title = 'Server Maintenance';
     redraw();
     loadSettings();
+    loadChoices();
+    loadPendingRequests();
     return unsubscribe;
 };

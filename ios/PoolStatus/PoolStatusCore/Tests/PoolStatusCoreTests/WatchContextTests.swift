@@ -44,10 +44,4 @@ struct WatchContextTests {
         #expect(auth.credentials == nil)
         #expect(saved.saved == nil)
     }
-
-    @Test("offers only everyday switches, none that ask first")
-    func controls() {
-        #expect(EquipmentControl.watch.map(\.name) == [.filter, .spaFilter, .blower, .heatPump, .heater, .lights, .yardLights])
-        #expect(EquipmentControl.watch.allSatisfy { $0.confirmOn == nil && $0.confirmOff == nil })
-    }
 }

@@ -24,7 +24,14 @@ var SettingSchema = new mongoose.Schema({
     // ask: someone without an account or invitation becomes a request for an admin; refuse: turned away
     signInRequests: { type: String, enum: ['ask', 'refuse'], default: 'ask' },
     // how apps show when heating will be done: the minutes left, or the time of day it will be ready
-    heatingEstimateDisplay: { type: String, enum: ['remaining', 'readyAt'], default: 'remaining' }
+    heatingEstimateDisplay: { type: String, enum: ['remaining', 'readyAt'], default: 'remaining' },
+    // °F per hour each heat source warms each body where history hasn't taught the model:
+    // { pool: { heater, heatPump }, spa: { heater, heatPump } }
+    heatingRules: { type: mongoose.Schema.Types.Mixed, default: null },
+    // added to a scheduled preheat's lead time, so the spa is ready by then rather than just at it
+    preheatMarginMinutes: Number,
+    // a spa preheat waiting to start in time for readyAt: { readyAt, requestedBy }
+    scheduledPreheat: { type: mongoose.Schema.Types.Mixed, default: null }
 });
 
 var Setting = mongoose.model('settings', SettingSchema);

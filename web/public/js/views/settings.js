@@ -1,8 +1,7 @@
-// Settings: the pool's name, the account signed in, and the way to history and administration.
-// Signing in is the sign-in page's; Settings shows only once someone has.
+// Settings: the pool's name and the account signed in. Signing in is the sign-in page's; Settings
+// shows only once someone has. The event log and server maintenance open from the main page.
 
 import { h, confirmAction } from '../dom.js';
-import { icon } from '../icons.js';
 import { DEFAULT_POOL_NAME, roleInfo, passwordProblem, passwordAcceptable, aboutLine } from '../model.js';
 import { RECONNECT_CHOICES, DEFAULT_RECONNECT_SECONDS } from '../store.js';
 import { formatDurationSeconds } from '../format.js';
@@ -14,7 +13,6 @@ export const mountSettings = (root, app) => {
     let poolName = prefs.read('poolName', DEFAULT_POOL_NAME);
     // the sign-in services the server offers; null until it says
     let choices = null;
-    let pendingRequests = 0;
     let methodsError = null;
     let linking = null;
     // the pool server's build, for the about line; null until it answers
@@ -37,19 +35,6 @@ export const mountSettings = (root, app) => {
             redraw();
         } catch {
             // the about line shows a dash for the server
-        }
-    };
-
-    const loadPendingRequests = async () => {
-        if (!store.isAdmin) {
-            return;
-        }
-        try {
-            const requests = await client.listRequests(token());
-            pendingRequests = requests.filter((request) => request.status === 'pending').length;
-            redraw();
-        } catch {
-            // the count is a hint; Accounts shows any error
         }
     };
 
@@ -161,18 +146,6 @@ export const mountSettings = (root, app) => {
         methodsSection()];
     };
 
-    const historySection = () => formSection({
-        header: store.isAdmin ? 'History & Administration' : 'History',
-        footer: aboutLine(app.webCommit, serverInfo)
-    },
-        linkRow('Event Log', '#/events'),
-        store.isAdmin ? h('a', { class: 'form-row', href: '#/accounts' },
-            h('span', null, 'Accounts'),
-            pendingRequests > 0 ? h('span', { class: 'count-badge', title: `${pendingRequests} waiting for approval` }, String(pendingRequests)) : null,
-            icon('chevronRight')) : null,
-        store.isAdmin && choices ? linkRow('Sign-In', '#/sign-in') : null,
-        store.isAdmin ? linkRow('Server Maintenance', '#/maintenance') : null);
-
     const render = () => [
         topbar({
             title: 'Settings',
@@ -181,23 +154,16 @@ export const mountSettings = (root, app) => {
             trailing: barButton({ label: 'Done', strong: true, onClick: () => navigate('') })
         }),
         h('main', { class: 'page' },
-            h('div', { class: 'form' }, poolSection(), accountSection(), historySection()))
+            h('div', { class: 'form' }, poolSection(), accountSection(),
+                h('div', { class: 'form-footer' }, aboutLine(app.webCommit, serverInfo))))
     ];
 
     const redraw = renderer(root, render);
-    let wasAdmin = store.isAdmin;
-    const unsubscribe = store.subscribe(() => {
-        if (store.isAdmin && !wasAdmin) {
-            loadPendingRequests();
-        }
-        wasAdmin = store.isAdmin;
-        redraw();
-    });
+    const unsubscribe = store.subscribe(redraw);
     const unwatch = app.onSettingsChanged(redraw);
     document.title = 'Settings';
     redraw();
     loadChoices();
-    loadPendingRequests();
     loadServerInfo();
     return () => {
         unsubscribe();

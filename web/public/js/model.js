@@ -97,6 +97,33 @@ export const WATER_BODIES = [
 
 export const waterBody = (id) => WATER_BODIES.find((body) => body.id === id) || null;
 
+/**
+ * what the heater and heat pump are doing for bodyId, as the temperature card shows it: the
+ * sources that are on, each with its control and whether it's producing heat, the highest
+ * setpoint among them, and when the estimate says the water gets there ("7:30 PM", in the
+ * server's time zone); null unless one is on and a pump sends water to that body
+ **/
+export const bodyHeating = (heating, bodyId, now = new Date()) => {
+    const devices = heating && heating.devices ? heating.devices : {};
+    const sources = HEATING_DEVICES
+        .filter((device) => devices[device.id] && devices[device.id].enabled === true && devices[device.id].body === bodyId)
+        .map((device) => ({
+            ...device,
+            control: EQUIPMENT.find((control) => control.name === device.controlName),
+            heating: devices[device.id].heating === true,
+            setpoint: devices[device.id].setpoint ?? null
+        }));
+    if (!sources.length) {
+        return null;
+    }
+    const setpoints = sources.map((source) => source.setpoint).filter((setpoint) => typeof setpoint === 'number');
+    const estimate = heating.estimate;
+    const ready = estimate && estimate.body === bodyId && estimate.status === 'ready' && estimate.readyAt
+        ? taskTime(new Date(estimate.readyAt), now, estimate.timeZone)
+        : null;
+    return { sources, setpoint: setpoints.length ? Math.max(...setpoints) : null, ready };
+};
+
 export const setpointOf = (heating, deviceId, bodyId) => heating && heating.setpoints && heating.setpoints[bodyId] ? heating.setpoints[bodyId][deviceId] : undefined;
 
 /**
@@ -143,6 +170,48 @@ export const WATER_MODES = [
 ];
 
 export const waterModeInfo = (id) => WATER_MODES.find((mode) => mode.id === id) || null;
+
+/**
+ * the everyday jobs offered in place of single switches, each on while the switches behind it
+ * are, as the server reads them
+ **/
+export const TASKS = [
+    { id: 'pool', title: 'Pool', summary: 'Filter running, water in spillover', icon: 'waves', tint: 'blue' },
+    { id: 'spaPreheat', title: 'Spa Preheat', summary: 'Spa filter, heater and heat pump', icon: 'thermometer', tint: 'orange' },
+    { id: 'spaParty', title: 'Spa Party', summary: 'Spa preheat with the blower, and lights after dark', icon: 'bubbles', tint: 'pink' }
+];
+
+export const taskInfo = (id) => TASKS.find((task) => task.id === id) || null;
+
+/** whether `id` is on in GET /tasks's answer */
+export const taskOn = (tasks, id) => Boolean(tasks && tasks[id] && tasks[id].on);
+
+/** a spa preheat waiting for its time, or null; not once it has started */
+export const scheduledPreheat = (tasks) => tasks && tasks.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
+    ? tasks.spaPreheat.scheduled
+    : null;
+
+/** "7:30 PM", or "Sat 7:30 AM" when it isn't the same day as now; in timeZone if given */
+export const taskTime = (date, now = new Date(), timeZone = undefined) => {
+    const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone });
+    const day = (d) => d.toLocaleDateString('en-CA', { timeZone });
+    return day(date) === day(now)
+        ? time
+        : `${date.toLocaleDateString(undefined, { weekday: 'short', timeZone })} ${time}`;
+};
+
+/** the lights a task row offers once it's dark at the pool */
+export const NIGHT_LIGHTS = ['lights', 'aux3'];
+
+/** { ready: "Ready by 7:30 PM", start: "Starts about 6:00 PM" } for a scheduled preheat */
+export const scheduleText = (scheduled, now = new Date()) => {
+    const readyAt = new Date(scheduled.readyAt);
+    const startAt = new Date(scheduled.startAt);
+    return {
+        ready: `Ready by ${taskTime(readyAt, now)}`,
+        start: startAt <= now ? 'Starting now' : `Starts about ${taskTime(startAt, now)}`
+    };
+};
 
 /**
  * spillover if that switch is on, otherwise spa if it is, otherwise pool; unknown until the
@@ -345,4 +414,29 @@ export const PANEL_KEYS = {
     right: { title: 'Right', label: '>' },
     minus: { title: 'Minus', label: '−' },
     plus: { title: 'Plus', label: '+' }
+};
+
+/** the heat sources the heating rules cover, as the settings and the estimates name them */
+export const HEATING_SOURCES = [
+    { id: 'heater', device: 'heater1', title: 'Heater' },
+    { id: 'heatPump', device: 'heatpump', title: 'Heat Pump' }
+];
+
+/**
+ * whether the heating model in use learned how fast `source` ('heater' or 'heatPump') warms
+ * `body`: { learned: °F per hour }, or { why } its rule stands in
+ **/
+export const rateBasis = (model, body, source) => {
+    if (!model) {
+        return { why: 'No model has been saved yet.' };
+    }
+    const learned = model.bodies ? model.bodies[body] : null;
+    if (!learned || !learned.available) {
+        const reason = learned && learned.reason ? learned.reason : 'the model in use has nothing for this water';
+        return { why: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.` };
+    }
+    if (source === 'heater') {
+        return typeof learned.heater === 'number' ? { learned: learned.heater } : { why: 'History doesn’t show the heater warming this water.' };
+    }
+    return learned.heatPump ? { learned: learned.heatPump.base } : { why: 'History doesn’t show the heat pump warming this water.' };
 };

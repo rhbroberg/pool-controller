@@ -39,6 +39,52 @@ public nonisolated enum PreviewServer {
 
     /// The token signing in as `name` gets.
     public static func token(for name: String) -> String { "token-\(name)" }
+
+    /// Sets a task as PUT /tasks/{task} would, so a test can start from it.
+    public static func setTask(_ task: String, on: Bool, readyAt: Date? = nil) {
+        PreviewTasks.set(task, on: on, readyAt: readyAt)
+    }
+}
+
+/// The pretend server's tasks, which PUT /tasks/{task} changes: a spa preheat starts at once
+/// unless it's asked to be ready more than an hour from now, when it waits.
+private nonisolated enum PreviewTasks {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var on = ["pool": false, "spaPreheat": false, "spaParty": false]
+    nonisolated(unsafe) private static var readyAt: Date?
+    private static let lead: TimeInterval = 3600
+
+    static func set(_ task: String, on value: Bool, readyAt: Date?) {
+        lock.withLock {
+            switch (task, value) {
+            case ("spaPreheat", true) where (readyAt?.timeIntervalSinceNow ?? 0) > lead:
+                self.readyAt = readyAt
+            case ("spaPreheat", false), ("spaParty", false):
+                on["spaPreheat"] = false
+                on["spaParty"] = false
+                self.readyAt = nil
+            case ("spaParty", true):
+                on["spaPreheat"] = true
+                on["spaParty"] = true
+                self.readyAt = nil
+            default:
+                on[task] = value
+                if task == "spaPreheat" {
+                    self.readyAt = nil
+                }
+            }
+        }
+    }
+
+    static func json() -> String {
+        lock.withLock {
+            let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+            let scheduled = readyAt.map {
+                #"{"readyAt":"\#(iso.format($0))","startAt":"\#(iso.format($0.addingTimeInterval(-lead)))","leadMinutes":60,"leadFrom":"rule","fromTemperature":82,"setpoint":102,"requestedBy":"preview"}"#
+            } ?? "null"
+            return #"{"pool":{"on":\#(on["pool"] ?? false)},"spaPreheat":{"on":\#(on["spaPreheat"] ?? false),"scheduled":\#(scheduled)},"spaParty":{"on":\#(on["spaParty"] ?? false)},"dark":true}"#
+        }
+    }
 }
 
 /// Answers the API's GET routes with plausible readings for an evening with the filter running
@@ -113,6 +159,13 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
             }
             let name = token.hasPrefix("token-") ? String(token.dropFirst("token-".count)) : "preview"
             return (200, #"{"email":"\#(name)","role":"admin"}"#)
+        case ("GET", "tasks"):
+            return (200, PreviewTasks.json())
+        case ("PUT", _) where path.hasPrefix("tasks/"):
+            let fields = sent.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any] ?? [:]
+            let readyAt = (fields["readyAt"] as? String).flatMap { try? iso.parse($0) }
+            PreviewTasks.set(String(path.dropFirst("tasks/".count)), on: fields["on"] as? Bool ?? false, readyAt: readyAt)
+            return (200, PreviewTasks.json())
         case ("GET", _):
             return body(for: path, query: query).map { (200, $0) } ?? (404, #"{"message":"not in the preview"}"#)
         default:
@@ -177,7 +230,10 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
             }
             return #"{"timeZone":"\#(TimeZone.current.identifier)","earliest":null,"days":[\#(days.joined(separator: ","))]}"#
         case "system/settings":
-            return #"{"timeZone":"\#(TimeZone.current.identifier)","timeZoneSource":"system","detectedTimeZone":"\#(TimeZone.current.identifier)","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650}"#
+            return #"{"timeZone":"\#(TimeZone.current.identifier)","timeZoneSource":"system","detectedTimeZone":"\#(TimeZone.current.identifier)","rawRetentionDays":365,"minimumRetentionDays":7,"maximumRetentionDays":3650,"heatingEstimateDisplay":"remaining","heatingRules":{"pool":{"heater":1,"heatPump":0.5},"spa":{"heater":20,"heatPump":4}},"preheatMarginMinutes":15}"#
+        case "heating/model":
+            // the pool learned, except the heater; the spa without enough windows
+            return #"{"model":{"id":"preview","createdAt":"\#(now)","createdBy":"preview","range":{"from":"2019-06-06T17:34:18.937Z","to":"2026-01-01T00:00:00.000Z"},"timeZone":"\#(TimeZone.current.identifier)","bodies":{"pool":{"available":true,"heater":null,"heatPump":{"base":0.55,"slope":0,"referenceAirTemperature":60,"minimumAirTemperature":null},"loss":0.012,"solar":0.41,"windows":{"heater":3,"heatpump":404,"both":60,"cooling":1061,"total":1528},"rSquared":0.45,"rmse":0.34,"notes":["the windows with the heater on show no warming from it, so how fast it heats is not known"]},"spa":{"available":false,"reason":"needs at least 5 windows; has 1","windows":{"heater":0,"heatpump":0,"both":1,"cooling":0,"total":1}}}},"defaultRange":{"from":"2019-06-06T17:34:18.937Z","to":"2026-01-01T00:00:00.000Z"}}"#
         case "system/jobs":
             let finished = iso.format(.now.addingTimeInterval(-240))
             return """

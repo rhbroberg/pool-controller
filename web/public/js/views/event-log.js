@@ -226,8 +226,8 @@ export const mountEventLog = (root, app) => {
     const render = () => [
         topbar({
             title: 'Event Log',
-            back: 'settings',
-            backTitle: 'Settings',
+            back: '',
+            backTitle: app.poolName(),
             trailing: barButton({ label: 'Refresh', iconName: 'refresh', onClick: () => { reload(); loadUsers(); } })
         }),
         filterBar(),

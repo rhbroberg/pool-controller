@@ -21,10 +21,10 @@ final class SitesUITests: XCTestCase {
         // nothing from the pool shows until signing in
         XCTAssertTrue(app.textFields["Account Name"].waitForExistence(timeout: timeout))
         XCTAssertTrue(app.navigationBars["Home"].exists)
-        XCTAssertFalse(app.staticTexts["Panel Control"].exists)
+        XCTAssertFalse(app.staticTexts["Remote Menu"].exists)
 
         signIn(app, as: "tester", password: "secret")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
     }
 
     func testAddingASecondPoolKeepsTheFirstSignedIn() {
@@ -34,7 +34,7 @@ final class SitesUITests: XCTestCase {
         type("home.test:3000", into: app.textFields["192.168.1.20:3000"])
         app.buttons["Connect"].tap()
         signIn(app, as: "tester", password: "secret")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
 
         // with one pool, another is added from its menu as it would be with several, and no
         // warning comes first
@@ -71,12 +71,12 @@ final class SitesUITests: XCTestCase {
         signIn(app, as: "tester", password: "nope")
         let error = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "incorrect name or password")).firstMatch
         XCTAssertTrue(error.waitForExistence(timeout: timeout))
-        XCTAssertFalse(app.staticTexts["Panel Control"].exists)
+        XCTAssertFalse(app.staticTexts["Remote Menu"].exists)
     }
 
     func testSigningOutOfOnePoolLeavesTheOthersSignedIn() {
         let app = launch(reset: true, seed: "-uiTestSites")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
 
         app.buttons["Settings"].tap()
         let signOut = app.buttons["Sign Out"]
@@ -101,23 +101,23 @@ final class SitesUITests: XCTestCase {
         XCTAssertEqual(app.textFields["Account Name"].value as? String, "tester")
 
         signIn(app, as: "tester", password: "secret")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
     }
 
     // MARK: Switching
 
     func testSwitchingBetweenPools() {
         let app = launch(reset: true, seed: "-uiTestSites")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
         XCTAssertTrue(app.navigationBars["Home"].exists)
 
         openFromMenu(app, current: "Home", choose: "Lake")
         XCTAssertTrue(app.navigationBars["Lake"].waitForExistence(timeout: timeout))
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
 
         openFromMenu(app, current: "Lake", choose: "Cabin")
         XCTAssertTrue(app.textFields["Account Name"].waitForExistence(timeout: timeout))
-        XCTAssertFalse(app.staticTexts["Panel Control"].exists)
+        XCTAssertFalse(app.staticTexts["Remote Menu"].exists)
 
         openFromMenu(app, current: "Cabin", choose: "All Sites")
         XCTAssertTrue(app.navigationBars["Sites"].waitForExistence(timeout: timeout))
@@ -129,12 +129,12 @@ final class SitesUITests: XCTestCase {
     func testRelaunchingOpensTheLastPoolOnlyWhenSignedIn() {
         var app = launch(reset: true, seed: "-uiTestSites")
         openFromMenu(app, current: "Home", choose: "Lake")
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
 
         app.terminate()
         app = launch()
         XCTAssertTrue(app.navigationBars["Lake"].waitForExistence(timeout: timeout))
-        XCTAssertTrue(app.staticTexts["Panel Control"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts["Remote Menu"].waitForExistence(timeout: timeout))
 
         openFromMenu(app, current: "Lake", choose: "Cabin")
         XCTAssertTrue(app.textFields["Account Name"].waitForExistence(timeout: timeout))

@@ -13,6 +13,8 @@ enum UITestMode {
     static let seedSites = "-uiTestSites"
     /// Old House, open last, with a sign-in its server no longer accepts.
     static let seedExpired = "-uiTestExpired"
+    /// The pretend server's pool task on, and a spa preheat scheduled for three hours from now.
+    static let seedTasks = "-uiTestTasks"
 
     private static let suite = "PoolStatusUITests"
     private static var arguments: [String] { ProcessInfo.processInfo.arguments }
@@ -40,6 +42,10 @@ enum UITestMode {
         }
         if arguments.contains(seedExpired) {
             seed(sites, name: "Old House", host: "old.test", account: "tester", token: PreviewServer.expiredToken, activate: true)
+        }
+        if arguments.contains(seedTasks) {
+            PreviewServer.setTask("pool", on: true)
+            PreviewServer.setTask("spaPreheat", on: true, readyAt: .now.addingTimeInterval(3 * 3600))
         }
         return SiteSession(sites: sites, network: network) { site, credentials in
             StatusStore(serverAddress: site.address, defaults: defaults, remembersAddress: false,

@@ -98,6 +98,8 @@ public nonisolated enum LiveUpdate: Sendable {
     case readings([StatusReading])
     /// The same as `GET /heating` answers.
     case heating(HeatingStatus)
+    /// The same as `GET /tasks` answers.
+    case tasks(TaskStatus)
 
     /// Nil for events the app doesn't know, or can't read.
     public init?(name: String, payload: Data) {
@@ -112,6 +114,11 @@ public nonisolated enum LiveUpdate: Sendable {
                 return nil
             }
             self = .heating(heating)
+        case "tasks":
+            guard let tasks = try? StatusClient.decoder.decode(TaskStatus.self, from: payload) else {
+                return nil
+            }
+            self = .tasks(tasks)
         default:
             return nil
         }
