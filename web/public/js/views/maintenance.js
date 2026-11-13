@@ -1,6 +1,6 @@
-// The pool's location for weather, the time zone and history settings, the maintenance jobs,
-// restart and factory reset, kept off the main Settings page because they affect the server
-// rather than this page.
+// The accounts and how people sign in, the pool's location for weather, the time zone and
+// history settings, the maintenance jobs, restart and factory reset: everything an admin keeps
+// the server running with.
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
@@ -34,7 +34,10 @@ const allTimeZones = (current) => {
 };
 
 export const mountMaintenance = (root, app) => {
-    const { store } = app;
+    const { store, client } = app;
+    // whether the server has sign-in services to set up; null until it says, or from one too old
+    let choices = null;
+    let pendingRequests = 0;
     let working = false;
     let message = null;
     let settings = null;
@@ -61,6 +64,28 @@ export const mountMaintenance = (root, app) => {
         } finally {
             working = false;
             redraw();
+        }
+    };
+
+    const loadChoices = async () => {
+        try {
+            choices = await client.fetchSignInChoices();
+        } catch {
+            choices = null;
+        }
+        redraw();
+    };
+
+    const loadPendingRequests = async () => {
+        if (!store.isAdmin) {
+            return;
+        }
+        try {
+            const requests = await client.listRequests(store.credentials.token);
+            pendingRequests = requests.filter((request) => request.status === 'pending').length;
+            redraw();
+        } catch {
+            // the count is a hint; Accounts shows any error
         }
     };
 
@@ -287,12 +312,20 @@ export const mountMaintenance = (root, app) => {
                     : h('button', { class: 'button', type: 'button', disabled: runningJob !== null, onClick: () => runJob(job) }, 'Run Now')));
     };
 
+    const accountsSection = () => formSection({ footer: 'Who can sign in, what each may do, and how they sign in.' },
+        h('a', { class: 'form-row', href: '#/accounts' },
+            h('span', null, 'Accounts'),
+            pendingRequests > 0 ? h('span', { class: 'count-badge', title: `${pendingRequests} waiting for approval` }, String(pendingRequests)) : null,
+            icon('chevronRight')),
+        choices ? linkRow('Sign-In', '#/sign-in') : null);
+
     const render = () => {
         const disabled = !store.isAdmin || working;
         return [
-            topbar({ title: 'Server Maintenance', back: 'settings', backTitle: 'Settings' }),
+            topbar({ title: 'Server Maintenance', back: '', backTitle: app.poolName() }),
             h('main', { class: 'page' },
                 h('div', { class: 'form' },
+                    store.isAdmin ? accountsSection() : null,
                     settings ? locationSection() : null,
                     settings ? historySection() : null,
                     ...(settings ? heatingSections() : []),
@@ -322,6 +355,7 @@ export const mountMaintenance = (root, app) => {
         // signing in as an admin on this page shows the settings without leaving it
         if (store.isAdmin && !wasAdmin) {
             loadSettings();
+            loadPendingRequests();
         }
         wasAdmin = store.isAdmin;
         redraw();
@@ -329,5 +363,7 @@ export const mountMaintenance = (root, app) => {
     document.title = 'Server Maintenance';
     redraw();
     loadSettings();
+    loadChoices();
+    loadPendingRequests();
     return unsubscribe;
 };

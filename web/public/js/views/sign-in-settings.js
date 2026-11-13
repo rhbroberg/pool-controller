@@ -108,8 +108,8 @@ export const mountSignInSettings = (root, app) => {
     const render = () => [
         topbar({
             title: 'Sign-In',
-            back: 'settings',
-            backTitle: 'Settings',
+            back: 'maintenance',
+            backTitle: 'Server Maintenance',
             trailing: store.isAdmin ? (saving ? spinner() : barButton({ label: 'Refresh', iconName: 'refresh', onClick: load, disabled: isLoading })) : null
         }),
         h('main', { class: 'page' },

@@ -192,8 +192,8 @@ export const mountAccounts = (root, app) => {
     const render = () => [
         topbar({
             title: 'Accounts',
-            back: 'settings',
-            backTitle: 'Settings',
+            back: 'maintenance',
+            backTitle: 'Server Maintenance',
             trailing: store.isAdmin ? [
                 barButton({ label: 'Refresh', iconName: 'refresh', onClick: load, disabled: isLoading }),
                 barButton({ label: 'Add Account', iconName: 'plus', onClick: add })
