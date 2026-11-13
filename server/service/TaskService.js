@@ -3,8 +3,8 @@
 // controller already has, so whether a task is on is read from those switches:
 //
 //   pool        spillover water flow with the filter pump running; off stops the filter pump
-//   spaPreheat  the spa filter with the heater and heat pump enabled; off stops the spa filter.
-//               It can be scheduled to be ready by a time, and then starts only as early as the
+//   spaPreheat  turns on the spa filter with the heater and heat pump, and is on while the spa
+//               filter runs with either of them; off stops the spa filter. It can be scheduled to be ready by a time, and then starts only as early as the
 //               spa needs to reach its setpoint by then
 //   spaParty    a spa preheat with the blower, and the lights when it's dark; off stops the spa
 //               filter, blower and lights
@@ -99,7 +99,8 @@ var spaSetpoint = () => Math.max(heatingService.setpoint('spa', 'heater1'), heat
 var states = () => {
     const state = stateSource();
     const on = (name) => state.isOn(SWITCHES[name]) === true;
-    const preheat = on('spaFilter') && on('heater') && on('heatPump');
+    // turning one heat source off leaves the spa heating with the other, so it stays a preheat
+    const preheat = on('spaFilter') && (on('heater') || on('heatPump'));
     return {
         pool: on('filter') && state.waterMode === 'spillover',
         spaPreheat: preheat,

@@ -78,6 +78,22 @@ describe('tasks', () => {
         await eventually(async () => (await reading(api, 'heater1 mode')) === 1, Object.assign({ message: 'the heater stays in Auto' }, SLOW));
     });
 
+    it('stays a preheat while either heat source is still on', async () => {
+        assert.equal((await put('spaPreheat', { on: true })).status, 200);
+        await settle(async () => (await tasks()).spaPreheat.on, 'the spa preheat to be on');
+        await expectSwitch('valve4', true);
+
+        assert.equal((await api('PUT', '/devices/valve4/false', { token: admin })).status, 200);
+        await expectSwitch('valve4', false);
+        assert.equal((await tasks()).spaPreheat.on, true, 'the heater still heats the spa');
+
+        assert.equal((await api('PUT', '/devices/heater1/false', { token: admin })).status, 200);
+        await settle(async () => !(await tasks()).spaPreheat.on, 'the preheat to end with both heat sources off');
+
+        assert.equal((await put('spaPreheat', { on: false })).status, 200);
+        await expectSwitch('aux14', false);
+    });
+
     it('throws a spa party with the blower, and the lights only after dark', async () => {
         const { dark } = await tasks();
         assert.equal((await put('spaParty', { on: true })).status, 200);

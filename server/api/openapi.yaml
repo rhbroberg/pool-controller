@@ -658,7 +658,7 @@ paths:
         - Tasks
       description: "the everyday jobs offered in place of single switches, each on when
         its switches are: pool (spillover water flow with the filter pump), spa preheat
-        (the spa filter with the heater and heat pump enabled) and spa party (a preheat
+        (the spa filter with the heater or heat pump enabled) and spa party (a preheat
         with the blower); with a spa preheat waiting to start in time for when it should
         be ready, and whether it's dark at the pool"
       operationId: getTasks
