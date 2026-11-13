@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis, bodyHeating } from '../public/js/model.js';
 
 const control = (name) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -195,6 +195,38 @@ describe('tasks', () => {
         const tasks = scheduled(new Date(), new Date());
         tasks.spaPreheat.on = true;
         assert.equal(scheduledPreheat(tasks), null);
+    });
+});
+
+describe('heating on the temperature card', () => {
+    const heating = ({ target = 'spa', heaterOn = true, status = 'ready' } = {}) => ({
+        target,
+        devices: {
+            heater1: { enabled: heaterOn, heating: heaterOn, callingForHeat: heaterOn, body: target, setpoint: 102, temperature: 90 },
+            heatpump: { enabled: true, heating: false, callingForHeat: true, body: target, setpoint: 100, temperature: 90 }
+        },
+        estimate: status ? { status, body: 'spa', setpoint: 102, readyAt: '2026-11-10T18:30:00Z', timeZone: 'UTC' } : null
+    });
+    const now = new Date('2026-11-10T17:00:00Z');
+
+    it('shows the sources that are on, the highest setpoint and when it will be there', () => {
+        const spa = bodyHeating(heating(), 'spa', now);
+        assert.deepEqual(spa.sources.map((source) => [source.id, source.heating, source.control.icon]), [['heater1', true, 'flame'], ['heatpump', false, 'heatWaves']]);
+        assert.equal(spa.setpoint, 102);
+        assert.match(spa.ready, /^6:30/);
+        assert.equal(bodyHeating(heating(), 'pool', now), null, 'no water flows to the pool');
+    });
+
+    it('leaves out a source that is off, and the time when there is no estimate', () => {
+        const spa = bodyHeating(heating({ heaterOn: false, status: 'unreachable' }), 'spa', now);
+        assert.deepEqual(spa.sources.map((source) => source.id), ['heatpump']);
+        assert.equal(spa.setpoint, 100);
+        assert.equal(spa.ready, null);
+    });
+
+    it('is nothing while no pump runs, or before the server has said', () => {
+        assert.equal(bodyHeating(heating({ target: null, status: null }), 'spa', now), null);
+        assert.equal(bodyHeating(null, 'spa', now), null);
     });
 });
 

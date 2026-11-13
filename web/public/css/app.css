@@ -228,6 +228,52 @@ a {
     background: var(--red);
 }
 
+.bottom-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    padding: 6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    background: var(--bar);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 0.5px solid var(--separator);
+}
+
+/* room to scroll the last of the page out from under the bottom bar */
+.page.above-bottom-bar {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+
+.bottom-bar-items {
+    display: flex;
+    max-width: var(--page-width);
+    margin: 0 auto;
+}
+
+.bottom-bar-item {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 2px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.bottom-bar-item:hover {
+    background: var(--fill);
+}
+
+.bottom-bar-item .icon {
+    width: 24px;
+    height: 24px;
+}
+
 .check-system-bar {
     position: sticky;
     top: 52px;
@@ -503,13 +549,19 @@ a {
 
 .temperature-card {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
+    gap: 8px;
     padding: 14px;
 }
 
-.temperature-hero {
-    flex: 1 1 auto;
+.water-columns {
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+}
+
+.water-column {
+    flex: 1 1 0;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -518,9 +570,106 @@ a {
     color: inherit;
 }
 
-.temperature-hero:hover .link-title,
-.measurement-row.linked:hover .row-title {
+.water-column:hover .link-title {
     text-decoration: underline;
+}
+
+.water-column .sources {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.water-column .source {
+    color: var(--tint);
+}
+
+.water-column .source .icon {
+    width: 17px;
+    height: 17px;
+    stroke-width: 2;
+}
+
+.water-value {
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.water-detail {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-height: 20px;
+    white-space: nowrap;
+}
+
+.water-detail .target {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--tint);
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.water-detail .target .icon {
+    width: 14px;
+    height: 14px;
+}
+
+.water-detail .ready {
+    font-size: 12px;
+    color: var(--secondary);
+}
+
+.water-detail.pump-off {
+    align-items: center;
+    margin-left: 0;
+}
+
+.water-detail.placeholder {
+    visibility: hidden;
+}
+
+.weather-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.weather-badge .high-low {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.weather-badge .weather-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--secondary);
+}
+
+.weather-badge .weather-icon.sun,
+.weather-badge .weather-icon.cloudSun {
+    color: var(--orange);
+}
+
+.weather-badge .weather-icon.cloudRain,
+.weather-badge .weather-icon.cloudLightning {
+    color: var(--blue);
 }
 
 .link-title {
@@ -554,15 +703,6 @@ a {
     height: 13px;
 }
 
-.hero-value {
-    font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
-    font-size: 50px;
-    font-weight: 600;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
 .dimmed {
     color: var(--secondary);
 }
@@ -576,81 +716,10 @@ a {
     color: var(--orange);
 }
 
-.freshness.live {
-    color: var(--green);
-}
-
 .temperature-divider {
     align-self: stretch;
     width: 0.5px;
     background: var(--separator);
-}
-
-.measurements {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex: 0 1 190px;
-    min-width: 130px;
-}
-
-.measurement-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 15px;
-    color: inherit;
-    border-radius: 6px;
-}
-
-.measurement-row .row-title {
-    color: var(--secondary);
-}
-
-.measurement-row.linked .row-title {
-    color: var(--accent);
-    font-weight: 500;
-}
-
-.measurement-row .row-value {
-    margin-left: auto;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-
-.measurement-row .chevron {
-    width: 11px;
-    height: 11px;
-    stroke-width: 3;
-    color: var(--accent);
-}
-
-.measurement-row:not(.linked) .chevron {
-    visibility: hidden;
-}
-
-.measurement-row .pause-icon {
-    width: 13px;
-    height: 13px;
-    color: var(--secondary);
-}
-
-.weather-row .weather-icon {
-    width: 15px;
-    height: 15px;
-    margin-right: 2px;
-    color: var(--secondary);
-}
-
-.weather-row .weather-icon.sun,
-.weather-row .weather-icon.cloudSun {
-    color: var(--orange);
-}
-
-.weather-row .weather-icon.cloudRain,
-.weather-row .weather-icon.cloudLightning {
-    color: var(--blue);
 }
 
 .control-section {
@@ -1059,6 +1128,13 @@ a {
 .panel-link .text span {
     font-size: 12px;
     color: var(--secondary);
+}
+
+.panel-link .value {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .panel-link > .icon {

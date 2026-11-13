@@ -1,9 +1,10 @@
 // Pool, Spa Preheat and Spa Party on the main page, each a switch; a preheat can instead be
-// scheduled to be ready by a time, which shows plainly as scheduled until it starts.
+// scheduled to be ready by a time, which shows plainly as scheduled until it starts. After dark
+// the lights and yard lights join them, and stay while they're on.
 
 import { h, openDialog } from '../dom.js';
 import { icon } from '../icons.js';
-import { TASKS, taskOn, scheduledPreheat, scheduleText } from '../model.js';
+import { EQUIPMENT, NIGHT_LIGHTS, TASKS, taskOn, scheduledPreheat, scheduleText } from '../model.js';
 import { formSection, formRow, sheetHeader, spinner } from '../ui.js';
 
 /** "2026-11-12T19:30" in local time, as a datetime-local input takes it */
@@ -108,7 +109,39 @@ export const taskSection = (app) => {
                 onClick: () => store.setTask(task.id, !shownOn)
             }, h('span', { class: 'knob' })));
     };
+    const lightRow = (control) => {
+        const on = store.isOn(control);
+        const pending = store.pendingState(control.name);
+        const shownOn = pending !== undefined ? pending : on;
+        let line = { text: 'It’s dark out', kind: 'off' };
+        if (pending !== undefined) {
+            line = { text: pending ? 'Turning on…' : 'Turning off…', kind: 'pending' };
+        } else if (on) {
+            line = { text: 'On', kind: 'on' };
+        }
+        return h('div', {
+            class: ['card', 'task-row', on ? 'on' : ''],
+            style: { '--tint': `var(--${control.tint})` },
+            'data-task': control.name
+        },
+        h('span', { class: 'task-icon' }, icon(control.icon)),
+        h('span', { class: 'task-text' },
+            h('strong', null, control.title),
+            h('span', { class: ['task-status', line.kind] }, line.text)),
+        pending !== undefined
+            ? spinner('small')
+            : h('button', {
+                class: ['switch', shownOn ? 'on' : ''],
+                type: 'button',
+                role: 'switch',
+                'aria-checked': String(shownOn),
+                'aria-label': control.title,
+                disabled: locked,
+                onClick: () => store.setControl(control, !shownOn)
+            }, h('span', { class: 'knob' })));
+    };
+    const lights = EQUIPMENT.filter((control) => NIGHT_LIGHTS.includes(control.name) && (tasks.dark || store.isOn(control)));
     return h('section', { class: 'control-section task-section' },
         h('h2', { class: 'section-title' }, 'Tasks'),
-        h('div', { class: 'section-body' }, ...TASKS.map(row)));
+        h('div', { class: 'section-body' }, ...TASKS.map(row), ...lights.map(lightRow)));
 };

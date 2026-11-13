@@ -3,7 +3,7 @@
 
 import { h, confirmAction } from '../dom.js';
 import { icon } from '../icons.js';
-import { GROUPS, WATER_MODES, controlsIn, heatingDeviceFor, tileState, waterModeInfo } from '../model.js';
+import { GROUPS, WATER_MODES, controlsIn, heatingDeviceFor, measurement, tileState, waterModeInfo } from '../model.js';
 import { relative } from '../format.js';
 import { topbar, spinner, renderer } from '../ui.js';
 import { openSetpoints } from './setpoints.js';
@@ -126,6 +126,15 @@ export const mountEquipment = (root, app) => {
                 }, mode.title))));
     };
 
+    /** the salt reading, which opens its history */
+    const saltLink = () => h('a', { class: 'card panel-link', href: '#/history/salt?from=equipment' },
+        h('span', { class: 'badge' }, icon('grains')),
+        h('span', { class: 'text' },
+            h('strong', null, 'Salt'),
+            h('span', null, 'The chlorinator’s salt over time')),
+        h('span', { class: 'value' }, measurement(store.readings, 'salt').value),
+        icon('chevronRight'));
+
     const controlSection = (group, ...content) => h('section', { class: 'control-section' },
         h('h2', { class: 'section-title' }, GROUPS.find((g) => g.id === group).title),
         h('div', { class: 'section-body' }, ...content));
@@ -143,7 +152,7 @@ export const mountEquipment = (root, app) => {
                         accessNote(store),
                         controlSection('heating', tileGrid('heating')),
                         controlSection('circulation', waterFlow(), tileGrid('circulation')),
-                        controlSection('features', tileGrid('features'))),
+                        controlSection('features', tileGrid('features'), saltLink())),
                     updateFooter(store)))
         ];
     };

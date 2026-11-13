@@ -24,6 +24,14 @@ export const topbar = ({ title, back, backTitle = 'Back', leading, trailing }) =
     h('h1', { class: 'topbar-title' }, title),
     h('div', { class: 'topbar-trailing' }, trailing));
 
+/**
+ * where a page opened from more than one place goes back to: the equipment for ?from=equipment,
+ * and otherwise fallback, a topbar's { back, backTitle }
+ **/
+export const backTo = (query, fallback) => query && query.get('from') === 'equipment'
+    ? { back: 'equipment', backTitle: 'Equipment' }
+    : fallback;
+
 export const barButton = ({ label, iconName, onClick, disabled = false, strong = false, showLabel = !iconName }) => h('button', {
     class: ['bar-button', strong ? 'strong' : ''],
     type: 'button',
