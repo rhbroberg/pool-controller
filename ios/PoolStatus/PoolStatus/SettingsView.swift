@@ -1,11 +1,11 @@
 import PoolStatusCore
 import SwiftUI
 
-/// The open site's settings: its name and address, the account signed in to it, and its
-/// history and administration.
+/// The open site's settings: its name and address, and the account signed in to it. The event
+/// log and server maintenance open from the dashboard's bottom row.
 struct SettingsView: View {
     private enum Route: Hashable {
-        case site, changePassword, signInMethods, eventLog, accounts, serverMaintenance
+        case site, changePassword, signInMethods
     }
 
     @Environment(SiteSession.self) private var session
@@ -57,20 +57,11 @@ struct SettingsView: View {
                 } header: {
                     Text("Account")
                 } footer: {
-                    Text("You stay signed in to this pool on this iPhone until you sign out.")
-                }
-
-                Section {
-                    NavigationLink("Event Log", value: Route.eventLog)
-                    if auth.isAdmin {
-                        NavigationLink("Accounts", value: Route.accounts)
-                        NavigationLink("Server Maintenance", value: Route.serverMaintenance)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("You stay signed in to this pool on this iPhone until you sign out.")
+                        Text(SystemInfo.aboutLine(appCommit: Bundle.main.object(forInfoDictionaryKey: "PoolGitCommit") as? String,
+                                                  server: serverInfo))
                     }
-                } header: {
-                    Text(auth.isAdmin ? "History & Administration" : "History")
-                } footer: {
-                    Text(SystemInfo.aboutLine(appCommit: Bundle.main.object(forInfoDictionaryKey: "PoolGitCommit") as? String,
-                                              server: serverInfo))
                 }
             }
             .navigationTitle("Settings")
@@ -82,9 +73,6 @@ struct SettingsView: View {
                     }
                 case .changePassword: ChangePasswordView()
                 case .signInMethods: SignInMethodsView(providers: choices.providers)
-                case .eventLog: EventLogView()
-                case .accounts: AccountsView()
-                case .serverMaintenance: ServerMaintenanceView()
                 }
             }
             .task(id: store.serverAddress) {
@@ -105,9 +93,8 @@ struct SettingsView: View {
     }
 }
 
-/// The pool's location for weather, the time zone and history settings, the maintenance jobs,
-/// restart and factory reset, kept off the main Settings page because they affect the server
-/// rather than this app.
+/// The accounts, the pool's location for weather, the time zone and history settings, the
+/// maintenance jobs, restart and factory reset: everything an admin keeps the server running with.
 struct ServerMaintenanceView: View {
     private enum Operation {
         case restart, factoryReset
@@ -132,6 +119,16 @@ struct ServerMaintenanceView: View {
 
     var body: some View {
         Form {
+            if store.auth.isAdmin {
+                Section {
+                    NavigationLink("Accounts") {
+                        AccountsView()
+                    }
+                } footer: {
+                    Text("Who can sign in, what each may do, and how they sign in.")
+                }
+            }
+
             if let settings {
                 locationSection(settings)
 
@@ -227,8 +224,7 @@ struct ServerMaintenanceView: View {
                 Section {
                     Text(message)
                 }
-            }
-        }
+            }        }
         .disabled(!store.auth.isAdmin || operation != nil)
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Server Maintenance")

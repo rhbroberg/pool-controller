@@ -42,12 +42,20 @@ final class TasksUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Circulation"].waitForExistence(timeout: timeout))
     }
 
+    func testAccountsAreUnderServerMaintenance() {
+        let app = launch()
+        let maintenance = app.buttons["Maintenance"]
+        XCTAssertTrue(maintenance.waitForExistence(timeout: timeout))
+        maintenance.tap()
+        let accounts = app.buttons["Accounts"]
+        XCTAssertTrue(accounts.waitForExistence(timeout: timeout))
+        accounts.tap()
+        XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: timeout))
+    }
+
     func testHeatingEstimatesSaysWhatIsLearnedAndWhatIsByRule() {
         let app = launch()
-        let settings = app.buttons["Settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: timeout))
-        settings.tap()
-        let maintenance = app.buttons["Server Maintenance"]
+        let maintenance = app.buttons["Maintenance"]
         XCTAssertTrue(maintenance.waitForExistence(timeout: timeout))
         maintenance.tap()
         // the link is below the jobs, and the list only makes the rows on screen
