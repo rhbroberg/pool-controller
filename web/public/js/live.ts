@@ -67,8 +67,8 @@ export class LiveConnection {
     url: string;
     onEvent: (name: string, data: any) => void;
     onStateChange: (isLive: boolean) => void;
-    WebSocketImpl: typeof WebSocket;
-    setTimer: (fn: () => void, ms: number) => any;
+    WebSocketImpl: any;
+    setTimer: any;
     clearTimer: (id: any) => void;
     socket: WebSocket | null;
     isLive: boolean;
@@ -86,8 +86,8 @@ export class LiveConnection {
         setTimer = (fn: () => void, ms: number) => setTimeout(fn, ms), clearTimer = (id: any) => clearTimeout(id) }: {
             onEvent?: (name: string, data: any) => void;
             onStateChange?: (isLive: boolean) => void;
-            WebSocketImpl?: typeof WebSocket;
-            setTimer?: (fn: () => void, ms: number) => any;
+            WebSocketImpl?: any;
+            setTimer?: any;
             clearTimer?: (id: any) => void;
         } = {}) {
         this.url = url;

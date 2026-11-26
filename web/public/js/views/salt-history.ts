@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Salt level against time. Zoom, pan, presets and restore match the temperature graphs.
 
 import { h } from '../dom.js';

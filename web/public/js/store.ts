@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The pool's state as the page shows it: readings, heating, the connection and the sign-in.
 
 import { ApiError, isAbort, toReading } from './api.js';
@@ -20,10 +19,10 @@ const CONFIRMATION_POLL_MS = 1000;
 // while live, how many confirmation polls' time to wait for a push before asking anyway
 const LIVE_CONFIRMATION_POLLS = 5;
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // what's kept of a sign-in: methods lists password and the services the account signs in with
-const signedInAs = (result) => ({
+const signedInAs = (result: any) => ({
     email: result.email,
     token: result.token,
     role: result.role || null,
@@ -31,12 +30,41 @@ const signedInAs = (result) => ({
 });
 
 export class StatusStore {
-    [key: string]: any;
+    client: any;
+    readings: any[];
+    heating: any;
+    weather: any;
+    tasks: any;
+    pendingTasks: Record<string, any>;
+    weatherCheckedAt: number;
+    lastRefresh: Date | null;
+    errorMessage: string | null;
+    isLoading: boolean;
+    connection: string;
+    connectionFailure: string | null;
+    nextAttempt: Date | null;
+    credentials: any;
+    signInExpired: boolean;
+    commissioning: any;
+    pending: Record<string, any>;
+    pendingWaterMode: string | null;
+    confirmedChanges: number;
+    accountChecked: boolean;
+    listeners: Set<(store?: any) => void>;
+    notifyQueued: boolean;
+    pollGeneration: number;
+    wakePoll: (() => void) | null;
+    pollSleep: any;
+    confirmationPollMs: number;
+    isLive: boolean;
+    live: any;
+    pushWaiters: Set<(pushed?: any) => void>;
+    pushesApplied: number;
     /**
      * live, a LiveConnection, pushes changes as the controller reports them; without it, or while
      * it can't reach the server, the store polls
      **/
-    constructor(client, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS, live = null } = {}) {
+    constructor(client: any, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS, live = null }: { pollSleep?: any; confirmationPollMs?: number; live?: any } = {}) {
         this.client = client;
         this.readings = [];
         // setpoints and what the heater and heat pump are doing; null from a server without them
@@ -108,7 +136,7 @@ export class StatusStore {
         this.notifyQueued = true;
         queueMicrotask(() => {
             this.notifyQueued = false;
-            this.listeners.forEach((listener) => listener(this));
+            this.listeners.forEach((listener: any) => listener(this));
         });
     }
 
@@ -284,7 +312,7 @@ export class StatusStore {
         if (this.pollSleep) {
             return this.pollSleep(ms);
         }
-        return new Promise((resolve) => {
+        return new Promise<void>((resolve) => {
             const timer = setTimeout(done, ms);
             const self = this;
             function done() {

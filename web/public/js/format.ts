@@ -13,8 +13,8 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 ];
 
 /** "5 minutes ago", "yesterday", "in 2 hours" */
-export const relative = (date: Date, now = Date.now()) => {
-    const seconds = (date.getTime() - now) / 1000;
+export const relative = (date: Date | number, now = Date.now()) => {
+    const seconds = ((date instanceof Date ? date.getTime() : date) - now) / 1000;
     for (const [unit, size] of UNITS) {
         if (Math.abs(seconds) >= size || unit === 'second') {
             return relativeFormat.format(Math.round(seconds / size), unit);
@@ -33,11 +33,11 @@ const monthYear = formatter({ month: 'short', year: '2-digit' });
 const hourOnly = formatter({ hour: 'numeric' });
 const timeSeconds = formatter({ hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
-export const formatMonthDayTime = (date: Date) => monthDayTime.format(date);
-export const formatMonthDayYear = (date: Date) => monthDayYear.format(date);
-export const formatMonthDayYearTime = (date: Date) => monthDayYearTime.format(date);
-export const formatMonthDay = (date: Date) => monthDay.format(date);
-export const formatMonthYear = (date: Date) => monthYear.format(date);
+export const formatMonthDayTime = (date: Date | number) => monthDayTime.format(date);
+export const formatMonthDayYear = (date: Date | number) => monthDayYear.format(date);
+export const formatMonthDayYearTime = (date: Date | number) => monthDayYearTime.format(date);
+export const formatMonthDay = (date: Date | number) => monthDay.format(date);
+export const formatMonthYear = (date: Date | number) => monthYear.format(date);
 
 /** "30 minutes", "2 hours", "1 day": a bucket length in seconds */
 export const formatSpan = (seconds: number) => {
@@ -45,8 +45,8 @@ export const formatSpan = (seconds: number) => {
     const count = Math.round(seconds / size);
     return `${count} ${unit}${count === 1 ? '' : 's'}`;
 };
-export const formatHour = (date: Date) => hourOnly.format(date);
-export const formatTimeSeconds = (date: Date) => timeSeconds.format(date);
+export const formatHour = (date: Date | number) => hourOnly.format(date);
+export const formatTimeSeconds = (date: Date | number) => timeSeconds.format(date);
 
 /** "30 seconds", "2 minutes" */
 export const formatDurationSeconds = (seconds: number) => {
@@ -58,7 +58,7 @@ export const formatDurationSeconds = (seconds: number) => {
 };
 
 /** "0:27", the time left until a date */
-export const countdown = (date: Date, now = Date.now()) => {
-    const left = Math.max(0, Math.ceil((date.getTime() - now) / 1000));
+export const countdown = (date: Date | number, now = Date.now()) => {
+    const left = Math.max(0, Math.ceil(((date instanceof Date ? date.getTime() : date) - now) / 1000));
     return `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
 };

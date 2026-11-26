@@ -12,7 +12,7 @@ const backing = () => {
     }
 };
 
-export const read = (key, fallback) => {
+export const read = (key: string, fallback: any = null) => {
     const storage = backing();
     const text = storage ? storage.getItem(PREFIX + key) : memory.get(key);
     if (text === null || text === undefined) {
@@ -25,7 +25,7 @@ export const read = (key, fallback) => {
     }
 };
 
-export const write = (key, value) => {
+export const write = (key: string, value: any) => {
     const storage = backing();
     const text = JSON.stringify(value);
     if (storage) {
@@ -40,7 +40,7 @@ export const write = (key, value) => {
     }
 };
 
-export const remove = (key) => {
+export const remove = (key: string) => {
     const storage = backing();
     if (storage) {
         storage.removeItem(PREFIX + key);

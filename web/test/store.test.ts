@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The status store: connection state, sign-in and confirming equipment changes.
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -65,7 +64,7 @@ describe('status store', () => {
     it('says why the system needs checking, once the panel has said and only while it does', async () => {
         const client = fakeClient();
         const store = newStore(client);
-        const reason = (value, message) => ({ name: 'check system reason', category: 'info', value, message, timestamp: new Date() });
+        const reason = (value: number, message?: string) => ({ name: 'check system reason', category: 'info', value, message, timestamp: new Date() });
         client.readings = [switchReading('check system', 1)];
         await store.refresh();
         assert.equal(store.needsAttention, true);
@@ -211,7 +210,7 @@ describe('status store', () => {
     it('takes a scheduled preheat as done once the server has it waiting', async () => {
         const readyAt = new Date(Date.now() + 5 * 3600 * 1000);
         const scheduled = { pool: { on: false }, spaParty: { on: false }, dark: true,
-            spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: new Date(readyAt - 3600000).toISOString(), leadMinutes: 60, leadFrom: 'rate' } } };
+            spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: new Date(readyAt.getTime() - 3600000).toISOString(), leadMinutes: 60, leadFrom: 'rate' } } };
         const client = fakeClient({
             setTask: async (task, on, when, token) => {
                 client.calls.push(['setTask', task, on, when, token]);
@@ -364,7 +363,7 @@ describe('status store', () => {
 
     it('needs a sign-in for the server’s settings', async () => {
         const store = newStore(fakeClient());
-        await assert.rejects(() => store.serverSettings(), (error) => error.kind === 'unauthorized');
+        await assert.rejects(() => store.serverSettings(), (error: any) => error.kind === 'unauthorized');
     });
 
     it('asks the server to reprocess history, and reads how the run is going', async () => {
@@ -379,7 +378,7 @@ describe('status store', () => {
         assert.equal(await store.reprocessRun(), null, 'none yet');
 
         const run = { state: 'waiting', from: '2020-07-19T04:00:00.000Z', to: '2020-07-21T04:00:00.000Z', through: null, transitions: [] };
-        answer = { status: 202, body: run };
+        answer = { status: 202, body: run } as any;
         const started = await store.startReprocess({ from: new Date(run.from), to: new Date(run.to), eventTypes: ['failed'], dryRun: true });
         assert.equal(started.from.getTime(), Date.parse(run.from));
         assert.deepEqual(requests.at(-1), {

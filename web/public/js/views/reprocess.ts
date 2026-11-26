@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Reading stored history again with the server's current protocol code, as after a parser fix:
 // pick the range and the kinds of event, preview what would change, then rewrite it.
 

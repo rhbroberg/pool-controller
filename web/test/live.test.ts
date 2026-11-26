@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Live updates: reading socket.io's packets, keeping the connection, and the store applying pushes.
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -255,7 +254,7 @@ describe('live connection', () => {
             }
             return saved(fn, ms);
         };
-        globalThis.setTimeout = strict;
+        globalThis.setTimeout = strict as any;
         const { sockets, FakeSocket } = fakeSockets();
         try {
             const live = new LiveConnection('ws://pool.local/', { WebSocketImpl: FakeSocket });
@@ -374,7 +373,7 @@ describe('status store with live updates', () => {
         const client = fakeClient([reading('filter', 0)]);
         const store = new StatusStore(client, {
             live,
-            pollSleep: (ms) => new Promise((resolve) => {
+            pollSleep: (ms: number) => new Promise<void>((resolve) => {
                 waits.push(ms);
                 wake = resolve;
                 store.wakePoll = resolve;

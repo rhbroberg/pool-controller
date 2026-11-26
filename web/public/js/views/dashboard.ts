@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The main page: the pool and spa and the tasks, with the air and today's weather in the top bar
 // and the equipment, the panel's own menus, the event log and server maintenance along the bottom.
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Mirrors the controller's display and sends its menu and arrow keys: the way to every setting
 // on the controller, not only the ones the page shows itself.
 
@@ -196,7 +195,7 @@ export const mountPanel = (root, app) => {
             h('div', { class: 'chips' }, presses.map(chip)));
     };
 
-    const padKey = (key, className, content, repeating) => h('button', {
+    const padKey = (key: string, className: string, content: any, repeating = false) => h('button', {
         class: ['dpad-key', className, repeat && repeat.key === key ? 'pressed' : ''],
         type: 'button',
         'aria-label': PANEL_KEYS[key].title,

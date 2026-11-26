@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Pool, Spa Preheat and Spa Party on the main page, each a switch; a preheat can instead be
 // scheduled to be ready by a time, which shows plainly as scheduled until it starts. After dark
 // the lights and yard lights join them, and stay while they're on.

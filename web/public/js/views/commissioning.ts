@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Shown after signing in with the default admin / admin account: the account must be renamed and
 // given a new password before it can change anything.
 

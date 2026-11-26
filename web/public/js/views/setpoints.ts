@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The pool and spa setpoints for the heater or the heat pump, in a sheet over the dashboard.
 
 import { h, openDialog } from '../dom.js';
@@ -33,7 +32,7 @@ export const openSetpoints = (app, device) => {
 
     const hasChanges = () => WATER_BODIES.some((body) => drafts[body.id] !== setpointOf(store.heating, device.id, body.id));
 
-    const step = (body, delta, [low, high]) => {
+    const step = (body: any, delta: number, [low, high]: number[]) => {
         drafts[body.id] = Math.min(high, Math.max(low, drafts[body.id] + delta));
         sheet.update();
     };

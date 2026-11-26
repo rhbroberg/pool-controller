@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Admin: how people sign in. Passwords on or off, whether newcomers may ask to join, and the
 // OpenID Connect services (Google, Microsoft, Apple, ...) offered on the sign-in form.
 
@@ -154,7 +153,7 @@ const openService = (app, settings, service) => {
         (!adding || !isApple() || (draft.apple.teamId && draft.apple.keyId && draft.apple.privateKey));
 
     const body = () => {
-        const changes = {
+        const changes: Record<string, any> = {
             displayName: draft.displayName.trim(),
             clientId: draft.clientId.trim(),
             enabled: draft.enabled,
@@ -216,7 +215,7 @@ const openService = (app, settings, service) => {
         }
     };
 
-    const field = (label, key, { type = 'text', placeholder, target = draft } = {}) => formRow(
+    const field = (label: string, key: string, { type = 'text', placeholder, target = draft }: { type?: string; placeholder?: string; target?: any } = {}) => formRow(
         h('span', { class: 'label' }, label),
         (type === 'password' ? passwordInput : textInput)({
             reveal, label, value: target[key], type, placeholder, trailing: true, autocomplete: 'off', onInput: (v) => { target[key] = v; dialog.update(); }

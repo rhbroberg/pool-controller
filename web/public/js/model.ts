@@ -15,9 +15,9 @@ const DISPLAY_NAMES = {
     spillover: 'Spillover'
 };
 
-export const displayName = (name) => DISPLAY_NAMES[name] || name.replace(/\b\w/g, (letter) => letter.toUpperCase());
+export const displayName = (name: string) => DISPLAY_NAMES[name] || name.replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-export const isOn = (reading) => Boolean(reading) && Number(reading.value) !== 0;
+export const isOn = (reading: any) => Boolean(reading) && Number(reading.value) !== 0;
 
 export const formattedValue = (reading) => {
     switch (reading.name) {
@@ -217,7 +217,7 @@ export const scheduleText = (scheduled, now = new Date()) => {
  * spillover if that switch is on, otherwise spa if it is, otherwise pool; unknown until the
  * server has reported the pool switch
  **/
-export const waterModeOf = (readings) => {
+export const waterModeOf = (readings: any[]) => {
     const reading = (name) => readings.find((r) => r.name === name);
     if (isOn(reading('spillover'))) {
         return 'spillover';
@@ -306,8 +306,8 @@ export const ROLES = [
 ];
 
 export const roleInfo = (id) => ROLES.find((role) => role.id === id) || null;
-export const canControl = (role) => role === 'user' || role === 'admin';
-export const isAdmin = (role) => role === 'admin';
+export const canControl = (role: string | null | undefined) => role === 'user' || role === 'admin';
+export const isAdmin = (role: string | null | undefined) => role === 'admin';
 
 export const DEFAULT_ADMIN = 'admin';
 export const MINIMUM_PASSWORD_LENGTH = 6;

@@ -107,7 +107,7 @@ export class TimeChart {
     /**
      * yLabel formats a y axis value; tickLabel formats a time given the tick step in ms
      **/
-    constructor(container, { yLabel = (v) => String(v), tickLabel = (t) => new Date(t).toLocaleString() } = {}) {
+    constructor(container: any, { yLabel = (v: any) => String(v), tickLabel = (t: any, _step?: any) => new Date(t).toLocaleString() }: { yLabel?: (v: any) => string; tickLabel?: (t: any, step?: any) => string } = {}) {
         this.container = container;
         this.yLabel = yLabel;
         this.tickLabel = tickLabel;

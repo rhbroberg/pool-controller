@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The web service: its files, its forwarding of the API, and the API client talking through it.
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,8 +6,8 @@ import net from 'node:net';
 import { createWebServer, describeCommit, API_BASE, UNREACHABLE_HEADER } from '../server.js';
 import { Client, ApiError } from '../public/js/api.js';
 
-const listen = (server) => new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
-const close = (server) => new Promise((resolve) => {
+const listen = (server: any) => new Promise<number>((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
+const close = (server: any) => new Promise<void>((resolve) => {
     server.closeAllConnections();
     server.close(() => resolve());
 });
@@ -167,7 +166,7 @@ describe('web service', () => {
         });
 
         it('reports a refusal with the server’s message, capitalized', async () => {
-            await assert.rejects(new Client(base).setDevice('filter', true, 'token'), (error) => {
+            await assert.rejects(new Client(base).setDevice('filter', true, 'token'), (error: any) => {
                 assert.equal(error.kind, 'server');
                 assert.equal(error.status, 403);
                 assert.equal(error.message, 'The viewer role cannot do that');
@@ -179,14 +178,14 @@ describe('web service', () => {
             const orphan = createWebServer({ apiUrl: 'http://127.0.0.1:9' });
             const orphanBase = `http://127.0.0.1:${await listen(orphan)}`;
             try {
-                await assert.rejects(new Client(orphanBase).fetchStatus(), (error) => error.kind === 'unreachable');
+                await assert.rejects(new Client(orphanBase).fetchStatus(), (error: any) => error.kind === 'unreachable');
             } finally {
                 await close(orphan);
             }
         });
 
         it('reports a web service that is down as unreachable', async () => {
-            await assert.rejects(new Client('http://127.0.0.1:9').fetchStatus(), (error) => error.kind === 'unreachable');
+            await assert.rejects(new Client('http://127.0.0.1:9').fetchStatus(), (error: any) => error.kind === 'unreachable');
         });
 
         it('builds history queries with ISO dates and names', async () => {
@@ -249,7 +248,7 @@ describe('web service live updates', () => {
     });
 
     // asks the web service to upgrade `path`, resolving with the switched socket or the refusal
-    const upgrade = (port, path) => new Promise((resolve, reject) => {
+    const upgrade = (port: number, path: string) => new Promise<any>((resolve, reject) => {
         const request = http.request({
             host: '127.0.0.1', port, path,
             headers: { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': 'dGVzdA==', 'Sec-WebSocket-Version': '13' }
@@ -265,7 +264,7 @@ describe('web service live updates', () => {
     });
 
     // what socket has said once it's at least length long, or once done(what it has said)
-    const read = (socket, have, length, done = (all) => all.length >= length) => new Promise((resolve) => {
+    const read = (socket: any, have: Buffer, length: number, done: (all: string) => boolean = (all) => all.length >= length) => new Promise<string>((resolve) => {
         let text = have.toString();
         const check = () => {
             if (done(text)) {

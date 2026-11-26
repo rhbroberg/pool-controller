@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Temperature against time for the pool or spa, with air temperature and the times the heater
 // and heat pump were warming it.
 

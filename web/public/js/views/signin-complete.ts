@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Where a sign-in through a service comes back to: it either signs in with the ticket it brought
 // or says why it didn't, such as waiting for an admin's approval.
 

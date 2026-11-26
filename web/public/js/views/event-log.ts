@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Every recorded event, newest first, loaded a page at a time as the list scrolls.
 
 import { h } from '../dom.js';
@@ -120,7 +119,7 @@ export const mountEventLog = (root, app) => {
         }, icon(on ? 'check' : kind.icon), kind.title);
     };
 
-    const menu = ({ label, iconName, value, options, active, onChange }) => h('label', { class: ['menu-select', active ? 'active' : ''] },
+    const menu = ({ label, iconName, value, options, active = false, onChange }: any) => h('label', { class: ['menu-select', active ? 'active' : ''] },
         icon(iconName),
         h('select', { 'aria-label': label, value, onChange: (event) => onChange(event.target.value) },
             options.map((option) => h('option', { value: option.value }, option.label))),

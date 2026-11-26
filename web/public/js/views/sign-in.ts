@@ -1,4 +1,3 @@
-// @ts-nocheck
 // What the page shows while signed out: only the pool's sign-in, with nothing from the pool
 // until it succeeds.
 

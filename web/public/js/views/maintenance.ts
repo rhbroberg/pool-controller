@@ -1,4 +1,3 @@
-// @ts-nocheck
 // The accounts and how people sign in, the pool's location for weather, the time zone and
 // history settings, the maintenance jobs, restart and factory reset: everything an admin keeps
 // the server running with.

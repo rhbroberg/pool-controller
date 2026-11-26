@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Starts the page: one status store for every page, and a page for each #/route.
 
 import { Client } from './api.js';
@@ -24,7 +23,8 @@ import { mountSignInSettings } from './views/sign-in-settings.js';
 // a sign-in through a service comes back here, so it shows whether or not anyone is signed in
 const SIGNED_OUT_ROUTE = /^signin\/complete$/;
 
-const ROUTES = [
+type RouteHandler = (root: HTMLElement, app: any, match: string[], query: URLSearchParams) => any;
+const ROUTES: [RegExp, RouteHandler][] = [
     [/^$/, (root, app) => mountDashboard(root, app)],
     [/^equipment$/, (root, app) => mountEquipment(root, app)],
     [/^panel$/, (root, app) => mountPanel(root, app)],

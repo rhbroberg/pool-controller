@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Every switch the page offers, the water flow, and the heaters with their setpoints: what the
 // main page showed before tasks.
 

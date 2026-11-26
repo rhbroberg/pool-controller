@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Serves the web front end and forwards its REST calls to the pool server, so the page and the
 // API share an origin and the pool server needs no CORS support.
 import { execFileSync } from 'node:child_process';
@@ -46,7 +45,7 @@ export const describeCommit = () => {
 
 const isProxied = (pathname) => PROXIED_PREFIXES.some((prefix) => pathname === prefix.replace(/\/$/, '') || pathname.startsWith(prefix));
 
-const sendJson = (res, status, body, headers = {}) => {
+const sendJson = (res: any, status: number, body: any, headers: Record<string, string> = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
     res.end(JSON.stringify(body));
 };
@@ -105,7 +104,7 @@ const forwardedHeaders = (req, target) => {
     return headers;
 };
 
-const upstreamRequest = (req, target, onResponse) => {
+const upstreamRequest = (req: any, target: any, onResponse?: any) => {
     const transport = target.protocol === 'https:' ? https : http;
     return transport.request({
         protocol: target.protocol,
@@ -125,7 +124,7 @@ const proxy = (req, res, target) => {
     upstream.setTimeout(PROXY_TIMEOUT_MS, () => {
         upstream.destroy(new Error(`no answer within ${PROXY_TIMEOUT_MS / 1000} seconds`));
     });
-    upstream.on('error', (error) => {
+    upstream.on('error', (error: any) => {
         if (res.headersSent) {
             res.destroy();
             return;
@@ -178,7 +177,7 @@ const proxyUpgrade = (req, socket, head, target, live) => {
         socket.write(rawHead(`HTTP/1.1 ${answer.statusCode} ${answer.statusMessage}`, answer.rawHeaders));
         answer.pipe(socket);
     });
-    upstream.on('error', (error) => {
+    upstream.on('error', (error: any) => {
         if (!socket.writable) {
             return;
         }
@@ -211,7 +210,7 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
         }
     });
     // upgraded connections are no longer the HTTP server's to close
-    const live = new Set();
+    const live = new Set<any>();
     server.on('upgrade', (req, socket, head) => {
         const { pathname } = new URL(req.url, 'http://localhost');
         if (isProxied(pathname)) {
@@ -223,7 +222,7 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
     const closeAllConnections = server.closeAllConnections.bind(server);
     server.closeAllConnections = () => {
         closeAllConnections();
-        live.forEach((socket) => socket.destroy());
+        live.forEach((socket: any) => socket.destroy());
     };
     return server;
 };
@@ -232,7 +231,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const port = Number(process.env.PORT || DEFAULT_PORT);
     const apiUrl = process.env.POOL_API_URL || DEFAULT_API_URL;
     const server = createWebServer({ apiUrl });
-    server.on('error', (error) => {
+    server.on('error', (error: any) => {
         if (error.code === 'EACCES') {
             console.error(`port ${port} needs more privileges here; set PORT to use another, such as PORT=8080`);
         } else if (error.code === 'EADDRINUSE') {

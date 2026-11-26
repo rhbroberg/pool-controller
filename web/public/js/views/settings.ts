@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Settings: the pool's name and the account signed in. Signing in is the sign-in page's; Settings
 // shows only once someone has. The event log and server maintenance open from the main page.
 

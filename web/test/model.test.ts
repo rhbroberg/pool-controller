@@ -1,4 +1,3 @@
-// @ts-nocheck
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,7 +42,7 @@ describe('equipment tiles', () => {
 
     it('asks before starting super chlorination only', () => {
         assert.ok(control('superchlorinate').confirmOn);
-        assert.equal(control('superchlorinate').confirmOff, undefined);
+        assert.equal((control('superchlorinate') as any).confirmOff, undefined);
         assert.equal(control('filter').confirmOn, undefined);
     });
 

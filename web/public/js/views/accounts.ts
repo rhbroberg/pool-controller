@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Admin: every account on the server, with ways to add, change and remove them, and the people
 // waiting to be let in through a sign-in service.
 
@@ -119,7 +118,7 @@ export const mountAccounts = (root, app) => {
     };
 
     const add = async () => {
-        const created = await openNewAccount(app, services);
+        const created: any = await openNewAccount(app, services);
         if (created && created.invitation) {
             invitations = [...invitations, created.invitation].sort((a, b) => a.email.localeCompare(b.email));
             redraw();
