@@ -200,7 +200,7 @@ const fitBody = (windows: FitWindow[]) => {
     }
 
     const [heater, base, slope, loss, solar] = fit.coefficients;
-    const notes = [];
+    const notes = [] as any[];
     if (!fit.allowed[2] && used.some(usesPump)) {
         notes.push('the heat pump windows cover too little range of air temperature to tell how it falls with cold; its output is taken as constant');
     }

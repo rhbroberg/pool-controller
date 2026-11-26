@@ -414,7 +414,7 @@ var advanceWaterMode = () => {
         waterModeRequest.lastMode = mode;
         waterModeRequest.statusFramesWaited = 0;
         pressSpillover(waterModeRequest.requestedBy);
-    } else if (++waterModeRequest.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
+    } else if ((waterModeRequest.statusFramesWaited = (waterModeRequest.statusFramesWaited || 0) + 1) >= CONTROL_VERIFY_STATUS_FRAMES) {
         logger.warn(`controller did not reach water flow ${waterModeRequest.target} for ${waterModeRequest.requestedBy}; it is ${mode}`);
         waterModeRequest = undefined;
     }

@@ -30,7 +30,7 @@ const POOL_COOLING_STEPS = 4;
 // the panel announces a labelled output changing as "<label> / Turned On"
 const switchMessages = panelLabels;
 
-var frames = [];
+var frames = [] as any[];
 var statusTemplate;
 var displayTemplate;
 var switchMask = 0;

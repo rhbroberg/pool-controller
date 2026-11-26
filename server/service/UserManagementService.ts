@@ -99,8 +99,8 @@ exports.listUsers = async function() {
  **/
 exports.updateUser = async function(admin, name, changes) {
     const account = await findAccount(name);
-    const updated = [];
-    const described = [];
+    const updated = [] as any[];
+    const described = [] as any[];
 
     if (typeof changes.role !== 'undefined' && changes.role !== account.role) {
         checkRole(changes.role);

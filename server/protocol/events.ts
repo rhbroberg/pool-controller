@@ -307,8 +307,8 @@ class StatusEvent extends ChecksummedEvent {
     }
 
     diff(previousMask) {
-        let nowEnabled = [];
-        let nowDisabled = [];
+        let nowEnabled = [] as any[];
+        let nowDisabled = [] as any[];
 
         const currentMask = this.rawMask();
         const changedMask = previousMask ^ currentMask;
@@ -346,13 +346,13 @@ class TextDisplayEvent extends ChecksummedEvent {
     // and '_' is the panel's degree sign
     panelLines() {
         const lineLength = 20;
-        const lines = [];
-        const blinking = [];
+        const lines = [] as any[];
+        const blinking = [] as any[];
         const end = this.frame.length - 5;
 
         for (let start = 4; start < end; start += lineLength) {
             let text = '';
-            const blinks = [];
+            const blinks = [] as any[];
             for (let i = start; i < Math.min(start + lineLength, end); i++) {
                 const c = this.frame.readUInt8(i);
                 if (c & 0x80) {

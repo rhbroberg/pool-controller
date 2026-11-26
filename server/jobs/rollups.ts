@@ -31,7 +31,7 @@ var run = async (context: { data: Record<string, any>; save: (c: Record<string, 
 
     let hour = data.hourWatermark ? new Date(data.hourWatermark).getTime() : floorHour(oldest);
     let day = data.dayWatermark ? new Date(data.dayWatermark).getTime() : tz.startOfDay(hour, timeZone);
-    const notes = [];
+    const notes = [] as any[];
 
     // history added or removed in the past, as by seed-history
     if (data.rebuildFrom) {
@@ -60,7 +60,7 @@ var run = async (context: { data: Record<string, any>; save: (c: Record<string, 
     let hours = 0;
     while (hour < target && Date.now() < deadline) {
         const end = Math.min(hour + HOUR_CHUNK * HOUR_MS, target);
-        const edges = [];
+        const edges = [] as any[];
         for (let edge = hour; edge <= end; edge += HOUR_MS) {
             edges.push(edge);
         }

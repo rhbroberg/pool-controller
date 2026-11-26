@@ -28,7 +28,7 @@ const PROGRESS_EVERY = 2000;
 var badRequest = (message) => utils.respondWithCode(400, { code: 400, message });
 
 // the latest run, kept until the next one starts
-var latest = null;
+var latest = null as any;
 
 var parseDate = (text, label) => {
     const date = new Date(text);
@@ -74,22 +74,22 @@ var asBuffer = (raw) => {
  **/
 var reinterpret = (raw, factory, interpreter) => {
     const bytes = asBuffer(raw);
-    const frames = bytes ? framesIn(bytes) : [];
+    const frames = bytes ? framesIn(bytes) : [] as any[];
     if (frames.length === 0) {
         return undefined;
     }
-    let result = null;
+    let result = null as any;
     for (const { frame } of frames) {
         let event;
         try {
             event = factory.create(frame);
         } catch {
             // the checksum still doesn't match
-            result = result || { eventType: 'failed', status: [] };
+            result = result || { eventType: 'failed', status: [] as any[] };
             continue;
         }
         if (!event) {
-            result = result || { eventType: 'unrecognized', status: [] };
+            result = result || { eventType: 'unrecognized', status: [] as any[] };
             continue;
         }
         const stored = interpreter.interpret(event);
@@ -156,8 +156,8 @@ var replay = async (run) => {
 
     // an event that changes kind can come round again on its new kind's cursor
     const rewritten = new Set();
-    let updates = [];
-    let removals = [];
+    let updates = [] as any[];
+    let removals = [] as any[];
     const flush = async (force) => {
         if (dryRun) {
             updates = [];

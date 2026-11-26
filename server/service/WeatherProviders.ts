@@ -103,7 +103,7 @@ exports.forecast = async function({ latitude, longitude }, timeZone) {
     });
     const days = (body.daily.time || []).map((seconds, i) => {
         const value = (name) => numberOrNull((body.daily[name] || [])[i]);
-        const instant = (name) => value(name) === null ? null : new Date(value(name) * 1000);
+        const instant = (name) => { const n = value(name); return n === null ? null : new Date(n * 1000); };
         return {
             // the time is the local midnight starting the day; noon is safely inside it
             date: tz.dayKey(seconds * 1000 + tz.DAY_MS / 2, timeZone),

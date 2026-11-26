@@ -90,7 +90,8 @@ export interface AuthedRequest extends Request {
         };
         pathParams?: Record<string, unknown>;
     };
-    swagger?: {
+    /** set by the swagger router before every controller runs */
+    swagger: {
         operation: unknown;
         params: Record<string, { value: unknown }>;
     };

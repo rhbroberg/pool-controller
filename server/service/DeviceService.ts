@@ -76,7 +76,7 @@ export async function getDeviceState(requestedId) {
  **/
 export async function getDevices(skip, limit) { // eslint-disable-line no-unused-vars
     var examples: any = {};
-    var indicators = [];
+    var indicators = [] as any[];
 
     const doc = await Event.findOne({ 'eventType': 'status' }).sort({ timestamp: -1 });
     if (doc) {

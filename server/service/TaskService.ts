@@ -46,8 +46,8 @@ const TITLES = { pool: 'Pool', spaPreheat: 'Spa Preheat', spaParty: 'Spa Party' 
 
 // { isOn(name), waterMode }
 var stateSource: () => { isOn: (name?: string) => boolean; waterMode?: string; ambient?: number } = () => ({ isOn: (_name?: string) => false, waterMode: undefined });
-var scheduled = null;
-var listeners = [];
+var scheduled = null as any;
+var listeners = [] as any[];
 var ticker;
 var clock = () => Date.now();
 
@@ -200,7 +200,7 @@ export async function getTasks() {
  * what went wrong once all have been asked for
  **/
 var apply = async (steps, user) => {
-    const problems = [];
+    const problems = [] as any[];
     for (const step of steps) {
         try {
             if (step.mode) {

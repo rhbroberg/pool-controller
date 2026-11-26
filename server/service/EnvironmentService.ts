@@ -38,13 +38,13 @@ exports.getHeaterState = async function(poolId) {
  * returns TemperatueZoneStatus
  **/
 exports.getPoolTemperature = async function(poolId, date, limit) {
-    var statuses = [];
+    var statuses = [] as any[];
     var examples: any = {};
 
     if (typeof date === 'undefined') {
         await getMostRecentInfo(tempNames[poolId], statuses);
     } else {
-        var temperatures = [];
+        var temperatures = [] as any[];
         const events = await Event.find({
             'eventType': 'info',
             'status': { $elemMatch: { 'name': 'pool temp' } },
@@ -132,7 +132,7 @@ exports.registerControlListener = function(cb) {
  **/
 exports.temperatureSummary = async function() {
     var examples: any = {};
-    var statuses = [];
+    var statuses = [] as any[];
 
     await getMostRecentInfo('ambient', statuses);
     await getMostRecentInfo('pool temp', statuses);

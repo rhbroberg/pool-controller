@@ -41,10 +41,10 @@ const SAMPLE_DEGREES_BELOW = 10;
 const SAMPLE_AIRS = [50, 65, 80];
 const SAMPLE_SUN = 0.5;
 
-var activeModel = null;
-var latestScan = null;
+var activeModel = null as any;
+var latestScan = null as any;
 var previews = new Map();
-var listeners = [];
+var listeners = [] as any[];
 
 var badRequest = (message) => utils.respondWithCode(400, { code: 400, message });
 var notFound = (message) => utils.respondWithCode(404, { code: 404, message });
@@ -300,7 +300,7 @@ var chosenSources = (includeSources) => {
 
 /** what the model says warming would take, for each body and way of heating, at a few air temperatures */
 var samples = (bodies) => {
-    const result = [];
+    const result = [] as any[];
     BODIES.forEach((body) => {
         const model = bodies[body];
         if (!model || !model.available) {
@@ -362,7 +362,7 @@ exports.preview = async function({ scanId, excludeWindowIds, includeSources }: a
         throw utils.respondWithCode(409, { code: 409, message: 'that scan has been replaced by a newer one; use its windows' });
     }
     const sources = chosenSources(includeSources);
-    const excluded = new Set(Array.isArray(excludeWindowIds) ? excludeWindowIds : []);
+    const excluded = new Set(Array.isArray(excludeWindowIds) ? excludeWindowIds : [] as any[]);
     const chosen = latestScan.windows.filter((window) => window.suitable && sources.includes(window.sources) && !excluded.has(window.id));
     const bodies: any = {};
     BODIES.forEach((body) => {

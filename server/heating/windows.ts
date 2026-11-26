@@ -107,7 +107,7 @@ const firstAfter = (series: SeriesPoint[], t: number): number => {
 };
 
 const pointsIn = (series: SeriesPoint[], start: number, end: number): SeriesPoint[] => {
-    const points = [];
+    const points = [] as any[];
     for (let i = firstAfter(series, start); i < series.length && series[i].t <= end; i++) {
         points.push(series[i]);
     }
@@ -190,17 +190,17 @@ class WindowExtractor {
         SWITCHES.forEach((name) => {
             this.switches[name] = initial.switches && initial.switches[name] ? 1 : 0;
         });
-        this.series = { 'pool temp': [], 'spa temp': [], [AIR]: [] };
+        this.series = { 'pool temp': [] as any[], 'spa temp': [] as any[], [AIR]: [] as any[] };
         Object.keys(this.series).forEach((name) => {
             const value = initial.readings && initial.readings[name];
             if (typeof value === 'number' && value > 0 && typeof initial.t === 'number') {
                 this.series[name].push({ t: initial.t, v: value });
             }
         });
-        this.segments = [];
-        this.open = null;
+        this.segments = [] as any[];
+        this.open = null as any;
         this.last = undefined;
-        this.gaps = [];
+        this.gaps = [] as any[];
         this.events = 0;
     }
 
@@ -263,14 +263,14 @@ class WindowExtractor {
         if (this.open) {
             this.open.end = t;
             this.segments.push(this.open);
-            this.open = null;
+            this.open = null as any;
         }
     }
 
     /** the windows, once every event has been pushed; `end` closes a run still going */
     finish(end) {
-        this.close(typeof end === 'number' ? Math.min(end, this.last) : this.last);
-        const windows = [];
+        this.close(typeof end === 'number' ? Math.min(end, this.last ?? end) : this.last);
+        const windows = [] as any[];
         this.joinFlickers().forEach((segment) => {
             this.windowsOf(segment).forEach((window) => windows.push(window));
         });
@@ -291,7 +291,7 @@ class WindowExtractor {
                 const [before, flicker, after] = [segments[i - 1], segments[i], segments[i + 1]];
                 const same = before.body === after.body && flicker.body === before.body &&
                     before.heater === after.heater && before.pump === after.pump;
-                if (same && flicker.end - flicker.start < flickerMs && before.end === flicker.start && flicker.end === after.start) {
+                if (same && flicker.end! - flicker.start < flickerMs && before.end === flicker.start && flicker.end === after.start) {
                     segments = segments.slice(0, i - 1)
                         .concat([{ body: before.body, heater: before.heater, pump: before.pump, start: before.start, end: after.end }])
                         .concat(segments.slice(i + 2));
@@ -314,7 +314,7 @@ class WindowExtractor {
             const points = pointsIn(this.series[SERIES[segment.body]], start, end);
             if (points.length > 0) {
                 const top = Math.max(...points.map((point) => point.v));
-                end = points.find((point) => point.v === top).t;
+                end = points.find((point) => point.v === top)!.t;
             }
         }
         if (end <= start) {
@@ -322,7 +322,7 @@ class WindowExtractor {
         }
         const pieces = Math.ceil((end - start) / maxWindowMs);
         const length = (end - start) / pieces;
-        const windows = [];
+        const windows = [] as any[];
         for (let piece = 0; piece < pieces; piece++) {
             windows.push(Object.assign({ start: Math.round(start + piece * length), end: Math.round(start + (piece + 1) * length) }, base));
         }
@@ -345,13 +345,13 @@ class WindowExtractor {
             readings: points.length,
             startTemperature: points.length ? points[0].v : null,
             endTemperature: points.length ? points[points.length - 1].v : null,
-            waterTemperature: null,
-            airTemperature: null,
-            sun: null,
-            slope: null,
-            scatter: null,
+            waterTemperature: null as number | null,
+            airTemperature: null as number | null,
+            sun: null as number | null,
+            slope: null as number | null,
+            scatter: null as number | null,
             suitable: false,
-            reason: null
+            reason: null as string | null
         };
         const reject = (reason) => Object.assign(result, { reason });
 
@@ -378,11 +378,15 @@ class WindowExtractor {
         // the reading carried in from before and out to the end, so a flat stretch counts as flat
         const atStart = valueAt(water, window.start);
         const atEnd = valueAt(water, window.end);
-        const line = lineFit([].concat(
-            typeof atStart === 'number' ? [{ t: window.start, v: atStart }] : [],
-            points,
-            typeof atEnd === 'number' ? [{ t: window.end, v: atEnd }] : []
-        ), window.start);
+        const linePoints: SeriesPoint[] = [];
+        if (typeof atStart === 'number') {
+            linePoints.push({ t: window.start, v: atStart });
+        }
+        linePoints.push(...points);
+        if (typeof atEnd === 'number') {
+            linePoints.push({ t: window.end, v: atEnd });
+        }
+        const line = lineFit(linePoints, window.start);
         if (!line) {
             return reject('too few readings');
         }

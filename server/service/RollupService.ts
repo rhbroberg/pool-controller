@@ -67,7 +67,7 @@ var edgesFor = (from, to, seconds, timeZone) => {
 
 // MARK: the math
 
-var emptyBucket = (start, end) => ({ start, end, count: 0, min: null, max: null, sum: 0, knownMs: 0, last: null });
+var emptyBucket = (start, end): any => ({ start, end, count: 0, min: null, max: null, sum: 0, knownMs: 0, last: null });
 
 var note = (bucket, value) => {
     bucket.min = bucket.min === null ? value : Math.min(bucket.min, value);
@@ -80,7 +80,7 @@ var note = (bucket, value) => {
  * isn't counted, since nothing is known about it yet
  **/
 var summarize = (initial, events, edges, until = Infinity) => {
-    const buckets = [];
+    const buckets = [] as any[];
     let value = typeof initial === 'number' ? initial : null;
     let next = 0;
     while (next < events.length && events[next].t < edges[0]) {
@@ -185,7 +185,7 @@ var derive = (name, initials, eventsByName) => {
     const changes = componentsOf(name)
         .flatMap((component) => (eventsByName[component] || []).map((event) => ({ t: event.t, name: component, v: event.v })))
         .sort((a, b) => a.t - b.t);
-    const events = [];
+    const events = [] as any[];
     let current = initial;
     for (const change of changes) {
         state[change.name] = change.v;

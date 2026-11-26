@@ -9,7 +9,7 @@
     "rootDir": ".",
     "strict": false,
     "noImplicitAny": false,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "noImplicitThis": false,
     "useDefineForClassFields": false,
     "esModuleInterop": true,

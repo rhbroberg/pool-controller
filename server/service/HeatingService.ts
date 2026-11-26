@@ -56,7 +56,7 @@ export function registerStateSource(source) {
 // the body the pumps have been driving toward and since when; unknown (null) until it changes
 // once after the server started, as the pump may have been running for hours already
 var targetSeen;
-var targetSince = null;
+var targetSince = null as any;
 
 var settleMs = () => {
     const minutes = Number(process.env.POOL_ESTIMATE_SETTLE_MINUTES);
@@ -93,7 +93,7 @@ var estimateFor = (state, target, devices) => {
     const temperature = state.temperatures[target];
     const air = state.ambient;
     const sources = calling.map((device) => ({ name: device, setpoint: devices[device].setpoint }));
-    const estimate = {
+    const estimate: any = {
         status: 'noReading',
         body: target,
         temperature: typeof temperature === 'number' ? temperature : null,
@@ -106,7 +106,7 @@ var estimateFor = (state, target, devices) => {
         // history: learned; rule: the body has no model, so the admin's rules timed it; mixed: a
         // source at work borrowed its rule
         basis: 'history',
-        ruleSources: [],
+        ruleSources: [] as any[],
         sources: calling,
         rate: null,
         model: null,

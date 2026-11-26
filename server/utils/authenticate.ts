@@ -1,4 +1,4 @@
-import type { AuthedRequest, OAuthScope } from '../types/domain';
+import type { AuthedRequest, AuthUser, OAuthScope } from '../types/domain';
 
 import log4js from 'log4js';
 
@@ -38,7 +38,7 @@ const authenticate = async (req: AuthedRequest, scopes: OAuthScope[] | string[])
         logger.warn(`REST ${user.email}: refused ${operation}; the ${user.role} role lacks ${missing.join(', ')}`);
         throw { status: 403, message: `the ${user.role} role cannot do that` };
     }
-    req.user = user;
+    req.user = user as AuthUser;
     req.token = tokenValue;
     return true;
 };

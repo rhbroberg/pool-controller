@@ -86,7 +86,7 @@ var bucketedSeries = async (name, from, to, seconds, context) => {
     const edges = rollups.edgesFor(from.getTime(), to.getTime(), seconds, context.timeZone);
     const end = edges[edges.length - 1];
     const rolled = rollups.ROLLED_NAMES.includes(name);
-    const parts = [];
+    const parts = [] as any[];
     let cursor = edges[0];
 
     const storedRes = !rolled ? undefined : seconds >= rollups.DAY ? rollups.DAY : seconds >= rollups.HOUR ? rollups.HOUR : undefined;
@@ -111,10 +111,10 @@ var bucketedSeries = async (name, from, to, seconds, context) => {
         parts.push(...(await rollups.bucketsFromRaw([name], rest))[name]);
     }
 
-    const points = [];
+    const points = [] as any[];
     let next = 0;
     for (let i = 0; i + 1 < edges.length; i++) {
-        const inside = [];
+        const inside = [] as any[];
         while (next < parts.length && parts[next].start < edges[i + 1]) {
             if (parts[next].start >= edges[i]) {
                 inside.push(parts[next]);
@@ -237,7 +237,7 @@ var graphableRollupDays = (name: string, from?: any, to?: any, limit?: number) =
         } },
         { $match: { known: 1, running: 1 } },
         { $sort: { _id: 1 } },
-        ...(limit ? [{ $limit: limit }] : [])
+        ...(limit ? [{ $limit: limit }] : [] as any[])
     ]);
 };
 
@@ -302,7 +302,7 @@ var earliestRecorded = async (names, timeZone) => {
 };
 
 var earliestGraphable = async (names, timeZone, dayWatermark) => {
-    let earliest = null;
+    let earliest = null as any;
     const consider = (key) => {
         if (key && (earliest === null || key < earliest)) {
             earliest = key;
@@ -350,7 +350,7 @@ export async function getAvailability(fromText, toText, names) {
     const counts = new Map();
     // salt, and a request that mixes it with the temperatures, marks days a reading was stored.
     // a pool or spa calendar marks days the graph can draw: the temperature was known while that pump ran
-    const graphable = requested.every((name) => PUMP_FOR_TEMPERATURE[name]) ? requested : [];
+    const graphable = requested.every((name) => PUMP_FOR_TEMPERATURE[name]) ? requested : [] as any[];
     const recorded = graphable.length ? [] : requested;
 
     // days the rollups job has finished, from their daily rollups

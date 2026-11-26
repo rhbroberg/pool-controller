@@ -6,7 +6,7 @@ let port: SerialPort | undefined;
 
 const writeEvent = ((message: Buffer) => {
     logger.trace('writing message', message.length, JSON.stringify(message));
-    var result = port.write(message, function(err) {
+    var result = port!.write(message, function(err) {
         if (err) {
             return logger.error('Error on write: ', err.message);
         }
@@ -15,7 +15,7 @@ const writeEvent = ((message: Buffer) => {
     logger.trace('result of write is ', result);
     // per dox, only drain if write() returned false
     if (!result) {
-        port.drain(() => {
+        port!.drain(() => {
             logger.trace('drain callback complete');
         });
     }

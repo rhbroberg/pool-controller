@@ -257,7 +257,7 @@ export async function updateSettings(changes: Record<string, any>, user?: AuthUs
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
     stored = Object.assign({}, stored, update);
 
-    const notes = [];
+    const notes = [] as any[];
     const changed: any = {};
     if ('timeZone' in update && timeZone() !== previousZone) {
         changed.timeZone = timeZone();
@@ -277,7 +277,7 @@ export async function updateSettings(changes: Record<string, any>, user?: AuthUs
     if ('heatingRules' in update) {
         changed.heatingRules = update.heatingRules;
         const described = Object.entries(changes.heatingRules).map(([body, rates]) =>
-            Object.entries(rates).map(([source, rate]) => `${body} ${source === 'heatPump' ? 'heat pump' : source} ${rate}°F per hour`).join(', ')).join(', ');
+            Object.entries(rates as Record<string, number>).map(([source, rate]) => `${body} ${source === 'heatPump' ? 'heat pump' : source} ${rate}°F per hour`).join(', ')).join(', ');
         notes.push(`heating rules: ${described}`);
     }
     if ('preheatMarginMinutes' in update) {

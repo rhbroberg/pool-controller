@@ -474,7 +474,7 @@ exports.updateSignInSettings = async function(req, admin, changes) {
     }
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
     settings = Object.assign({}, settings, update);
-    const notes = [];
+    const notes = [] as any[];
     if ('passwordSignIn' in update) {
         notes.push(`password sign-in ${update.passwordSignIn ? 'on' : 'off'}`);
     }

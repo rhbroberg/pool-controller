@@ -30,7 +30,7 @@ var resolveParameter = (parameter: any) => {
 
 // controllers read their inputs as req.swagger.params[name].value, the validated and coerced values
 var operationParams = (req: AuthedRequest, operation: any) => {
-    const sources = { path: req.openapi.pathParams, query: req.query, header: req.headers };
+    const sources = { path: req.openapi?.pathParams, query: req.query, header: req.headers };
     const params: any = {};
     for (const parameter of (operation.parameters || []).map(resolveParameter)) {
         const source = sources[parameter.in] || {};
@@ -51,7 +51,7 @@ var routeToController = (req: AuthedRequest, res: Response, next: NextFunction) 
         return;
     }
     const controller = require(path.join(__dirname, 'controllers', operation['x-swagger-router-controller']));
-    const handler = controller[operation.operationId];
+    const handler = controller[operation.operationId!];
     if (typeof handler !== 'function') {
         next({ status: 501, message: `${operation.operationId} is not implemented` });
         return;
