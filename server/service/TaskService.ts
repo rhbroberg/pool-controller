@@ -1,7 +1,6 @@
 'use strict';
 
 import { TASKS } from '../types/domain';
-import type { TaskId, AuthUser, WaterMode } from '../types/domain';
 // The everyday jobs the apps offer in place of single switches. Each is a set of switches the
 // controller already has, so whether a task is on is read from those switches:
 //

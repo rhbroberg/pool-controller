@@ -18,6 +18,11 @@ export class ApiError extends Error {
     get body(): ApiErrorBody {
         return { code: this.code, message: this.message };
     }
+
+    /** historical name used by catch sites that read e.payload.message */
+    get payload(): ApiErrorBody {
+        return this.body;
+    }
 }
 
 /** builds an ApiError to throw (or return) for a failed request */
