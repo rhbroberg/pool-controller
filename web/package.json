@@ -4,14 +4,26 @@
     "private": true,
     "description": "Web front end for the pool controller: serves the page and forwards its API calls to the pool server",
     "type": "module",
-    "main": "server.js",
+    "main": "server.ts",
     "engines": {
         "node": ">=20"
     },
     "scripts": {
+        "build": "npm run build:server && npm run build:client",
+        "build:server": "esbuild server.ts --outfile=server.js --platform=node --format=esm --target=node20 --packages=external",
+        "build:client": "esbuild \"public/js/**/*.ts\" \"public/js/views/**/*.ts\" --outdir=public/js --outbase=public/js --format=esm --target=es2022 --sourcemap",
+        "prestart": "npm run build",
         "start": "node server.js",
-        "dev": "PORT=8080 node server.js",
-        "test": "node --test \"test/**/*.test.js\""
+        "dev": "PORT=8080 tsx server.ts",
+        "typecheck": "tsc --noEmit",
+        "test": "node --import tsx --test \"test/**/*.test.ts\"",
+        "pretest": "npm run build:client"
     },
-    "license": "ISC"
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^26.6.11",
+        "esbuild": "^0.28.2",
+        "tsx": "^4.23.15",
+        "typescript": "^5.9.3"
+    }
 }

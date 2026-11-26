@@ -1,3 +1,8 @@
 node_modules
 coverage/
 .anima/
+# TypeScript build output (sources are *.ts)
+web/server.js
+web/public/js/**/*.js
+web/public/js/**/*.js.map
+server/dist/
