@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 
 var utils = require('../utils/writer');
@@ -39,7 +38,7 @@ var memorySetpoints = () => {
 
 var setpoints = memorySetpoints();
 // { filter, spaFilter, waterMode, enabled: { heater1, heatpump }, heaterFiring, temperatures: { pool, spa }, ambient }
-var stateSource = () => ({ enabled: {}, temperatures: {} });
+var stateSource = () => ({ enabled: {} as Record<string, any>, temperatures: {} as Record<string, any>, heaterFiring: false as boolean });
 
 /**
  * replaces the stand-in setpoints with a driver's own, such as the simulator's

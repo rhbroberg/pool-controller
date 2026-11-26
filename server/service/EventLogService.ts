@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 
@@ -94,7 +93,7 @@ exports.getEvents = async function(types, user, cursor, order, limit) {
     const ascending = order === 'asc';
     const size = Math.min(Math.max(limit || DEFAULT_LIMIT, 1), MAX_LIMIT);
 
-    const match = { eventType: { $in: wanted } };
+    const match: Record<string, any> = { eventType: { $in: wanted } };
     if (user === CONTROLLER) {
         match.user = { $exists: false };
     } else if (user) {

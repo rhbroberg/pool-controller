@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Reads stored frames again with the server's current protocol code and stores what it makes of
 // them now, as when a parser fix recovers frames that were stored as failures. Readings and
@@ -255,7 +254,7 @@ var describe = (run) => run && {
             const [before, after] = key.split('>');
             return { from: before, to: after, count };
         })
-        .sort((a, b) => b.count - a.count),
+        .sort((a, b) => Number(b.count) - Number(a.count)),
     error: run.error || null
 };
 
@@ -290,7 +289,7 @@ var execute = async (run, user) => {
  * them by default; with dryRun, only counts what would change. Answers at once with the run, which
  * goes on in the job queue
  **/
-exports.start = async function({ from, to, eventTypes, dryRun } = {}, user) {
+exports.start = async function({ from, to, eventTypes, dryRun }: { from?: any; to?: any; eventTypes?: string[]; dryRun?: boolean } = {}, user?: any) {
     if (latest && (latest.state === 'waiting' || latest.state === 'running')) {
         throw utils.respondWithCode(409, { code: 409, message: 'history is already being reprocessed; wait for it to finish' });
     }

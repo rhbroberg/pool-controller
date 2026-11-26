@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Summaries of readings over fixed buckets of time. Readings are stored only when they change,
 // so a value holds until the next one: each bucket's average is weighted by how long each value
@@ -27,7 +26,7 @@ const ROLLUPS_JOB = 'rollups';
 
 var isDerived = (name) => HEATING_NAMES.includes(name);
 var eventTypeOf = (name) => (INFO_NAMES.includes(name) ? 'info' : 'status');
-var unique = (values) => [...new Set(values)];
+var unique = (values: any[]): any[] => [...new Set(values)];
 var componentsOf = (name) => [name.split(':')[2], ...CIRCULATION];
 var rawNamesFor = (names) => unique(names.flatMap((name) => (isDerived(name) ? componentsOf(name) : [name])));
 
@@ -281,8 +280,8 @@ var oldestRaw = async () => {
 
 // MARK: stored rollups
 
-var docsFor = (res, bucketsByName) => {
-    const docs = [];
+var docsFor = (res: any, bucketsByName: Record<string, any[]>) => {
+    const docs: any[] = [];
     for (const [name, buckets] of Object.entries(bucketsByName)) {
         for (const bucket of buckets) {
             if (bucket.knownMs > 0 || bucket.count > 0) {

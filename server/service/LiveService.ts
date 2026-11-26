@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Pushes changes to the apps the moment the controller reports them, over socket.io, so they
 // needn't wait for their next poll:
@@ -12,21 +11,24 @@
 //
 // The apps keep polling, less often, in case a push is missed.
 
-const log4js = require('log4js');
-var logger = log4js.getLogger();
+import log4js from 'log4js';
+const logger = log4js.getLogger();
 
 // a status change and the display reading after it often arrive together; one heating push covers both
 const HEATING_DELAY_MS = 150;
 
-var io;
-var sources = { heating: async () => null, tasks: async () => null };
-var timers: any = {};
+type PushName = 'heating' | 'tasks';
+type SourceFn = () => Promise<unknown>;
+
+let io: { emit(event: string, body: unknown): void } | undefined;
+const sources: Record<PushName, SourceFn> = { heating: async () => null, tasks: async () => null };
+const timers: Partial<Record<PushName, NodeJS.Timeout | undefined>> = {};
 
 /**
  * io is the socket.io server; heating() and tasks() resolve with what GET /heating and
  * GET /tasks answer
  **/
-exports.attach = function(server, { heating, tasks } = {}) {
+exports.attach = function(server: typeof io, { heating, tasks }: { heating?: SourceFn; tasks?: SourceFn } = {}) {
     io = server;
     if (heating) {
         sources.heating = heating;
@@ -36,7 +38,7 @@ exports.attach = function(server, { heating, tasks } = {}) {
     }
 };
 
-exports.readings = function(entries) {
+exports.readings = function(entries: unknown[]) {
     if (!io || !entries || entries.length === 0) {
         return;
     }
@@ -46,7 +48,7 @@ exports.readings = function(entries) {
 };
 
 // pushes `name` once, a moment after the first change asks for it
-var pushSoon = (name) => {
+const pushSoon = (name: PushName) => {
     if (!io || timers[name]) {
         return;
     }

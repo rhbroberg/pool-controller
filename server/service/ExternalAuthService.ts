@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Signing in through OpenID Connect services (Google, Microsoft, Apple, Auth0, ...): the
 // browser or app is sent to the service, which sends it back to /auth/{provider}/callback; the
@@ -166,8 +165,8 @@ var destination = (flow, query) => {
  * where to send the browser to sign in with a service; client is web or ios, link a code from
  * linkIdentity when an account is adding the service
  **/
-exports.start = async function(req, providerId, { client, link } = {}) {
-    const flow = { provider: providerId, client: client === 'ios' ? 'ios' : 'web', origin: publicOrigin(req) };
+exports.start = async function(req, providerId, { client, link }: { client?: string; link?: string } = {}) {
+    const flow: Record<string, any> = { provider: providerId, client: client === 'ios' ? 'ios' : 'web', origin: publicOrigin(req) };
     try {
         const provider = await enabledProvider(providerId);
         if (link) {
@@ -181,7 +180,7 @@ exports.start = async function(req, providerId, { client, link } = {}) {
         const config = await configurationFor(provider);
         const state = library.randomState();
         flow.nonce = library.randomNonce();
-        const params = {
+        const params: Record<string, any> = {
             redirect_uri: redirectUri(flow.origin, provider._id),
             scope: provider.kind === 'apple' ? 'name email' : 'openid email profile',
             state,
@@ -445,7 +444,7 @@ exports.getSignInSettings = async function(req) {
 };
 
 // true if an admin could still sign in through the enabled services other than excluding
-var externalAdminRemains = async (excluding) => {
+var externalAdminRemains = async (excluding?: any) => {
     const ids = (await Provider.find({ enabled: true }).distinct('_id')).filter((id) => id !== excluding);
     return Boolean(await User.exists({ role: 'admin', 'identities.provider': { $in: ids } }));
 };

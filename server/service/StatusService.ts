@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 
@@ -45,7 +44,7 @@ var latestSwitches = async () => {
  * why the panel asks for the system to be checked: value counts the reasons, which message lists
  **/
 exports.reasonReading = function(reasons, timestamp) {
-    const reading = { name: CHECK_SYSTEM_REASON, category: 'info', value: reasons.length, timestamp: timestamp };
+    const reading: { name: string; category: string; value: number; timestamp: any; message?: string } = { name: CHECK_SYSTEM_REASON, category: 'info', value: reasons.length, timestamp: timestamp };
     if (reasons.length) {
         reading.message = reasons.join(', ');
     }

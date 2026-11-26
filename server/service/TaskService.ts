@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // The everyday jobs the apps offer in place of single switches. Each is a set of switches the
 // controller already has, so whether a task is on is read from those switches:
@@ -45,7 +44,7 @@ const TASKS = ['pool', 'spaPreheat', 'spaParty'];
 const TITLES = { pool: 'Pool', spaPreheat: 'Spa Preheat', spaParty: 'Spa Party' };
 
 // { isOn(name), waterMode }
-var stateSource = () => ({ isOn: () => false, waterMode: undefined });
+var stateSource: () => { isOn: (name?: string) => boolean; waterMode?: string; ambient?: number } = () => ({ isOn: (_name?: string) => false, waterMode: undefined });
 var scheduled = null;
 var listeners = [];
 var ticker;
@@ -224,7 +223,7 @@ var preheatSteps = () => [
     { device: 'heatPump', on: true }
 ];
 
-var record = (user, task, on, extra) => {
+var record = (user: any, task: string, on: boolean, extra?: string) => {
     const what = `${on ? 'Turned on' : 'Turned off'} ${TITLES[task]}${extra ? ` ${extra}` : ''}`;
     logger.info(`REST ${who(user)}: ${what}`);
     activity.record(user, what);

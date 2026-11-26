@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 
@@ -15,13 +14,13 @@ var logger = log4js.getLogger(); // eslint-disable-line no-unused-vars
  * returns List
  **/
 exports.getFiltrationDevices = function() {
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = ['pool', 'spa'];
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };
@@ -33,7 +32,7 @@ exports.getFiltrationDevices = function() {
  * returns ApiResponse
  **/
 exports.getFiltrationState = function(pumpId) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'code': 0,
@@ -42,7 +41,7 @@ exports.getFiltrationState = function(pumpId) { // eslint-disable-line no-unused
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };
@@ -55,7 +54,7 @@ exports.getFiltrationState = function(pumpId) { // eslint-disable-line no-unused
  * returns ApiResponse
  **/
 exports.setFiltrationState = function(pumpId, state) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'code': 0,
@@ -64,7 +63,7 @@ exports.setFiltrationState = function(pumpId, state) { // eslint-disable-line no
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };

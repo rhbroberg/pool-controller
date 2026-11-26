@@ -1,10 +1,11 @@
-var Tail = require('./tail');
-const fs = require('fs');
-const log4js = require('log4js');
-var logger = log4js.getLogger();
-const { PingEvent, StatusEvent, DisplayUpdateEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('../protocol/events'); // eslint-disable-line no-unused-vars
+import fs from 'fs';
+import log4js from 'log4js';
+const Tail = require('./tail');
+import { ControlEvent } from '../protocol/events';
 
-var streamFromStart = (filename, cb) => {
+const logger = log4js.getLogger();
+
+const streamFromStart = (filename: string, cb: (data: Buffer) => void) => {
     fs.open(filename, 'r', (err, fd) => {
         if (err) {
             logger.error(err);
@@ -40,7 +41,7 @@ var streamFromStart = (filename, cb) => {
     });
 };
 
-var listen = ((filename, cb, options) => {
+const listen = ((filename: string, cb: (data: Buffer) => void, options?: { fromStart?: boolean }) => {
     logger.info('tailing file', filename);
     if (options && options.fromStart) {
         logger.info('reading capture from the start');
@@ -55,9 +56,9 @@ var listen = ((filename, cb, options) => {
     });
 });
 
-var writeEvent = ((message) => {
+const writeEvent = ((message: any) => {
     const myControl = new ControlEvent(message);
     logger.debug('writing control event: ', myControl.asString());
 });
 
-module.exports = { listen, writeEvent };
+export { listen, writeEvent };

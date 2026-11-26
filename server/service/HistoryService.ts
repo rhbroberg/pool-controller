@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 
@@ -216,9 +215,9 @@ var availabilityNames = (names) => {
  * changes, so a day can be graphable with no new reading, and a reading taken while the pump was
  * off is not.
  **/
-var graphableRollupDays = (name, from, to, limit) => {
+var graphableRollupDays = (name: string, from?: any, to?: any, limit?: number) => {
     const pump = PUMP_FOR_TEMPERATURE[name];
-    const match = { name: { $in: [name, pump] }, res: rollups.DAY };
+    const match: Record<string, any> = { name: { $in: [name, pump] }, res: rollups.DAY };
     if (from !== undefined || to !== undefined) {
         match.start = {};
         if (from !== undefined) {

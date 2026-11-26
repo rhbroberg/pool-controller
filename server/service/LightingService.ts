@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 
 
@@ -8,7 +7,7 @@
  * returns LightingZoneStatus
  **/
 exports.getLightingState = function(lightId) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'level': 0,
@@ -19,7 +18,7 @@ exports.getLightingState = function(lightId) { // eslint-disable-line no-unused-
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };
@@ -30,13 +29,13 @@ exports.getLightingState = function(lightId) { // eslint-disable-line no-unused-
  * returns List
  **/
 exports.getLights = function() {
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = ['', ''];
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };
@@ -49,7 +48,7 @@ exports.getLights = function() {
  * returns LightingZoneStatus
  **/
 exports.setLightingState = function(lightId, state) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'level': 0,
@@ -60,7 +59,7 @@ exports.setLightingState = function(lightId, state) { // eslint-disable-line no-
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };

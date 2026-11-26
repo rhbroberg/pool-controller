@@ -1,9 +1,10 @@
-const log4js = require('log4js');
-const { SerialPort } = require('serialport');
-var logger = log4js.getLogger();
-var port;
+import log4js from 'log4js';
+import { SerialPort } from 'serialport';
 
-var writeEvent = ((message) => {
+const logger = log4js.getLogger();
+let port: SerialPort | undefined;
+
+const writeEvent = ((message: Buffer) => {
     logger.trace('writing message', message.length, JSON.stringify(message));
     var result = port.write(message, function(err) {
         if (err) {
@@ -20,7 +21,7 @@ var writeEvent = ((message) => {
     }
 });
 
-var listen = ((filename, cb) => {
+const listen = ((filename: string, cb: (data: Buffer) => void) => {
     port = new SerialPort({ path: filename, baudRate: 19200, autoOpen: false });
 
     port.open(function(err) {
@@ -38,4 +39,4 @@ var listen = ((filename, cb) => {
     return port;
 });
 
-module.exports = { listen, writeEvent };
+export { listen, writeEvent };

@@ -1,9 +1,10 @@
-const fs = require('fs');
-const log4js = require('log4js');
-var logger = log4js.getLogger();
-var { mongoose } = require('../mongoose');
+import fs from 'fs';
+import log4js from 'log4js';
+import { mongoose } from '../mongoose';
 
-var listen = ((filename, cb) => {
+const logger = log4js.getLogger();
+
+const listen = ((filename: string, cb: (data: Buffer) => void | Promise<void>) => {
     fs.readFile(filename, async (err, data) => {
         logger.info('starting');
         if (err)
@@ -21,4 +22,4 @@ var listen = ((filename, cb) => {
     });
 });
 
-module.exports = { listen };
+export { listen };

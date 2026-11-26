@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 
@@ -93,7 +92,7 @@ exports.getPoolTemperature = async function(poolId, date, limit) {
  * returns ApiResponse
  **/
 exports.setHeaterState = function(poolId, state) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'code': 0,
@@ -102,7 +101,7 @@ exports.setHeaterState = function(poolId, state) { // eslint-disable-line no-unu
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };

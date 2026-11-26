@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Learns how long each body of water takes to warm, from the history of what the pump, heater and
 // heat pump did and what the water and air temperatures did meanwhile.
@@ -193,7 +192,7 @@ var summarize = (windows) => {
         windows: windows.length,
         suitable: windows.filter((window) => window.suitable).length,
         bodies,
-        reasons: Object.entries(reasons).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count)
+        reasons: (Object.entries(reasons) as [string, number][]).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count)
     };
 };
 
@@ -238,7 +237,7 @@ var executeScan = async (run) => {
  *
  * returns HeatingScan
  **/
-exports.startScan = async function({ from, to } = {}, user) {
+exports.startScan = async function({ from, to }: { from?: any; to?: any } = {}, user?: any) {
     if (latestScan && (latestScan.state === 'waiting' || latestScan.state === 'running')) {
         throw utils.respondWithCode(409, { code: 409, message: 'history is already being scanned; wait for it to finish' });
     }
@@ -353,7 +352,7 @@ var compact = (window) => ({
  *
  * returns HeatingModelPreview
  **/
-exports.preview = async function({ scanId, excludeWindowIds, includeSources } = {}) {
+exports.preview = async function({ scanId, excludeWindowIds, includeSources }: any = {}) {
     if (!latestScan || latestScan.state !== 'finished') {
         throw utils.respondWithCode(409, { code: 409, message: 'there is no finished scan; find windows first' });
     }
@@ -398,7 +397,7 @@ exports.preview = async function({ scanId, excludeWindowIds, includeSources } = 
  *
  * returns HeatingModelState
  **/
-exports.save = async function({ previewId } = {}, user) {
+exports.save = async function({ previewId }: { previewId?: string } = {}, user?: any) {
     const preview = previews.get(previewId);
     if (!preview) {
         throw notFound('that calculation is no longer held; calculate it again');

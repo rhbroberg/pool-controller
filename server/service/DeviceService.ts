@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('../config/config');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
@@ -100,7 +99,7 @@ exports.getDevices = async function(skip, limit) { // eslint-disable-line no-unu
  * returns DeviceRegistrationInfo
  **/
 exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-vars
-    return new Promise(function(resolve, reject) { // eslint-disable-line no-unused-vars
+    return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
             'id': '0729a580-2240-11e6-9eb5-0002a5d5c51b',
@@ -109,7 +108,7 @@ exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-v
         if (Object.keys(examples).length > 0) {
             resolve(examples[Object.keys(examples)[0]]);
         } else {
-            resolve();
+            resolve(undefined);
         }
     });
 };
@@ -129,7 +128,7 @@ exports.registerControlListener = function(cb) {
 var onOff = (isOn) => isOn ? 'on' : 'off';
 
 exports.setDeviceState = function(requestedId, state, user) {
-    return new Promise(function(resolve, reject) {
+    return new Promise<any>(function(resolve, reject) {
         const deviceId = resolveDevice(requestedId);
         const label = describeDevice(requestedId, deviceId);
         const desiredOn = state === 'true';
