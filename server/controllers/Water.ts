@@ -1,9 +1,12 @@
 'use strict';
 
+import type { Response } from 'express';
+import type { AuthedRequest } from '../types/domain';
+
 var utils = require('../utils/writer');
 var Water = require('../service/WaterService');
 
-module.exports.setWaterMode = function setWaterMode (req, res) {
+module.exports.setWaterMode = function setWaterMode (req: AuthedRequest, res: Response) {
   Water.setWaterMode(req.swagger.params['mode'].value, req.user)
     .then(function (response) {
       utils.writeJson(res, response);

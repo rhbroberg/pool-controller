@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 require('./config/config');
 
@@ -41,13 +40,13 @@ var simulator = require('./drivers/simulator');
 const express = require('express');
 const publicPath = path.join(__dirname, './public');
 var { initializeServer } = require('./index'); // route handler, courtesy of swagger.io
-var io;
+var io: any;
 var replayStarted = false;
-var controlRequests = [];
-var controlVerification = [];
+var controlRequests: any[] = [];
+var controlVerification: any[] = [];
 // filter shutdown has been seen to take about a dozen status frames
 const CONTROL_VERIFY_STATUS_FRAMES = 40;
-var driver;
+var driver: any;
 
 var argv = yargs(hideBin(process.argv))
     .default('f', __dirname + '/test/test-data/sample-various-bin')
@@ -73,7 +72,7 @@ var processingErrors = 0;
 var factory = new EventFactory();
 // what has been seen, so only changes are stored; it starts empty rather than from the database
 var interpreter = new FrameInterpreter();
-var latestDisplay;
+var latestDisplay: any;
 
 // drops indexes the models no longer list, such as the old status.0.name ones, and builds new ones
 var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map((model) => model.syncIndexes().then((dropped) => {
@@ -154,7 +153,7 @@ if (argv.d !== 'file' && !argv.jobsOnly) {
     }));
 }
 
-var saveStatus = (switchesEnabled, buf, category, timestamp, message) => {
+var saveStatus = (switchesEnabled: any, buf: any, category: string, timestamp: any, message?: string) => {
     var dbStatusEvent = new Event({
         _id: new mongoose.Types.ObjectId,
         source: 'panel',
@@ -175,14 +174,14 @@ var saveStatus = (switchesEnabled, buf, category, timestamp, message) => {
 /**
  * resolves once saved, or once saving failed
  **/
-var saveSwitchState = (switchesEnabled, buf, category, timestamp, message) => {
+var saveSwitchState = (switchesEnabled: any, buf: any, category: string, timestamp: any, message?: string) => {
     if (switchesEnabled.length > 0) {
         return saveStatus(switchesEnabled, buf, category, timestamp, message);
     }
     return Promise.resolve();
 };
 
-var streamEvent = (kind, text, timestamp) => {
+var streamEvent = (kind: string, text?: any, timestamp?: any) => {
     // send to sockets (if established)
     if (io) {
         logger.trace('streaming data to http listeners at ', timestamp);
@@ -197,7 +196,7 @@ var streamEvent = (kind, text, timestamp) => {
 /**
  * buf is the frame with the bus's escaping undone; wire is how it arrived, which is stored
  **/
-var dispatchEvent = (buf, wire = stuff(buf)) => {
+var dispatchEvent = (buf: Buffer, wire = stuff(buf)) => {
     // maybe change to an observer pattern for action taken
     const event = factory.create(buf);
     if (!event) {
@@ -299,7 +298,7 @@ var dispatchEvent = (buf, wire = stuff(buf)) => {
     return true;
 };
 
-var handleHunk = (data) => {
+var handleHunk = (data: Buffer) => {
     parser.parse(data, (buf, length, wire) => {
         logger.debug(parser.toHexString());
         // maybe change Event to take the FrameParser instead of the buf?
@@ -324,9 +323,9 @@ var handleHunk = (data) => {
 };
 
 // the heater's on/off is its mode from the display, not its status bit
-var labelled = (name) => panelLabels[name] ? `${name} (${panelLabels[name]})` : name;
+var labelled = (name: string) => panelLabels[name] ? `${name} (${panelLabels[name]})` : name;
 
-var isSwitchOn = (name) => name === 'heater1' ? interpreter.heaterAuto === 1 : interpreter.enabledSwitches.includes(name);
+var isSwitchOn = (name: string) => name === 'heater1' ? interpreter.heaterAuto === 1 : interpreter.enabledSwitches.includes(name);
 
 // a keypress only toggles, so a request is confirmed by watching status frames rather than
 // pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it
@@ -346,7 +345,7 @@ var verifyControlRequests = () => {
     });
 };
 
-var controlListener = ((whatChange, desiredOn, requestedBy) => {
+var controlListener = ((whatChange: string, desiredOn: boolean, requestedBy: string) => {
     if (!ControlEvent.isControl(whatChange)) {
         throw new Error(`'${whatChange}' is not a controller button`);
     }
@@ -380,9 +379,9 @@ var controlListener = ((whatChange, desiredOn, requestedBy) => {
 // request presses it once, waits for the status bits to show the next mode, and presses
 // again until the requested mode is reached.
 const WATER_MODES = ['pool', 'spa', 'spillover'];
-var waterModeRequest;
+var waterModeRequest: { target: string; requestedBy: string; pressesLeft?: number; lastMode?: string; statusFramesWaited?: number } | undefined;
 
-var currentWaterMode = () => {
+var currentWaterMode = (): string | undefined => {
     if (isSwitchOn('spillover')) {
         return 'spillover';
     }
@@ -392,7 +391,7 @@ var currentWaterMode = () => {
     return isSwitchOn('pool') ? 'pool' : undefined;
 };
 
-var pressSpillover = (requestedBy) => {
+var pressSpillover = (requestedBy: string) => {
     var press = new ControlEvent();
     press.toggleControls(['spillover']);
     controlRequests.push({
@@ -421,7 +420,7 @@ var advanceWaterMode = () => {
     }
 };
 
-var waterModeListener = ((target, requestedBy) => {
+var waterModeListener = ((target: string, requestedBy: string) => {
     if (!WATER_MODES.includes(target)) {
         throw new Error(`water flow mode must be one of ${WATER_MODES.join(', ')}`);
     }
@@ -442,7 +441,7 @@ const panelKeys = ['menu', 'left', 'right', 'minus', 'plus'];
 
 // menu and arrow keys change what the panel displays, not a status bit, so they are
 // sent once and never verified
-var panelKeyListener = ((key, requestedBy) => {
+var panelKeyListener = ((key: string, requestedBy: string) => {
     if (!panelKeys.includes(key)) {
         throw new Error(`'${key}' is not a panel navigation key`);
     }
@@ -480,7 +479,7 @@ panelService.registerKeyListener(panelKeyListener);
 panelService.registerDisplaySource(() => latestDisplay);
 waterService.registerModeListener(waterModeListener);
 
-var knownTemp = (name) => {
+var knownTemp = (name: string) => {
     const value = Number(interpreter.present[name]);
     return value > 0 ? value : undefined;
 };

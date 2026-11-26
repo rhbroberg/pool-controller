@@ -1,5 +1,8 @@
 'use strict';
 
+import type { AuthUser } from '../types/domain';
+import type { GeoLocation, HeatingRules } from '../types/domain';
+
 const fs = require('fs');
 var { Setting } = require('../models/setting');
 var utils = require('../utils/writer');
@@ -22,7 +25,14 @@ const MAX_PREHEAT_MARGIN_MINUTES = 240;
 // five digits, optionally with the ZIP+4 extension, which the lookup doesn't need
 const ZIP_CODE = /^(\d{5})(?:-\d{4})?$/;
 
-var stored = {
+var stored: {
+    timeZone: string | null;
+    rawRetentionDays: number;
+    location: GeoLocation | null;
+    heatingEstimateDisplay: string;
+    heatingRules: HeatingRules;
+    preheatMarginMinutes: number;
+} = {
     timeZone: null,
     rawRetentionDays: DEFAULT_RETENTION_DAYS,
     location: null,
@@ -30,10 +40,10 @@ var stored = {
     heatingRules: heatingRules.complete(null),
     preheatMarginMinutes: DEFAULT_PREHEAT_MARGIN_MINUTES
 };
-var detected;
-var listeners = [];
+var detected: string | undefined;
+var listeners: Array<(changed?: Record<string, any>) => void> = [];
 
-var readFile = (path) => {
+var readFile = (path: string) => {
     try {
         return fs.readFileSync(path, 'utf8').trim();
     } catch {
@@ -41,7 +51,7 @@ var readFile = (path) => {
     }
 };
 
-var readLink = (path) => {
+var readLink = (path: string) => {
     try {
         return fs.readlinkSync(path);
     } catch {
@@ -66,7 +76,7 @@ var detect = () => {
     return zone;
 };
 
-var validationError = (message) => utils.respondWithCode(400, { code: 400, message: message });
+var validationError = (message: string) => utils.respondWithCode(400, { code: 400, message: message });
 
 /**
  * reads the stored settings; run at startup and after a factory reset
@@ -166,7 +176,7 @@ var locate = async (zipCode) => {
  * listener(changes) runs after a change, with changes.timeZone set when the zone changed and
  * changes.location when the zip code did
  **/
-exports.onChange = function(listener) {
+exports.onChange = function(listener: (changed?: Record<string, any>) => void) {
     listeners.push(listener);
 };
 
@@ -194,7 +204,7 @@ exports.getSettings = async function() {
  *
  * returns Settings
  **/
-exports.updateSettings = async function(changes, user) {
+exports.updateSettings = async function(changes: Record<string, any>, user?: AuthUser | null) {
     const who = user && user.email ? user.email : 'unknown user';
     const update: any = {};
     if (Object.prototype.hasOwnProperty.call(changes || {}, 'timeZone')) {

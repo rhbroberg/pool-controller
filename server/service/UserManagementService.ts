@@ -1,5 +1,7 @@
 'use strict';
 
+import type { AuthUser, UserRole } from '../types/domain';
+
 const { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } = require('./../models/user');
 var utils = require('../utils/writer');
 const activity = require('./ActivityService');

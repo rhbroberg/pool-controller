@@ -1,17 +1,19 @@
 'use strict';
 
-var utils = require('../utils/writer');
+import log4js from 'log4js';
+import type { AuthUser } from '../types/domain';
+
+const utils = require('../utils/writer');
 const activity = require('./ActivityService');
-const log4js = require('log4js');
-var logger = log4js.getLogger();
+const logger = log4js.getLogger();
 
-var modeListener;
+var modeListener: ((mode: string, who: string) => string) | undefined;
 
-exports.registerModeListener = function(listener) {
+exports.registerModeListener = function(listener: (mode: string, who: string) => string) {
     modeListener = listener;
 };
 
-var title = (mode) => mode.charAt(0).toUpperCase() + mode.slice(1);
+var title = (mode: string) => mode.charAt(0).toUpperCase() + mode.slice(1);
 
 /**
  * sets the water flow to pool, spa or spillover; the controller steps through those modes in
@@ -20,13 +22,13 @@ var title = (mode) => mode.charAt(0).toUpperCase() + mode.slice(1);
  * mode String
  * returns WaterMode
  **/
-exports.setWaterMode = function(mode, user) {
+exports.setWaterMode = function(mode: string, user?: AuthUser | null) {
     return new Promise(function(resolve, reject) {
         const who = user && user.email ? user.email : 'unknown user';
-        let previous;
+        let previous: string;
         try {
-            previous = modeListener(mode, who);
-        } catch (e) {
+            previous = modeListener!(mode, who);
+        } catch (e: any) {
             logger.warn(`REST ${who}: rejected water flow ${mode}: ${e.message}`);
             reject(utils.respondWithCode(400, { code: 400, message: e.message }));
             return;

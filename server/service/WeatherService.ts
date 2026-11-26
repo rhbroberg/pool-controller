@@ -48,7 +48,7 @@ exports.refresh = async function() {
     return { zipCode, hours: hours.length, days: days.length };
 };
 
-var describeDay = (day) => day ? {
+var describeDay = (day: any) => day ? {
     date: day.date,
     high: day.high,
     low: day.low,
@@ -111,7 +111,7 @@ exports.forecast = async function(hours) {
  *
  * returns how many hours and days were removed
  **/
-exports.removeBefore = async function(cutoff, timeZone) {
+exports.removeBefore = async function(cutoff: Date, timeZone: string) {
     const [hours, days] = await Promise.all([
         WeatherHour.deleteMany({ time: { $lt: cutoff } }),
         WeatherDay.deleteMany({ date: { $lt: tz.dayKey(cutoff.getTime(), timeZone) } })

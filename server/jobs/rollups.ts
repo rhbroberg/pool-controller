@@ -18,9 +18,9 @@ const DAY_CHUNK = 14;
 // ones are redone from the raw events still kept; 2 needs a pump moving water
 const HEATING_RULES = 2;
 
-var floorHour = (ms) => Math.floor(ms / HOUR_MS) * HOUR_MS;
+var floorHour = (ms: number) => Math.floor(ms / HOUR_MS) * HOUR_MS;
 
-var run = async (context) => {
+var run = async (context: { data: Record<string, any>; save: (c: Record<string, any>) => Promise<void> }) => {
     const deadline = Date.now() + BUDGET_MS;
     const timeZone = settings.timeZone();
     const data = context.data;

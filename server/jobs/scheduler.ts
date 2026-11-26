@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use strict';
 // Runs the server's maintenance jobs on their intervals, one at a time, inside the REST
 // process. A lease in the jobs collection keeps two processes from running the same job, so the
@@ -14,27 +13,57 @@ const LEASE_MS = 10 * 60 * 1000;
 const CATCH_UP_MS = 2000;
 const OWNER = `${os.hostname()}:${process.pid}`;
 
-var jobs = new Map();
+interface JobContext {
+    readonly data: Record<string, any>;
+    save(changes: Record<string, any>): Promise<void>;
+}
+
+interface JobResult {
+    summary?: string | null;
+    more?: boolean;
+}
+
+interface JobDefinition {
+    name: string;
+    description: string;
+    everyMs: number;
+    firstDelayMs?: number;
+    run(context: JobContext): Promise<JobResult | void>;
+}
+
+interface RegisteredJob extends JobDefinition {
+    running: boolean;
+    timer: ReturnType<typeof setTimeout> | undefined;
+    nextRunAt: Date | undefined;
+}
+
+interface JobOutcome {
+    lastResult: string;
+    lastError: string | null;
+    lastSummary: string | null;
+}
+
+var jobs = new Map<string, RegisteredJob>();
 var scheduling = false;
 // jobs run one after another, so maintenance never piles up on the controller's bus timing
-var queue = Promise.resolve();
+var queue: Promise<unknown> = Promise.resolve();
 
 /**
  * job: { name, description, everyMs, firstDelayMs, run(context) }, where run resolves with
  * { summary, more } and context has data (what the job kept from its last run) and save(data)
  **/
-exports.register = function(job) {
+exports.register = function(job: JobDefinition) {
     jobs.set(job.name, Object.assign({ running: false, timer: undefined, nextRunAt: undefined }, job));
 };
 
-var acquire = async (name) => {
+var acquire = async (name: string) => {
     const now = new Date();
     try {
         return await JobState.findOneAndUpdate(
             { _id: name, $or: [{ leaseUntil: null }, { leaseUntil: { $lte: now } }, { leaseOwner: OWNER }] },
             { $set: { leaseOwner: OWNER, leaseUntil: new Date(now.getTime() + LEASE_MS) } },
             { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
-    } catch (e) {
+    } catch (e: any) {
         // the upsert collides with the document another process holds the lease on
         if (e.code === 11000) {
             return undefined;
@@ -43,7 +72,7 @@ var acquire = async (name) => {
     }
 };
 
-var schedule = (job, delayMs) => {
+var schedule = (job: RegisteredJob, delayMs: number) => {
     clearTimeout(job.timer);
     if (!scheduling) {
         job.nextRunAt = undefined;
@@ -51,24 +80,24 @@ var schedule = (job, delayMs) => {
     }
     job.nextRunAt = new Date(Date.now() + delayMs);
     job.timer = setTimeout(() => {
-        exports.runNow(job.name, 'schedule').catch((e) => logger.error(`job ${job.name}: ${e.message}`));
+        exports.runNow(job.name, 'schedule').catch((e: Error) => logger.error(`job ${job.name}: ${e.message}`));
     }, delayMs);
     // waiting for a job alone doesn't keep the process running
     job.timer.unref();
 };
 
-var execute = async (job, trigger) => {
+var execute = async (job: RegisteredJob, trigger: string) => {
     const state = await acquire(job.name);
     if (!state) {
         return { busy: true };
     }
     job.running = true;
     const started = new Date();
-    let outcome = { lastResult: 'ok', lastError: null, lastSummary: null };
+    let outcome: JobOutcome = { lastResult: 'ok', lastError: null, lastSummary: null };
     let more = false;
     try {
-        let data = state.data || {};
-        const context = {
+        let data: Record<string, any> = state.data || {};
+        const context: JobContext = {
             get data() {
                 return data;
             },
@@ -81,16 +110,16 @@ var execute = async (job, trigger) => {
         outcome.lastSummary = result.summary || null;
         more = result.more === true;
         logger.debug(`job ${job.name} (${trigger}): ${outcome.lastSummary || 'done'}`);
-    } catch (e) {
+    } catch (e: any) {
         outcome = { lastResult: 'failed', lastError: e.message, lastSummary: null };
         logger.error(`job ${job.name} failed: ${e.stack || e.message}`);
     } finally {
         job.running = false;
         const finished = new Date();
         await JobState.updateOne({ _id: job.name }, {
-            $set: Object.assign(outcome, { lastStartedAt: started, lastFinishedAt: finished, lastDurationMs: finished - started, leaseUntil: null }),
+            $set: Object.assign(outcome, { lastStartedAt: started, lastFinishedAt: finished, lastDurationMs: finished.getTime() - started.getTime(), leaseUntil: null }),
             $inc: { runs: 1 }
-        }).catch((e) => logger.error(`job ${job.name}: could not record its run: ${e.message}`));
+        }).catch((e: Error) => logger.error(`job ${job.name}: could not record its run: ${e.message}`));
     }
     schedule(job, more ? CATCH_UP_MS : job.everyMs);
     return { busy: false, more };
@@ -99,7 +128,7 @@ var execute = async (job, trigger) => {
 /**
  * runs a job now, after any job already running; resolves with its status
  **/
-exports.runNow = function(name, trigger = 'manual') {
+exports.runNow = function(name: string, trigger = 'manual') {
     const job = jobs.get(name);
     if (!job) {
         return Promise.reject(new Error(`there is no job named ${name}`));
@@ -113,7 +142,7 @@ exports.runNow = function(name, trigger = 'manual') {
  * runs work in this process's job queue, after any job already running and before the next, for
  * work that must not overlap the jobs, such as rewriting the events the rollups are made from
  **/
-exports.exclusive = function(work) {
+exports.exclusive = function(work: () => Promise<unknown>) {
     const run = queue.then(() => work());
     queue = run.catch(() => {});
     return run;
@@ -122,7 +151,7 @@ exports.exclusive = function(work) {
 /**
  * starts running every job on its interval; with enabled false, jobs only run when asked
  **/
-exports.start = function({ enabled }) {
+exports.start = function({ enabled }: { enabled: boolean }) {
     scheduling = enabled;
     for (const job of jobs.values()) {
         schedule(job, job.firstDelayMs || job.everyMs);
@@ -138,7 +167,7 @@ exports.stop = function() {
     }
 };
 
-var describe = (job, state) => ({
+var describe = (job: RegisteredJob, state: any) => ({
     name: job.name,
     description: job.description,
     intervalSeconds: Math.round(job.everyMs / 1000),
@@ -157,8 +186,8 @@ var describe = (job, state) => ({
 /**
  * one job's status, or every job's
  **/
-exports.status = async function(name) {
-    const states = new Map((await JobState.find({}).select({ data: 0 }).lean()).map((state) => [state._id, state]));
+exports.status = async function(name?: string) {
+    const states = new Map((await JobState.find({}).select({ data: 0 }).lean()).map((state: any) => [state._id, state]));
     if (name) {
         const job = jobs.get(name);
         return job ? describe(job, states.get(name)) : undefined;
@@ -166,6 +195,6 @@ exports.status = async function(name) {
     return [...jobs.values()].map((job) => describe(job, states.get(job.name)));
 };
 
-exports.has = function(name) {
+exports.has = function(name: string) {
     return jobs.has(name);
 };

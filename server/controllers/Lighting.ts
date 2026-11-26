@@ -1,9 +1,12 @@
 'use strict';
 
+import type { Response } from 'express';
+import type { AuthedRequest } from '../types/domain';
+
 var utils = require('../utils/writer');
 var Lighting = require('../service/LightingService');
 
-module.exports.getLightingState = function getLightingState (req, res) {
+module.exports.getLightingState = function getLightingState (req: AuthedRequest, res: Response) {
   var lightId = req.swagger.params['lightId'].value;
   Lighting.getLightingState(lightId)
     .then(function (response) {
@@ -14,7 +17,7 @@ module.exports.getLightingState = function getLightingState (req, res) {
     });
 };
 
-module.exports.getLights = function getLights (req, res) {
+module.exports.getLights = function getLights (req: AuthedRequest, res: Response) {
   Lighting.getLights()
     .then(function (response) {
       utils.writeJson(res, response);
@@ -24,7 +27,7 @@ module.exports.getLights = function getLights (req, res) {
     });
 };
 
-module.exports.setLightingState = function setLightingState (req, res) {
+module.exports.setLightingState = function setLightingState (req: AuthedRequest, res: Response) {
   var lightId = req.swagger.params['lightId'].value;
   var state = req.swagger.params['state'].value;
   Lighting.setLightingState(lightId,state)

@@ -3,7 +3,7 @@
 
 const weather = require('../service/WeatherService');
 
-var run = async () => {
+var run = async (): Promise<{ summary: string }> => {
     const fetched = await weather.refresh();
     if (!fetched) {
         return { summary: 'no zip code set, so no weather to fetch' };

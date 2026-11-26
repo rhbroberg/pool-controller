@@ -1,5 +1,7 @@
 'use strict';
 
+import type { AuthUser } from '../types/domain';
+
 var { mongoose } = require('../mongoose');
 var { Event } = require('../models/event');
 var { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD } = require('../models/user');
@@ -16,11 +18,11 @@ const RESTART_DELAY_MS = 500;
 
 var resetListener = () => {};
 
-exports.registerResetListener = function(listener) {
+exports.registerResetListener = function(listener: () => void) {
     resetListener = listener;
 };
 
-var nameOf = (user) => user && user.email ? user.email : 'unknown user';
+var nameOf = (user?: AuthUser | null) => user && user.email ? user.email : 'unknown user';
 
 const SERVICE_NAME = 'pool-controller';
 const { version } = require('../package.json');
@@ -55,7 +57,7 @@ exports.commissionIfEmpty = async function() {
  *
  * returns ApiResponse
  **/
-exports.factoryReset = async function(user) {
+exports.factoryReset = async function(user?: AuthUser | null) {
     const who = nameOf(user);
     logger.warn(`REST ${who}: factory reset; erasing all history and accounts`);
     try {
@@ -77,7 +79,7 @@ exports.factoryReset = async function(user) {
  *
  * returns ApiResponse
  **/
-exports.restart = async function(user) {
+exports.restart = async function(user?: AuthUser | null) {
     logger.warn(`REST ${nameOf(user)}: restart requested; exiting`);
     await activity.record(user, 'Restarted the server');
     setTimeout(() => {

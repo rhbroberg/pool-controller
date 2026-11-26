@@ -1,18 +1,20 @@
 'use strict';
 
-var utils = require('../utils/writer');
+import log4js from 'log4js';
+import type { AuthUser } from '../types/domain';
+
+const utils = require('../utils/writer');
 const activity = require('./ActivityService');
-const log4js = require('log4js');
-var logger = log4js.getLogger();
+const logger = log4js.getLogger();
 
-var displaySource = () => undefined;
-var keyListener;
+var displaySource: () => any = () => undefined;
+var keyListener: ((key: string, who: string) => void) | undefined;
 
-exports.registerDisplaySource = function(source) {
+exports.registerDisplaySource = function(source: () => any) {
     displaySource = source;
 };
 
-exports.registerKeyListener = function(listener) {
+exports.registerKeyListener = function(listener: (key: string, who: string) => void) {
     keyListener = listener;
 };
 
@@ -38,12 +40,12 @@ exports.getPanelDisplay = function() {
  * key String
  * returns PanelKeyPress
  **/
-exports.pressPanelKey = function(key, user) {
+exports.pressPanelKey = function(key: string, user?: AuthUser | null) {
     return new Promise(function(resolve, reject) {
         const who = user && user.email ? user.email : 'unknown user';
         try {
-            keyListener(key, who);
-        } catch (e) {
+            keyListener!(key, who);
+        } catch (e: any) {
             logger.warn(`REST ${who}: rejected panel key ${key}: ${e.message}`);
             reject(utils.respondWithCode(400, { code: 400, message: e.message }));
             return;

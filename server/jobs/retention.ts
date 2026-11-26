@@ -12,7 +12,7 @@ const BATCH = 5000;
 const BUDGET_MS = Number(process.env.RETENTION_BUDGET_MS) || 20000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-var run = async () => {
+var run = async (): Promise<{ summary: string; more?: boolean }> => {
     const deadline = Date.now() + BUDGET_MS;
     const days = settings.rawRetentionDays();
     const cutoff = Date.now() - days * DAY_MS;

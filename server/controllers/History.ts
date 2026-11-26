@@ -1,9 +1,12 @@
 'use strict';
 
+import type { Response } from 'express';
+import type { AuthedRequest } from '../types/domain';
+
 var utils = require('../utils/writer');
 var History = require('../service/HistoryService');
 
-module.exports.getHistory = function getHistory (req, res) {
+module.exports.getHistory = function getHistory (req: AuthedRequest, res: Response) {
   var names = req.swagger.params['names'].value;
   var from = req.swagger.params['from'].value;
   var to = req.swagger.params['to'].value;
@@ -18,7 +21,7 @@ module.exports.getHistory = function getHistory (req, res) {
     });
 };
 
-module.exports.getHistoryAvailability = function getHistoryAvailability (req, res) {
+module.exports.getHistoryAvailability = function getHistoryAvailability (req: AuthedRequest, res: Response) {
   History.getAvailability(req.swagger.params['from'].value, req.swagger.params['to'].value, req.swagger.params['names'].value)
     .then(function (response) {
       utils.writeJson(res, response);

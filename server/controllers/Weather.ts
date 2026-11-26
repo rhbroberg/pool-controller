@@ -1,9 +1,12 @@
 'use strict';
 
+import type { Response } from 'express';
+import type { AuthedRequest } from '../types/domain';
+
 var utils = require('../utils/writer');
 var Weather = require('../service/WeatherService');
 
-module.exports.getWeather = function getWeather (req, res) {
+module.exports.getWeather = function getWeather (req: AuthedRequest, res: Response) {
   Weather.getWeather()
     .then(function (response) {
       utils.writeJson(res, response);

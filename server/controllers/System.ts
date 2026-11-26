@@ -1,5 +1,8 @@
 'use strict';
 
+import type { Response } from 'express';
+import type { AuthedRequest } from '../types/domain';
+
 var utils = require('../utils/writer');
 var System = require('../service/SystemService');
 var Settings = require('../service/SettingsService');
@@ -18,19 +21,19 @@ var answer = (res, promise) => promise
     utils.writeJson(res, response);
   });
 
-module.exports.getSettings = function getSettings (req, res) {
+module.exports.getSettings = function getSettings (req: AuthedRequest, res: Response) {
   answer(res, Settings.getSettings());
 };
 
-module.exports.updateSettings = function updateSettings (req, res) {
+module.exports.updateSettings = function updateSettings (req: AuthedRequest, res: Response) {
   answer(res, Settings.updateSettings(req.swagger.params['changes'].value, req.user));
 };
 
-module.exports.listJobs = function listJobs (req, res) {
+module.exports.listJobs = function listJobs (req: AuthedRequest, res: Response) {
   answer(res, scheduler.status());
 };
 
-module.exports.runJob = function runJob (req, res) {
+module.exports.runJob = function runJob (req: AuthedRequest, res: Response) {
   var name = req.swagger.params['name'].value;
   if (!scheduler.has(name)) {
     utils.writeJson(res, { code: 404, message: `there is no job named ${name}` }, 404);
@@ -45,23 +48,23 @@ module.exports.runJob = function runJob (req, res) {
   }));
 };
 
-module.exports.startReprocess = function startReprocess (req, res) {
+module.exports.startReprocess = function startReprocess (req: AuthedRequest, res: Response) {
   answer(res, Reprocess.start(req.swagger.params['request'].value, req.user).then(function (run) {
     return utils.respondWithCode(202, run);
   }));
 };
 
-module.exports.getReprocess = function getReprocess (req, res) {
+module.exports.getReprocess = function getReprocess (req: AuthedRequest, res: Response) {
   answer(res, Reprocess.status().then(function (run) {
     return run || utils.respondWithCode(404, { code: 404, message: 'history hasn’t been reprocessed since the server started' });
   }));
 };
 
-module.exports.getSystemInfo = function getSystemInfo (req, res) {
+module.exports.getSystemInfo = function getSystemInfo (req: AuthedRequest, res: Response) {
   utils.writeJson(res, System.info());
 };
 
-module.exports.factoryReset = function factoryReset (req, res) {
+module.exports.factoryReset = function factoryReset (req: AuthedRequest, res: Response) {
   System.factoryReset(req.user)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -71,7 +74,7 @@ module.exports.factoryReset = function factoryReset (req, res) {
     });
 };
 
-module.exports.restartServer = function restartServer (req, res) {
+module.exports.restartServer = function restartServer (req: AuthedRequest, res: Response) {
   System.restart(req.user)
     .then(function (response) {
       utils.writeJson(res, response);

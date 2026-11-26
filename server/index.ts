@@ -1,5 +1,8 @@
 'use strict';
 
+import type { Request, Response, NextFunction } from 'express';
+import type { AuthedRequest } from './types/domain';
+
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -17,7 +20,7 @@ const specPath = path.join(__dirname, 'api/openapi.yaml');
 const apiDoc = jsyaml.safeLoad(fs.readFileSync(specPath, 'utf8'));
 
 // resolves a parameter that refers to #/components/parameters
-var resolveParameter = (parameter) => {
+var resolveParameter = (parameter: any) => {
     if (!parameter.$ref) {
         return parameter;
     }
@@ -25,7 +28,7 @@ var resolveParameter = (parameter) => {
 };
 
 // controllers read their inputs as req.swagger.params[name].value, the validated and coerced values
-var operationParams = (req, operation) => {
+var operationParams = (req: AuthedRequest, operation: any) => {
     const sources = { path: req.openapi.pathParams, query: req.query, header: req.headers };
     const params: any = {};
     for (const parameter of (operation.parameters || []).map(resolveParameter)) {
@@ -40,7 +43,7 @@ var operationParams = (req, operation) => {
 
 // sends each validated request to the export named by its operationId in the controller module
 // named by x-swagger-router-controller
-var routeToController = (req, res, next) => {
+var routeToController = (req: AuthedRequest, res: Response, next: NextFunction) => {
     const operation = req.openapi && req.openapi.schema;
     if (!operation) {
         next();
@@ -57,7 +60,7 @@ var routeToController = (req, res, next) => {
 };
 
 // API errors are answered in the same { code, message } form the services use
-var sendError = (err, req, res, next) => {
+var sendError = (err: any, req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
         next(err);
         return;
@@ -67,7 +70,7 @@ var sendError = (err, req, res, next) => {
         logger.error(`REST ${req.method} ${req.originalUrl} failed:`, err);
     }
     for (const [name, value] of Object.entries(err.headers || {})) {
-        res.setHeader(name, value);
+        res.setHeader(name, value as string);
     }
     let message = err.message;
     if (code === 415) {
@@ -78,7 +81,7 @@ var sendError = (err, req, res, next) => {
     writeJson(res, { code, message }, code);
 };
 
-var initializeServer = (cb) => {
+var initializeServer = (cb: (app: any, server: any) => void) => {
     const app = express();
     app.disable('x-powered-by');
 
