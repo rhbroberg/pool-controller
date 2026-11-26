@@ -4,9 +4,10 @@
 // controller already has, so whether a task is on is read from those switches:
 //
 //   pool        spillover water flow with the filter pump running; off stops the filter pump
-//   spaPreheat  turns on the spa filter with the heater and heat pump, and is on while the spa
-//               filter runs with either of them; off stops the spa filter. It can be scheduled to be ready by a time, and then starts only as early as the
-//               spa needs to reach its setpoint by then
+//   spaPreheat  turns on the spa filter with the heater and heat pump, and turns the blower off
+//               so a prior spa party does not stay on; it is on while the spa filter runs with
+//               either heat source; off stops the spa filter. It can be scheduled to be ready by
+//               a time, and then starts only as early as the spa needs to reach its setpoint by then
 //   spaParty    a spa preheat with the blower, and the lights when it's dark; off stops the spa
 //               filter, blower and lights
 
@@ -230,7 +231,9 @@ var record = (user, task, on, extra) => {
 };
 
 var startPreheat = async (user) => {
-    await apply(preheatSteps(), user);
+    // the blower off first: spa party is preheat with the blower, so a prior party must not
+    // remain on when only a preheat was asked for
+    await apply([{ device: 'blower', on: false }, ...preheatSteps()], user);
 };
 
 /**
