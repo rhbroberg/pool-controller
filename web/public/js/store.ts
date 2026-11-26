@@ -3,6 +3,26 @@
 import { ApiError, isAbort, toReading } from './api.js';
 import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo, taskInfo, taskOn, scheduledPreheat } from './model.js';
 import * as prefs from './prefs.js';
+import type { ConnectionState, Credentials, Reading, SignInResult } from './types.js';
+import type { LiveConnection } from './live.js';
+
+/** production uses Client; tests pass plain fakes with the methods each case needs */
+export type StoreClient = {
+    fetchStatus(): Promise<Reading[]>;
+    fetchHeating(): Promise<any>;
+    fetchTasks(): Promise<any>;
+    fetchWeather(): Promise<any>;
+    setDevice(name: string, on: boolean, token: string): Promise<any>;
+    setWaterMode(mode: string, token: string): Promise<any>;
+    setTask(task: string, on: boolean, readyAt: Date | string | null | undefined, token: string): Promise<any>;
+    setSetpoint(degrees: number, device: string, body: string, token: string): Promise<any>;
+    signIn(email: string, password: string): Promise<SignInResult>;
+    signInWithTicket(ticket: string): Promise<SignInResult>;
+    changeCredentials(name: string, password: string, token: string): Promise<SignInResult>;
+    fetchAccount(token: string): Promise<{ email: string; role: string; methods?: string[] }>;
+    signOut(token: string): Promise<any>;
+    [key: string]: any;
+};
 
 export const REFRESH_SECONDS = 15;
 // while live updates arrive, polling only catches anything they missed
@@ -22,7 +42,7 @@ const LIVE_CONFIRMATION_POLLS = 5;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // what's kept of a sign-in: methods lists password and the services the account signs in with
-const signedInAs = (result: any) => ({
+const signedInAs = (result: SignInResult): Credentials => ({
     email: result.email,
     token: result.token,
     role: result.role || null,
@@ -30,42 +50,49 @@ const signedInAs = (result: any) => ({
 });
 
 export class StatusStore {
-    client: any;
-    readings: any[];
+    client: StoreClient;
+    readings: Reading[];
     heating: any;
     weather: any;
     tasks: any;
-    pendingTasks: Record<string, any>;
+    pendingTasks: Record<string, boolean>;
     weatherCheckedAt: number;
     lastRefresh: Date | null;
     errorMessage: string | null;
     isLoading: boolean;
-    connection: string;
+    connection: ConnectionState;
     connectionFailure: string | null;
     nextAttempt: Date | null;
-    credentials: any;
+    credentials: Credentials | null;
     signInExpired: boolean;
-    commissioning: any;
-    pending: Record<string, any>;
+    commissioning: Credentials | null;
+    pending: Record<string, boolean>;
     pendingWaterMode: string | null;
     confirmedChanges: number;
     accountChecked: boolean;
-    listeners: Set<(store?: any) => void>;
+    listeners: Set<(store: StatusStore) => void>;
     notifyQueued: boolean;
     pollGeneration: number;
     wakePoll: (() => void) | null;
-    pollSleep: any;
+    pollSleep: ((ms: number) => Promise<void>) | null | undefined;
     confirmationPollMs: number;
     isLive: boolean;
-    live: any;
-    pushWaiters: Set<(pushed?: any) => void>;
+    live: Pick<LiveConnection, 'start' | 'stop'> & {
+        onEvent: LiveConnection['onEvent'] | null;
+        onStateChange: LiveConnection['onStateChange'] | null;
+    } | null;
+    pushWaiters: Set<(pushed?: boolean) => void>;
     pushesApplied: number;
     /**
      * live, a LiveConnection, pushes changes as the controller reports them; without it, or while
      * it can't reach the server, the store polls
      **/
-    constructor(client: any, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS, live = null }: { pollSleep?: any; confirmationPollMs?: number; live?: any } = {}) {
-        this.client = client;
+    constructor(client: StoreClient | object, { pollSleep, confirmationPollMs = CONFIRMATION_POLL_MS, live = null }: {
+        pollSleep?: StatusStore['pollSleep'];
+        confirmationPollMs?: number;
+        live?: StatusStore['live'];
+    } = {}) {
+        this.client = client as StoreClient;
         this.readings = [];
         // setpoints and what the heater and heat pump are doing; null from a server without them
         this.heating = null;
@@ -280,14 +307,14 @@ export class StatusStore {
     }
 
     /** replaces the readings the push carries, keeping the rest as they were */
-    applyReadings(pushed) {
+    applyReadings(pushed: Reading[]) {
         const byName = new Map(pushed.map((reading) => [reading.name, reading]));
         const readings = this.readings.map((reading) => {
             const replacement = byName.get(reading.name);
             byName.delete(reading.name);
             return replacement || reading;
         });
-        this.readings = readings.concat([...byName.values()]);
+        this.readings = readings.concat([...byName.values()] as Reading[]);
         this.lastRefresh = new Date();
         this.pushesApplied += 1;
         this.markConnected();
@@ -585,7 +612,7 @@ export class StatusStore {
      * turns a task on or off, then waits for the controller to report its switches; a spa
      * preheat with readyAt (a Date) may instead wait on the server until it must start
      **/
-    async setTask(task, on, readyAt: Date | string | null = null) {
+    async setTask(task: string, on: boolean, readyAt: Date | string | null = null) {
         if (!this.credentials) {
             this.errorMessage = new ApiError('unauthorized').message;
             this.changed();
@@ -686,7 +713,7 @@ export class StatusStore {
     async setSetpoints(setpoints, deviceId) {
         const credentials = this.requireCredentials();
         try {
-            for (const [body, degrees] of Object.entries(setpoints)) {
+            for (const [body, degrees] of Object.entries(setpoints as Record<string, number>)) {
                 const current = this.heating && this.heating.setpoints[body] ? this.heating.setpoints[body][deviceId] : undefined;
                 if (degrees !== current) {
                     await this.client.setSetpoint(degrees, deviceId, body, credentials.token);

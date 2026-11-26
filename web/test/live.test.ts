@@ -313,7 +313,7 @@ describe('status store with live updates', () => {
         (live as any).onEvent('readings', { readings: [{ name: 'filter', category: 'status', value: true, timestamp: '2026-01-02T04:00:00.000Z' },
             { name: 'lights', category: 'status', value: false, timestamp: '2026-01-02T04:00:00.000Z' }] });
         assert.deepEqual(store.readings.map((entry) => [entry.name, entry.value]), [['pool temp', 80], ['filter', 1], ['lights', 0]]);
-        assert.ok(store.reading('filter').timestamp instanceof Date);
+        assert.ok(store.reading('filter')!.timestamp instanceof Date);
         assert.equal(store.isOn(filter), true);
     });
 

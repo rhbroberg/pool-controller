@@ -140,7 +140,7 @@ describe('status store', () => {
         const store = newStore(fakeClient({ signIn: async () => ({ email: 'admin', token: 'setup', role: 'admin', mustChangeCredentials: true }) }));
         await store.signIn('admin', 'admin');
         assert.equal(store.credentials, null);
-        assert.equal(store.commissioning.token, 'setup');
+        assert.equal(store.commissioning!.token, 'setup');
         assert.equal(prefs.read('credentials', null), null);
 
         await store.commission('rick', 'poolpass');
@@ -271,7 +271,7 @@ describe('status store', () => {
             }
         });
         const store = newStore(client);
-        assert.equal(store.credentials.email, 'rick', 'a saved sign-in is used when the page opens');
+        assert.equal(store.credentials!.email, 'rick', 'a saved sign-in is used when the page opens');
 
         store.signOut({ endSession: true });
         assert.deepEqual(client.calls, [['signOut', 't']]);
