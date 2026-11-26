@@ -1,10 +1,11 @@
 'use strict';
-var mongoose = require('mongoose');
+
+import mongoose from 'mongoose';
 
 // one reading summarized over one bucket of time: hourly buckets on the UTC hour, daily ones on
 // the pool's local midnight. Values hold until they change, so the average is weighted by how
 // long each value was in effect, and knownMs is how much of the bucket had a value at all.
-var RollupSchema = new mongoose.Schema({
+const RollupSchema = new mongoose.Schema({
     name: String,
     // bucket length in seconds: 3600 or 86400
     res: Number,
@@ -24,6 +25,6 @@ var RollupSchema = new mongoose.Schema({
 // every history and availability query is a range of one name at one resolution
 RollupSchema.index({ name: 1, res: 1, start: 1 }, { name: 'name_res_start', unique: true });
 
-var Rollup = mongoose.model('rollups', RollupSchema);
+const Rollup = mongoose.model('rollups', RollupSchema);
 
-module.exports = { Rollup };
+export { Rollup };

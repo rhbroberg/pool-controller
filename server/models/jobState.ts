@@ -1,9 +1,10 @@
 'use strict';
-var mongoose = require('mongoose');
+
+import mongoose from 'mongoose';
 
 // one document per maintenance job: its lease, how its last run went, and whatever it keeps
 // between runs (such as how far rollups have got)
-var JobStateSchema = new mongoose.Schema({
+const JobStateSchema = new mongoose.Schema({
     _id: String,
     leaseOwner: String,
     leaseUntil: Date,
@@ -17,6 +18,6 @@ var JobStateSchema = new mongoose.Schema({
     data: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { minimize: false });
 
-var JobState = mongoose.model('jobs', JobStateSchema);
+const JobState = mongoose.model('jobs', JobStateSchema);
 
-module.exports = { JobState };
+export { JobState };

@@ -1,9 +1,10 @@
 'use strict';
-var mongoose = require('mongoose');
+
+import mongoose from 'mongoose';
 
 // One hour of weather at the pool's zip code, in °F, mph and inches. Each fetch overwrites the
 // hours it covers, so an hour forecast earlier becomes the one observed once it has passed.
-var WeatherHourSchema = new mongoose.Schema({
+const WeatherHourSchema = new mongoose.Schema({
     zipCode: String,
     // the start of the hour
     time: Date,
@@ -28,7 +29,7 @@ var WeatherHourSchema = new mongoose.Schema({
 WeatherHourSchema.index({ zipCode: 1, time: 1 }, { name: 'zip_time', unique: true });
 
 // one local day at the pool's zip code, in the server's time zone
-var WeatherDaySchema = new mongoose.Schema({
+const WeatherDaySchema = new mongoose.Schema({
     zipCode: String,
     // YYYY-MM-DD in the server's time zone
     date: String,
@@ -44,7 +45,7 @@ var WeatherDaySchema = new mongoose.Schema({
 
 WeatherDaySchema.index({ zipCode: 1, date: 1 }, { name: 'zip_date', unique: true });
 
-var WeatherHour = mongoose.model('weatherhours', WeatherHourSchema);
-var WeatherDay = mongoose.model('weatherdays', WeatherDaySchema);
+const WeatherHour = mongoose.model('weatherhours', WeatherHourSchema);
+const WeatherDay = mongoose.model('weatherdays', WeatherDaySchema);
 
-module.exports = { WeatherHour, WeatherDay };
+export { WeatherHour, WeatherDay };

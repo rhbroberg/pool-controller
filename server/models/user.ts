@@ -1,9 +1,9 @@
-// @ts-nocheck
-const crypto = require('crypto');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const _ = require('lodash');
-const bcrypt = require('bcryptjs');
+import crypto from 'crypto';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import _ from 'lodash';
+import bcrypt from 'bcryptjs';
+import type { UserRole, OAuthScope } from '../types/domain';
 
 // a fresh or factory-reset server has only this account, and it must be renamed and given a
 // new password before it can change anything
@@ -11,8 +11,8 @@ const DEFAULT_ADMIN_NAME = 'admin';
 const DEFAULT_ADMIN_PASSWORD = 'admin';
 
 // each role holds every OAuth2 scope of the roles before it
-const ROLES = ['viewer', 'user', 'admin'];
-const ROLE_SCOPES = {
+const ROLES: UserRole[] = ['viewer', 'user', 'admin'];
+const ROLE_SCOPES: Record<UserRole, OAuthScope[]> = {
     viewer: ['account'],
     user: ['account', 'control'],
     admin: ['account', 'control', 'admin']
@@ -30,7 +30,7 @@ var UserSchema = new mongoose.Schema({
     // an account that signs in only through an external service has none
     password: {
         type: String,
-        required: function() {
+        required: function(this: { identities?: unknown[] }) {
             return !this.identities || this.identities.length === 0;
         },
         minlength: 6
@@ -87,7 +87,13 @@ UserSchema.methods.signInMethods = function() {
 
 // the account as the API reports it, without secrets
 UserSchema.methods.describe = function() {
-    const described = {
+    const described: {
+        email: string;
+        role: string;
+        mustChangeCredentials: boolean;
+        methods: string[];
+        displayName?: string;
+    } = {
         email: this.email,
         role: this.role,
         mustChangeCredentials: this.mustChangeCredentials,
@@ -99,11 +105,11 @@ UserSchema.methods.describe = function() {
     return described;
 };
 
-UserSchema.statics.findByIdentity = function(provider, subject) {
+UserSchema.statics.findByIdentity = function(provider: string, subject: string) {
     return this.findOne({ identities: { $elemMatch: { provider, subject } } });
 };
 
-UserSchema.methods.hasScope = function(scope) {
+UserSchema.methods.hasScope = function(scope: string) {
     return (ROLE_SCOPES[this.role] || []).includes(scope);
 };
 
@@ -112,7 +118,7 @@ UserSchema.methods.generateAuthToken = function() {
     var access = 'auth';
     // the random id keeps two sign-ins in the same second from sharing a token, so signing one
     // out leaves the other signed in
-    var token = jwt.sign({ _id: user._id.toHexString(), access, jti: crypto.randomUUID() }, process.env.JWT_SECRET).toString();
+    var token = jwt.sign({ _id: user._id.toHexString(), access, jti: crypto.randomUUID() }, process.env.JWT_SECRET as string).toString();
 
     user.tokens = user.tokens.concat({ access, token });
     return user.save().then(() => {
@@ -120,7 +126,7 @@ UserSchema.methods.generateAuthToken = function() {
     });
 };
 
-UserSchema.methods.removeToken = function(token) {
+UserSchema.methods.removeToken = function(token: string) {
     var user = this;
 
     return user.updateOne({
@@ -130,12 +136,12 @@ UserSchema.methods.removeToken = function(token) {
     });
 };
 
-UserSchema.statics.findByToken = function(token) {
+UserSchema.statics.findByToken = function(token: string) {
     var User = this;
     var decoded;
 
     try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { _id: string };
     } catch {
         return Promise.reject();
     }
@@ -147,7 +153,7 @@ UserSchema.statics.findByToken = function(token) {
     });
 };
 
-UserSchema.statics.findByCredentials = function(email, password) {
+UserSchema.statics.findByCredentials = function(email: string, password: string) {
     var User = this;
 
     return User.findOne({ email }).then((user) => {
@@ -207,4 +213,4 @@ UserSchema.pre('save', function(next) {
 
 var User = mongoose.model('User', UserSchema);
 
-module.exports = { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES, ROLE_SCOPES };
+export { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES, ROLE_SCOPES };

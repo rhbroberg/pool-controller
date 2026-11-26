@@ -1,8 +1,9 @@
 'use strict';
-var mongoose = require('mongoose');
+
+import mongoose from 'mongoose';
 
 // where the pool is, found from the zip code an admin gave, so weather can be fetched for it
-var LocationSchema = new mongoose.Schema({
+const LocationSchema = new mongoose.Schema({
     zipCode: String,
     countryCode: String,
     latitude: Number,
@@ -12,7 +13,7 @@ var LocationSchema = new mongoose.Schema({
 }, { _id: false });
 
 // the server's own settings, one document
-var SettingSchema = new mongoose.Schema({
+const SettingSchema = new mongoose.Schema({
     _id: String,
     // null follows the time zone detected from the host
     timeZone: { type: String, default: null },
@@ -34,6 +35,6 @@ var SettingSchema = new mongoose.Schema({
     scheduledPreheat: { type: mongoose.Schema.Types.Mixed, default: null }
 });
 
-var Setting = mongoose.model('settings', SettingSchema);
+const Setting = mongoose.model('settings', SettingSchema);
 
-module.exports = { Setting };
+export { Setting };

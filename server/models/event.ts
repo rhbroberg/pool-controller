@@ -1,9 +1,10 @@
 'use strict';
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
 
-var EventSchema = new Schema({
+import mongoose from 'mongoose';
 
+const Schema = mongoose.Schema;
+
+const EventSchema = new Schema({
     _id: mongoose.Schema.Types.ObjectId,
     raw: Buffer,
     timestamp: {
@@ -34,6 +35,7 @@ EventSchema.index({ eventType: 1, timestamp: -1 }, { name: 'eventType_timestamp'
 EventSchema.index({ timestamp: 1 }, { name: 'timestamp' });
 // one account's actions, newest first, without walking past the controller's own events
 EventSchema.index({ user: 1, timestamp: -1 }, { name: 'user_timestamp', sparse: true });
-var Event = mongoose.model('events', EventSchema);
 
-module.exports = { Event };
+const Event = mongoose.model('events', EventSchema);
+
+export { Event };
