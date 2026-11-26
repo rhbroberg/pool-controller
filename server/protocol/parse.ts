@@ -1,8 +1,8 @@
-// @ts-nocheck
 'use strict';
-const log4js = require('log4js');
 
-var logger = log4js.getLogger();
+import log4js from 'log4js';
+
+const logger = log4js.getLogger();
 
 const DLE = 0x10;
 const STX = 0x02;
@@ -10,11 +10,13 @@ const ETX = 0x03;
 // longer than any frame the controller sends; a lost end marker can't run past it
 const MAX_FRAME = 256;
 
+export type FrameReceiver = (frame: Buffer, length: number, wire?: Buffer) => void;
+
 /**
  * a frame as it goes on the bus: inside the body a 0x10 is sent as 10 00, so only 10 02 and
  * 10 03 mark a frame's start and end. The checksum covers the bytes before this escaping.
  **/
-var stuff = (frame) => {
+const stuff = (frame: Buffer | number[]): Buffer => {
     const out = [frame[0], frame[1]];
     for (let i = 2; i < frame.length - 2; i++) {
         out.push(frame[i]);
@@ -26,38 +28,46 @@ var stuff = (frame) => {
     return Buffer.from(out);
 };
 
+type ParseState = 'begin' | 'header' | 'body' | 'alternate_header' | 'alternate_body' | 'alternate_footer';
+
 class FrameParser {
-    [key: string]: any;
+    state: ParseState;
+    start: number;
+    bufferIndex: number;
+    wireIndex: number;
+    // the last byte was a 0x10 that hasn't been matched with what follows it yet
+    escaped: boolean;
+    subParser?: (received: FrameReceiver, thisByte: number, i: number) => void;
+    parseErrors: number;
+    payload: Buffer;
+    wire: Buffer;
 
     constructor() {
         this.state = 'begin';
         this.start = 0;
         this.bufferIndex = 0;
         this.wireIndex = 0;
-        // the last byte was a 0x10 that hasn't been matched with what follows it yet
         this.escaped = false;
-        this.subParser;
+        this.subParser = undefined;
         this.parseErrors = 0;
 
         this.payload = Buffer.allocUnsafe(MAX_FRAME);
         this.wire = Buffer.allocUnsafe(MAX_FRAME * 2);
     }
 
-    toHexString() {
-        var readable;
+    toHexString(): string {
+        let readable = '';
 
-        for (var i = 0; i < this.bufferIndex; i++) {
-            if (!readable) {
-                readable = '';
-            } else {
+        for (let i = 0; i < this.bufferIndex; i++) {
+            if (readable) {
                 readable += ' ';
             }
-            readable += this.payload[i].toString(16).padStart(2, 0);
+            readable += this.payload[i].toString(16).padStart(2, '0');
         }
         return readable;
     }
 
-    append(thisByte) {
+    append(thisByte: number): boolean {
         if (this.bufferIndex >= MAX_FRAME) {
             logger.error(`frame longer than ${MAX_FRAME} bytes; dropping it`);
             this.state = 'begin';
@@ -72,7 +82,7 @@ class FrameParser {
      * hands received the frame with the bus's escaping undone, its length, and the bytes as they
      * arrived, which is what gets stored
      **/
-    parseRegular(received, thisByte, i) {
+    parseRegular(received: FrameReceiver, thisByte: number, i: number): void {
         if (this.state === 'header') {
             if ((thisByte === STX) && (this.payload.readUInt8(0) == DLE)) {
                 this.state = 'body';
@@ -104,16 +114,15 @@ class FrameParser {
             if (this.append(thisByte) && thisByte === DLE) {
                 this.escaped = true;
             }
-        }
-        else {
+        } else {
             logger.error(`parse error: state ${this.state}, byte ${thisByte.toString(16)}, index ${i} `);
-            logger.error(this.toHexString(this.payload, this.bufferIndex));
+            logger.error(this.toHexString());
             this.state = 'begin';
             this.parseErrors++;
         }
     }
 
-    parseMotorTelemetry(received, thisByte) {
+    parseMotorTelemetry(received: FrameReceiver, thisByte: number): void {
         if (this.state === 'alternate_header') {
             if (thisByte === 0x18) {
                 this.state = 'alternate_body';
@@ -134,15 +143,15 @@ class FrameParser {
         }
     }
 
-    parse(hunk, received) {
-        for (var i = 0; i < hunk.length; i++) {
-            let thisByte = hunk[i];
+    parse(hunk: Buffer | Uint8Array, received: FrameReceiver): void {
+        for (let i = 0; i < hunk.length; i++) {
+            const thisByte = hunk[i];
             logger.trace('byte: ', thisByte.toString(16));
             if (this.state === 'begin') {
                 if (thisByte === DLE) {
                     this.state = 'header';
                     this.start = i;
-                    this.subParser = this.parseRegular;
+                    this.subParser = this.parseRegular.bind(this);
                     this.bufferIndex = 0;
                     this.wireIndex = 0;
                     this.escaped = false;
@@ -155,22 +164,21 @@ class FrameParser {
                     //   this.subParser = this.parseMotorTelemetry;
                 }
             } else {
-                this.subParser(received, thisByte, i);
+                this.subParser!(received, thisByte, i);
             }
         }
     }
-
 }
 
 /**
  * the frames in bytes as they came off the bus, such as an event's stored raw: each as
  * { frame, wire }, with the escaping undone in frame
  **/
-var framesIn = (bytes) => {
+const framesIn = (bytes: Buffer): { frame: Buffer; wire?: Buffer }[] => {
     const parser = new FrameParser();
-    const frames = [];
-    parser.parse(bytes, (frame, length, wire) => frames.push({ frame: Buffer.from(frame), wire }));
+    const frames: { frame: Buffer; wire?: Buffer }[] = [];
+    parser.parse(bytes, (frame, _length, wire) => frames.push({ frame: Buffer.from(frame), wire }));
     return frames;
 };
 
-module.exports = { FrameParser, stuff, framesIn };
+export { FrameParser, stuff, framesIn };

@@ -14,18 +14,20 @@ const statusMap = [
 ];
 
 class TwoWayMap {
-    [key: string]: any;
-    constructor(map) {
+    map: Record<string, string>;
+    reverseMap: Record<string, string>;
+
+    constructor(map: Record<string, string>) {
         this.map = map;
         this.reverseMap = {};
-        for (var key in map) {
-            var value = map[key];
+        for (const key in map) {
+            const value = map[key];
             this.reverseMap[value] = key;
         }
     }
 
-    fromIndex(key) { return this.map[key]; }
-    fromName(key) { return this.reverseMap[key]; }
+    fromIndex(key: string | number): string | undefined { return this.map[String(key)]; }
+    fromName(key: string): string | undefined { return this.reverseMap[key]; }
 }
 
 const controlMap = new TwoWayMap({
@@ -82,8 +84,12 @@ const panelLabels = {
 };
 
 class Event {
-    [key: string]: any;
-    constructor(frame, header) {
+    now: number;
+    validMsb: number | undefined;
+    validLsb: number | undefined;
+    frame: Buffer;
+
+    constructor(frame: Buffer | undefined | null, header: number[]) {
         this.now = moment().valueOf();
         this.validMsb = header[0];
         this.validLsb = header[1];
@@ -100,7 +106,7 @@ class Event {
         }
     }
 
-    verifyEventType(msb, lsb) {
+    verifyEventType(msb: number | undefined, lsb: number | undefined): void {
         const isValid = ((typeof msb === 'undefined' || this.frame.readUInt8(2) === msb) &&
             (typeof lsb === 'undefined' || this.frame.readUInt8(3) == lsb)) ? true : false;
         if (!isValid) {
@@ -110,14 +116,13 @@ class Event {
         }
     }
 
-    toHexString() {
-        return this.frame.toHexString();
+    toHexString(): string {
+        return (this.frame as Buffer & { toHexString(): string }).toHexString();
     }
 }
 
 class ChecksummedEvent extends Event {
-    [key: string]: any;
-    constructor(frame, header) {
+    constructor(frame: Buffer | undefined | null, header: number[]) {
         super(frame, header);
 
         // only verify instances with valid starting data
@@ -128,7 +133,7 @@ class ChecksummedEvent extends Event {
         }
     }
 
-    verifyChecksum() {
+    verifyChecksum(): boolean {
         const msb = this.frame.readUInt8(this.frame.length - 4);
         const lsb = this.frame.readUInt8(this.frame.length - 3);
         const messageChecksum = msb * 256 + lsb;
@@ -144,7 +149,7 @@ class ChecksummedEvent extends Event {
         return true;
     }
 
-    computeChecksum(length?: number) {
+    computeChecksum(length?: number): number {
         var checksum = 0;
         const size = length ? length : this.frame.length - 2;
 
@@ -155,7 +160,7 @@ class ChecksummedEvent extends Event {
         return checksum;
     }
 
-    freeze(newLength) {
+    freeze(newLength: number): void {
         var resizedBuf = this.frame.slice(0, newLength + 2);
         this.frame = resizedBuf;
         const checksum = this.computeChecksum(); // don't checksum trailing stanza
@@ -171,21 +176,24 @@ class ChecksummedEvent extends Event {
         this.frame = resizedBuf;
     }
 
-    prettyBits(wantsOn) {
+    // StatusEvent and ControlEvent implement this
+    bitsToName?(cb: (name: string, isOn: boolean) => void): void;
+
+    prettyBits(wantsOn: boolean | number): string {
         let msg = '';
 
-        this.bitsToName((name, isOn) => {
-            if (wantsOn === isOn) {
+        this.bitsToName!((name, isOn) => {
+            if (Boolean(wantsOn) === isOn) {
                 msg += `'${name}' `;
             }
         });
         return msg;
     }
 
-    enabledSwitches() {
-        let enabled = [];
+    enabledSwitches(): string[] {
+        const enabled: string[] = [];
 
-        this.bitsToName((name, isOn) => {
+        this.bitsToName!((name, isOn) => {
             if (isOn) {
                 enabled.push(name);
             }
@@ -193,10 +201,10 @@ class ChecksummedEvent extends Event {
         return enabled;
     }
 
-    disabledSwitches() {
-        let disabled = [];
+    disabledSwitches(): string[] {
+        const disabled: string[] = [];
 
-        this.bitsToName((name, isOn) => {
+        this.bitsToName!((name, isOn) => {
             if (!isOn) {
                 disabled.push(name);
             }
@@ -204,55 +212,53 @@ class ChecksummedEvent extends Event {
         return disabled;
     }
 
-    bitToInt(byte, mask) {
+    bitToInt(byte: number, mask: number): number {
         return byte & mask ? 1 : 0;
     }
 }
 
 // 10 02 01 01 ckmsb cklsb
 class PingEvent extends Event {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, PingEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x01, 0x01];
     }
 }
 
 class UnidentifiedPingEvent extends ChecksummedEvent {
-    [key: string]: any;
-    constructor(frame) {
+    secondByte: number;
+
+    constructor(frame?: Buffer) {
         super(frame, UnidentifiedPingEvent.header());
 
         this.secondByte = this.frame.readUInt8(3);
     }
 
-    static header() {
+    static header(): number[] {
         return [0x04];
     }
 }
 
 class UnidentifiedStatusEvent extends ChecksummedEvent {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, UnidentifiedStatusEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x00, 0x04];
     }
 }
 
 // 10 02 01 02 ... ckmsg cklsb
 class StatusEvent extends ChecksummedEvent {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, StatusEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x01, 0x02];
     }
 
@@ -324,10 +330,11 @@ class StatusEvent extends ChecksummedEvent {
 
 // the readings the panel and the wireless remote show as text
 class TextDisplayEvent extends ChecksummedEvent {
-    [key: string]: any;
-    constructor(frame, header) {
+    text: string;
+
+    constructor(frame: Buffer | undefined | null, header: number[]) {
         super(frame, header);
-        this.text = frame.toString('ascii', 4);
+        this.text = frame ? frame.toString('ascii', 4) : '';
     }
 
     clearText() {
@@ -403,12 +410,11 @@ class TextDisplayEvent extends ChecksummedEvent {
 
 // 10 02 01 03 .... ckmsb cklsb
 class DisplayUpdateEvent extends TextDisplayEvent {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, DisplayUpdateEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x01, 0x03];
     }
 }
@@ -416,12 +422,11 @@ class DisplayUpdateEvent extends TextDisplayEvent {
 // 10 02 04 0a .... ckmsb cklsb: what the wireless remote shows. A few bytes the remote uses for
 // its own lights come before the text, which carries the same readings as the panel's
 class WirelessDisplayEvent extends TextDisplayEvent {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, WirelessDisplayEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x04, 0x0a];
     }
 }
@@ -430,12 +435,11 @@ class WirelessDisplayEvent extends TextDisplayEvent {
 // dox said  0x83, 0x01 but i find 0x00 0x8c
 // 0x8c wireless, 0x03 keypad, 0x02 panel
 class ControlEvent extends ChecksummedEvent {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, ControlEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0x00, 0x8c];
     }
 
@@ -506,8 +510,8 @@ class ControlEvent extends ChecksummedEvent {
     toggleControlsAlternate(toToggle) {
         // first build the mask from each bit location
         var mask = 0;
-        toToggle.forEach((s) => {
-            const bitPosition = controlMap.fromName(s);
+        toToggle.forEach((s: string) => {
+            const bitPosition = Number(controlMap.fromName(s));
             mask |= (0x01 << bitPosition);
         });
 
@@ -551,12 +555,11 @@ class ControlEvent extends ChecksummedEvent {
 
 // e0 18 80 e6 18 9e e0 1e 80
 class MotorTelemetryEvent extends Event {
-    [key: string]: any;
-    constructor(frame) {
+    constructor(frame?: Buffer) {
         super(frame, MotorTelemetryEvent.header());
     }
 
-    static header() {
+    static header(): number[] {
         return [0xe0, 0x18];
     }
 }
@@ -588,4 +591,4 @@ Waterfall
 
 */
 
-module.exports = { PingEvent, DisplayUpdateEvent, WirelessDisplayEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels, statusMap };
+export { PingEvent, DisplayUpdateEvent, WirelessDisplayEvent, StatusEvent, MotorTelemetryEvent, ControlEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent, panelLabels, statusMap };

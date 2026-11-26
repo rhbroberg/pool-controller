@@ -1,9 +1,22 @@
 'use strict';
-const { PingEvent, StatusEvent, DisplayUpdateEvent, WirelessDisplayEvent, ControlEvent, MotorTelemetryEvent, UnidentifiedPingEvent, UnidentifiedStatusEvent } = require('./events');
+
+import {
+    PingEvent,
+    StatusEvent,
+    DisplayUpdateEvent,
+    WirelessDisplayEvent,
+    ControlEvent,
+    MotorTelemetryEvent,
+    UnidentifiedPingEvent,
+    UnidentifiedStatusEvent
+} from './events';
+
+type EventCreator = (buf: Buffer) => unknown;
 
 // move the code from .register in each class to the constructor here instead
 class EventFactory {
-    [key: string]: any;
+    twoByteEvents: Record<string, EventCreator>;
+    oneByteEvents: Record<string, EventCreator>;
 
     constructor() {
         this.twoByteEvents = {};
@@ -12,7 +25,7 @@ class EventFactory {
         this.registerAll();
     }
 
-    registerAll() {
+    registerAll(): void {
         this.registerEvent(PingEvent.header(), ((buf) => { return new PingEvent(buf); }));
         this.registerEvent(DisplayUpdateEvent.header(), ((buf) => { return new DisplayUpdateEvent(buf); }));
         this.registerEvent(WirelessDisplayEvent.header(), ((buf) => { return new WirelessDisplayEvent(buf); }));
@@ -23,7 +36,7 @@ class EventFactory {
         this.registerEvent(MotorTelemetryEvent.header(), ((buf) => { return new MotorTelemetryEvent(buf); }));
     }
 
-    registerEvent(header, creator) {
+    registerEvent(header: number[], creator: EventCreator): void {
         if (typeof header[1] != 'undefined') {
             const key = `${header[0]}, ${header[1]}`;
             this.twoByteEvents[key] = creator;
@@ -33,21 +46,21 @@ class EventFactory {
         }
     }
 
-    create(buf) {
+    create(buf: Buffer): unknown {
         const msb = buf.readUInt8(2);
         const lsb = buf.readUInt8(3);
         let event = this.twoByteEvents[`${msb}, ${lsb}`];
 
         if (event) {
             return event(buf);
-        } else {
-            // try the one-byte events
-            event = this.oneByteEvents[`${msb}`];
-            if (event) {
-                return event(buf);
-            }
         }
+        // try the one-byte events
+        event = this.oneByteEvents[`${msb}`];
+        if (event) {
+            return event(buf);
+        }
+        return undefined;
     }
 }
 
-module.exports = { EventFactory };
+export { EventFactory };

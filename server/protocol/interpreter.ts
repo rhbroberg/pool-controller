@@ -1,10 +1,27 @@
-// @ts-nocheck
 'use strict';
 // What the server stores for each frame from the controller. Readings and switches are stored only
 // when they change, so what a frame means depends on the frames before it; this keeps that state.
 // The live controller and reprocessing of stored history share it, so both store the same things.
 
-const { StatusEvent } = require('./events');
+import { StatusEvent } from './events';
+
+export interface StatusEntry {
+    name: string;
+    value: number;
+}
+
+export interface InterpretedEvent {
+    eventType: string;
+    status: StatusEntry[];
+    message?: string;
+    diffs?: { nowEnabled: string[]; nowDisabled: string[] };
+}
+
+export interface InterpreterSeed {
+    readings?: Record<string, number>;
+    switchesOn?: string[];
+    heaterAuto?: number;
+}
 
 // the readings the display shows; the pool, spa and air start unknown rather than absent
 const READINGS = { poolTemp: 'pool temp', spaTemp: 'spa temp', salt: 'salt', ambientTemp: 'ambient' };
@@ -13,33 +30,50 @@ const HEATER_MODE = 'heater1 mode';
 // stored with the panel's words as the event's message; the panel cycles between the reasons for
 // one fault, so each is stored once until the check system switch goes off
 const CHECK_SYSTEM_REASON = 'check system reason';
-const CHECK_SYSTEM_BIT = StatusEvent.bitPosition('check system');
+const CHECK_SYSTEM_BIT = StatusEvent.bitPosition('check system')!;
 
-var isTextDisplay = (event) => event && typeof event.getPoolTemp === 'function' && typeof event.getHeater1Mode === 'function';
+interface TextDisplayLike {
+    getPoolTemp(): string | undefined;
+    getSpaTemp(): string | undefined;
+    getSaltPPM(): string | undefined;
+    getAmbientTemp(): string | undefined;
+    getHeater1Mode(): string | undefined;
+    getCheckSystem(): string | undefined;
+}
+
+const isTextDisplay = (event: unknown): event is TextDisplayLike =>
+    !!event && typeof (event as TextDisplayLike).getPoolTemp === 'function'
+    && typeof (event as TextDisplayLike).getHeater1Mode === 'function';
 
 class FrameInterpreter {
-    [key: string]: any;
+    present: Record<string, number>;
+    previous: Record<string, number>;
+    statusMask: number;
+    enabledSwitches: string[];
+    // 1 for auto, 0 for off, undefined until the panel displays the heater line
+    heaterAuto: number | undefined;
+    reasons: string[];
+
     constructor() {
         this.reset();
     }
 
     /** forgets what has been seen, so the next frames are stored as new history */
-    reset() {
+    reset(): void {
         this.present = { 'pool temp': UNKNOWN, 'spa temp': UNKNOWN, 'ambient': UNKNOWN };
         this.previous = { 'pool temp': UNKNOWN, 'spa temp': UNKNOWN, 'ambient': UNKNOWN };
         this.statusMask = 0;
         this.enabledSwitches = [];
-        // 1 for auto, 0 for off, undefined until the panel displays the heater line
         this.heaterAuto = undefined;
         this.reasons = [];
     }
 
-    isCheckSystemOn() {
+    isCheckSystemOn(): boolean {
         return ((this.statusMask >> CHECK_SYSTEM_BIT) & 0x01) === 1;
     }
 
     /** what the panel has said is wrong since the check system switch went on, in order */
-    checkSystemReasons() {
+    checkSystemReasons(): string[] {
         return this.reasons.slice();
     }
 
@@ -47,7 +81,7 @@ class FrameInterpreter {
      * starts from what history last recorded: readings by name, the switches that were on, and
      * the heater's mode
      **/
-    seed({ readings = {}, switchesOn = [], heaterAuto } = {}) {
+    seed({ readings = {}, switchesOn = [], heaterAuto }: InterpreterSeed = {}): void {
         this.reset();
         Object.entries(readings).forEach(([name, value]) => {
             if (typeof value === 'number') {
@@ -66,7 +100,7 @@ class FrameInterpreter {
     // a one-degree bounce back to the reading before is the sensor flickering, not a change.
     // leave present alone on a bounce: updating it to the bounce made 50→51→50→51 keep
     // storing every other reading, so the value twitched forever around one degree
-    addIfChanged(changes, text, name) {
+    addIfChanged(changes: StatusEntry[], text: string | undefined, name: string): void {
         if (!text) {
             return;
         }
@@ -89,13 +123,13 @@ class FrameInterpreter {
      * nothing. A status frame also says which switches went on and off; a new reason for checking
      * the system comes with its words as message
      **/
-    interpret(event) {
+    interpret(event: unknown): InterpretedEvent | null {
         if (isTextDisplay(event)) {
-            const changes = [];
+            const changes: StatusEntry[] = [];
             const reason = event.getCheckSystem();
             const isNewReason = typeof reason !== 'undefined' && this.isCheckSystemOn() && !this.reasons.includes(reason);
             if (isNewReason) {
-                this.reasons.push(reason);
+                this.reasons.push(reason!);
                 changes.push({ name: CHECK_SYSTEM_REASON, value: 1 });
             }
             const heaterMode = event.getHeater1Mode();
@@ -125,12 +159,12 @@ class FrameInterpreter {
             if (diffs.nowEnabled.length === 0 && diffs.nowDisabled.length === 0) {
                 return null;
             }
-            const status = diffs.nowEnabled.map((name) => ({ name, value: 1 }))
-                .concat(diffs.nowDisabled.map((name) => ({ name, value: 0 })));
+            const status = diffs.nowEnabled.map((name: string) => ({ name, value: 1 }))
+                .concat(diffs.nowDisabled.map((name: string) => ({ name, value: 0 })));
             return { eventType: 'status', status, diffs };
         }
-        if (event && event.constructor.name === 'ControlEvent') {
-            const pressed = event.enabledSwitches();
+        if (event && (event as { constructor?: { name?: string } }).constructor?.name === 'ControlEvent') {
+            const pressed = (event as StatusEvent).enabledSwitches();
             return pressed.length ? { eventType: 'control', status: pressed.map((name) => ({ name, value: 1 })) } : null;
         }
         return null;
@@ -139,7 +173,7 @@ class FrameInterpreter {
     /**
      * follows an event already stored as it is, as if this had decided to store it
      **/
-    adopt(eventType, status, message) {
+    adopt(eventType: string, status: StatusEntry[] | undefined, message?: string): void {
         for (const entry of status || []) {
             if (typeof entry.value !== 'number') {
                 continue;
@@ -166,4 +200,4 @@ class FrameInterpreter {
     }
 }
 
-module.exports = { FrameInterpreter, isTextDisplay, HEATER_MODE, CHECK_SYSTEM_REASON };
+export { FrameInterpreter, isTextDisplay, HEATER_MODE, CHECK_SYSTEM_REASON };
