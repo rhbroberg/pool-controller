@@ -51,17 +51,17 @@ var listeners = [];
 var ticker;
 var clock = () => Date.now();
 
-exports.registerStateSource = function(source) {
+export function registerStateSource(source) {
     stateSource = source;
 };
 
 /** for the tests: a clock other than the real one */
-exports.useClock = function(now) {
+export function useClock(now) {
     clock = now || (() => Date.now());
 };
 
 /** listener() runs when a scheduled preheat is set, cancelled or started */
-exports.onChange = function(listener) {
+export function onChange(listener) {
     listeners.push(listener);
 };
 
@@ -76,14 +76,14 @@ var who = (user) => user && user.email ? user.email : 'unknown user';
  * reads a preheat scheduled before a restart, and checks every minute whether it's time to start
  * one; run at startup and after a factory reset
  **/
-exports.load = async function() {
+export async function load() {
     const doc = await Setting.findById(SETTINGS_ID).lean();
     scheduled = doc && doc.scheduledPreheat && doc.scheduledPreheat.readyAt ? doc.scheduledPreheat : null;
     if (scheduled) {
         logger.info(`a spa preheat is scheduled to be ready at ${new Date(scheduled.readyAt).toISOString()}`);
     }
     if (!ticker) {
-        ticker = setInterval(() => exports.tick().catch((e) => logger.error(`scheduled preheat: ${e.message}`)), tickMs());
+        ticker = setInterval(() => tick().catch((e) => logger.error(`scheduled preheat: ${e.message}`)), tickMs());
         ticker.unref();
     }
 };
@@ -183,7 +183,7 @@ var scheduleView = async () => {
  *
  * returns Tasks
  **/
-exports.getTasks = async function() {
+export async function getTasks() {
     const on = states();
     return {
         pool: { on: on.pool },
@@ -241,11 +241,11 @@ var startPreheat = async (user) => {
  *
  * returns Tasks
  **/
-exports.setPool = async function(on, user) {
+export async function setPool(on, user) {
     record(user, 'pool', on);
     // the pump first, so the water flows as soon as the valves turn
     await apply(on ? [{ device: 'filter', on: true }, { mode: 'spillover' }] : [{ device: 'filter', on: false }], user);
-    return exports.getTasks();
+    return getTasks();
 };
 
 /**
@@ -253,14 +253,14 @@ exports.setPool = async function(on, user) {
  *
  * returns Tasks
  **/
-exports.setSpaPreheat = async function(on, readyAt, user) {
+export async function setSpaPreheat(on, readyAt, user) {
     if (!on) {
         record(user, 'spaPreheat', false, scheduled ? '(and its schedule)' : undefined);
         if (scheduled) {
             await saveSchedule(null);
         }
         await apply([{ device: 'spaFilter', on: false }], user);
-        return exports.getTasks();
+        return getTasks();
     }
     if (readyAt !== undefined && readyAt !== null) {
         const ready = new Date(readyAt).getTime();
@@ -271,7 +271,7 @@ exports.setSpaPreheat = async function(on, readyAt, user) {
         if (!states().spaPreheat && ready - lead.minutes * MINUTE_MS > clock()) {
             record(user, 'spaPreheat', true, `to be ready at ${new Date(ready).toISOString()}`);
             await saveSchedule({ readyAt: new Date(ready), requestedBy: who(user) });
-            return exports.getTasks();
+            return getTasks();
         }
     }
     record(user, 'spaPreheat', true);
@@ -279,7 +279,7 @@ exports.setSpaPreheat = async function(on, readyAt, user) {
         await saveSchedule(null);
     }
     await startPreheat(user);
-    return exports.getTasks();
+    return getTasks();
 };
 
 /**
@@ -288,7 +288,7 @@ exports.setSpaPreheat = async function(on, readyAt, user) {
  *
  * returns Tasks
  **/
-exports.setSpaParty = async function(on, user) {
+export async function setSpaParty(on, user) {
     record(user, 'spaParty', on);
     if (on) {
         if (scheduled) {
@@ -302,13 +302,13 @@ exports.setSpaParty = async function(on, user) {
     } else {
         await apply([{ device: 'spaFilter', on: false }, { device: 'blower', on: false }, { device: 'lights', on: false }], user);
     }
-    return exports.getTasks();
+    return getTasks();
 };
 
 /**
  * starts a scheduled preheat once the spa needs all the time left to reach its setpoint
  **/
-exports.tick = async function() {
+export async function tick() {
     if (!scheduled) {
         return;
     }
@@ -331,4 +331,4 @@ exports.tick = async function() {
 };
 
 /** which task names PUT /tasks/{task} takes */
-exports.TASKS = TASKS;
+export { TASKS };

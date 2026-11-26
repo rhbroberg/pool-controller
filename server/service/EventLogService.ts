@@ -84,7 +84,7 @@ var decodeCursor = (cursor) => {
  * limit Integer (optional)
  * returns EventPage
  **/
-exports.getEvents = async function(types, user, cursor, order, limit) {
+export async function getEvents(types, user, cursor, order, limit) {
     const wanted = types && types.length ? types : TYPES;
     const unknown = wanted.filter((type) => !TYPES.includes(type));
     if (unknown.length) {
@@ -132,7 +132,7 @@ exports.getEvents = async function(types, user, cursor, order, limit) {
  *
  * returns List
  **/
-exports.getEventUsers = async function() {
+export async function getEventUsers() {
     const users = await Event.distinct('user', { user: { $exists: true } });
     return users.sort((a, b) => a.localeCompare(b));
 };

@@ -161,7 +161,7 @@ var earliestReading = async (oldestRaw) => {
  *
  * returns History
  **/
-exports.getHistory = async function(names, fromText, toText, maxPoints, resolution) {
+export async function getHistory(names, fromText, toText, maxPoints, resolution) {
     const requested = (names || []).map((name) => name.trim()).filter((name) => name.length > 0);
     if (requested.length === 0 || requested.length > MAX_NAMES) {
         throw badRequest(`ask for between 1 and ${MAX_NAMES} names`);
@@ -333,7 +333,7 @@ var earliestGraphable = async (names, timeZone, dayWatermark) => {
  *
  * returns HistoryAvailability
  **/
-exports.getAvailability = async function(fromText, toText, names) {
+export async function getAvailability(fromText, toText, names) {
     const requested = availabilityNames(names);
     const to = parseDate(toText, new Date(), 'to');
     const from = parseDate(fromText, new Date(to.getTime() - 366 * tz.DAY_MS), 'from');
@@ -408,5 +408,5 @@ exports.getAvailability = async function(fromText, toText, names) {
     };
 };
 
-exports.RESOLUTIONS = RESOLUTIONS;
-exports.chooseResolution = chooseResolution;
+export { RESOLUTIONS };
+export { chooseResolution };

@@ -45,11 +45,11 @@ var stateSource = () => ({ enabled: {} as Record<string, any>, temperatures: {} 
  *
  * store  { reachesController, get(body, device), set(body, device, degrees) }
  **/
-exports.registerSetpoints = function(store) {
+export function registerSetpoints(store) {
     setpoints = store;
 };
 
-exports.registerStateSource = function(source) {
+export function registerStateSource(source) {
     stateSource = source;
 };
 
@@ -66,7 +66,7 @@ var settleMs = () => {
 /**
  * to be told when the switches change, so the moment a pump starts is known
  **/
-exports.stateChanged = function() {
+export function stateChanged() {
     const target = heating.targetBody(stateSource()) || null;
     if (targetSeen === undefined) {
         targetSeen = target;
@@ -194,7 +194,7 @@ var badRequest = (e) => utils.respondWithCode(400, { code: 400, message: e.messa
 /**
  * the setpoint `device` uses for `body`
  **/
-exports.setpoint = function(body, device) {
+export function setpoint(body, device) {
     return setpoints.get(body, device);
 };
 
@@ -203,8 +203,8 @@ exports.setpoint = function(body, device) {
  *
  * returns Heating
  **/
-exports.getHeating = async function() {
-    exports.stateChanged();
+export async function getHeating() {
+    stateChanged();
     const state = stateSource();
     const target = heating.targetBody(state);
     const devices: any = {};
@@ -239,7 +239,7 @@ exports.getHeating = async function() {
 /**
  * returns Setpoint
  **/
-exports.getSetpoint = async function(body, device) {
+export async function getSetpoint(body, device) {
     try {
         validate(body, device);
     } catch (e) {
@@ -251,7 +251,7 @@ exports.getSetpoint = async function(body, device) {
 /**
  * returns SetpointChange
  **/
-exports.setSetpoint = async function(body, device, degrees, user) {
+export async function setSetpoint(body, device, degrees, user) {
     const who = user && user.email ? user.email : 'unknown user';
     try {
         validate(body, device);

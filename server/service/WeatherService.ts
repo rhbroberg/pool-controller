@@ -18,7 +18,7 @@ const STALE_MS = 3 * HOUR_MS;
  *
  * returns { zipCode, hours, days }, or undefined when no zip code is set
  **/
-exports.refresh = async function() {
+export async function refresh() {
     const location = settings.location();
     if (!location) {
         return undefined;
@@ -64,7 +64,7 @@ var describeDay = (day: any) => day ? {
  *
  * returns Weather
  **/
-exports.getWeather = async function() {
+export async function getWeather() {
     const location = settings.location();
     if (!location) {
         return { configured: false, location: null, today: null, fetchedAt: null, stale: false };
@@ -84,7 +84,7 @@ exports.getWeather = async function() {
 /**
  * the conditions in the hour containing `time` at the zip code, or undefined if none were kept
  **/
-exports.conditionsAt = async function(time) {
+export async function conditionsAt(time) {
     const location = settings.location();
     if (!location) {
         return undefined;
@@ -96,7 +96,7 @@ exports.conditionsAt = async function(time) {
 /**
  * the hours kept from now through `hours` ahead, oldest first
  **/
-exports.forecast = async function(hours) {
+export async function forecast(hours) {
     const location = settings.location();
     if (!location) {
         return [];
@@ -111,7 +111,7 @@ exports.forecast = async function(hours) {
  *
  * returns how many hours and days were removed
  **/
-exports.removeBefore = async function(cutoff: Date, timeZone: string) {
+export async function removeBefore(cutoff: Date, timeZone: string) {
     const [hours, days] = await Promise.all([
         WeatherHour.deleteMany({ time: { $lt: cutoff } }),
         WeatherDay.deleteMany({ date: { $lt: tz.dayKey(cutoff.getTime(), timeZone) } })

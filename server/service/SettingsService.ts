@@ -8,7 +8,7 @@ var { Setting } = require('../models/setting');
 var utils = require('../utils/writer');
 const { isValidTimeZone } = require('../utils/timezone');
 const activity = require('./ActivityService');
-const heatingRules = require('../heating/rules');
+const heatingRuleBook = require('../heating/rules');
 const weatherProviders = require('./WeatherProviders');
 const log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -37,7 +37,7 @@ var stored: {
     rawRetentionDays: DEFAULT_RETENTION_DAYS,
     location: null,
     heatingEstimateDisplay: DEFAULT_ESTIMATE_DISPLAY,
-    heatingRules: heatingRules.complete(null),
+    heatingRules: heatingRuleBook.complete(null),
     preheatMarginMinutes: DEFAULT_PREHEAT_MARGIN_MINUTES
 };
 var detected: string | undefined;
@@ -81,7 +81,7 @@ var validationError = (message: string) => utils.respondWithCode(400, { code: 40
 /**
  * reads the stored settings; run at startup and after a factory reset
  **/
-exports.load = async function() {
+export async function load() {
     detected = detect();
     const doc = await Setting.findById(SETTINGS_ID).lean();
     stored = {
@@ -89,33 +89,33 @@ exports.load = async function() {
         rawRetentionDays: doc && doc.rawRetentionDays ? doc.rawRetentionDays : DEFAULT_RETENTION_DAYS,
         location: doc && doc.location && doc.location.zipCode ? doc.location : null,
         heatingEstimateDisplay: doc && ESTIMATE_DISPLAYS.includes(doc.heatingEstimateDisplay) ? doc.heatingEstimateDisplay : DEFAULT_ESTIMATE_DISPLAY,
-        heatingRules: heatingRules.complete(doc && doc.heatingRules),
+        heatingRules: heatingRuleBook.complete(doc && doc.heatingRules),
         preheatMarginMinutes: doc && Number.isInteger(doc.preheatMarginMinutes) ? doc.preheatMarginMinutes : DEFAULT_PREHEAT_MARGIN_MINUTES
     };
     const where = stored.location ? `weather for ${stored.location.placeName} (${stored.location.zipCode})` : 'no zip code for weather';
-    logger.info(`time zone ${exports.timeZone()} (${exports.timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
+    logger.info(`time zone ${timeZone()} (${timeZoneSource()}); raw history kept ${stored.rawRetentionDays} days; ${where}`);
 };
 
 /**
  * the zone calendar days follow: the configured one, otherwise the host's, otherwise UTC
  **/
-exports.timeZone = function() {
+export function timeZone() {
     return stored.timeZone || detected || 'UTC';
 };
 
-exports.timeZoneSource = function() {
+export function timeZoneSource() {
     if (stored.timeZone) {
         return 'configured';
     }
     return detected ? 'system' : 'default';
 };
 
-exports.rawRetentionDays = function() {
+export function rawRetentionDays() {
     return stored.rawRetentionDays;
 };
 
 /** 'remaining' (minutes until ready) or 'readyAt' (the time it will be ready) */
-exports.heatingEstimateDisplay = function() {
+export function heatingEstimateDisplay() {
     return stored.heatingEstimateDisplay;
 };
 
@@ -123,19 +123,19 @@ exports.heatingEstimateDisplay = function() {
  * how fast each heat source warms each body of water, in °F per hour, where history hasn't
  * taught the model: { pool: { heater, heatPump }, spa: { heater, heatPump } }
  **/
-exports.heatingRules = function() {
+export function heatingRules() {
     return stored.heatingRules;
 };
 
 /** minutes added to a scheduled preheat's lead time */
-exports.preheatMarginMinutes = function() {
+export function preheatMarginMinutes() {
     return stored.preheatMarginMinutes;
 };
 
 /**
  * where the pool is ({ zipCode, countryCode, latitude, longitude, placeName }), or null
  **/
-exports.location = function() {
+export function location() {
     return stored.location;
 };
 
@@ -176,17 +176,17 @@ var locate = async (zipCode) => {
  * listener(changes) runs after a change, with changes.timeZone set when the zone changed and
  * changes.location when the zip code did
  **/
-exports.onChange = function(listener: (changed?: Record<string, any>) => void) {
+export function onChange(listener: (changed?: Record<string, any>) => void) {
     listeners.push(listener);
 };
 
 /**
  * returns Settings
  **/
-exports.getSettings = async function() {
+export async function getSettings() {
     return {
-        timeZone: exports.timeZone(),
-        timeZoneSource: exports.timeZoneSource(),
+        timeZone: timeZone(),
+        timeZoneSource: timeZoneSource(),
         detectedTimeZone: detected || null,
         rawRetentionDays: stored.rawRetentionDays,
         minimumRetentionDays: MIN_RETENTION_DAYS,
@@ -204,7 +204,7 @@ exports.getSettings = async function() {
  *
  * returns Settings
  **/
-exports.updateSettings = async function(changes: Record<string, any>, user?: AuthUser | null) {
+export async function updateSettings(changes: Record<string, any>, user?: AuthUser | null) {
     const who = user && user.email ? user.email : 'unknown user';
     const update: any = {};
     if (Object.prototype.hasOwnProperty.call(changes || {}, 'timeZone')) {
@@ -231,7 +231,7 @@ exports.updateSettings = async function(changes: Record<string, any>, user?: Aut
         update.heatingEstimateDisplay = changes.heatingEstimateDisplay;
     }
     if (Object.prototype.hasOwnProperty.call(changes || {}, 'heatingRules')) {
-        const { valid, problem } = heatingRules.validate(changes.heatingRules);
+        const { valid, problem } = heatingRuleBook.validate(changes.heatingRules);
         if (problem) {
             throw validationError(problem);
         }
@@ -251,7 +251,7 @@ exports.updateSettings = async function(changes: Record<string, any>, user?: Aut
         throw validationError('give a timeZone, rawRetentionDays, zipCode, heatingEstimateDisplay, heatingRules or preheatMarginMinutes to change');
     }
 
-    const previousZone = exports.timeZone();
+    const previousZone = timeZone();
     const previousZip = stored.location ? stored.location.zipCode : null;
     const previousDisplay = stored.heatingEstimateDisplay;
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
@@ -259,8 +259,8 @@ exports.updateSettings = async function(changes: Record<string, any>, user?: Aut
 
     const notes = [];
     const changed: any = {};
-    if ('timeZone' in update && exports.timeZone() !== previousZone) {
-        changed.timeZone = exports.timeZone();
+    if ('timeZone' in update && timeZone() !== previousZone) {
+        changed.timeZone = timeZone();
         notes.push(`time zone ${previousZone} -> ${changed.timeZone}`);
     }
     if ('rawRetentionDays' in update) {
@@ -289,5 +289,5 @@ exports.updateSettings = async function(changes: Record<string, any>, user?: Aut
         activity.record(user, `Changed server settings: ${notes.join('; ')}`);
     }
     listeners.forEach((listener) => listener(changed));
-    return exports.getSettings();
+    return getSettings();
 };

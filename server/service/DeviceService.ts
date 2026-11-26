@@ -29,7 +29,7 @@ var describeDevice = (requested, device) => requested === device ? device : `${r
  * deviceId String 
  * no response value expected for this operation
  **/
-exports.getDeviceState = async function(requestedId) {
+export async function getDeviceState(requestedId) {
     const deviceId = resolveDevice(requestedId);
     var examples: any = {};
     var current;
@@ -74,7 +74,7 @@ exports.getDeviceState = async function(requestedId) {
  * limit Integer max number of records to return (optional)
  * returns List
  **/
-exports.getDevices = async function(skip, limit) { // eslint-disable-line no-unused-vars
+export async function getDevices(skip, limit) { // eslint-disable-line no-unused-vars
     var examples: any = {};
     var indicators = [];
 
@@ -98,7 +98,7 @@ exports.getDevices = async function(skip, limit) { // eslint-disable-line no-unu
  * deviceId String 
  * returns DeviceRegistrationInfo
  **/
-exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-vars
+export function registerDevice(deviceId) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -115,7 +115,7 @@ exports.registerDevice = function(deviceId) { // eslint-disable-line no-unused-v
 
 var controlCB;
 
-exports.registerControlListener = function(cb) {
+export function registerControlListener(cb) {
     controlCB = cb;
 };
 
@@ -127,7 +127,7 @@ exports.registerControlListener = function(cb) {
  **/
 var onOff = (isOn) => isOn ? 'on' : 'off';
 
-exports.setDeviceState = function(requestedId, state, user) {
+export function setDeviceState(requestedId, state, user) {
     return new Promise<any>(function(resolve, reject) {
         const deviceId = resolveDevice(requestedId);
         const label = describeDevice(requestedId, deviceId);

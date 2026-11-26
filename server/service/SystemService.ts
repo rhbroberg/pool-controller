@@ -18,7 +18,7 @@ const RESTART_DELAY_MS = 500;
 
 var resetListener = () => {};
 
-exports.registerResetListener = function(listener: () => void) {
+export function registerResetListener(listener: () => void) {
     resetListener = listener;
 };
 
@@ -35,14 +35,14 @@ const startedAt = new Date();
  *
  * returns SystemInfo
  **/
-exports.info = function() {
+export function info() {
     return { service: SERVICE_NAME, version, apiVersion, commit, startedAt };
 };
 
 /**
  * creates the default admin account if there are no accounts; run at startup
  **/
-exports.commissionIfEmpty = async function() {
+export async function commissionIfEmpty() {
     const upgraded = await User.assignLegacyRoles();
     if (upgraded > 0) {
         logger.warn(`gave the admin role to ${upgraded} account(s) created before roles existed`);
@@ -57,13 +57,13 @@ exports.commissionIfEmpty = async function() {
  *
  * returns ApiResponse
  **/
-exports.factoryReset = async function(user?: AuthUser | null) {
+export async function factoryReset(user?: AuthUser | null) {
     const who = nameOf(user);
     logger.warn(`REST ${who}: factory reset; erasing all history and accounts`);
     try {
         await mongoose.connection.dropDatabase();
         await Promise.all([Event, User, Rollup, Provider, AccessRequest, Invitation, WeatherHour, WeatherDay].map((model) => model.createIndexes()));
-        await exports.commissionIfEmpty();
+        await commissionIfEmpty();
     } catch (e) {
         logger.error(`factory reset failed: ${e}`);
         throw utils.respondWithCode(500, { code: 500, message: `factory reset failed: ${e.message}` });
@@ -79,7 +79,7 @@ exports.factoryReset = async function(user?: AuthUser | null) {
  *
  * returns ApiResponse
  **/
-exports.restart = async function(user?: AuthUser | null) {
+export async function restart(user?: AuthUser | null) {
     logger.warn(`REST ${nameOf(user)}: restart requested; exiting`);
     await activity.record(user, 'Restarted the server');
     setTimeout(() => {
