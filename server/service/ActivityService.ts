@@ -23,9 +23,9 @@ const fixedLabels = {
 /**
  * the name a person would use for a switch, button or reading
  **/
-exports.label = function(name: string): string {
+export function label(name: string): string {
     return (panelLabels as Record<string, string>)[name] || (fixedLabels as Record<string, string>)[name] || name.charAt(0).toUpperCase() + name.slice(1);
-};
+}
 
 /**
  * stores something a signed-in account did, for the event log; failures are logged, not thrown,
@@ -35,7 +35,7 @@ exports.label = function(name: string): string {
  * message   what happened, in a sentence
  * details   optional [{ name, value }] such as the device and requested state
  **/
-exports.record = async function(user: AuthUser | string | null | undefined, message: string, details?: { name: string; value: unknown }[]) {
+export async function record(user: AuthUser | string | null | undefined, message: string, details?: { name: string; value: unknown }[]) {
     const name = user && typeof user === 'object' && user.email ? user.email : user;
     try {
         await Event.create({
@@ -50,4 +50,4 @@ exports.record = async function(user: AuthUser | string | null | undefined, mess
     } catch (e) {
         logger.error(`could not record "${message}" for ${name}: ${e}`);
     }
-};
+}

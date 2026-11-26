@@ -1,17 +1,17 @@
 'use strict';
 
 import log4js from 'log4js';
-import type { AuthUser } from '../types/domain';
+import type { AuthUser, WaterMode } from '../types/domain';
+import { respondWithCode } from '../utils/writer';
+import * as activity from './ActivityService';
 
-const utils = require('../utils/writer');
-const activity = require('./ActivityService');
 const logger = log4js.getLogger();
 
 var modeListener: ((mode: string, who: string) => string) | undefined;
 
-exports.registerModeListener = function(listener: (mode: string, who: string) => string) {
+export function registerModeListener(listener: (mode: string, who: string) => string) {
     modeListener = listener;
-};
+}
 
 var title = (mode: string) => mode.charAt(0).toUpperCase() + mode.slice(1);
 
@@ -22,7 +22,7 @@ var title = (mode: string) => mode.charAt(0).toUpperCase() + mode.slice(1);
  * mode String
  * returns WaterMode
  **/
-exports.setWaterMode = function(mode: string, user?: AuthUser | null) {
+export function setWaterMode(mode: WaterMode | string, user?: AuthUser | null) {
     return new Promise(function(resolve, reject) {
         const who = user && user.email ? user.email : 'unknown user';
         let previous: string;
@@ -30,7 +30,7 @@ exports.setWaterMode = function(mode: string, user?: AuthUser | null) {
             previous = modeListener!(mode, who);
         } catch (e: any) {
             logger.warn(`REST ${who}: rejected water flow ${mode}: ${e.message}`);
-            reject(utils.respondWithCode(400, { code: 400, message: e.message }));
+            reject(respondWithCode(400, { code: 400, message: e.message }));
             return;
         }
 
@@ -45,4 +45,4 @@ exports.setWaterMode = function(mode: string, user?: AuthUser | null) {
         // spillover switches
         resolve({ mode: mode, previousMode: previous, requestedAt: new Date().toISOString() });
     });
-};
+}

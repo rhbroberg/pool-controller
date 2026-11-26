@@ -28,7 +28,7 @@ const timers: Partial<Record<PushName, NodeJS.Timeout | undefined>> = {};
  * io is the socket.io server; heating() and tasks() resolve with what GET /heating and
  * GET /tasks answer
  **/
-exports.attach = function(server: typeof io, { heating, tasks }: { heating?: SourceFn; tasks?: SourceFn } = {}) {
+export function attach(server: typeof io, { heating, tasks }: { heating?: SourceFn; tasks?: SourceFn } = {}) {
     io = server;
     if (heating) {
         sources.heating = heating;
@@ -36,16 +36,16 @@ exports.attach = function(server: typeof io, { heating, tasks }: { heating?: Sou
     if (tasks) {
         sources.tasks = tasks;
     }
-};
+}
 
-exports.readings = function(entries: unknown[]) {
+export function readings(entries: unknown[]) {
     if (!io || !entries || entries.length === 0) {
         return;
     }
     io.emit('readings', { readings: entries });
-    exports.heatingChanged();
-    exports.tasksChanged();
-};
+    heatingChanged();
+    tasksChanged();
+}
 
 // pushes `name` once, a moment after the first change asks for it
 const pushSoon = (name: PushName) => {
@@ -57,19 +57,19 @@ const pushSoon = (name: PushName) => {
         try {
             const body = await sources[name]();
             if (body) {
-                io.emit(name, body);
+                io!.emit(name, body);
             }
-        } catch (e) {
+        } catch (e: any) {
             logger.warn(`could not push ${name}: ${e.message}`);
         }
     }, HEATING_DELAY_MS);
-    timers[name].unref();
+    timers[name]!.unref();
 };
 
-exports.heatingChanged = function() {
+export function heatingChanged() {
     pushSoon('heating');
-};
+}
 
-exports.tasksChanged = function() {
+export function tasksChanged() {
     pushSoon('tasks');
-};
+}
