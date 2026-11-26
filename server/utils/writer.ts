@@ -1,7 +1,34 @@
 'use strict';
 
 import type { ServerResponse } from 'http';
+import type { ApiErrorBody } from '../types/domain';
 
+/**
+ * an HTTP error the API answers with { code, message }; controllers write its code and body
+ **/
+export class ApiError extends Error {
+    readonly code: number;
+
+    constructor(code: number, message: string) {
+        super(message);
+        this.name = 'ApiError';
+        this.code = code;
+    }
+
+    get body(): ApiErrorBody {
+        return { code: this.code, message: this.message };
+    }
+}
+
+/** builds an ApiError to throw (or return) for a failed request */
+export function fail(code: number, message: string): ApiError {
+    return new ApiError(code, message);
+}
+
+/**
+ * a non-200 success the OpenAPI handlers return, such as 202 Accepted; writeJson sends the
+ * payload with this status code
+ **/
 export class ResponsePayload {
     code: number;
     payload: unknown;
@@ -12,11 +39,25 @@ export class ResponsePayload {
     }
 }
 
-export function respondWithCode(code: number, payload: unknown): ResponsePayload {
+/**
+ * wraps a payload in a ResponsePayload for non-error statuses, or an ApiError when the payload
+ * is an { code, message } error body (the historical shape services throw)
+ **/
+export function respondWithCode(code: number, payload: unknown): ResponsePayload | ApiError {
+    if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        const body = payload as Record<string, unknown>;
+        if (typeof body.code === 'number' && typeof body.message === 'string' && code >= 400) {
+            return new ApiError(code, body.message);
+        }
+    }
     return new ResponsePayload(code, payload);
 }
 
 export function writeJson(response: ServerResponse, arg1?: unknown, arg2?: number): void {
+    if (arg1 instanceof ApiError) {
+        writeJson(response, arg1.body, arg1.code);
+        return;
+    }
     if (arg1 instanceof ResponsePayload) {
         writeJson(response, arg1.payload, arg1.code);
         return;

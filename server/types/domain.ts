@@ -40,9 +40,34 @@ export type WeatherCondition =
     | 'storm';
 
 /** account roles, each holding every OAuth2 scope of the roles before it */
-export type UserRole = 'viewer' | 'user' | 'admin';
+export const USER_ROLES = ['viewer', 'user', 'admin'] as const;
+export type UserRole = typeof USER_ROLES[number];
 
 export type OAuthScope = 'account' | 'control' | 'admin';
+
+/** everyday tasks the apps offer in place of single switches */
+export const TASKS = ['pool', 'spaPreheat', 'spaParty'] as const;
+export type TaskId = typeof TASKS[number];
+
+/** bodies of water the heaters drive toward */
+export const WATER_BODIES = ['pool', 'spa'] as const;
+export type WaterBody = typeof WATER_BODIES[number];
+
+/** heat sources with their own setpoints per body */
+export const HEAT_DEVICES = ['heater1', 'heatpump'] as const;
+export type HeatDevice = typeof HEAT_DEVICES[number];
+
+/** panel keys the wireless remote and REST API can press */
+export const PANEL_KEYS = ['menu', 'left', 'right', 'minus', 'plus'] as const;
+export type PanelKey = typeof PANEL_KEYS[number];
+
+/** water-flow modes the spillover key steps through */
+export const WATER_MODES = ['pool', 'spa', 'spillover'] as const;
+export type WaterMode = typeof WATER_MODES[number];
+
+/** kinds of heating-model windows */
+export const HEATING_SOURCES = ['heater', 'heatpump', 'both', 'cooling'] as const;
+export type HeatingSource = typeof HEATING_SOURCES[number];
 
 /** minimal user shape handlers attach to the request after authenticate */
 export interface AuthUser {
@@ -71,8 +96,17 @@ export interface AuthedRequest extends Request {
     };
 }
 
-/** API error body services throw via respondWithCode */
+/** API error body services throw via respondWithCode / ApiError */
 export interface ApiErrorBody {
     code: number;
     message: string;
+}
+
+/** typed swagger param lookup used by controllers */
+export function swaggerValue<T>(req: AuthedRequest, name: string): T {
+    const params = req.swagger?.params;
+    if (!params || !(name in params)) {
+        throw new Error(`missing swagger param ${name}`);
+    }
+    return params[name].value as T;
 }

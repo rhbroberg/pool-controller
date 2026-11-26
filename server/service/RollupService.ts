@@ -1,4 +1,6 @@
 'use strict';
+
+import { WATER_BODIES } from '../types/domain';
 // Summaries of readings over fixed buckets of time. Readings are stored only when they change,
 // so a value holds until the next one: each bucket's average is weighted by how long each value
 // was in effect, starting from the value carried in. The same math serves the rollups job,
@@ -17,7 +19,7 @@ const INFO_NAMES = ['pool temp', 'spa temp', 'ambient', 'salt', 'heater1 mode'];
 const WATER_NAMES = ['pool temp', 'spa temp', 'salt'];
 const CIRCULATION = ['filter', 'aux14', 'spa', 'spillover'];
 const HEAT_SOURCES = ['heater1', 'valve4'];
-const BODIES = ['pool', 'spa'];
+const BODIES = [...WATER_BODIES];
 // heating:<body>:<source> is 1 while that source was warming that body
 const HEATING_NAMES = BODIES.flatMap((body) => HEAT_SOURCES.map((source) => `heating:${body}:${source}`));
 // what the history graphs draw; anything else is bucketed from raw events while they last

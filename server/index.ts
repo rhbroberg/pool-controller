@@ -2,6 +2,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import type { AuthedRequest } from './types/domain';
+import { ApiError } from './utils/writer';
 
 const fs = require('fs');
 const path = require('path');
@@ -63,6 +64,10 @@ var routeToController = (req: AuthedRequest, res: Response, next: NextFunction) 
 var sendError = (err: any, req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
         next(err);
+        return;
+    }
+    if (err instanceof ApiError) {
+        writeJson(res, err.body, err.code);
         return;
     }
     const code = err.status || err.statusCode || 500;

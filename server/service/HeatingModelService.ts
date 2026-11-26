@@ -1,4 +1,6 @@
 'use strict';
+
+import { WATER_BODIES } from '../types/domain';
 // Learns how long each body of water takes to warm, from the history of what the pump, heater and
 // heat pump did and what the water and air temperatures did meanwhile.
 //
@@ -28,7 +30,7 @@ var logger = log4js.getLogger();
 
 // history from this time on was produced by the simulator, not a pool
 const SIMULATED_FROM = new Date('2026-01-01T00:00:00Z');
-const BODIES = ['pool', 'spa'];
+const BODIES = [...WATER_BODIES];
 const PROGRESS_EVERY = 5000;
 const KEEP_PREVIEWS = 5;
 const PREVIEW_LIFE_MS = 60 * 60 * 1000;

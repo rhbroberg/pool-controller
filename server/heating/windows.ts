@@ -11,6 +11,7 @@
 
 const sun = require('./sun');
 const heating = require('../protocol/heating');
+import { HEATING_SOURCES } from '../types/domain';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -37,7 +38,7 @@ const DEFAULTS = {
 };
 
 // what each window had running: the heater, the heat pump, both, or neither (the water cooling)
-const SOURCES = ['heater', 'heatpump', 'both', 'cooling'];
+const SOURCES = [...HEATING_SOURCES];
 
 const SWITCHES = ['filter', 'aux14', 'spa', 'spillover', 'heater1', 'valve4'];
 const SERIES = { pool: 'pool temp', spa: 'spa temp' };

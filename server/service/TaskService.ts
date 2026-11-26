@@ -1,4 +1,7 @@
 'use strict';
+
+import { TASKS } from '../types/domain';
+import type { TaskId, AuthUser, WaterMode } from '../types/domain';
 // The everyday jobs the apps offer in place of single switches. Each is a set of switches the
 // controller already has, so whether a task is on is read from those switches:
 //
@@ -40,7 +43,6 @@ const SPA_READING_FRESH_MS = 3 * HOUR_MS;
 // what the spa is assumed to be with no reading and no air temperature
 const UNKNOWN_SPA_F = 70;
 const SWITCHES = { filter: 'filter', spaFilter: 'aux14', heater: 'heater1', heatPump: 'valve4', blower: 'aux5', lights: 'lights' };
-const TASKS = ['pool', 'spaPreheat', 'spaParty'];
 const TITLES = { pool: 'Pool', spaPreheat: 'Spa Preheat', spaParty: 'Spa Party' };
 
 // { isOn(name), waterMode }

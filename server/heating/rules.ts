@@ -4,11 +4,12 @@
 // model is timed by its rules alone, with nothing lost to the air; a model that has no rate for
 // a source borrows that source's rule. A later model that learns the rate takes over from it.
 
-import type { HeatingBodyRules, HeatingRules } from '../types/domain';
+import { WATER_BODIES } from '../types/domain';
+import type { HeatingBodyRules, HeatingRules, WaterBody } from '../types/domain';
 
-const BODIES = ['pool', 'spa'] as const;
+const BODIES = WATER_BODIES;
 const SOURCES = ['heater', 'heatPump'] as const;
-type BodyId = typeof BODIES[number];
+type BodyId = WaterBody;
 type SourceId = typeof SOURCES[number];
 
 // rough figures for a residential pool and spa; an admin sets this installation's own

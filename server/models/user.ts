@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import _ from 'lodash';
 import bcrypt from 'bcryptjs';
+import { USER_ROLES } from '../types/domain';
 import type { UserRole, OAuthScope } from '../types/domain';
 
 // a fresh or factory-reset server has only this account, and it must be renamed and given a
@@ -11,7 +12,7 @@ const DEFAULT_ADMIN_NAME = 'admin';
 const DEFAULT_ADMIN_PASSWORD = 'admin';
 
 // each role holds every OAuth2 scope of the roles before it
-const ROLES: UserRole[] = ['viewer', 'user', 'admin'];
+const ROLES: UserRole[] = [...USER_ROLES];
 const ROLE_SCOPES: Record<UserRole, OAuthScope[]> = {
     viewer: ['account'],
     user: ['account', 'control'],

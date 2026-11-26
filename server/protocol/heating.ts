@@ -3,11 +3,13 @@
 // its own setpoint for the pool and for the spa, and drives toward the one for whichever body
 // the water is flowing through.
 
-export type WaterBody = 'pool' | 'spa';
-export type HeatDevice = 'heater1' | 'heatpump';
+import { WATER_BODIES, HEAT_DEVICES } from '../types/domain';
+import type { WaterBody, HeatDevice } from '../types/domain';
 
-const BODIES: WaterBody[] = ['pool', 'spa'];
-const DEVICES: HeatDevice[] = ['heater1', 'heatpump'];
+export type { WaterBody, HeatDevice };
+
+const BODIES: WaterBody[] = [...WATER_BODIES];
+const DEVICES: HeatDevice[] = [...HEAT_DEVICES];
 const SETPOINT_MIN_F = 65;
 const SETPOINT_MAX_F = 104;
 

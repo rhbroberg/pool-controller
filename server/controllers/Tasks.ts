@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { ApiError } from '../utils/writer';
 
 var utils = require('../utils/writer');
 var Tasks = require('../service/TaskService');
@@ -11,6 +12,10 @@ var answer = (res, promise) => promise
     utils.writeJson(res, response);
   })
   .catch(function (response) {
+    if (response instanceof ApiError) {
+      utils.writeJson(res, response.body, response.code);
+      return;
+    }
     if (response instanceof Error) {
       utils.writeJson(res, { code: 500, message: response.message }, 500);
       return;

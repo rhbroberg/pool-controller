@@ -6,24 +6,31 @@ const UNREACHABLE_HEADER = 'x-pool-web-unreachable';
 
 const capitalized = (text?: string | null) => text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 
+/** kind is unreachable, unauthorized (401) or server (any other failure the server reported) */
+export type ApiErrorKind = 'unreachable' | 'unauthorized' | 'server';
+
 /**
  * kind is unreachable (no answer from the pool server), unauthorized (401) or server (any other
  * failure the server reported)
  **/
 export class ApiError extends Error {
-    kind: string;
+    kind: ApiErrorKind;
     status?: number;
-    constructor(kind: string, { status, message }: { status?: number; message?: string } = {}) {
+    constructor(kind: ApiErrorKind, { status, message }: { status?: number; message?: string } = {}) {
         super(capitalized(message) || ApiError.defaultMessage(kind, status));
         this.kind = kind;
         this.status = status;
     }
 
-    static defaultMessage(kind: string, status?: number) {
+    static defaultMessage(kind: ApiErrorKind, status?: number) {
         switch (kind) {
         case 'unreachable': return 'The pool server isn’t answering.';
         case 'unauthorized': return 'Sign in to control equipment.';
-        default: return `The server returned HTTP ${status}.`;
+        case 'server': return `The server returned HTTP ${status}.`;
+        default: {
+            const _exhaustive: never = kind;
+            return _exhaustive;
+        }
         }
     }
 }

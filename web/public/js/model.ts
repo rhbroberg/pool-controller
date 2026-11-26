@@ -167,9 +167,11 @@ export const WATER_MODES = [
     { id: 'pool', title: 'Pool', summary: 'Water flows through the pool only.' },
     { id: 'spa', title: 'Spa', summary: 'Water flows through the spa only.' },
     { id: 'spillover', title: 'Spillover', summary: 'Pool water is pumped through the spa and spills back over into the pool.' }
-];
+] as const;
 
-export const waterModeInfo = (id) => WATER_MODES.find((mode) => mode.id === id) || null;
+export type WaterModeId = typeof WATER_MODES[number]['id'];
+
+export const waterModeInfo = (id: string) => WATER_MODES.find((mode) => mode.id === id) || null;
 
 /**
  * the everyday jobs offered in place of single switches, each on while the switches behind it
@@ -179,9 +181,11 @@ export const TASKS = [
     { id: 'pool', title: 'Pool', summary: 'Filter running, water in spillover', icon: 'waves', tint: 'blue' },
     { id: 'spaPreheat', title: 'Spa Preheat', summary: 'Spa filter, heater and heat pump', icon: 'thermometer', tint: 'orange' },
     { id: 'spaParty', title: 'Spa Party', summary: 'Spa preheat with the blower, and lights after dark', icon: 'bubbles', tint: 'pink' }
-];
+] as const;
 
-export const taskInfo = (id) => TASKS.find((task) => task.id === id) || null;
+export type TaskId = typeof TASKS[number]['id'];
+
+export const taskInfo = (id: string) => TASKS.find((task) => task.id === id) || null;
 
 /** whether `id` is on in GET /tasks's answer */
 export const taskOn = (tasks, id) => Boolean(tasks && tasks[id] && tasks[id].on);
