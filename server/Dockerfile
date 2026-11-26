@@ -21,4 +21,4 @@ ENV POOL_GIT_COMMIT=$POOL_GIT_COMMIT
 EXPOSE 3000
 
 # the image's entrypoint is node
-CMD [ "server.js", "-d", "serial", "-f", "/dev/ttyUSB0" ]
+CMD [ "--import", "tsx", "server.ts", "-d", "serial", "-f", "/dev/ttyUSB0" ]
