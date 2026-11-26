@@ -43,8 +43,38 @@ const SWITCHES = ['filter', 'aux14', 'spa', 'spillover', 'heater1', 'valve4'];
 const SERIES = { pool: 'pool temp', spa: 'spa temp' };
 const AIR = 'ambient';
 
+interface SeriesPoint { t: number; v: number; }
+
+interface WindowExtractorOptions {
+    settleMs?: number;
+    flickerMs?: number;
+    gapMs?: number;
+    maxWindowMs?: number;
+    minHeatingMs?: number;
+    minCoolingMs?: number;
+    minHeatingReadings?: number;
+    minCoolingReadings?: number;
+    maxScatterF?: number;
+    listMinMs?: number;
+    sun?: (ms: number) => number;
+}
+
+interface WindowExtractorInitial {
+    t?: number;
+    switches?: Record<string, number>;
+    readings?: Record<string, number>;
+}
+
+interface OpenSegment {
+    body: string;
+    heater: boolean;
+    pump: boolean;
+    start: number;
+    end?: number;
+}
+
 /** the newest value at or before t, or undefined */
-var valueAt = (series, t) => {
+const valueAt = (series: SeriesPoint[], t: number): number | undefined => {
     let low = 0;
     let high = series.length - 1;
     let found;
@@ -61,7 +91,7 @@ var valueAt = (series, t) => {
 };
 
 /** the index of the first point after t */
-var firstAfter = (series, t) => {
+const firstAfter = (series: SeriesPoint[], t: number): number => {
     let low = 0;
     let high = series.length;
     while (low < high) {
@@ -75,7 +105,7 @@ var firstAfter = (series, t) => {
     return low;
 };
 
-var pointsIn = (series, start, end) => {
+const pointsIn = (series: SeriesPoint[], start: number, end: number): SeriesPoint[] => {
     const points = [];
     for (let i = firstAfter(series, start); i < series.length && series[i].t <= end; i++) {
         points.push(series[i]);
@@ -87,7 +117,7 @@ var pointsIn = (series, start, end) => {
  * the average of a reading held between changes over start to end, or undefined when it wasn't
  * known for most of that
  **/
-var meanOver = (series, start, end) => {
+const meanOver = (series: SeriesPoint[], start: number, end: number): number | undefined => {
     let value = valueAt(series, start);
     let at = start;
     let known = 0;
@@ -112,7 +142,7 @@ var meanOver = (series, start, end) => {
  * far the points stray from it; the readings are whole degrees that change in steps, which a
  * median of slopes would call flat but a line through them follows
  **/
-var lineFit = (points, origin) => {
+const lineFit = (points: SeriesPoint[], origin: number) => {
     let used = points;
     if (used.length > 400) {
         const step = Math.ceil(used.length / 400);
@@ -133,7 +163,7 @@ var lineFit = (points, origin) => {
     return { slope, scatter };
 };
 
-var sourcesOf = (heater, pump) => {
+const sourcesOf = (heater: boolean, pump: boolean): string => {
     if (heater && pump) {
         return 'both';
     }
@@ -141,11 +171,19 @@ var sourcesOf = (heater, pump) => {
 };
 
 class WindowExtractor {
-    [key: string]: any;
+    options: typeof DEFAULTS & WindowExtractorOptions;
+    switches: Record<string, number>;
+    series: Record<string, SeriesPoint[]>;
+    segments: OpenSegment[];
+    open: OpenSegment | null;
+    last: number | undefined;
+    gaps: { from: number; to: number }[];
+    events: number;
+
     /**
      * initial  { t, switches: { name: 0|1 }, readings: { 'pool temp': °F, ... } } as the range opens
      **/
-    constructor(initial: any = {}, options: any = {}) {
+    constructor(initial: WindowExtractorInitial = {}, options: WindowExtractorOptions = {}) {
         this.options = Object.assign({}, DEFAULTS, options);
         this.switches = {};
         SWITCHES.forEach((name) => {
@@ -168,7 +206,7 @@ class WindowExtractor {
     /**
      * one stored event, in time order: { t, type: 'info' | 'status', status: [{ name, value }] }
      **/
-    push({ t, type, status }) {
+    push({ t, type, status }: { t: number; type: string; status?: { name: string; value: number }[] }) {
         if (typeof this.last === 'number' && t - this.last > this.options.gapMs) {
             this.gap(this.last, t);
         }
@@ -357,4 +395,4 @@ class WindowExtractor {
     }
 }
 
-module.exports = { WindowExtractor, SOURCES, DEFAULTS, valueAt, meanOver, lineFit, SWITCHES, SERIES, AIR };
+export { WindowExtractor, SOURCES, DEFAULTS, valueAt, meanOver, lineFit, SWITCHES, SERIES, AIR };

@@ -16,6 +16,18 @@
 // none may be negative: heat sources don't cool and the sun doesn't chill.
 
 const REFERENCE_AIR_F = 60;
+
+export type HeatSourceKind = 'heater' | 'heatpump' | 'both' | 'cooling';
+
+export interface FitWindow {
+    sources: HeatSourceKind | string;
+    hours: number;
+    airTemperature: number;
+    waterTemperature: number;
+    slope: number;
+    sun?: number;
+}
+
 const NAMES = ['heater', 'pumpBase', 'pumpSlope', 'loss', 'solar'];
 const COLUMNS = NAMES.length;
 // the sun needs windows from different parts of the day
@@ -33,10 +45,10 @@ const MIN_OUTLIER_F_PER_HOUR = 0.5;
 const MAX_WEIGHT_HOURS = 4;
 const MIN_SOURCE_F_PER_HOUR = 0.02;
 
-var usesHeater = (window) => window.sources === 'heater' || window.sources === 'both';
-var usesPump = (window) => window.sources === 'heatpump' || window.sources === 'both';
+const usesHeater = (window: FitWindow): boolean => window.sources === 'heater' || window.sources === 'both';
+const usesPump = (window: FitWindow): boolean => window.sources === 'heatpump' || window.sources === 'both';
 
-var row = (window) => {
+const row = (window: FitWindow): number[] => {
     const pump = usesPump(window) ? 1 : 0;
     return [
         usesHeater(window) ? 1 : 0,
@@ -48,21 +60,21 @@ var row = (window) => {
 };
 
 // longer windows give steadier slopes: a reading's quantization matters less over more hours
-var weight = (window) => Math.pow(Math.min(window.hours, MAX_WEIGHT_HOURS), 2);
+const weight = (window: FitWindow): number => Math.pow(Math.min(window.hours, MAX_WEIGHT_HOURS), 2);
 
-var median = (values) => {
+const median = (values: number[]): number => {
     const sorted = values.slice().sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
-var spread = (values) => {
+const spread = (values: number[]): number => {
     const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
     return Math.sqrt(values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length);
 };
 
 /** solves the square system in place by elimination; undefined when it's singular */
-var solve = (matrix, vector) => {
+const solve = (matrix: number[][], vector: number[]): number[] | undefined => {
     const n = vector.length;
     const a = matrix.map((line, index) => line.concat([vector[index]]));
     for (let column = 0; column < n; column++) {
@@ -99,7 +111,7 @@ var solve = (matrix, vector) => {
  * only four to choose from, every set of columns is tried and the best that stays non-negative
  * wins
  **/
-var nonNegativeFit = (rows, slopes, weights, allowed) => {
+const nonNegativeFit = (rows: number[][], slopes: number[], weights: number[], allowed: boolean[]): number[] => {
     let best = { error: Infinity, coefficients: new Array(COLUMNS).fill(0) };
     const error = (coefficients) => rows.reduce((sum, line, index) => {
         const predicted = line.reduce((total, value, column) => total + value * coefficients[column], 0);
@@ -131,7 +143,7 @@ var nonNegativeFit = (rows, slopes, weights, allowed) => {
     return best.coefficients;
 };
 
-var identifiable = (windows) => {
+const identifiable = (windows: FitWindow[]): boolean[] => {
     const withPump = windows.filter(usesPump);
     const airs = withPump.map((window) => window.airTemperature);
     const excess = windows.map((window) => window.waterTemperature - window.airTemperature);
@@ -144,7 +156,7 @@ var identifiable = (windows) => {
     ];
 };
 
-var fitOnce = (windows) => {
+const fitOnce = (windows: FitWindow[]) => {
     const rows = windows.map(row);
     const slopes = windows.map((window) => window.slope);
     const weights = windows.map(weight);
@@ -154,9 +166,9 @@ var fitOnce = (windows) => {
     return { coefficients, allowed, residuals, weights, slopes };
 };
 
-var range = (values) => values.length ? [Math.min(...values), Math.max(...values)] : null;
+const range = (values: number[]): [number, number] | null => values.length ? [Math.min(...values), Math.max(...values)] : null;
 
-var count = (windows, sources) => windows.filter((window) => window.sources === sources).length;
+const count = (windows: FitWindow[], sources: string): number => windows.filter((window) => window.sources === sources).length;
 
 /**
  * the model for one body from its windows (suitable ones, as measured by the extractor):
@@ -167,7 +179,7 @@ var count = (windows, sources) => windows.filter((window) => window.sources === 
  *   loss        per hour, the share of the water's excess over the air lost
  *   windows, outliers, rSquared, rmse (°F per hour), airRange, waterRange, notes
  **/
-var fitBody = (windows) => {
+const fitBody = (windows: FitWindow[]) => {
     if (windows.length < MIN_WINDOWS) {
         return { available: false, reason: `needs at least ${MIN_WINDOWS} windows; has ${windows.length}`, windows: counts(windows) };
     }
@@ -240,7 +252,7 @@ var fitBody = (windows) => {
     };
 };
 
-var counts = (windows) => ({
+const counts = (windows: FitWindow[]) => ({
     heater: count(windows, 'heater'),
     heatpump: count(windows, 'heatpump'),
     both: count(windows, 'both'),
@@ -248,4 +260,4 @@ var counts = (windows) => ({
     total: windows.length
 });
 
-module.exports = { fitBody, REFERENCE_AIR_F, MIN_WINDOWS, NAMES };
+export { fitBody, REFERENCE_AIR_F, MIN_WINDOWS, NAMES };
