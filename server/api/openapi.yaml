@@ -707,9 +707,10 @@ paths:
     put:
       tags:
         - Tasks
-      description: on turns on the spa filter, heater and heat pump, now or, given readyAt,
-        as late as the spa can still reach its setpoint by then; off stops the spa filter
-        and drops a scheduled preheat
+      description: on turns on the spa filter, heater and heat pump and turns the blower off
+        (so a prior spa party does not stay on), now or, given readyAt, as late as the spa
+        can still reach its setpoint by then; off stops the spa filter and drops a scheduled
+        preheat
       operationId: setSpaPreheatTask
       requestBody:
         content:

@@ -110,6 +110,20 @@ describe('tasks', () => {
         assert.equal((await tasks()).spaParty.on, false);
     });
 
+    it('turns the blower off when starting a spa preheat, so a prior spa party does not stay on', async () => {
+        assert.equal((await put('spaParty', { on: true })).status, 200);
+        await settle(async () => (await tasks()).spaParty.on, 'the spa party to be on');
+        await expectSwitch('aux5', true);
+
+        assert.equal((await put('spaPreheat', { on: true })).status, 200);
+        await settle(async () => (await tasks()).spaPreheat.on && !(await tasks()).spaParty.on,
+            'the spa preheat to be on without the spa party');
+        await expectSwitch('aux5', false);
+        await expectSwitch('aux14', true);
+
+        assert.equal((await put('spaPreheat', { on: false })).status, 200);
+        await expectSwitch('aux14', false);
+    });
 
     it('schedules a preheat to be ready by a time, starting only as early as it must', async () => {
         assert.equal((await api('PUT', '/system/settings', { token: admin, body: { heatingRules: { spa: { heater: 100, heatPump: 20 } }, preheatMarginMinutes: 0 } })).status, 200);
