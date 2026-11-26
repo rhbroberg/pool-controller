@@ -2,6 +2,7 @@
 
 import type { Response, NextFunction } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var ExternalAuth = require('../service/ExternalAuthService');
@@ -19,7 +20,7 @@ var redirect = (res, location) => {
     res.redirect(302, location);
 };
 
-var param = (req, name) => req.swagger.params[name].value;
+var param = <T = any>(req, name: string): T => swaggerValue<T>(req, name);
 
 module.exports.listProviders = function listProviders (req: AuthedRequest, res: Response) {
     respond(res, ExternalAuth.listProviders());

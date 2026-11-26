@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 import { ApiError } from '../utils/writer';
 
 var utils = require('../utils/writer');
@@ -28,16 +29,16 @@ module.exports.getTasks = function getTasks (req: AuthedRequest, res: Response) 
 };
 
 module.exports.setPoolTask = function setPoolTask (req: AuthedRequest, res: Response) {
-  const change = req.swagger.params['change'].value as { on: boolean };
+  const change = swaggerValue(req, 'change') as { on: boolean };
   answer(res, Tasks.setPool(change.on, req.user));
 };
 
 module.exports.setSpaPreheatTask = function setSpaPreheatTask (req: AuthedRequest, res: Response) {
-  const change = req.swagger.params['change'].value as { on: boolean; readyAt?: string };
+  const change = swaggerValue(req, 'change') as { on: boolean; readyAt?: string };
   answer(res, Tasks.setSpaPreheat(change.on, change.readyAt, req.user));
 };
 
 module.exports.setSpaPartyTask = function setSpaPartyTask (req: AuthedRequest, res: Response) {
-  const change = req.swagger.params['change'].value as { on: boolean };
+  const change = swaggerValue(req, 'change') as { on: boolean };
   answer(res, Tasks.setSpaParty(change.on, req.user));
 };

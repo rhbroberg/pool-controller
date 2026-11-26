@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var Panel = require('../service/PanelService');
@@ -17,7 +18,7 @@ module.exports.getPanelDisplay = function getPanelDisplay (req: AuthedRequest, r
 };
 
 module.exports.pressPanelKey = function pressPanelKey (req: AuthedRequest, res: Response) {
-  var key = req.swagger.params['key'].value;
+  var key = swaggerValue(req, 'key');
   Panel.pressPanelKey(key, req.user)
     .then(function (response) {
       utils.writeJson(res, response);

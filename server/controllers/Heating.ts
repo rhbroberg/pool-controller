@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 import { ApiError } from '../utils/writer';
 
 var utils = require('../utils/writer');
@@ -35,7 +36,7 @@ module.exports.getHeating = function getHeating (req: AuthedRequest, res: Respon
 };
 
 module.exports.getSetpoint = function getSetpoint (req: AuthedRequest, res: Response) {
-  Heating.getSetpoint(req.swagger.params['body'].value, req.swagger.params['device'].value)
+  Heating.getSetpoint(swaggerValue(req, 'body'), swaggerValue(req, 'device'))
     .then(function (response) {
       utils.writeJson(res, response);
     })
@@ -45,8 +46,8 @@ module.exports.getSetpoint = function getSetpoint (req: AuthedRequest, res: Resp
 };
 
 module.exports.setSetpoint = function setSetpoint (req: AuthedRequest, res: Response) {
-  Heating.setSetpoint(req.swagger.params['body'].value, req.swagger.params['device'].value,
-                      req.swagger.params['degrees'].value, req.user)
+  Heating.setSetpoint(swaggerValue(req, 'body'), swaggerValue(req, 'device'),
+                      swaggerValue(req, 'degrees'), req.user)
     .then(function (response) {
       utils.writeJson(res, response);
     })
@@ -60,11 +61,11 @@ module.exports.getHeatingModel = function getHeatingModel (req: AuthedRequest, r
 };
 
 module.exports.saveHeatingModel = function saveHeatingModel (req: AuthedRequest, res: Response) {
-  answer(res, HeatingModel.save(req.swagger.params['request'].value, req.user));
+  answer(res, HeatingModel.save(swaggerValue(req, 'request'), req.user));
 };
 
 module.exports.startHeatingScan = function startHeatingScan (req: AuthedRequest, res: Response) {
-  const body = req.swagger.params['request'] ? req.swagger.params['request'].value : undefined;
+  const body = (req.swagger.params['request'] ? swaggerValue(req, 'request') : undefined);
   answer(res, HeatingModel.startScan(body || {}, req.user).then(function (scan) {
     return utils.respondWithCode(202, scan);
   }));
@@ -81,5 +82,5 @@ module.exports.getHeatingWindows = function getHeatingWindows (req: AuthedReques
 };
 
 module.exports.previewHeatingModel = function previewHeatingModel (req: AuthedRequest, res: Response) {
-  answer(res, HeatingModel.preview(req.swagger.params['request'].value));
+  answer(res, HeatingModel.preview(swaggerValue(req, 'request')));
 };

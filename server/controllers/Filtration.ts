@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var Filtration = require('../service/FiltrationService');
@@ -17,7 +18,7 @@ module.exports.getFiltrationDevices = function getFiltrationDevices (req: Authed
 };
 
 module.exports.getFiltrationState = function getFiltrationState (req: AuthedRequest, res: Response) {
-  var pumpId = req.swagger.params['pumpId'].value;
+  var pumpId = swaggerValue(req, 'pumpId');
   Filtration.getFiltrationState(pumpId)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -28,8 +29,8 @@ module.exports.getFiltrationState = function getFiltrationState (req: AuthedRequ
 };
 
 module.exports.setFiltrationState = function setFiltrationState (req: AuthedRequest, res: Response) {
-  var pumpId = req.swagger.params['pumpId'].value;
-  var state = req.swagger.params['state'].value;
+  var pumpId = swaggerValue(req, 'pumpId');
+  var state = swaggerValue(req, 'state');
   Filtration.setFiltrationState(pumpId,state)
     .then(function (response) {
       utils.writeJson(res, response);

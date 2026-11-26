@@ -2,6 +2,7 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 import { ApiError } from '../utils/writer';
 
 var utils = require('../utils/writer');
@@ -31,7 +32,7 @@ module.exports.getSettings = function getSettings (req: AuthedRequest, res: Resp
 };
 
 module.exports.updateSettings = function updateSettings (req: AuthedRequest, res: Response) {
-  answer(res, Settings.updateSettings(req.swagger.params['changes'].value, req.user));
+  answer(res, Settings.updateSettings(swaggerValue(req, 'changes'), req.user));
 };
 
 module.exports.listJobs = function listJobs (req: AuthedRequest, res: Response) {
@@ -39,7 +40,7 @@ module.exports.listJobs = function listJobs (req: AuthedRequest, res: Response) 
 };
 
 module.exports.runJob = function runJob (req: AuthedRequest, res: Response) {
-  var name = req.swagger.params['name'].value;
+  var name = swaggerValue(req, 'name');
   if (!scheduler.has(name)) {
     utils.writeJson(res, { code: 404, message: `there is no job named ${name}` }, 404);
     return;
@@ -54,7 +55,7 @@ module.exports.runJob = function runJob (req: AuthedRequest, res: Response) {
 };
 
 module.exports.startReprocess = function startReprocess (req: AuthedRequest, res: Response) {
-  answer(res, Reprocess.start(req.swagger.params['request'].value, req.user).then(function (run) {
+  answer(res, Reprocess.start(swaggerValue(req, 'request'), req.user).then(function (run) {
     return utils.respondWithCode(202, run);
   }));
 };

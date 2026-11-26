@@ -2,12 +2,13 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var Device = require('../service/DeviceService');
 
 module.exports.getDeviceState = function getDeviceState (req: AuthedRequest, res: Response) {
-  var deviceId = req.swagger.params['deviceId'].value;
+  var deviceId = swaggerValue(req, 'deviceId');
   Device.getDeviceState(deviceId)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -18,8 +19,8 @@ module.exports.getDeviceState = function getDeviceState (req: AuthedRequest, res
 };
 
 module.exports.getDevices = function getDevices (req: AuthedRequest, res: Response) {
-  var skip = req.swagger.params['skip'].value;
-  var limit = req.swagger.params['limit'].value;
+  var skip = swaggerValue(req, 'skip');
+  var limit = swaggerValue(req, 'limit');
   Device.getDevices(skip,limit)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -30,7 +31,7 @@ module.exports.getDevices = function getDevices (req: AuthedRequest, res: Respon
 };
 
 module.exports.registerDevice = function registerDevice (req: AuthedRequest, res: Response) {
-  var deviceId = req.swagger.params['deviceId'].value;
+  var deviceId = swaggerValue(req, 'deviceId');
   Device.registerDevice(deviceId)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -41,8 +42,8 @@ module.exports.registerDevice = function registerDevice (req: AuthedRequest, res
 };
 
 module.exports.setDeviceState = function setDeviceState (req: AuthedRequest, res: Response) {
-  var deviceId = req.swagger.params['deviceId'].value;
-  var state = req.swagger.params['state'].value;
+  var deviceId = swaggerValue(req, 'deviceId');
+  var state = swaggerValue(req, 'state');
   Device.setDeviceState(deviceId, state, req.user)
     .then(function (response) {
       utils.writeJson(res, response);

@@ -2,16 +2,17 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var History = require('../service/HistoryService');
 
 module.exports.getHistory = function getHistory (req: AuthedRequest, res: Response) {
-  var names = req.swagger.params['names'].value;
-  var from = req.swagger.params['from'].value;
-  var to = req.swagger.params['to'].value;
-  var maxPoints = req.swagger.params['maxPoints'].value;
-  var resolution = req.swagger.params['resolution'].value;
+  var names = swaggerValue(req, 'names');
+  var from = swaggerValue(req, 'from');
+  var to = swaggerValue(req, 'to');
+  var maxPoints = swaggerValue(req, 'maxPoints');
+  var resolution = swaggerValue(req, 'resolution');
   History.getHistory(names, from, to, maxPoints, resolution)
     .then(function (response) {
       utils.writeJson(res, response);
@@ -22,7 +23,7 @@ module.exports.getHistory = function getHistory (req: AuthedRequest, res: Respon
 };
 
 module.exports.getHistoryAvailability = function getHistoryAvailability (req: AuthedRequest, res: Response) {
-  History.getAvailability(req.swagger.params['from'].value, req.swagger.params['to'].value, req.swagger.params['names'].value)
+  History.getAvailability(swaggerValue(req, 'from'), swaggerValue(req, 'to'), swaggerValue(req, 'names'))
     .then(function (response) {
       utils.writeJson(res, response);
     })

@@ -2,13 +2,13 @@
 
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
+import { swaggerValue } from '../types/domain';
 
 var utils = require('../utils/writer');
 var EventLog = require('../service/EventLogService');
 
 module.exports.getEvents = function getEvents (req: AuthedRequest, res: Response) {
-  var params = req.swagger.params;
-  EventLog.getEvents(params['types'].value, params['user'].value, params['cursor'].value, params['order'].value, params['limit'].value)
+  EventLog.getEvents(swaggerValue(req, 'types'), swaggerValue(req, 'user'), swaggerValue(req, 'cursor'), swaggerValue(req, 'order'), swaggerValue(req, 'limit'))
     .then(function (response) {
       utils.writeJson(res, response);
     })
