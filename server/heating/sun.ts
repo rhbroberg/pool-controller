@@ -9,29 +9,31 @@ const SUNRISE = 6.5;
 const SUNSET = 19.5;
 const SAMPLE_MS = 10 * 60 * 1000;
 
+export type SunAt = (ms: number) => number;
+
 /** the sun, 0 to 1, at a local hour (0 to 24) */
-var atLocalHour = (hour) => hour <= SUNRISE || hour >= SUNSET
+const atLocalHour = (hour: number): number => hour <= SUNRISE || hour >= SUNSET
     ? 0
     : Math.sin(Math.PI * (hour - SUNRISE) / (SUNSET - SUNRISE));
 
 /** a function giving the sun, 0 to 1, at a time in ms, for the wall clock of a time zone */
-var forTimeZone = (timeZone) => {
-    let format;
+const forTimeZone = (timeZone: string): SunAt => {
+    let format: Intl.DateTimeFormat;
     try {
         format = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', hour: 'numeric', minute: 'numeric' });
     } catch {
         format = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', hourCycle: 'h23', hour: 'numeric', minute: 'numeric' });
     }
-    return (ms) => {
+    return (ms: number): number => {
         const parts = format.formatToParts(new Date(ms));
-        const hour = Number(parts.find((part) => part.type === 'hour').value) % 24;
-        const minute = Number(parts.find((part) => part.type === 'minute').value);
+        const hour = Number(parts.find((part) => part.type === 'hour')!.value) % 24;
+        const minute = Number(parts.find((part) => part.type === 'minute')!.value);
         return atLocalHour(hour + minute / 60);
     };
 };
 
 /** the average sun over the span, sampled every ten minutes */
-var averageOver = (sun, startMs, endMs) => {
+const averageOver = (sun: SunAt, startMs: number, endMs: number): number => {
     const samples = Math.max(1, Math.ceil((endMs - startMs) / SAMPLE_MS));
     let total = 0;
     for (let i = 0; i < samples; i++) {
@@ -40,4 +42,4 @@ var averageOver = (sun, startMs, endMs) => {
     return total / samples;
 };
 
-module.exports = { forTimeZone, averageOver, atLocalHour, HOUR_MS };
+export { forTimeZone, averageOver, atLocalHour, HOUR_MS };

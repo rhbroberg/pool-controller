@@ -16,7 +16,9 @@
 // setpoint, then the rest. The sun fades toward evening, so the time is worked out again with
 // the sun averaged over the time it came to, until it settles.
 
-const { REFERENCE_AIR_F } = require('./fit');
+import type { HeatPumpRate } from './rules';
+
+const { REFERENCE_AIR_F } = require('./fit') as { REFERENCE_AIR_F: number };
 
 // a setpoint that would take longer than this isn't worth promising
 const LONGEST_HOURS = 72;
@@ -24,13 +26,35 @@ const STAGES = 4;
 const PASSES = 4;
 const CONVERGED_HOURS = 0.02;
 
-var heaterRate = (model) => typeof model.heater === 'number' ? model.heater : null;
+export interface HeatingModelRates {
+    heater?: number | null;
+    heatPump?: HeatPumpRate | null;
+    loss?: number;
+    solar?: number;
+}
 
-var pumpRate = (model, air) => model.heatPump
+export interface HeatSource {
+    name: 'heater1' | 'heatpump' | string;
+    setpoint: number;
+}
+
+export type SunHours = (hours?: number) => number;
+
+export type TimeToReachResult =
+    | { status: 'atSetpoint' }
+    | { status: 'ready'; hours: number; setpoint: number }
+    | { status: 'unreachable'; reachesAtMost: number; tooSlow?: boolean }
+    | { status: 'insufficientData'; missing: string };
+
+const heaterRate = (model: HeatingModelRates): number | null =>
+    typeof model.heater === 'number' ? model.heater : null;
+
+const pumpRate = (model: HeatingModelRates, air: number): number | null => model.heatPump
     ? Math.max(0, model.heatPump.base + model.heatPump.slope * (air - REFERENCE_AIR_F))
     : null;
 
-var sourceRate = (model, name, air) => name === 'heater1' ? heaterRate(model) : pumpRate(model, air);
+const sourceRate = (model: HeatingModelRates, name: string, air: number): number | null =>
+    name === 'heater1' ? heaterRate(model) : pumpRate(model, air);
 
 /**
  * how much each source warms the water at this air temperature, and what is lost, in °F per hour:
@@ -39,7 +63,22 @@ var sourceRate = (model, name, air) => name === 'heater1' ? heaterRate(model) : 
  *
  *   sun  0 to 1, how much sun is on the water now
  **/
-var currentRate = (model, { temperature, airTemperature, heater, heatPump, sun = 0 }) => {
+const currentRate = (
+    model: HeatingModelRates,
+    {
+        temperature,
+        airTemperature,
+        heater,
+        heatPump,
+        sun = 0
+    }: {
+        temperature: number;
+        airTemperature: number;
+        heater: boolean;
+        heatPump: boolean;
+        sun?: number;
+    }
+) => {
     const added = {
         heater: heater ? heaterRate(model) : 0,
         heatPump: heatPump ? pumpRate(model, airTemperature) : 0
@@ -55,18 +94,24 @@ var currentRate = (model, { temperature, airTemperature, heater, heatPump, sun =
     };
 };
 
-var onePass = (model, temperature, airTemperature, sources, sunnyness) => {
+const onePass = (
+    model: HeatingModelRates,
+    temperature: number,
+    airTemperature: number,
+    sources: HeatSource[],
+    sunnyness: number
+): TimeToReachResult => {
     const loss = model.loss || 0;
     const solar = (model.solar || 0) * sunnyness;
     let t = temperature;
     let hours = 0;
-    let reached;
+    let reached: number | undefined;
     for (let stage = 0; stage < STAGES; stage++) {
         const active = sources.filter((source) => source.setpoint > t);
         if (active.length === 0) {
             break;
         }
-        const added = active.reduce((sum, source) => sum + sourceRate(model, source.name, airTemperature), solar);
+        const added = active.reduce((sum, source) => sum + (sourceRate(model, source.name, airTemperature) || 0), solar);
         const target = Math.min(...active.map((source) => source.setpoint));
         const limit = loss > 0 ? airTemperature + added / loss : Infinity;
         if (added <= 0 || target >= limit - 0.05) {
@@ -96,7 +141,20 @@ var onePass = (model, temperature, airTemperature, sources, sunnyness) => {
  * the air is too cold for it, or { status: 'insufficientData', missing } when the model has
  * nothing for a source that is on
  **/
-var timeToReach = (model: any, { temperature, airTemperature, sources, sun = (_hours?: number) => 0 }: any) => {
+const timeToReach = (
+    model: HeatingModelRates,
+    {
+        temperature,
+        airTemperature,
+        sources,
+        sun = (_hours?: number) => 0
+    }: {
+        temperature: number;
+        airTemperature: number;
+        sources: HeatSource[];
+        sun?: SunHours;
+    }
+): TimeToReachResult => {
     const missing = sources.find((source) => sourceRate(model, source.name, airTemperature) === null);
     if (missing) {
         return { status: 'insufficientData', missing: missing.name };
@@ -104,7 +162,8 @@ var timeToReach = (model: any, { temperature, airTemperature, sources, sun = (_h
     let result = onePass(model, temperature, airTemperature, sources, sun(1));
     for (let pass = 1; pass < PASSES && result.status === 'ready'; pass++) {
         const next = onePass(model, temperature, airTemperature, sources, sun(Math.max(result.hours, 0.25)));
-        const settled = next.status === 'ready' && Math.abs(next.hours - result.hours) < CONVERGED_HOURS;
+        const settled = next.status === 'ready' && result.status === 'ready'
+            && Math.abs(next.hours - result.hours) < CONVERGED_HOURS;
         result = next;
         if (settled) {
             break;
@@ -113,4 +172,4 @@ var timeToReach = (model: any, { temperature, airTemperature, sources, sun = (_h
     return result;
 };
 
-module.exports = { timeToReach, currentRate, heaterRate, pumpRate, LONGEST_HOURS };
+export { timeToReach, currentRate, heaterRate, pumpRate, LONGEST_HOURS };

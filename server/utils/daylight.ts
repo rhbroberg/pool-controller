@@ -3,7 +3,9 @@
 // latitude and longitude (from the zip code an admin gave) this is the sun's real position;
 // without them it falls back to the same fixed day the heating model uses.
 
-const sun = require('../heating/sun');
+import type { GeoLocation } from '../types/domain';
+
+const sun = require('../heating/sun') as typeof import('../heating/sun');
 
 const RAD = Math.PI / 180;
 const DAY_MS = 86400 * 1000;
@@ -16,7 +18,7 @@ const SUNSET_ELEVATION = -0.833;
  * the sun's elevation in degrees at `ms` seen from latitude and longitude in degrees, from the
  * low-precision formulas of the Astronomical Almanac; good to a fraction of a degree
  **/
-var elevation = (ms, latitude, longitude) => {
+const elevation = (ms: number, latitude: number, longitude: number): number => {
     const days = (ms - J2000_MS) / DAY_MS;
     const meanAnomaly = (357.529 + 0.98560028 * days) * RAD;
     const meanLongitude = 280.459 + 0.98564736 * days;
@@ -34,11 +36,11 @@ var elevation = (ms, latitude, longitude) => {
  * true between sunset and sunrise at `location` ({ latitude, longitude }), or, without one, at
  * night on the fixed day for `timeZone`
  **/
-var isDark = (ms, location, timeZone) => {
+const isDark = (ms: number, location: GeoLocation | null | undefined, timeZone: string): boolean => {
     if (location && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
         return elevation(ms, location.latitude, location.longitude) < SUNSET_ELEVATION;
     }
     return sun.forTimeZone(timeZone)(ms) === 0;
 };
 
-module.exports = { elevation, isDark };
+export { elevation, isDark };

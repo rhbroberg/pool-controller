@@ -1,10 +1,12 @@
 'use strict';
 // WMO weather interpretation codes, as Open-Meteo reports them, in the few kinds the pages show.
 
+import type { WeatherCondition } from '../types/domain';
+
 /**
  * code as one of sunny, partly-cloudy, cloudy, fog, rain, snow or storm; null when unknown
  **/
-var condition = (code) => {
+const condition = (code: unknown): WeatherCondition | null => {
     if (typeof code !== 'number') {
         return null;
     }
@@ -32,4 +34,4 @@ var condition = (code) => {
     return null;
 };
 
-module.exports = { condition };
+export { condition };
