@@ -1,5 +1,5 @@
 #!/bin/sh
-# Lints the staged version of each server JavaScript file, so unstaged edits can't hide an error
+# Lints the staged version of each server TypeScript or JavaScript file, so unstaged edits can't hide an error
 # from the check, and scans the Docker images with Docker Scout when the commit changes what goes
 # into them. POOL_SCOUT=always scans whatever the commit changes; POOL_SCOUT=skip doesn't scan.
 
@@ -14,7 +14,7 @@ if [ ! -x "$eslint" ]; then
     echo "pre-commit: ESLint isn't installed, skipping lint (run npm install in server/)" >&2
 else
     lint_status=0
-    for file in $(git diff --cached --name-only --diff-filter=ACMR --relative -- '*.js' '*.cjs'); do
+    for file in $(git diff --cached --name-only --diff-filter=ACMR --relative -- '*.js' '*.ts' '*.cjs'); do
         git show ":./$file" | "$eslint" --no-warn-ignored --stdin --stdin-filename "$file" || lint_status=1
     done
     if [ $lint_status -ne 0 ]; then
