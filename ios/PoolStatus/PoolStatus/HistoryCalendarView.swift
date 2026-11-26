@@ -153,7 +153,8 @@ private struct HistoryCalendar: UIViewRepresentable {
             let days = daysAround(visibleMonth)
             // An animated reload applies a collection snapshot, and the calendar scrolls while
             // that snapshot is still applying, which asks for a second one. UIKit aborts on that.
-            DispatchQueue.main.async {
+            // Hop to the next turn of the main actor so the current update finishes first.
+            Task { @MainActor in
                 view.reloadDecorations(forDateComponents: days, animated: false)
             }
         }
@@ -219,7 +220,8 @@ private struct HistoryCalendar: UIViewRepresentable {
             if immediate {
                 applyQueuedSelection(generation)
             } else {
-                DispatchQueue.main.async { [weak self] in
+                // Same deferral as reloadDecorations: wait until UIKit finishes the tap's snapshot.
+                Task { @MainActor [weak self] in
                     self?.applyQueuedSelection(generation)
                 }
             }

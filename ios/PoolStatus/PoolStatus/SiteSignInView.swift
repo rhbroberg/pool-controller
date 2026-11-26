@@ -130,8 +130,10 @@ struct SiteSignInView: View {
                     await signIn(with: signingInWith)
                 }
             }
-            .fullScreenCover(isPresented: Binding(get: { auth.commissioning != nil },
-                                                  set: { if !$0 { auth.cancelCommissioning() } })) {
+            .fullScreenCover(item: Binding(
+                get: { auth.commissioning },
+                set: { if $0 == nil { auth.cancelCommissioning() } }
+            )) { _ in
                 CommissioningView()
             }
             .onAppear {

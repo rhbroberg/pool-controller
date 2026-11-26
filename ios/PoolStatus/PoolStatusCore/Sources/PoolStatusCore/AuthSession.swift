@@ -91,7 +91,7 @@ public final class AuthSession {
     public var canControl: Bool { role?.canControl ?? false }
     public var isAdmin: Bool { role?.isAdmin ?? false }
     /// Whether the account has a password to change; true until the server has said.
-    public var hasPassword: Bool { methods?.contains("password") ?? true }
+    public var hasPassword: Bool { methods?.contains(SignInMethodID.password) ?? true }
     /// Signed in, but the account's current role hasn't been asked for since launch.
     public var needsAccountCheck: Bool { credentials != nil && !accountChecked }
 

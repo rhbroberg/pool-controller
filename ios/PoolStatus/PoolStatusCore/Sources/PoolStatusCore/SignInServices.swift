@@ -236,10 +236,16 @@ public enum SignInServicesError: LocalizedError, Equatable {
     }
 }
 
+/// Ids the server uses in an account's `methods` list.
+public nonisolated enum SignInMethodID: Sendable {
+    /// Password sign-in, as opposed to a configured OAuth service's id.
+    public static let password = "password"
+}
+
 /// The names of the ways an account signs in, with services' ids replaced by their names.
 public func signInMethodNames(_ methods: [String]?, services: [SignInProvider]) -> [String] {
     (methods ?? []).map { method in
-        if method == "password" {
+        if method == SignInMethodID.password {
             return String(localized: "Password", bundle: .module)
         }
         return services.first { $0.id == method }?.displayName ?? method

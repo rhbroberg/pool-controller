@@ -62,12 +62,12 @@ struct HeatingEstimatesView: View {
 
     // MARK: Looking
 
+    /// Date pickers that mark the range as the admin's own; a plain `$model.from` would also fire
+    /// when `load` fills the server's default, and then skip putting that default back later.
     private var rangeSection: some View {
         Section {
-            DatePicker("From", selection: Binding(get: { model.from }, set: { model.from = $0; model.rangeEdited() }),
-                       in: ...Date.now)
-            DatePicker("To", selection: Binding(get: { model.to }, set: { model.to = $0; model.rangeEdited() }),
-                       in: ...Date.now)
+            DatePicker("From", selection: editedDate(\.from), in: ...Date.now)
+            DatePicker("To", selection: editedDate(\.to), in: ...Date.now)
         } header: {
             Text("History to Learn From")
         } footer: {
@@ -78,6 +78,13 @@ struct HeatingEstimatesView: View {
                 Text("Starts as all the history before the simulated data begins in 2026.")
             }
         }
+    }
+
+    private func editedDate(_ keyPath: ReferenceWritableKeyPath<HeatingEstimatesModel, Date>) -> Binding<Date> {
+        Binding(
+            get: { model[keyPath: keyPath] },
+            set: { model[keyPath: keyPath] = $0; model.rangeEdited() }
+        )
     }
 
     private var findSection: some View {

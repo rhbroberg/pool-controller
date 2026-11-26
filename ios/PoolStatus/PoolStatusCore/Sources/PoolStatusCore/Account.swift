@@ -45,11 +45,13 @@ public nonisolated enum AccountRole: String, Codable, CaseIterable, Identifiable
 }
 
 /// The signed-in account, its `x-auth` token and role.
-public nonisolated struct Credentials: Equatable, Sendable {
+public nonisolated struct Credentials: Equatable, Sendable, Identifiable {
     public let name: String
     public let token: String
     /// Missing for sign-ins saved before roles existed, until the server is asked.
     public let role: AccountRole?
+
+    public var id: String { token }
 
     public init(name: String, token: String, role: AccountRole?) {
         self.name = name
@@ -85,7 +87,7 @@ public nonisolated struct AccountInfo: Decodable, Identifiable, Hashable, Sendab
 
     public var id: String { name }
     /// True until the server says otherwise.
-    public var hasPassword: Bool { methods?.contains("password") ?? true }
+    public var hasPassword: Bool { methods?.contains(SignInMethodID.password) ?? true }
 
     public init(name: String, role: AccountRole, mustChangeCredentials: Bool? = nil, methods: [String]? = nil, displayName: String? = nil) {
         self.name = name

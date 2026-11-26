@@ -19,6 +19,7 @@ struct PoolStatusApp: App {
 
     var body: some Scene {
         WindowGroup {
+            @Bindable var session = session
             Group {
                 if let store = session.store, let site = session.openSite {
                     SiteView()
@@ -31,7 +32,7 @@ struct PoolStatusApp: App {
             }
             .environment(session)
             .animation(.default, value: session.openID)
-            .sheet(isPresented: Binding(get: { session.isAddingSite }, set: { session.isAddingSite = $0 })) {
+            .sheet(isPresented: $session.isAddingSite) {
                 AddSiteView { site in
                     session.open(site)
                 }
