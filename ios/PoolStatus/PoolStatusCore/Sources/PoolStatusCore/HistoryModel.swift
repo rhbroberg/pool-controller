@@ -1,6 +1,54 @@
 import Foundation
 import Observation
 
+/// The part of a history graph last shown, so coming back opens at the same zoom and pan.
+/// Stored as plain doubles in `UserDefaults` (not JSON `Data`), which AppStorage-style keys
+/// round-trip reliably in the app sandbox.
+public nonisolated struct HistoryViewport: Equatable, Sendable {
+    public var visibleLength: TimeInterval
+    public var scrollPosition: Date
+
+    public init(visibleLength: TimeInterval, scrollPosition: Date) {
+        self.visibleLength = visibleLength
+        self.scrollPosition = scrollPosition
+    }
+
+    private static func lengthKey(_ key: String) -> String { key + ".length" }
+    private static func scrollKey(_ key: String) -> String { key + ".scroll" }
+
+    public static func load(forKey key: String, defaults: UserDefaults = .standard) -> HistoryViewport? {
+        // prefer the plain doubles; fall back to an older JSON blob if one is still around
+        if defaults.object(forKey: lengthKey(key)) != nil {
+            let length = defaults.double(forKey: lengthKey(key))
+            let scroll = defaults.double(forKey: scrollKey(key))
+            guard length > 0 else {
+                return nil
+            }
+            return HistoryViewport(visibleLength: length,
+                                   scrollPosition: Date(timeIntervalSinceReferenceDate: scroll))
+        }
+        guard let data = defaults.data(forKey: key),
+              let legacy = try? JSONDecoder().decode(Legacy.self, from: data) else {
+            return nil
+        }
+        let loaded = HistoryViewport(visibleLength: legacy.visibleLength,
+                                     scrollPosition: Date(timeIntervalSinceReferenceDate: legacy.scrollStart))
+        loaded.save(forKey: key, defaults: defaults)
+        defaults.removeObject(forKey: key)
+        return loaded
+    }
+
+    public func save(forKey key: String, defaults: UserDefaults = .standard) {
+        defaults.set(visibleLength, forKey: Self.lengthKey(key))
+        defaults.set(scrollPosition.timeIntervalSinceReferenceDate, forKey: Self.scrollKey(key))
+    }
+
+    private struct Legacy: Decodable {
+        var visibleLength: TimeInterval
+        var scrollStart: TimeInterval
+    }
+}
+
 /// `GET /history`. Readings are stored when they change, so `before` is each series' value as
 /// the window opens. A series with few enough readings has every one as recorded; otherwise one
 /// point per bucket of `resolution` seconds: the average weighted by how long each value held,
@@ -556,6 +604,8 @@ public final class TemperatureHistoryModel {
 @Observable
 public final class SaltHistoryModel {
     public private(set) var samples: [HistorySample] = []
+    /// Oldest salt reading the server has reported, for the scrollable domain.
+    public private(set) var earliest: Date?
     public private(set) var isLoading = false
     public private(set) var errorMessage: String?
 
@@ -567,6 +617,9 @@ public final class SaltHistoryModel {
         defer { isLoading = false }
         do {
             let response = try await client.fetchHistory(names: [.salt], from: start, to: end, maxPoints: maxPoints)
+            if let oldest = response.earliest {
+                earliest = min(earliest ?? oldest, oldest)
+            }
             let series = response.series.first { $0.name == .salt }
             let resolution = series?.resolution ?? 0
             var loaded = (series?.before.flatMap { HistorySample($0, resolution: 0) }.map { [$0] } ?? [])

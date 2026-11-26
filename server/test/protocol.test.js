@@ -75,6 +75,16 @@ describe('interpreting frames', () => {
         assert.deepEqual(read(interpreter, display('  Pool Temp   82_F')).status, [{ name: 'pool temp', value: 82 }]);
     });
 
+    it('settles when a reading keeps flipping by one degree', () => {
+        const interpreter = new FrameInterpreter();
+        assert.deepEqual(read(interpreter, display('  Air Temp    50_F')).status, [{ name: 'ambient', value: 50 }]);
+        assert.deepEqual(read(interpreter, display('  Air Temp    51_F')).status, [{ name: 'ambient', value: 51 }]);
+        assert.equal(read(interpreter, display('  Air Temp    50_F')), null, 'bounce');
+        assert.equal(read(interpreter, display('  Air Temp    51_F')), null, 'still settled on 51');
+        assert.equal(read(interpreter, display('  Air Temp    50_F')), null, 'bounce again');
+        assert.deepEqual(read(interpreter, display('  Air Temp    52_F')).status, [{ name: 'ambient', value: 52 }]);
+    });
+
     it('takes readings and the heater mode from the wireless remote', () => {
         const interpreter = new FrameInterpreter();
         const [{ frame: parsed }] = framesIn(WIRELESS_AIR);
