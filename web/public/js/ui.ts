@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Pieces shared by the pages: the top bar, form sections and small controls.
 
 import { h, patch } from './dom.js';
@@ -70,7 +69,7 @@ export const actionRow = (title, onClick, { destructive = false, disabled = fals
     disabled: disabled || busy
 }, h('span', null, title), busy ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null);
 
-export const textInput = ({ label, value, onInput, type = 'text', autocomplete, placeholder, trailing = false, disabled = false, onEnter, name }) => h('input', {
+export const textInput = ({ label, value, onInput, type = 'text', autocomplete, placeholder, trailing = false, disabled = false, onEnter, name }: { label?: string; value?: any; onInput?: (v: any) => void; type?: string; autocomplete?: string; placeholder?: string; trailing?: boolean; disabled?: boolean; onEnter?: () => void; name?: string }) => h('input', {
     type,
     value,
     placeholder: placeholder ?? label,
@@ -94,7 +93,7 @@ export const textInput = ({ label, value, onInput, type = 'text', autocomplete, 
 /**
  * which of a view's password fields show what's typed, by label; toggling one redraws
  **/
-export const revealer = (redraw) => {
+export const revealer = (redraw: () => void) => {
     const shown = new Set();
     return {
         shown: (key) => shown.has(key),
@@ -108,7 +107,7 @@ export const revealer = (redraw) => {
 };
 
 /** a password field with an eye button that shows what's typed; reveal comes from revealer */
-export const passwordInput = ({ reveal, ...options }) => {
+export const passwordInput = ({ reveal, ...options }: { reveal: { shown: (k: string) => boolean; toggle: (k: string) => void }; label?: string; value?: any; onInput?: (v: any) => void; autocomplete?: string; placeholder?: string; trailing?: boolean; disabled?: boolean; onEnter?: () => void; name?: string }) => {
     const shown = reveal.shown(options.label);
     return h('span', { class: 'password-input' },
         textInput({ ...options, type: shown ? 'text' : 'password' }),

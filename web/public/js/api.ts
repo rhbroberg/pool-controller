@@ -1,25 +1,25 @@
-// @ts-nocheck
 // The pool server's REST API, reached through the web service that serves this page.
 
 export const API_PATH = '/rhbroberg/pool-api/1.0.0';
 const DEFAULT_TIMEOUT_MS = 10000;
 const UNREACHABLE_HEADER = 'x-pool-web-unreachable';
 
-const capitalized = (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+const capitalized = (text?: string | null) => text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 
 /**
  * kind is unreachable (no answer from the pool server), unauthorized (401) or server (any other
  * failure the server reported)
  **/
 export class ApiError extends Error {
-    [key: string]: any;
-    constructor(kind, { status, message } = {}) {
+    kind: string;
+    status?: number;
+    constructor(kind: string, { status, message }: { status?: number; message?: string } = {}) {
         super(capitalized(message) || ApiError.defaultMessage(kind, status));
         this.kind = kind;
         this.status = status;
     }
 
-    static defaultMessage(kind, status) {
+    static defaultMessage(kind: string, status?: number) {
         switch (kind) {
         case 'unreachable': return 'The pool server isn’t answering.';
         case 'unauthorized': return 'Sign in to control equipment.';
@@ -28,14 +28,14 @@ export class ApiError extends Error {
     }
 }
 
-export const isAbort = (error) => error && (error.name === 'AbortError' || error.name === 'TimeoutError');
+export const isAbort = (error: any) => error && (error.name === 'AbortError' || error.name === 'TimeoutError');
 
-const toDate = (value) => value ? new Date(value) : null;
+const toDate = (value: any) => value ? new Date(value) : null;
 
 /** a reading as GET /status and the live updates send it, with its value a number */
-export const toReading = (reading) => ({ ...reading, value: Number(reading.value), timestamp: toDate(reading.timestamp) });
+export const toReading = (reading: any) => ({ ...reading, value: Number(reading.value), timestamp: toDate(reading.timestamp) });
 
-const anySignal = (signals) => {
+const anySignal = (signals: AbortSignal[]) => {
     if (AbortSignal.any) {
         return AbortSignal.any(signals);
     }
@@ -51,16 +51,17 @@ const anySignal = (signals) => {
 };
 
 export class Client {
-    [key: string]: any;
+    origin: string;
+    fetch: typeof fetch;
     /**
      * origin is empty in the browser, where the API shares the page's origin
      **/
-    constructor(origin = '', fetchImpl = (...args) => fetch(...args)) {
+    constructor(origin = '', fetchImpl: typeof fetch = ((input, init) => fetch(input, init)) as typeof fetch) {
         this.origin = origin;
         this.fetch = fetchImpl;
     }
 
-    url(path, query) {
+    url(path: string, query?: Record<string, any> | null) {
         let url = `${this.origin}${API_PATH}/${path}`;
         if (query) {
             const params = new URLSearchParams();
@@ -77,8 +78,8 @@ export class Client {
         return url;
     }
 
-    async send(method, path, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal } = {}) {
-        const headers = {
+    async send(method: string, path: string, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal }: { token?: string | null; body?: any; query?: Record<string, any>; timeout?: number; signal?: AbortSignal } = {}) {
+        const headers: Record<string, string> = {
             Accept: 'application/json',
             // the server's validator rejects any request without a JSON content type, body or not
             'Content-Type': 'application/json'
@@ -153,7 +154,7 @@ export class Client {
     }
 
     /** turns a task on or off; a spa preheat with readyAt (a Date) waits until it must start */
-    setTask(task, on, readyAt, token) {
+    setTask(task: string, on: boolean, readyAt: Date | null | undefined, token: string) {
         const body = readyAt ? { on, readyAt: readyAt.toISOString() } : { on };
         return this.send('PUT', `tasks/${task}`, { token, body });
     }
@@ -167,15 +168,15 @@ export class Client {
 
     // MARK: control
 
-    setDevice(name, on, token) {
+    setDevice(name: string, on: boolean, token: string) {
         return this.send('PUT', `devices/${encodeURIComponent(name)}/${on}`, { token });
     }
 
-    setWaterMode(mode, token) {
+    setWaterMode(mode: string, token: string) {
         return this.send('PUT', `water/mode/${mode}`, { token });
     }
 
-    setSetpoint(degrees, device, body, token) {
+    setSetpoint(degrees: number, device: string, body: string, token: string) {
         return this.send('PUT', `heating/setpoints/${body}/${device}/${degrees}`, { token });
     }
 
@@ -186,7 +187,7 @@ export class Client {
         return { ...display, timestamp: toDate(display.timestamp) };
     }
 
-    pressPanelKey(key, token) {
+    pressPanelKey(key: string, token: string) {
         return this.send('PUT', `panel/keys/${key}`, { token });
     }
 
@@ -198,7 +199,7 @@ export class Client {
      * readings comes back as buckets at least resolution seconds long: each point is the
      * bucket's time-weighted average, with its lowest (low) and highest (high) value.
      **/
-    async fetchHistory(names, from, to, { signal, maxPoints, resolution } = {}) {
+    async fetchHistory(names: string[], from: any, to: any, { signal, maxPoints, resolution }: { signal?: AbortSignal; maxPoints?: number; resolution?: number } = {}) {
         const response = await this.send('GET', 'history', {
             query: { names: names.join(','), from: new Date(from).toISOString(), to: new Date(to).toISOString(), maxPoints, resolution },
             timeout: 30000,
@@ -220,7 +221,7 @@ export class Client {
     }
 
     /** the days (YYYY-MM-DD, in the server's time zone) with these readings, or any water reading when names is omitted */
-    fetchAvailability(from, to, names) {
+    fetchAvailability(from: any, to: any, names?: string[]) {
         return this.send('GET', 'history/availability', {
             query: {
                 names: names && names.length ? names.join(',') : undefined,
@@ -230,7 +231,7 @@ export class Client {
         });
     }
 
-    async fetchEvents({ types, user, cursor, ascending, limit }) {
+    async fetchEvents({ types, user, cursor, ascending, limit }: { types: string[]; user?: string; cursor?: string; ascending?: boolean; limit?: number }) {
         const page = await this.send('GET', 'events', {
             query: { types: types.join(','), order: ascending ? 'asc' : 'desc', limit, user, cursor }
         });
@@ -243,7 +244,7 @@ export class Client {
 
     // MARK: accounts
 
-    signIn(email, password) {
+    signIn(email: string, password: string) {
         return this.send('POST', 'users/login', { body: { email, password } });
     }
 
@@ -251,28 +252,28 @@ export class Client {
      * renames the signed-in account and sets its password; returns a new token, since the old
      * one stops working
      **/
-    changeCredentials(name, password, token) {
+    changeCredentials(name: string, password: string, token: string) {
         return this.send('PUT', 'users/me/credentials', { token, body: { email: name, password } });
     }
 
-    fetchAccount(token) {
+    fetchAccount(token: string) {
         return this.send('GET', 'users/me', { token });
     }
 
-    signOut(token) {
+    signOut(token: string) {
         return this.send('DELETE', 'users/me/token', { token });
     }
 
-    listAccounts(token) {
+    listAccounts(token: string) {
         return this.send('GET', 'users', { token });
     }
 
-    createAccount(name, password, role, token) {
+    createAccount(name: string, password: string, role: string, token: string) {
         return this.send('POST', 'users', { token, body: { email: name, password, role } });
     }
 
-    updateAccount(name, { role, password }, token) {
-        const changes = {};
+    updateAccount(name: string, { role, password }: { role?: string; password?: string }, token: string) {
+        const changes: Record<string, string> = {};
         if (role) {
             changes.role = role;
         }
@@ -282,7 +283,7 @@ export class Client {
         return this.send('PUT', `users/${encodeURIComponent(name)}`, { token, body: changes });
     }
 
-    deleteAccount(name, token) {
+    deleteAccount(name: string, token: string) {
         return this.send('DELETE', `users/${encodeURIComponent(name)}`, { token });
     }
 
@@ -294,88 +295,88 @@ export class Client {
     }
 
     /** where the browser goes to sign in with a service; it comes back to #/signin/complete */
-    signInUrl(provider) {
+    signInUrl(provider: string) {
         return this.url(`auth/${encodeURIComponent(provider)}/start`, { client: 'web' });
     }
 
     /** trades the ticket a sign-in through a service came back with for a token */
-    signInWithTicket(ticket) {
+    signInWithTicket(ticket: string) {
         return this.send('POST', 'users/login/external', { body: { ticket } });
     }
 
     /** resolves with { url } to send the browser to, to add the service to this account */
-    linkIdentity(provider, token) {
+    linkIdentity(provider: string, token: string) {
         return this.send('POST', `users/me/identities/${encodeURIComponent(provider)}`, { token, body: { client: 'web' } });
     }
 
-    unlinkIdentity(provider, token) {
+    unlinkIdentity(provider: string, token: string) {
         return this.send('DELETE', `users/me/identities/${encodeURIComponent(provider)}`, { token });
     }
 
-    async listRequests(token) {
+    async listRequests(token: string) {
         const requests = await this.send('GET', 'users/requests', { token });
         return requests.map((request) => ({ ...request, firstSeen: toDate(request.firstSeen), lastSeen: toDate(request.lastSeen) }));
     }
 
-    approveRequest(id, role, token) {
+    approveRequest(id: string, role: string, token: string) {
         return this.send('POST', `users/requests/${encodeURIComponent(id)}/approve`, { token, body: { role } });
     }
 
-    denyRequest(id, token) {
+    denyRequest(id: string, token: string) {
         return this.send('POST', `users/requests/${encodeURIComponent(id)}/deny`, { token });
     }
 
-    forgetRequest(id, token) {
+    forgetRequest(id: string, token: string) {
         return this.send('DELETE', `users/requests/${encodeURIComponent(id)}`, { token });
     }
 
-    listInvitations(token) {
+    listInvitations(token: string) {
         return this.send('GET', 'users/invitations', { token });
     }
 
     /** provider null works with any service trusted for email addresses */
-    createInvitation({ email, role, provider }, token) {
+    createInvitation({ email, role, provider }: { email: string; role: string; provider?: string | null }, token: string) {
         return this.send('POST', 'users/invitations', { token, body: { email, role, provider: provider || null } });
     }
 
-    deleteInvitation(id, token) {
+    deleteInvitation(id: string, token: string) {
         return this.send('DELETE', `users/invitations/${encodeURIComponent(id)}`, { token });
     }
 
-    fetchSignInSettings(token) {
+    fetchSignInSettings(token: string) {
         return this.send('GET', 'system/sign-in', { token });
     }
 
     /** changes: { passwordSignIn } and/or { signInRequests: 'ask' | 'refuse' } */
-    updateSignInSettings(changes, token) {
+    updateSignInSettings(changes: Record<string, any>, token: string) {
         return this.send('PUT', 'system/sign-in', { token, body: changes });
     }
 
-    createSignInService(service, token) {
+    createSignInService(service: any, token: string) {
         return this.send('POST', 'system/sign-in/providers', { token, body: service, timeout: 20000 });
     }
 
-    updateSignInService(id, changes, token) {
+    updateSignInService(id: string, changes: any, token: string) {
         return this.send('PUT', `system/sign-in/providers/${encodeURIComponent(id)}`, { token, body: changes, timeout: 20000 });
     }
 
-    deleteSignInService(id, token) {
+    deleteSignInService(id: string, token: string) {
         return this.send('DELETE', `system/sign-in/providers/${encodeURIComponent(id)}`, { token });
     }
 
     // MARK: system
 
-    async factoryReset(token) {
+    async factoryReset(token: string) {
         const result = await this.send('POST', 'system/factory-reset', { token });
         return (result && result.message) || 'Factory reset complete.';
     }
 
-    restartServer(token) {
+    restartServer(token: string) {
         return this.send('POST', 'system/restart', { token });
     }
 
     /** the time zone history days follow, how long raw history is kept and the weather's location */
-    fetchSettings(token) {
+    fetchSettings(token: string) {
         return this.send('GET', 'system/settings', { token });
     }
 
@@ -383,17 +384,17 @@ export class Client {
      * changes: { timeZone } (null for the server's own zone), { rawRetentionDays } and/or
      * { zipCode } (null to stop fetching weather); a new zip code is looked up before this answers
      **/
-    updateSettings(changes, token) {
+    updateSettings(changes: Record<string, any>, token: string) {
         return this.send('PUT', 'system/settings', { token, body: changes, timeout: 20000 });
     }
 
-    async fetchJobs(token) {
+    async fetchJobs(token: string) {
         const jobs = await this.send('GET', 'system/jobs', { token });
         return jobs.map(withJobDates);
     }
 
     /** runs a maintenance job now; answers once it has finished */
-    async runJob(name, token) {
+    async runJob(name: string, token: string) {
         return withJobDates(await this.send('POST', `system/jobs/${encodeURIComponent(name)}/run`, { token, timeout: 120000 }));
     }
 
@@ -401,8 +402,8 @@ export class Client {
      * reads stored frames from `from` up to `to` again, rewriting events of eventTypes (every kind
      * when empty); with dryRun, only counts what would change. Answers at once with the run
      **/
-    async startReprocess({ from, to, eventTypes, dryRun }, token) {
-        const body = { from: new Date(from).toISOString(), to: new Date(to).toISOString(), dryRun: Boolean(dryRun) };
+    async startReprocess({ from, to, eventTypes, dryRun }: { from: any; to: any; eventTypes?: string[]; dryRun?: boolean }, token: string) {
+        const body: Record<string, any> = { from: new Date(from).toISOString(), to: new Date(to).toISOString(), dryRun: Boolean(dryRun) };
         if (eventTypes && eventTypes.length) {
             body.eventTypes = eventTypes;
         }
@@ -410,7 +411,7 @@ export class Client {
     }
 
     /** the reprocessing run under way or the last one, or null when there hasn't been one */
-    async fetchReprocess(token) {
+    async fetchReprocess(token: string) {
         try {
             return withRunDates(await this.send('GET', 'system/reprocess', { token }));
         } catch (error) {
@@ -422,7 +423,7 @@ export class Client {
     }
 }
 
-const withRunDates = (run) => ({
+const withRunDates = (run: any) => ({
     ...run,
     from: toDate(run.from),
     to: toDate(run.to),
@@ -432,7 +433,7 @@ const withRunDates = (run) => ({
     through: toDate(run.through)
 });
 
-const withJobDates = (job) => ({
+const withJobDates = (job: any) => ({
     ...job,
     nextRunAt: toDate(job.nextRunAt),
     lastStartedAt: toDate(job.lastStartedAt),

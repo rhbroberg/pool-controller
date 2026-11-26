@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Line icons standing in for the app's SF Symbols, drawn on a 24-point grid.
 
 import { s } from './dom.js';
@@ -134,7 +133,7 @@ const ICONS = {
 /**
  * an inline SVG icon; filled shades the shape in its colour, as SF Symbols' fill variant does
  **/
-export const icon = (name, { filled = false, className = '', label } = {}) => {
+export const icon = (name: string, { filled = false, className = '', label }: { filled?: boolean; className?: string; label?: string } = {}) => {
     const parts = ICONS[name] || [];
     return s('svg', {
         class: ['icon', filled ? 'filled' : '', className],

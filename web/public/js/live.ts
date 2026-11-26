@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Live updates from the pool server: socket.io over a WebSocket, reached through the web
 // service like the API. Only what the page needs of the protocol (Engine.IO 4, Socket.IO 5):
 //
@@ -17,7 +16,7 @@ const LONGEST_RETRY_MS = 30000;
 const OPEN_TIMEOUT_MS = 10000;
 
 /** one Engine.IO packet as received; null if it isn't one */
-export const parsePacket = (text) => {
+export const parsePacket = (text: string): any => {
     if (typeof text !== 'string' || text.length === 0) {
         return null;
     }
@@ -40,7 +39,7 @@ export const parsePacket = (text) => {
     }
 };
 
-const parseMessage = (text, json) => {
+const parseMessage = (text: string, json: (body: string) => any): any => {
     // a namespace other than the default one would follow the type, as "/name,"
     if (text.length > 1 && text[1] === '/') {
         return null;
@@ -62,17 +61,35 @@ const parseMessage = (text, json) => {
 };
 
 /** where the live updates are, for a page at location */
-export const liveUrl = (location) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${LIVE_PATH}`;
+export const liveUrl = (location: Location | { protocol: string; host: string }) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${LIVE_PATH}`;
 
 export class LiveConnection {
-    [key: string]: any;
+    url: string;
+    onEvent: (name: string, data: any) => void;
+    onStateChange: (isLive: boolean) => void;
+    WebSocketImpl: typeof WebSocket;
+    setTimer: (fn: () => void, ms: number) => any;
+    clearTimer: (id: any) => void;
+    socket: WebSocket | null;
+    isLive: boolean;
+    running: boolean;
+    retryMs: number;
+    retryTimer: any;
+    watchdog: any;
+    silenceMs?: number;
     /**
      * onEvent(name, data) receives each event; onStateChange(isLive) hears of joining and losing
      * the server
      **/
-    constructor(url, { onEvent = () => {}, onStateChange = () => {}, WebSocketImpl = globalThis.WebSocket,
+    constructor(url: string, { onEvent = () => {}, onStateChange = () => {}, WebSocketImpl = globalThis.WebSocket,
         // a browser's timers must be called unbound, not as methods of this
-        setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (id) => clearTimeout(id) } = {}) {
+        setTimer = (fn: () => void, ms: number) => setTimeout(fn, ms), clearTimer = (id: any) => clearTimeout(id) }: {
+            onEvent?: (name: string, data: any) => void;
+            onStateChange?: (isLive: boolean) => void;
+            WebSocketImpl?: typeof WebSocket;
+            setTimer?: (fn: () => void, ms: number) => any;
+            clearTimer?: (id: any) => void;
+        } = {}) {
         this.url = url;
         this.onEvent = onEvent;
         this.onStateChange = onStateChange;
@@ -126,7 +143,7 @@ export class LiveConnection {
         socket.onerror = () => {};
     }
 
-    receive(text) {
+    receive(text: string) {
         const packet = parsePacket(text);
         if (!packet) {
             return;

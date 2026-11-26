@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Builds elements and patches them into the page in place, so a view can redraw itself from
 // its state on every change without losing focus, hover or a click under way.
 
@@ -6,7 +5,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // set as properties rather than attributes, so they reflect what the user has done
 const PROPERTIES = new Set(['value', 'checked', 'indeterminate', 'selected']);
 
-const listen = (element, type, handler) => {
+const listen = (element: any, type: string, handler: any) => {
     if (!element.__handlers) {
         element.__handlers = {};
     }
@@ -21,7 +20,7 @@ const listen = (element, type, handler) => {
     element.__handlers[type] = handler;
 };
 
-const applyProps = (element, props) => {
+const applyProps = (element: any, props: any) => {
     Object.entries(props || {}).forEach(([key, value]) => {
         if (PROPERTIES.has(key) && value !== undefined && value !== null) {
             element.__props = { ...(element.__props || {}), [key]: value };
@@ -51,7 +50,7 @@ const applyProps = (element, props) => {
     });
 };
 
-const appendChildren = (element, children) => {
+const appendChildren = (element: any, children: any[]) => {
     children.flat(Infinity).forEach((child) => {
         if (child === null || child === undefined || child === false || child === true) {
             return;
@@ -64,8 +63,8 @@ const appendChildren = (element, children) => {
  * h('button', { class: 'tile', onClick }, 'Label') builds an HTML element; on* props are event
  * handlers, value and checked are properties, and false or null props are left off
  **/
-export const h = (tag, props, ...children) => {
-    const element = document.createElement(tag);
+export const h = (tag: string, props: any, ...children: any[]): any => {
+    const element: any = document.createElement(tag);
     applyProps(element, props);
     appendChildren(element, children);
     // a select's value only takes once its options are there
@@ -74,23 +73,23 @@ export const h = (tag, props, ...children) => {
 };
 
 /** the same as h, for SVG elements */
-export const s = (tag, props, ...children) => {
-    const element = document.createElementNS(SVG_NS, tag);
+export const s = (tag: string, props: any, ...children: any[]): any => {
+    const element: any = document.createElementNS(SVG_NS, tag);
     applyProps(element, props);
     appendChildren(element, children);
     return element;
 };
 
-const sameKind = (a, b) => a.nodeType === b.nodeType && a.nodeName === b.nodeName &&
+const sameKind = (a: any, b: any) => a.nodeType === b.nodeType && a.nodeName === b.nodeName &&
     (a.nodeType !== 1 || a.getAttribute('data-key') === b.getAttribute('data-key'));
 
-const updateElement = (have, want) => {
-    for (const { name } of Array.from(have.attributes)) {
+const updateElement = (have: any, want: any) => {
+    for (const { name } of Array.from(have.attributes as NamedNodeMap)) {
         if (!want.hasAttribute(name)) {
             have.removeAttribute(name);
         }
     }
-    for (const { name, value } of Array.from(want.attributes)) {
+    for (const { name, value } of Array.from(want.attributes as NamedNodeMap)) {
         if (have.getAttribute(name) !== value) {
             have.setAttribute(name, value);
         }
@@ -120,7 +119,7 @@ const updateElement = (have, want) => {
     have.__props = props;
 };
 
-const patchChildren = (parent, next) => {
+const patchChildren = (parent: any, next: any) => {
     const wanted = [next].flat(Infinity).filter((node) => node !== null && node !== undefined && node !== false)
         .map((node) => node instanceof Node ? node : document.createTextNode(String(node)));
     wanted.forEach((want, index) => {
@@ -130,8 +129,10 @@ const patchChildren = (parent, next) => {
         } else if (!sameKind(have, want)) {
             parent.replaceChild(want, have);
         } else if (have.nodeType === 3) {
-            if (have.data !== want.data) {
-                have.data = want.data;
+            const haveText = have as Text;
+            const wantText = want as Text;
+            if (haveText.data !== wantText.data) {
+                haveText.data = wantText.data;
             }
         } else if (have.nodeType === 1) {
             updateElement(have, want);
@@ -146,7 +147,7 @@ const patchChildren = (parent, next) => {
  * makes parent's children match next, reusing the elements already there where they're the same
  * kind, so the page keeps its state; then calls each element's ref with the element on the page
  **/
-export const patch = (parent, next) => {
+export const patch = (parent: any, next: any) => {
     patchChildren(parent, next);
     parent.querySelectorAll('*').forEach((element) => {
         if (element.__ref) {
@@ -161,12 +162,12 @@ export const patch = (parent, next) => {
  * a modal dialog with content from render(close); resolves with what close is called with, or
  * undefined when it's dismissed. render is called again by the returned update().
  **/
-export const openDialog = (render, { className = '', dismissable = true } = {}) => {
+export const openDialog = (render: (close: (value?: any) => void) => any, { className = '', dismissable = true }: { className?: string; dismissable?: boolean } = {}) => {
     const dialog = h('dialog', { class: ['dialog', className] });
     let resolved = false;
-    let resolveResult;
+    let resolveResult: (value?: any) => void;
     const result = new Promise((resolve) => { resolveResult = resolve; });
-    const close = (value) => {
+    const close = (value?: any) => {
         if (resolved) {
             return;
         }
@@ -201,7 +202,7 @@ export const openDialog = (render, { className = '', dismissable = true } = {}) 
 /**
  * asks before a change; resolves true when the action is chosen
  **/
-export const confirmAction = ({ title, message, action, destructive = false }) => openDialog((close) => [
+export const confirmAction = ({ title, message, action, destructive = false }: { title: string; message?: string; action: string; destructive?: boolean }) => openDialog((close) => [
     h('div', { class: 'dialog-body' },
         h('h2', { class: 'dialog-title' }, title),
         message ? h('p', { class: 'dialog-message' }, message) : null),

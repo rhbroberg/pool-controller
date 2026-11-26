@@ -1,11 +1,10 @@
-// @ts-nocheck
 // Calendar days in an IANA time zone, using only Intl, so the history calendar lines up with
 // the server's days, whatever zone the browser is in. Times are milliseconds.
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 const formatters = new Map();
 
-const formatter = (timeZone) => {
+const formatter = (timeZone: string) => {
     if (!formatters.has(timeZone)) {
         formatters.set(timeZone, new Intl.DateTimeFormat('en-US', {
             timeZone,
@@ -21,7 +20,7 @@ const formatter = (timeZone) => {
     return formatters.get(timeZone);
 };
 
-export const isValidTimeZone = (timeZone) => {
+export const isValidTimeZone = (timeZone: string | null | undefined) => {
     if (typeof timeZone !== 'string' || !timeZone) {
         return false;
     }
@@ -37,8 +36,8 @@ export const isValidTimeZone = (timeZone) => {
 export const localTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /** the wall clock in timeZone at ms */
-export const wallClock = (ms, timeZone) => {
-    const parts = {};
+export const wallClock = (ms: number, timeZone: string) => {
+    const parts: Record<string, string> = {};
     for (const { type, value } of formatter(timeZone).formatToParts(new Date(ms))) {
         parts[type] = value;
     }
@@ -46,47 +45,47 @@ export const wallClock = (ms, timeZone) => {
 };
 
 // how far timeZone's wall clock is ahead of UTC at ms
-const offsetAt = (ms, timeZone) => {
+const offsetAt = (ms: number, timeZone: string) => {
     const clock = wallClock(ms, timeZone);
     return Date.UTC(clock.year, clock.month - 1, clock.day, clock.hour, clock.minute, clock.second) - Math.floor(ms / 1000) * 1000;
 };
 
 /** the instant the wall clock in timeZone reads midnight starting year-month-day */
-export const midnightOf = (year, month, day, timeZone) => {
+export const midnightOf = (year: number, month: number, day: number, timeZone: string) => {
     const asUtc = Date.UTC(year, month - 1, day);
     // the offset at midnight can differ from the one at the first guess across a DST change
     const guess = asUtc - offsetAt(asUtc, timeZone);
     return asUtc - offsetAt(guess, timeZone);
 };
 
-export const startOfDay = (ms, timeZone) => {
+export const startOfDay = (ms: number, timeZone: string) => {
     const clock = wallClock(ms, timeZone);
     return midnightOf(clock.year, clock.month, clock.day, timeZone);
 };
 
 /** YYYY-MM-DD from its parts */
-export const keyOf = (year, month, day) => `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+export const keyOf = (year: number, month: number, day: number) => `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
 /** YYYY-MM-DD of the local day holding ms */
-export const dayKey = (ms, timeZone) => {
+export const dayKey = (ms: number, timeZone: string) => {
     const clock = wallClock(ms, timeZone);
     return keyOf(clock.year, clock.month, clock.day);
 };
 
 /** { year, month, day } from YYYY-MM-DD */
-export const partsOf = (key) => {
+export const partsOf = (key: string) => {
     const [year, month, day] = key.split('-').map(Number);
     return { year, month, day };
 };
 
 /** the midnight starting the day named by key */
-export const midnightOfKey = (key, timeZone) => {
+export const midnightOfKey = (key: string, timeZone: string) => {
     const { year, month, day } = partsOf(key);
     return midnightOf(year, month, day, timeZone);
 };
 
 /** the key of the day `days` after key, by the calendar rather than by 24-hour steps */
-export const addDaysToKey = (key, days) => {
+export const addDaysToKey = (key: string, days: number) => {
     const { year, month, day } = partsOf(key);
     const date = new Date(Date.UTC(year, month - 1, day + days));
     return keyOf(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
