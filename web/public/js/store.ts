@@ -585,7 +585,7 @@ export class StatusStore {
      * turns a task on or off, then waits for the controller to report its switches; a spa
      * preheat with readyAt (a Date) may instead wait on the server until it must start
      **/
-    async setTask(task, on, readyAt = null) {
+    async setTask(task, on, readyAt: Date | string | null = null) {
         if (!this.credentials) {
             this.errorMessage = new ApiError('unauthorized').message;
             this.changed();
@@ -593,7 +593,8 @@ export class StatusStore {
         }
         this.pendingTasks = { ...this.pendingTasks, [task]: on };
         this.changed();
-        const title = taskInfo(task) ? taskInfo(task).title : task;
+        const info = taskInfo(task);
+        const title = info ? info.title : task;
         const reached = () => taskOn(this.tasks, task) === on || (on && task === 'spaPreheat' && scheduledPreheat(this.tasks) !== null);
         try {
             this.tasks = await this.client.setTask(task, on, readyAt, this.credentials.token);
@@ -622,7 +623,7 @@ export class StatusStore {
             await this.client.setWaterMode(mode, this.credentials.token);
             const confirmed = await this.awaitConfirmation(() => this.waterMode === mode, WATER_MODE_TIMEOUT_MS);
             if (confirmed === false) {
-                this.errorMessage = `The controller hasn’t switched to ${waterModeInfo(mode).title} yet.`;
+                this.errorMessage = `The controller hasn’t switched to ${waterModeInfo(mode)?.title || mode} yet.`;
             }
         } catch (error) {
             await this.handleControlError(error, 'Sign in again to change the water flow.', 'Your account can’t change the water flow.');

@@ -30,10 +30,10 @@ const dotCaption = (name) => {
     return 'A dot marks a day with pool, spa or salt readings. Click the first day, then the last.';
 };
 
-export const openHistoryCalendar = (app, [initialFrom, initialTo], name = null) => {
+export const openHistoryCalendar = (app: any, [initialFrom, initialTo]: [any, any], name: string | null = null) => {
     let sheet;
-    const calendar = new HistoryCalendar(app.client, () => sheet && sheet.update(), name ? [name] : null);
-    let { first, last } = calendar.keysIn(initialFrom, initialTo);
+    const calendar = new HistoryCalendar(app.client, () => sheet && sheet.update(), name ? [name] as string[] : null);
+    let { first, last }: { first: string | null; last: string | null } = calendar.keysIn(initialFrom, initialTo);
     let visible = (({ year, month }) => ({ year, month }))(partsOf(last));
 
     const page = (offset) => {
@@ -92,7 +92,7 @@ export const openHistoryCalendar = (app, [initialFrom, initialTo], name = null) 
                     class: 'bar-button strong',
                     type: 'button',
                     disabled: !selection,
-                    onClick: () => close(calendar.range(selection.start, selection.end))
+                    onClick: () => close(calendar.range(selection!.start, selection!.end))
                 }, 'Show')
             }),
             h('div', { class: 'sheet-content calendar' },

@@ -150,7 +150,7 @@ export class TemperatureHistory {
 
     missing(from, to, level) {
         const covering = this.level(level).loaded.filter((loaded) => this.covers(loaded, from, to)).sort((a, b) => a.from - b.from);
-        const gaps = [];
+        const gaps: any[] = [];
         let cursor = from;
         for (const loaded of covering) {
             if (loaded.to <= cursor || loaded.from >= to) {
@@ -169,7 +169,7 @@ export class TemperatureHistory {
 
     record(from, to, level, summarized) {
         const store = this.level(level);
-        const merged = [];
+        const merged: any[] = [];
         for (const next of [...store.loaded, { from, to, summarized }].sort((a, b) => a.from - b.from)) {
             const last = merged[merged.length - 1];
             // a closer summary has to stay separate, or the wider one would hide that it was already fetched
@@ -276,7 +276,7 @@ export class TemperatureHistory {
 
 /** how long each sample's value held: a reading until the next one, a bucket for its span */
 export const holds = (samples, end) => {
-    const result = [];
+    const result: any[] = [];
     samples.forEach((sample, index) => {
         if (sample.t >= end) {
             return;
@@ -295,7 +295,7 @@ export const holds = (samples, end) => {
 
 /** back-to-back stretches joined into one */
 const merged = (stretches) => {
-    const result = [];
+    const result: any[] = [];
     for (const stretch of stretches) {
         const last = result[result.length - 1];
         if (last && stretch.start <= last.end) {
@@ -318,7 +318,7 @@ export const valueAt = (line, t) => {
     if (!line.length || t < line[0].t || t > line[line.length - 1].t) {
         return null;
     }
-    let value = null;
+    let value: any = null;
     for (const sample of line) {
         if (sample.t > t) {
             break;

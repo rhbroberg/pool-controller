@@ -11,7 +11,7 @@ const MINIMUM_TICK_SPACING = 80;
 
 let nextId = 0;
 
-const escapeText = (text) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const escapeText = (text: any) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c]);
 
 /** about count round values from low to high */
 export const niceTicks = (low, high, count = 5) => {
@@ -22,7 +22,7 @@ export const niceTicks = (low, high, count = 5) => {
     const rough = span / count;
     const magnitude = 10 ** Math.floor(Math.log10(rough));
     const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= rough) || 10 * magnitude;
-    const ticks = [];
+    const ticks: number[] = [];
     for (let value = Math.ceil(low / step) * step; value <= high + step * 1e-9; value += step) {
         ticks.push(Number(value.toFixed(10)));
     }
@@ -33,7 +33,7 @@ export const niceTicks = (low, high, count = 5) => {
 export const timeTicks = (from, to, maxCount) => {
     const span = to - from;
     const step = TIME_STEPS.find((s) => span / s <= maxCount) || TIME_STEPS[TIME_STEPS.length - 1];
-    const ticks = [];
+    const ticks: number[] = [];
     const start = new Date(from);
     start.setHours(0, 0, 0, 0);
     if (step >= 30 * DAY) {
@@ -67,8 +67,8 @@ const rangePath = (points, x, y) => {
     if (points.length < 2) {
         return '';
     }
-    const top = [];
-    const bottom = [];
+    const top: any[] = [];
+    const bottom: any[] = [];
     for (let i = 0; i < points.length - 1; i++) {
         const left = x(points[i].t).toFixed(1);
         const right = x(points[i + 1].t).toFixed(1);
@@ -176,7 +176,7 @@ export class TimeChart {
         const x = (t) => plot.left + ((t - from) / (to - from)) * plot.width;
         const y = (v) => plot.top + (1 - (v - yMin) / (yMax - yMin)) * plot.height;
         const clip = `${this.id}-clip`;
-        const parts = [];
+        const parts: string[] = [];
 
         parts.push(`<defs><clipPath id="${clip}"><rect x="${plot.left}" y="${plot.top - 2}" width="${plot.width}" height="${plot.height + 4}"/></clipPath></defs>`);
 

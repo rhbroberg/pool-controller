@@ -12,9 +12,9 @@ const run = (changes = {}) => ({
 });
 
 /** a store whose runs the test hands out in turn; requests are recorded */
-const fakeStore = (runs = []) => {
+const fakeStore = (runs: any[] = []) => {
     const store = {
-        requests: [],
+        requests: [] as any[],
         looks: 0,
         reprocessRun: async () => {
             store.looks += 1;
@@ -28,7 +28,7 @@ const fakeStore = (runs = []) => {
     return store;
 };
 
-const newForm = (store, waits = []) => new ReprocessForm(store, { now: NOW, sleep: async (ms) => { waits.push(ms); } });
+const newForm = (store: any, waits: any[] = []) => new ReprocessForm(store, { now: NOW, sleep: async (ms) => { waits.push(ms); } });
 
 describe('reprocess form', () => {
     it('starts on the last 30 days and the frames the server couldn’t read', () => {
@@ -63,7 +63,7 @@ describe('reprocess form', () => {
 
     it('sends the range and kinds, and follows the run until it’s done', async () => {
         const store = fakeStore([run({ state: 'waiting' }), run({ state: 'running', through: new Date(2020, 6, 20) }), run()]);
-        const waits = [];
+        const waits: any[] = [];
         const form = newForm(store, waits);
         form.from = '2020-07-19T00:00';
         form.to = '2020-07-21T00:00';
@@ -119,14 +119,14 @@ describe('describing a run', () => {
 
     it('says what comes next once it’s done', () => {
         assert.equal(runFooter(run()), 'Nothing has changed yet. Reprocess makes these changes.');
-        assert.match(runFooter(run({ dryRun: false })), /summaries are being redone/);
+        assert.match(runFooter(run({ dryRun: false }))!, /summaries are being redone/);
         assert.equal(runFooter(run({ dryRun: false, updated: 0, removed: 0 })), null);
         assert.equal(runFooter(run({ state: 'running' })), null);
     });
 
     it('reads and writes times the way the date fields show them', () => {
         assert.equal(inputValue(new Date(2020, 6, 9, 5, 7)), '2020-07-09T05:07');
-        assert.equal(fromInput('2020-07-09T05:07').getTime(), new Date(2020, 6, 9, 5, 7).getTime());
+        assert.equal(fromInput('2020-07-09T05:07')!.getTime(), new Date(2020, 6, 9, 5, 7).getTime());
         assert.equal(fromInput(''), null);
         assert.equal(fromInput('not a time'), null);
     });

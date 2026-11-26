@@ -143,7 +143,7 @@ export const passwordInput = ({ reveal, ...options }: {
     onEnter?: () => void;
     name?: string;
 }) => {
-    const shown = reveal.shown(options.label);
+    const shown = reveal.shown(options.label || '');
     return h('span', { class: 'password-input' },
         textInput({ ...options, type: shown ? 'text' : 'password' }),
         h('button', {
@@ -154,7 +154,7 @@ export const passwordInput = ({ reveal, ...options }: {
             'aria-pressed': String(shown),
             // keeps the focus, and the caret, in the field
             onMousedown: (event) => event.preventDefault(),
-            onClick: () => reveal.toggle(options.label)
+            onClick: () => reveal.toggle(options.label || '')
         }, icon(shown ? 'eyeOff' : 'eye')));
 };
 

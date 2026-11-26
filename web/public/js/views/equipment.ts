@@ -103,9 +103,9 @@ export const mountEquipment = (root, app) => {
         const current = store.waterMode;
         const pending = store.pendingWaterMode;
         const locked = !store.canControl;
-        let status = null;
+        let status: any = null;
         if (pending) {
-            status = `Switching to ${waterModeInfo(pending).title}…`;
+            status = `Switching to ${waterModeInfo(pending)?.title || pending}…`;
         } else if (!current) {
             status = 'Waiting for the controller';
         }
@@ -136,7 +136,7 @@ export const mountEquipment = (root, app) => {
         icon('chevronRight'));
 
     const controlSection = (group, ...content) => h('section', { class: 'control-section' },
-        h('h2', { class: 'section-title' }, GROUPS.find((g) => g.id === group).title),
+        h('h2', { class: 'section-title' }, GROUPS.find((g) => g.id === group)!.title),
         h('div', { class: 'section-body' }, ...content));
 
     const render = () => {

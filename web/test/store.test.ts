@@ -12,11 +12,11 @@ const switchReading = (name, value) => ({ name, category: 'status', value, times
 /** a client whose status the test controls; requests are recorded */
 const fakeClient = (overrides = {}) => {
     const client = {
-        calls: [],
+        calls: [] as any[],
         readings: [switchReading('pool', 1), switchReading('filter', 0)],
         fetchStatus: async () => client.readings,
         fetchHeating: async () => null,
-        tasks: null,
+        tasks: null as any,
         fetchTasks: async () => client.tasks,
         weatherRequests: 0,
         fetchWeather: async () => {
@@ -232,11 +232,11 @@ describe('status store', () => {
         });
         const store = newStore(client);
         await store.setTask('spaParty', true);
-        assert.match(store.errorMessage, /sign in/i);
+        assert.match(store.errorMessage!, /sign in/i);
 
         store.save({ email: 'rick', token: 't', role: 'user' });
         await store.setTask('spaParty', true);
-        assert.match(store.errorMessage, /heater mode/);
+        assert.match(store.errorMessage!, /heater mode/);
         assert.deepEqual(store.pendingTasks, {});
     });
 
@@ -247,7 +247,7 @@ describe('status store', () => {
         assert.equal(store.credentials, null);
         assert.equal(store.signInExpired, true);
         assert.equal(store.lastAccountName, 'rick', 'the sign-in page offers the account again');
-        assert.match(store.errorMessage, /no longer valid/);
+        assert.match(store.errorMessage!, /no longer valid/);
 
         await store.signIn('rick', 'secret');
         assert.equal(store.signInExpired, false);
@@ -307,7 +307,7 @@ describe('status store', () => {
     });
 
     it('polls until stopped, waiting longer after losing the server', async () => {
-        const waits = [];
+        const waits: any[] = [];
         let fail = false;
         const client = fakeClient({ fetchStatus: async () => { if (fail) { throw new ApiError('unreachable'); } return []; } });
         const store = new StatusStore(client, {
@@ -367,8 +367,8 @@ describe('status store', () => {
     });
 
     it('asks the server to reprocess history, and reads how the run is going', async () => {
-        const requests = [];
-        let answer = { status: 404, body: { code: 404, message: 'not yet' } };
+        const requests: any[] = [];
+        let answer: any = { status: 404, body: { code: 404, message: 'not yet' } };
         const client = new Client('http://pool', async (url, init) => {
             requests.push({ url, method: init.method, body: init.body && JSON.parse(init.body), token: init.headers['x-auth'] });
             return new Response(JSON.stringify(answer.body), { status: answer.status });

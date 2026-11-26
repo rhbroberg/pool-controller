@@ -10,7 +10,7 @@ const openCommissioning = (store) => {
     let password = '';
     let confirmation = '';
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
 
     /** why the entries can't be saved yet, once something has been typed */
     const problem = () => {
@@ -81,7 +81,7 @@ const openCommissioning = (store) => {
 /** opens the set-up sheet whenever the store is commissioning, wherever the page is */
 export const watchCommissioning = (app) => {
     const { store } = app;
-    let dialog = null;
+    let dialog: any = null;
     store.subscribe(() => {
         if (store.commissioning && !dialog) {
             dialog = openCommissioning(store);

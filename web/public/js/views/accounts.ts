@@ -18,16 +18,16 @@ const notAdmin = (store) => h('div', { class: 'center-message' },
 
 export const mountAccounts = (root, app) => {
     const { store, client } = app;
-    let accounts = [];
-    let requests = [];
-    let invitations = [];
-    let services = [];
+    let accounts: any[] = [];
+    let requests: any[] = [];
+    let invitations: any[] = [];
+    let services: any[] = [];
     // the role chosen for each request before it's approved
     const approvalRoles = {};
     let isLoading = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
 
-    const token = () => store.credentials ? store.credentials.token : '';
+    const token = () => store.credentials ? store.credentials!.token : '';
 
     const load = async () => {
         if (!store.isAdmin) {
@@ -158,7 +158,7 @@ export const mountAccounts = (root, app) => {
         h('div', { class: 'row-text' },
             h('span', null, invitation.email),
             h('small', null, `${invitation.providerName || 'Any trusted service'} · invited by ${invitation.createdBy}`)),
-        h('span', { class: 'role' }, roleInfo(invitation.role) ? roleInfo(invitation.role).title : invitation.role),
+        h('span', { class: 'role' }, (roleInfo(invitation.role)?.title) || invitation.role),
         h('button', {
             class: 'icon-button',
             type: 'button',
@@ -171,14 +171,14 @@ export const mountAccounts = (root, app) => {
     const denied = () => requests.filter((request) => request.status === 'denied');
 
     const row = (account) => {
-        const isYou = store.credentials && account.email === store.credentials.email;
+        const isYou = store.credentials && account.email === store.credentials!.email;
         const notes = [isYou ? 'You' : null, services.length ? methodNames(account.methods, services).join(', ') : null].filter(Boolean).join(' · ');
         return formRow(h('div', { class: 'account-row', style: { flex: 1, minWidth: 0 } },
             h('a', { class: 'row-link', href: `#/accounts/${encodeURIComponent(account.email)}` },
                 h('div', { class: 'row-text' },
                     h('span', null, account.email),
                     account.mustChangeCredentials ? h('small', { class: 'warning' }, 'Not set up yet') : notes ? h('small', null, notes) : null),
-                h('span', { class: 'role' }, roleInfo(account.role) ? roleInfo(account.role).title : account.role),
+                h('span', { class: 'role' }, (roleInfo(account.role)?.title) || account.role),
                 icon('chevronRight')),
             isYou ? h('span', { style: { width: '32px' } }) : h('button', {
                 class: 'icon-button',
@@ -245,7 +245,7 @@ const openNewAccount = (app, services) => {
     let service = '';
     let role = 'user';
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
     const reveal = revealer(() => dialog.update());
 
     const inviting = () => method === 'invitation';
@@ -260,7 +260,7 @@ const openNewAccount = (app, services) => {
         saving = true;
         errorMessage = null;
         dialog.update();
-        const token = store.credentials ? store.credentials.token : '';
+        const token = store.credentials ? store.credentials!.token : '';
         try {
             close(inviting()
                 ? { invitation: await client.createInvitation({ email: email.trim(), role, provider: service || null }, token) }
@@ -315,7 +315,7 @@ const openNewAccount = (app, services) => {
                         field('Account Name', name, (v) => { name = v; }, 'text', 'off'),
                         field('Password', password, (v) => { password = v; }, 'password', 'new-password'),
                         field('Confirm Password', confirmation, (v) => { confirmation = v; }, 'password', 'new-password')),
-                formSection({ footer: roleInfo(role).summary },
+                formSection({ footer: roleInfo(role)!.summary },
                     formRow(h('span', { class: 'label' }, 'Role'), select({
                         label: 'Role',
                         value: role,
@@ -332,17 +332,17 @@ const openNewAccount = (app, services) => {
 /** admin: change one account's role or reset its password */
 export const mountAccountDetail = (root, app, name) => {
     const { store, client } = app;
-    let account = null;
-    let role = null;
+    let account: any = null;
+    let role: any = null;
     let password = '';
     let confirmation = '';
     let saving = false;
     let loading = true;
-    let message = null;
+    let message: any = null;
     let failed = false;
-    let services = [];
+    let services: any[] = [];
 
-    const token = () => store.credentials ? store.credentials.token : '';
+    const token = () => store.credentials ? store.credentials!.token : '';
 
     const load = async () => {
         if (!store.isAdmin) {
@@ -377,10 +377,10 @@ export const mountAccountDetail = (root, app, name) => {
             account = result;
             role = result.role;
             failed = false;
-            message = changes.password ? 'Password reset.' : `${account.email} is now ${roleInfo(result.role).withArticle}.`;
+            message = changes.password ? 'Password reset.' : `${account.email} is now ${roleInfo(result.role)!.withArticle}.`;
             password = '';
             confirmation = '';
-            if (store.credentials && account.email === store.credentials.email) {
+            if (store.credentials && account.email === store.credentials!.email) {
                 await store.refreshAccount();
             }
         } catch (error) {
@@ -419,7 +419,7 @@ export const mountAccountDetail = (root, app, name) => {
         return h('div', { class: 'form' },
             account.methods && services.length ? formSection({},
                 formRow(h('span', { class: 'label' }, 'Signs In With'), h('span', { class: 'value' }, methodNames(account.methods, services).join(', ') || 'Nothing yet'))) : null,
-            formSection({ footer: roleInfo(role).summary },
+            formSection({ footer: roleInfo(role)!.summary },
                 formRow(h('span', { class: 'label' }, 'Role'), select({
                     label: 'Role',
                     value: role,

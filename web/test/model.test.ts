@@ -41,9 +41,9 @@ describe('equipment tiles', () => {
     });
 
     it('asks before starting super chlorination only', () => {
-        assert.ok(control('superchlorinate').confirmOn);
+        assert.ok(control('superchlorinate')!.confirmOn);
         assert.equal((control('superchlorinate') as any).confirmOff, undefined);
-        assert.equal(control('filter').confirmOn, undefined);
+        assert.equal(control('filter')!.confirmOn, undefined);
     });
 
     it('uses this panel’s names for its aux outputs', () => {
@@ -91,10 +91,10 @@ describe('weather', () => {
 
     it('mentions a real chance of rain and an out-of-date forecast', () => {
         const summary = weatherSummary(weather({ high: 75, low: 60, condition: 'rain', precipitationProbability: 80 }, { stale: true }));
-        assert.equal(summary.title, 'Rain');
-        assert.equal(summary.icon, 'cloudRain');
-        assert.equal(summary.rain, '80% chance of rain');
-        assert.equal(summary.isStale, true);
+        assert.equal(summary!.title, 'Rain');
+        assert.equal(summary!.icon, 'cloudRain');
+        assert.equal(summary!.rain, '80% chance of rain');
+        assert.equal(summary!.isStale, true);
     });
 
     it('shows nothing without a zip code or before the first forecast', () => {
@@ -105,16 +105,16 @@ describe('weather', () => {
 
     it('copes with a missing temperature or an unknown condition', () => {
         const summary = weatherSummary(weather({ high: null, low: 60, condition: null }));
-        assert.equal(summary.highLow, '--° / 60°');
-        assert.equal(summary.title, 'Today');
+        assert.equal(summary!.highLow, '--° / 60°');
+        assert.equal(summary!.title, 'Today');
     });
 });
 
 describe('passwords', () => {
     it('explains a short or mismatched password once something is typed', () => {
         assert.equal(passwordProblem('', ''), null);
-        assert.match(passwordProblem('abc', ''), /at least 6/);
-        assert.match(passwordProblem('abcdef', 'abcdeg'), /match/);
+        assert.match(passwordProblem('abc', '')!, /at least 6/);
+        assert.match(passwordProblem('abcdef', 'abcdeg')!, /match/);
         assert.equal(passwordAcceptable('abcdef', 'abcdef'), true);
         assert.equal(passwordAcceptable('abcdef', ''), false);
     });
@@ -199,7 +199,7 @@ describe('tasks', () => {
 });
 
 describe('heating on the temperature card', () => {
-    const heating = ({ target = 'spa', heaterOn = true, status = 'ready' } = {}) => ({
+    const heating = ({ target = 'spa', heaterOn = true, status = 'ready' }: any = {}) => ({
         target,
         devices: {
             heater1: { enabled: heaterOn, heating: heaterOn, callingForHeat: heaterOn, body: target, setpoint: 102, temperature: 90 },
@@ -211,17 +211,17 @@ describe('heating on the temperature card', () => {
 
     it('shows the sources that are on, the highest setpoint and when it will be there', () => {
         const spa = bodyHeating(heating(), 'spa', now);
-        assert.deepEqual(spa.sources.map((source) => [source.id, source.heating, source.control.icon]), [['heater1', true, 'flame'], ['heatpump', false, 'heatWaves']]);
-        assert.equal(spa.setpoint, 102);
-        assert.match(spa.ready, /^6:30/);
+        assert.deepEqual(spa!.sources.map((source) => [source.id, source.heating, source.control!.icon]), [['heater1', true, 'flame'], ['heatpump', false, 'heatWaves']]);
+        assert.equal(spa!.setpoint, 102);
+        assert.match(spa!.ready!, /^6:30/);
         assert.equal(bodyHeating(heating(), 'pool', now), null, 'no water flows to the pool');
     });
 
     it('leaves out a source that is off, and the time when there is no estimate', () => {
         const spa = bodyHeating(heating({ heaterOn: false, status: 'unreachable' }), 'spa', now);
-        assert.deepEqual(spa.sources.map((source) => source.id), ['heatpump']);
-        assert.equal(spa.setpoint, 100);
-        assert.equal(spa.ready, null);
+        assert.deepEqual(spa!.sources.map((source) => source.id), ['heatpump']);
+        assert.equal(spa!.setpoint, 100);
+        assert.equal(spa!.ready, null);
     });
 
     it('is nothing while no pump runs, or before the server has said', () => {

@@ -52,16 +52,16 @@ const tickLabel = (t, step) => {
 };
 
 export const mountTemperatureHistory = (root, app, water) => {
-    const body = waterBody(water);
+    const body = waterBody(water)!;
     const model = new TemperatureHistory(water, app.client, () => redraw());
     const viewportKey = water === 'pool' ? 'poolTemperatureHistoryViewport' : 'spaTemperatureHistoryViewport';
     let now = Date.now();
     let length = PRESETS[0].length;
     let start = now - length;
     // null once the window has been zoomed away from every preset: shown as Custom
-    let preset = 'day';
+    let preset: string | null = 'day';
     // the time under the pointer while reading values off the graph
-    let selected = null;
+    let selected: any = null;
     // what the legend's switches show on the graph, kept between visits
     const shown = {
         air: prefs.read('showAirTemperature', true),
@@ -69,10 +69,10 @@ export const mountTemperatureHistory = (root, app, water) => {
         heatPump: prefs.read('showHeatPump', true)
     };
     const helpSeen = prefs.read('historyHelpSeen', false);
-    let chart = null;
-    let loadTimer = null;
-    let saveTimer = null;
-    let gesture = null;
+    let chart: any = null;
+    let loadTimer: any = null;
+    let saveTimer: any = null;
+    let gesture: any = null;
     const pointers = new Map();
 
     const saved = prefs.read(viewportKey, null);
@@ -347,7 +347,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     /** fits the readings in view, with a little room above and below */
     const yDomain = ({ segments, air }) => {
         const end = start + length;
-        const values = [];
+        const values: any[] = [];
         [...segments, air].forEach((line) => {
             line.forEach((sample) => {
                 if (sample.t >= start && sample.t <= end) {

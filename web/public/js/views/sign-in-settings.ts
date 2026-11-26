@@ -15,10 +15,10 @@ const notAdmin = (store) => h('div', { class: 'center-message' },
 
 export const mountSignInSettings = (root, app) => {
     const { store, client } = app;
-    let settings = null;
+    let settings: any = null;
     let isLoading = false;
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
 
     const token = () => store.credentials ? store.credentials.token : '';
 
@@ -138,7 +138,7 @@ const openService = (app, settings, service) => {
         ? { id: preset.id, displayName: preset.displayName, kind: preset.kind, issuer: preset.issuer, trustEmail: preset.trustEmail, enabled: true, clientId: '', clientSecret: '', apple: { teamId: '', keyId: '', privateKey: '' } }
         : { ...service, clientSecret: '', apple: { teamId: '', keyId: '', privateKey: '', ...(service.apple || {}) } };
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
     const reveal = revealer(() => dialog.update());
     const token = () => store.credentials ? store.credentials.token : '';
 

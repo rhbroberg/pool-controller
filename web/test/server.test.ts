@@ -14,7 +14,7 @@ const close = (server: any) => new Promise<void>((resolve) => {
 
 /** stands in for the pool server, recording what reaches it */
 const startUpstream = async () => {
-    const seen = [];
+    const seen: any[] = [];
     const upstream = http.createServer((req, res) => {
         let body = '';
         req.on('data', (chunk) => { body += chunk; });
@@ -24,13 +24,13 @@ const startUpstream = async () => {
                 res.writeHead(status, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(payload));
             };
-            if (req.url.startsWith(`${API_BASE}/status`)) {
+            if ((req.url || '').startsWith(`${API_BASE}/status`)) {
                 reply(200, [{ name: 'filter', category: 'status', value: 1, timestamp: '2026-01-02T03:04:05.000Z' }]);
-            } else if (req.url.startsWith(`${API_BASE}/users/me`)) {
+            } else if ((req.url || '').startsWith(`${API_BASE}/users/me`)) {
                 reply(401, { code: 401 });
-            } else if (req.url.startsWith(`${API_BASE}/devices/`)) {
+            } else if ((req.url || '').startsWith(`${API_BASE}/devices/`)) {
                 reply(403, { code: 403, message: 'the viewer role cannot do that' });
-            } else if (req.url.startsWith(`${API_BASE}/users/login`)) {
+            } else if ((req.url || '').startsWith(`${API_BASE}/users/login`)) {
                 reply(200, { email: JSON.parse(body).email, token: 'token-1', role: 'admin' });
             } else {
                 reply(200, { echoed: req.url });
@@ -60,14 +60,14 @@ describe('web service', () => {
     it('serves the page at the root', async () => {
         const response = await fetch(`${base}/`);
         assert.equal(response.status, 200);
-        assert.match(response.headers.get('content-type'), /text\/html/);
+        assert.match(response.headers.get('content-type')!, /text\/html/);
         assert.match(await response.text(), /<div id="app">/);
     });
 
     it('serves scripts as JavaScript modules can be loaded', async () => {
         const response = await fetch(`${base}/js/app.js`);
         assert.equal(response.status, 200);
-        assert.match(response.headers.get('content-type'), /text\/javascript/);
+        assert.match(response.headers.get('content-type')!, /text\/javascript/);
     });
 
     it('answers 404 for files it does not have, and never serves files above public/', async () => {
@@ -215,7 +215,7 @@ describe('web service live updates', () => {
     let upstreamPort;
     let web;
     let webPort;
-    const upgrades = [];
+    const upgrades: any[] = [];
 
     // stands in for the pool server's socket.io: it greets each WebSocket, then echoes what it hears
     before(async () => {
@@ -302,7 +302,7 @@ describe('web service live updates', () => {
     it('closes the pool server’s side when the browser goes away', async () => {
         const { socket, head } = await upgrade(webPort, '/socket.io/?EIO=4&transport=websocket');
         await read(socket, head, 5);
-        const connections = () => new Promise((resolve) => upstream.getConnections((_, count) => resolve(count)));
+        const connections = (): Promise<number> => new Promise((resolve) => upstream.getConnections((_, count) => resolve(count ?? 0)));
         const open = await connections();
         socket.destroy();
         for (let i = 0; i < 50 && (await connections()) >= open; i++) {

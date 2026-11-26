@@ -16,7 +16,7 @@ const LONGEST_RETRY_MS = 30000;
 const OPEN_TIMEOUT_MS = 10000;
 
 /** one Engine.IO packet as received; null if it isn't one */
-export const parsePacket = (text: string): any => {
+export const parsePacket = (text: string | null | undefined): any => {
     if (typeof text !== 'string' || text.length === 0) {
         return null;
     }
@@ -175,7 +175,7 @@ export class LiveConnection {
 
     send(text) {
         try {
-            this.socket.send(text);
+            this.socket!.send(text);
         } catch {
             this.lost();
         }

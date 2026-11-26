@@ -29,7 +29,7 @@ export const mountDashboard = (root, app) => {
 
     const offlineBanner = () => {
         const host = app.apiServer || 'the pool server';
-        let detail = null;
+        let detail: any = null;
         if (store.isLoading) {
             detail = 'Reconnecting…';
         } else if (store.nextAttempt && store.nextAttempt > new Date()) {
@@ -65,10 +65,11 @@ export const mountDashboard = (root, app) => {
         const weather = weatherSummary(store.weather);
         const details = [`Air ${air.value}`];
         if (weather) {
-            details.push(`${weather.place ? `Today in ${weather.place}` : 'Today'}: ${weather.title}, high ${weather.highLow.replace(' / ', ', low ')}`,
-                weather.rain, weather.isStale ? 'Forecast out of date' : null);
+            details.push(`${weather.place ? `Today in ${weather.place}` : 'Today'}: ${weather.title}, high ${weather.highLow.replace(' / ', ', low ')}`);
+            if (weather.rain) details.push(weather.rain);
+            if (weather.isStale) details.push('Forecast out of date');
         }
-        const summary = details.filter(Boolean).join(' · ');
+        const summary = details.filter((part): part is string => Boolean(part)).join(' · ');
         return h('span', { class: 'weather-badge', title: summary, 'aria-label': summary, role: 'img' },
             icon(weather ? weather.icon : 'thermometer', { className: `weather-icon ${weather ? weather.icon : ''}` }),
             h('span', { class: 'air' }, air.value),
@@ -100,9 +101,9 @@ export const mountDashboard = (root, app) => {
                 icon('chevronRight'),
                 h('span', { class: 'sources' }, sources.map((source) => h('span', {
                     class: 'source',
-                    style: { '--tint': `var(--${source.control.tint})` },
+                    style: { '--tint': `var(--${source.control!.tint})` },
                     title: `${source.title} ${source.heating ? 'heating' : 'on'}`
-                }, icon(source.control.icon, { filled: source.heating }))))),
+                }, icon(source.control!.icon, { filled: source.heating }))))),
             h('span', { class: ['water-value', water.isDimmed ? 'dimmed' : ''] }, water.value),
             waterDetail(water, heating));
     };

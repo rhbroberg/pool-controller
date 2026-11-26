@@ -10,7 +10,7 @@ export const mountSignInComplete = (root, app, query) => {
     const { store } = app;
     const outcome = signInOutcome(query);
     let working = Boolean(outcome.ticket);
-    let failure = null;
+    let failure: any = null;
 
     // the ticket is spent once used; keep it out of the history and off the screen
     history.replaceState(null, '', '#/signin/complete');

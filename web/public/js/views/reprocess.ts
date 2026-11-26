@@ -16,7 +16,7 @@ export const mountReprocess = (root, app) => {
             const [from, to] = form.range;
             const confirmed = await confirmAction({
                 title: 'Reprocess history?',
-                message: `Events from ${formatMonthDayYearTime(from)} to ${formatMonthDayYearTime(to)} are rewritten from their stored frames, and ones that now change nothing are removed. This can’t be undone. The history summaries are then redone from the start of the range.`,
+                message: `Events from ${formatMonthDayYearTime(from!)} to ${formatMonthDayYearTime(to!)} are rewritten from their stored frames, and ones that now change nothing are removed. This can’t be undone. The history summaries are then redone from the start of the range.`,
                 action: 'Reprocess',
                 destructive: true
             });

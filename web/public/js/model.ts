@@ -144,7 +144,7 @@ export const tileState = (control, on, pending, heating) => {
         text = `${stateText(control, true)} · pump off`;
     } else {
         const body = waterBody(heating.body);
-        const water = body.title.toLowerCase();
+        const water = body ? body.title.toLowerCase() : 'water';
         if (heating.heating) {
             text = `Heating ${water}`;
         } else if (heating.callingForHeat) {
@@ -152,7 +152,7 @@ export const tileState = (control, on, pending, heating) => {
         } else if (heating.temperature === null || heating.temperature === undefined) {
             text = `${stateText(control, true)} · ${water}`;
         } else {
-            text = `${body.title} at setpoint`;
+            text = `${body ? body.title : 'Water'} at setpoint`;
         }
     }
     return { running, text, targetSetpoint: target };
@@ -370,7 +370,7 @@ export const signInOutcome = (params) => {
 /**
  * the names of how an account signs in, with services' ids replaced by their names
  **/
-export const methodNames = (methods, providers = []) => (methods || []).map((method) => {
+export const methodNames = (methods: any, providers: any[] = []) => (methods || []).map((method: any) => {
     if (method === 'password') {
         return 'Password';
     }

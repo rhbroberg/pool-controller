@@ -36,21 +36,21 @@ const allTimeZones = (current) => {
 export const mountMaintenance = (root, app) => {
     const { store, client } = app;
     // whether the server has sign-in services to set up; null until it says, or from one too old
-    let choices = null;
+    let choices: any = null;
     let pendingRequests = 0;
     let working = false;
-    let message = null;
-    let settings = null;
+    let message: any = null;
+    let settings: any = null;
     // the heating model in use, to say which rates it learned; null until one is saved
-    let heatingModel = null;
-    let jobs = [];
+    let heatingModel: any = null;
+    let jobs: any[] = [];
     // settings or jobs that couldn't be read or changed
-    let settingsError = null;
-    let runningJob = null;
+    let settingsError: any = null;
+    let runningJob: any = null;
     // the zip code being typed; null shows the saved one
-    let zipDraft = null;
+    let zipDraft: any = null;
     let savingZip = false;
-    let locationError = null;
+    let locationError: any = null;
 
     const run = async (action, done) => {
         working = true;

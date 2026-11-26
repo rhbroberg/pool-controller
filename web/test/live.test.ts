@@ -12,7 +12,7 @@ const filter = EQUIPMENT.find((control) => control.name === 'filter');
 
 /** WebSockets the test drives: what the page sends is recorded, what the server sends is pushed */
 const fakeSockets = () => {
-    const sockets = [];
+    const sockets: any[] = [];
     class FakeSocket {
     [key: string]: any;
         constructor(url) {
@@ -61,8 +61,8 @@ const fakeTimers = () => {
 const connection = (options = {}) => {
     const { sockets, FakeSocket } = fakeSockets();
     const timers = fakeTimers();
-    const events = [];
-    const states = [];
+    const events: any[] = [];
+    const states: any[] = [];
     const live = new LiveConnection('ws://pool.local/socket.io/?EIO=4&transport=websocket', {
         WebSocketImpl: FakeSocket,
         setTimer: timers.setTimer,
@@ -286,11 +286,11 @@ const fakeLive = () => ({
 
 const reading = (name, value, category = 'status') => ({ name, category, value, timestamp: new Date('2026-01-02T03:04:05Z') });
 
-const fakeClient = (readings) => {
+const fakeClient = (readings: any) => {
     const client = {
         readings,
         statusRequests: 0,
-        calls: [],
+        calls: [] as any[],
         fetchStatus: async () => {
             client.statusRequests += 1;
             return client.readings;
@@ -310,7 +310,7 @@ describe('status store with live updates', () => {
         const live = fakeLive();
         const store = new StatusStore(fakeClient([reading('pool temp', 80, 'info'), reading('filter', 0)]), { live });
         await store.refresh();
-        live.onEvent('readings', { readings: [{ name: 'filter', category: 'status', value: true, timestamp: '2026-01-02T04:00:00.000Z' },
+        (live as any).onEvent('readings', { readings: [{ name: 'filter', category: 'status', value: true, timestamp: '2026-01-02T04:00:00.000Z' },
             { name: 'lights', category: 'status', value: false, timestamp: '2026-01-02T04:00:00.000Z' }] });
         assert.deepEqual(store.readings.map((entry) => [entry.name, entry.value]), [['pool temp', 80], ['filter', 1], ['lights', 0]]);
         assert.ok(store.reading('filter').timestamp instanceof Date);
@@ -319,13 +319,13 @@ describe('status store with live updates', () => {
 
     it('keeps a push over the answer to a refresh that asked before it', async () => {
         const live = fakeLive();
-        let answer;
+        let answer: any = null;
         const client = fakeClient([reading('filter', 0)]);
         client.fetchStatus = () => new Promise((resolve) => { answer = resolve; });
         const store = new StatusStore(client, { live });
         const refreshing = store.refresh();
-        live.onEvent('readings', { readings: [reading('filter', 1)] });
-        answer([reading('filter', 0)]);
+        (live as any).onEvent('readings', { readings: [reading('filter', 1)] });
+        answer!([reading('filter', 0)]);
         await refreshing;
         assert.equal(store.isOn(filter), true);
         assert.equal(store.connection, 'connected');
@@ -338,7 +338,7 @@ describe('status store with live updates', () => {
         client.fetchStatus = async () => { throw new ApiError('unreachable'); };
         await store.refresh();
         assert.equal(store.connection, 'disconnected');
-        live.onEvent('readings', { readings: [reading('filter', 1)] });
+        (live as any).onEvent('readings', { readings: [reading('filter', 1)] });
         assert.equal(store.connection, 'connected');
         assert.equal(store.connectionFailure, null);
         assert.ok(store.lastRefresh);
@@ -347,11 +347,11 @@ describe('status store with live updates', () => {
     it('shows changes as the live updates come and go', async () => {
         const live = fakeLive();
         const store = new StatusStore(fakeClient([]), { live });
-        const notified = [];
+        const notified: any[] = [];
         store.subscribe((changed) => notified.push(changed.isLive));
-        live.onStateChange(true);
+        (live as any).onStateChange(true);
         await Promise.resolve();
-        live.onStateChange(false);
+        (live as any).onStateChange(false);
         await Promise.resolve();
         assert.deepEqual(notified, [true, false]);
     });
@@ -359,16 +359,16 @@ describe('status store with live updates', () => {
     it('applies pushed heating, and ignores pushes it doesn’t know', async () => {
         const live = fakeLive();
         const store = new StatusStore(fakeClient([]), { live });
-        live.onEvent('heating', { minimum: 70, devices: {} });
+        (live as any).onEvent('heating', { minimum: 70, devices: {} });
         assert.equal(store.heating.minimum, 70);
-        live.onEvent('weather', { today: {} });
-        live.onEvent('readings', 'not readings');
+        (live as any).onEvent('weather', { today: {} });
+        (live as any).onEvent('readings', 'not readings');
         assert.deepEqual(store.readings, []);
     });
 
     it('polls less often while live, and refreshes at once on joining or losing the live updates', async () => {
         const live = fakeLive();
-        const waits = [];
+        const waits: any[] = [];
         let wake;
         const client = fakeClient([reading('filter', 0)]);
         const store = new StatusStore(client, {
@@ -384,20 +384,20 @@ describe('status store with live updates', () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         assert.deepEqual(waits, [REFRESH_SECONDS * 1000]);
 
-        live.onStateChange(true);
+        (live as any).onStateChange(true);
         await new Promise((resolve) => setTimeout(resolve, 10));
         assert.equal(client.statusRequests, 2, 'joining catches up on anything missed');
         assert.deepEqual(waits, [REFRESH_SECONDS * 1000, LIVE_REFRESH_SECONDS * 1000]);
         assert.equal(store.isLive, true);
 
-        live.onStateChange(false);
+        (live as any).onStateChange(false);
         await new Promise((resolve) => setTimeout(resolve, 10));
         assert.equal(client.statusRequests, 3);
         assert.equal(waits.at(-1), REFRESH_SECONDS * 1000);
 
         store.stopPolling();
         assert.equal(live.stops, 2, 'once on starting over, once on stopping');
-        wake();
+        wake!();
     });
 
     it('confirms a change from the push rather than by polling', async () => {
@@ -406,13 +406,13 @@ describe('status store with live updates', () => {
         const store = new StatusStore(client, { live, confirmationPollMs: 1000 });
         store.save({ email: 'rick', token: 't', role: 'user' });
         await store.refresh();
-        live.onStateChange(true);
+        (live as any).onStateChange(true);
         const requests = client.statusRequests;
 
         const change = store.setControl(filter, true);
         await new Promise((resolve) => setTimeout(resolve, 20));
         assert.equal(store.pendingState('filter'), true);
-        live.onEvent('readings', { readings: [reading('filter', true)] });
+        (live as any).onEvent('readings', { readings: [reading('filter', true)] });
         await change;
 
         assert.equal(client.statusRequests, requests, 'no polling needed');
@@ -427,7 +427,7 @@ describe('status store with live updates', () => {
         const store = new StatusStore(client, { live, confirmationPollMs: 2 });
         store.save({ email: 'rick', token: 't', role: 'user' });
         await store.refresh();
-        live.onStateChange(true);
+        (live as any).onStateChange(true);
 
         const change = store.setControl(filter, true);
         client.readings = [reading('filter', 1)];

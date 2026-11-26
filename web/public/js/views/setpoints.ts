@@ -15,7 +15,7 @@ export const openSetpoints = (app, device) => {
         drafts[body.id] = setpointOf(store.heating, device.id, body.id) ?? DEFAULT_SETPOINT;
     });
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
 
     const explanation = () => {
         const parts = [`The ${device.title.toLowerCase()} heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it.`];

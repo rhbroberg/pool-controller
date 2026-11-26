@@ -62,15 +62,15 @@ const app = {
     }
 };
 
-const root = document.getElementById('app');
-let unmount = null;
+const root = document.getElementById('app')!;
+let unmount: (() => void) | null = null;
 // whether the page on screen was drawn for someone signed in
-let shownSignedIn = null;
+let shownSignedIn: boolean | null = null;
 
 const route = () => {
     const [hashPath, hashQuery = ''] = location.hash.replace(/^#\/?/, '').split('?');
     const path = decodeURI(hashPath).replace(/\/$/, '');
-    let match = null;
+    let match: RegExpExecArray | null = null;
     const found = ROUTES.find(([pattern]) => {
         match = pattern.exec(path);
         return match;
@@ -91,7 +91,7 @@ const route = () => {
         location.replace('#/');
         return;
     }
-    unmount = found[1](root, app, match.slice(1), new URLSearchParams(hashQuery)) || null;
+    unmount = found[1](root, app, match!.slice(1), new URLSearchParams(hashQuery)) || null;
 };
 
 window.addEventListener('hashchange', route);

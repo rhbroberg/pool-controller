@@ -200,7 +200,7 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
     const target = new URL(apiUrl);
     const root = path.resolve(publicDir);
     const server = http.createServer((req, res) => {
-        const { pathname } = new URL(req.url, 'http://localhost');
+        const { pathname } = new URL(req.url || '/', 'http://localhost');
         if (isProxied(pathname)) {
             proxy(req, res, target);
         } else if (pathname === '/config.json') {
@@ -212,7 +212,7 @@ export const createWebServer = ({ apiUrl = DEFAULT_API_URL, publicDir = PUBLIC_D
     // upgraded connections are no longer the HTTP server's to close
     const live = new Set<any>();
     server.on('upgrade', (req, socket, head) => {
-        const { pathname } = new URL(req.url, 'http://localhost');
+        const { pathname } = new URL(req.url || '/', 'http://localhost');
         if (isProxied(pathname)) {
             proxyUpgrade(req, socket, head, target, live);
         } else {

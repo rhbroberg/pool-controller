@@ -12,11 +12,11 @@ export const mountSettings = (root, app) => {
     const { store, client } = app;
     let poolName = prefs.read('poolName', DEFAULT_POOL_NAME);
     // the sign-in services the server offers; null until it says
-    let choices = null;
-    let methodsError = null;
-    let linking = null;
+    let choices: any = null;
+    let methodsError: any = null;
+    let linking: any = null;
     // the pool server's build, for the about line; null until it answers
-    let serverInfo = null;
+    let serverInfo: any = null;
 
     const token = () => store.credentials ? store.credentials.token : '';
 
@@ -178,7 +178,7 @@ export const mountChangePassword = (root, app) => {
     let password = '';
     let confirmation = '';
     let saving = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
     const reveal = revealer(() => redraw());
 
     const canSave = () => current && passwordAcceptable(password, confirmation) && !saving;

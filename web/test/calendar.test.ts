@@ -11,7 +11,7 @@ const HOUR = 3600 * 1000;
 const availability = { timeZone: NEW_YORK, earliest: '2026-10-02', days: [{ date: '2026-11-07', readings: 42 }, { date: '2026-10-15', readings: 3 }] };
 
 const fakeClient = (answer = availability) => {
-    const requests = [];
+    const requests: any[] = [];
     return {
         requests,
         fetchAvailability: async (from, to) => {
@@ -47,7 +47,7 @@ describe('history calendar', () => {
     });
 
     it('asks for only the spa temperature when the calendar is the spa’s', async () => {
-        const names = [];
+        const names: any[] = [];
         const client = {
             fetchAvailability: async (from, to, requested) => {
                 names.push(requested);

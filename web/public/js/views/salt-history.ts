@@ -45,18 +45,18 @@ export const mountSaltHistory = (root, app, query) => {
     let length = PRESETS[1].length;
     let start = now - length;
     // null once the window has been zoomed away from every preset: shown as Custom
-    let preset = 'month';
-    let samples = [];
-    let earliest = null;
+    let preset: string | null = 'month';
+    let samples: any[] = [];
+    let earliest: any = null;
     let resolution = 0;
     let isLoading = false;
-    let errorMessage = null;
-    let selected = null;
-    let chart = null;
-    let loadTimer = null;
-    let saveTimer = null;
+    let errorMessage: string | null = null;
+    let selected: any = null;
+    let chart: any = null;
+    let loadTimer: any = null;
+    let saveTimer: any = null;
     let generation = 0;
-    let gesture = null;
+    let gesture: any = null;
     const pointers = new Map();
     const helpSeen = prefs.read('historyHelpSeen', false);
 

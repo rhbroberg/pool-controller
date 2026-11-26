@@ -16,7 +16,7 @@ export const shiftMonth = ({ year, month }, offset) => {
 
 export class HistoryCalendar {
     [key: string]: any;
-    constructor(client, changed = () => {}, names = null) {
+    constructor(client: any, changed: () => void = () => {}, names: string[] | null = null) {
         this.client = client;
         this.changed = changed;
         // null asks for every water reading; ['pool temp'] marks only that one
@@ -90,9 +90,9 @@ export class HistoryCalendar {
         const weekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
         const today = this.today(now);
         let key = addDaysToKey(firstKey, -weekday);
-        const weeks = [];
+        const weeks: any[] = [];
         while (weeks.length < 6) {
-            const week = [];
+            const week: any[] = [];
             for (let i = 0; i < 7; i++) {
                 const parts = partsOf(key);
                 week.push({

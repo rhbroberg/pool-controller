@@ -10,9 +10,9 @@ export const mountSignIn = (root, app) => {
     let email = store.lastAccountName || '';
     let password = '';
     let signingIn = false;
-    let signInError = null;
+    let signInError: any = null;
     // what the server offers: passwords and/or services; null until it says, or if it can't
-    let choices = null;
+    let choices: any = null;
     const reveal = revealer(() => redraw());
 
     const loadChoices = async () => {

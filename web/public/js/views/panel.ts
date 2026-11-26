@@ -25,18 +25,18 @@ const KEYBOARD = {
 
 export const mountPanel = (root, app) => {
     const { store, client } = app;
-    let display = null;
-    let errorMessage = null;
+    let display: any = null;
+    let errorMessage: any = null;
     // false once the server can't be reached; true while it answers, even with an error
     let reachable = true;
     // the last few presses, oldest first, so a display that lags behind isn't mistaken for a
     // press that didn't take
-    let presses = [];
+    let presses: any[] = [];
     let nextPressId = 0;
     let disposed = false;
-    let pollTimer = null;
-    let repeat = null;
-    let wakeLock = null;
+    let pollTimer: any = null;
+    let repeat: any = null;
+    let wakeLock: any = null;
 
     const handle = (error) => {
         if (isAbort(error)) {

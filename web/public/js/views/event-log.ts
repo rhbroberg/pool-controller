@@ -17,16 +17,16 @@ export const mountEventLog = (root, app) => {
     let kinds = new Set(DEFAULT_EVENT_KINDS);
     let user = EVERYONE;
     let ascending = false;
-    let events = [];
-    let users = [];
+    let events: any[] = [];
+    let users: any[] = [];
     let isLoading = false;
-    let errorMessage = null;
+    let errorMessage: any = null;
     // the server has no more events for these filters
     let reachedEnd = false;
-    let cursor = null;
+    let cursor: any = null;
     // bumped on every reload, so a page that arrives after the filters change is dropped
     let generation = 0;
-    let observer = null;
+    let observer: any = null;
 
     const isDefaultKinds = () => kinds.size === DEFAULT_EVENT_KINDS.length && DEFAULT_EVENT_KINDS.every((kind) => kinds.has(kind));
 

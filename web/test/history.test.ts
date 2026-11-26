@@ -15,7 +15,7 @@ const series = (name, points, { before = null, resolution = 0 } = {}) => ({
 
 /** a client that answers every history request with the given series, recording each request */
 const fakeClient = (seriesList) => {
-    const requests = [];
+    const requests: any[] = [];
     return {
         requests,
         fetchHistory: async (names, from, to, options) => {
@@ -166,7 +166,7 @@ describe('temperature history lines', () => {
     });
 
     it('carries the value in effect as the window opens, for readings as recorded', async () => {
-        const history = new TemperatureHistory('pool', fakeClient([series('ambient', [[500, 60]], { before: { t: 10, v: 55 } })]));
+        const history = new TemperatureHistory('pool', fakeClient([series('ambient', [[500, 60]], { before: { t: 10, v: 55 } as any })]));
         await history.ensureLoaded(100, 2000, LEVEL);
         assert.deepEqual(history.airLine(1000, LEVEL).map((s) => [s.t, s.v]), [[10, 55], [500, 60], [1000, 60]]);
     });
