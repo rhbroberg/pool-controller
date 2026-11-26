@@ -54,6 +54,7 @@ const tickLabel = (t, step) => {
 export const mountTemperatureHistory = (root, app, water) => {
     const body = waterBody(water);
     const model = new TemperatureHistory(water, app.client, () => redraw());
+    const viewportKey = water === 'pool' ? 'poolTemperatureHistoryViewport' : 'spaTemperatureHistoryViewport';
     let now = Date.now();
     let length = PRESETS[0].length;
     let start = now - length;
@@ -70,22 +71,42 @@ export const mountTemperatureHistory = (root, app, water) => {
     const helpSeen = prefs.read('historyHelpSeen', false);
     let chart = null;
     let loadTimer = null;
+    let saveTimer = null;
     let gesture = null;
     const pointers = new Map();
 
+    const saved = prefs.read(viewportKey, null);
+    if (saved && typeof saved.length === 'number' && typeof saved.start === 'number' && saved.length > 0) {
+        length = Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, saved.length));
+        start = Math.min(saved.start, now - length);
+        preset = (PRESETS.find((choice) => Math.abs(choice.length - length) < 1) || {}).id || null;
+    }
+
     // MARK: the window
 
-    const domainStart = () => Math.min(model.earliest ?? now, now - length);
+    const domainStart = () => Math.min(model.earliest ?? now, start, now - length);
     const clampStart = (value) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
     /** the bucket length that gives about one point per pixel at this zoom */
     const level = () => levelFor(length, chart ? chart.devicePixels : 1000);
     const drawnLevel = () => model.displayLevel(level(), start, start + length, now);
 
+    const saveViewport = () => {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        prefs.write(viewportKey, { length, start });
+    };
+
+    const scheduleViewportSave = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveViewport, 200);
+    };
+
     const show = (newLength, endingAt) => {
         length = newLength;
         start = clampStart(endingAt - newLength);
         windowChanged();
+        saveViewport();
     };
 
     /** changes the zoom, keeping the right edge on now if it was there, or the center otherwise */
@@ -98,6 +119,7 @@ export const mountTemperatureHistory = (root, app, water) => {
             length = newLength;
             start = clampStart(Math.min(center - newLength / 2, now - newLength));
             windowChanged();
+            saveViewport();
         }
     };
 
@@ -109,6 +131,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     const pan = (ms) => {
         start = clampStart(start + ms);
         windowChanged();
+        scheduleViewportSave();
     };
 
     /** shows the days picked in the calendar, as far as the zoom limits allow */
@@ -206,6 +229,7 @@ export const mountTemperatureHistory = (root, app, water) => {
             selected = null;
             start = clampStart(gesture.start - moved * chart.msPerPixel);
             windowChanged();
+            scheduleViewportSave();
         } else if (gesture.mode === 'select') {
             selected = chart.timeAt(event.clientX);
             redraw();
@@ -465,8 +489,10 @@ export const mountTemperatureHistory = (root, app, water) => {
 
     return () => {
         prefs.write('historyHelpSeen', true);
+        saveViewport();
         clearInterval(refreshTimer);
         clearTimeout(loadTimer);
+        clearTimeout(saveTimer);
         unwatch();
         if (chart) {
             chart.destroy();

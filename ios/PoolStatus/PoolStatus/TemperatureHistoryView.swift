@@ -64,21 +64,42 @@ struct TemperatureHistoryView: View {
     @State private var choosingDates = false
     /// The plot's width, for asking the server for about one point per pixel.
     @State private var chartWidth: CGFloat = 360
+    /// Scroll to restore after the first fetch; the chart is remounted so Charts doesn't clamp it.
+    @State private var pendingScroll: Date?
+    /// Bumped to remount the chart once the restored pan is safe to show.
+    @State private var chartEpoch = 0
+    @State private var viewportSaveTask: Task<Void, Never>?
 
     init(water: WaterBody, initialPreset: Preset = .day) {
         self.water = water
         _model = State(initialValue: TemperatureHistoryModel(water: water))
-        _visibleLength = State(initialValue: initialPreset.length)
-        _scrollPosition = State(initialValue: Date.now.addingTimeInterval(-initialPreset.length))
-        _preset = State(initialValue: initialPreset)
+        let key = water == .pool ? SettingsKey.poolTemperatureHistory : SettingsKey.spaTemperatureHistory
+        if let saved = HistoryViewport.load(forKey: key) {
+            let length = min(max(saved.visibleLength, Self.minimumLength), Self.maximumLength)
+            let start = min(saved.scrollPosition, Date.now.addingTimeInterval(-length))
+            _visibleLength = State(initialValue: length)
+            _scrollPosition = State(initialValue: start)
+            _preset = State(initialValue: Preset.allCases.first { abs($0.length - length) < 1 })
+            _pendingScroll = State(initialValue: start)
+        } else {
+            _visibleLength = State(initialValue: initialPreset.length)
+            _scrollPosition = State(initialValue: Date.now.addingTimeInterval(-initialPreset.length))
+            _preset = State(initialValue: initialPreset)
+        }
+    }
+
+    private var viewportKey: String {
+        water == .pool ? SettingsKey.poolTemperatureHistory : SettingsKey.spaTemperatureHistory
     }
 
     private var visibleRange: ClosedRange<Date> {
         scrollPosition...scrollPosition.addingTimeInterval(visibleLength)
     }
 
+    /// Includes the restored pan from the first frame so Charts has room to show it.
     private var domain: ClosedRange<Date> {
-        let start = min(model.earliest ?? now, now.addingTimeInterval(-visibleLength))
+        let floor = now.addingTimeInterval(-visibleLength)
+        let start = [model.earliest, scrollPosition, pendingScroll, floor].compactMap { $0 }.min() ?? floor
         return start...now
     }
 
@@ -143,6 +164,8 @@ struct TemperatureHistoryView: View {
 
             chart(segments: segments, air: air, heater: heater, heatPump: heatPump,
                   ticks: HistoryWindow.ticks(in: window, visibleLength: visibleLength))
+                // remount after restore so chartScrollPosition opens at the saved pan
+                .id(chartEpoch)
                 .frame(minHeight: 160, maxHeight: .infinity)
                 .overlay(alignment: .topTrailing) {
                     summaryBadge(water: waterSummary, air: airSummary)
@@ -177,8 +200,21 @@ struct TemperatureHistoryView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemGroupedBackground))
+        .onChange(of: scrollPosition) { _, _ in
+            guard pendingScroll == nil else {
+                return
+            }
+            scheduleViewportSave()
+        }
+        .onChange(of: visibleLength) { _, _ in
+            guard pendingScroll == nil else {
+                return
+            }
+            scheduleViewportSave()
+        }
         .onDisappear {
             helpSeen = true
+            saveViewport()
         }
         .navigationTitle("\(water.title) Temperature")
         .navigationBarTitleDisplayMode(.inline)
@@ -202,19 +238,24 @@ struct TemperatureHistoryView: View {
                 show(range)
             }
         }
-        .task(id: LoadKey(start: scrollPosition, length: visibleLength, level: level)) {
+        .task(id: LoadKey(start: pendingScroll ?? scrollPosition, length: visibleLength, level: level)) {
             // let scrolling and pinching settle before asking for more data
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else {
                 return
             }
+            let aim = pendingScroll ?? scrollPosition
             let margin = visibleLength / 2
-            let start = scrollPosition.addingTimeInterval(-margin)
-            let end = min(now, scrollPosition.addingTimeInterval(visibleLength + margin))
+            let start = aim.addingTimeInterval(-margin)
+            let end = min(now, aim.addingTimeInterval(visibleLength + margin))
             guard start < end else {
                 return
             }
             await model.ensureLoaded(start...end, level: level, client: store.client)
+            guard !Task.isCancelled else {
+                return
+            }
+            finishRestoreIfNeeded()
         }
         .task {
             while !Task.isCancelled {
@@ -520,9 +561,40 @@ struct TemperatureHistoryView: View {
         return (low - 3).rounded(.down)...(high + 3).rounded(.up)
     }
 
+    /// After the first fetch widens the domain, remount the chart on the saved pan.
+    private func finishRestoreIfNeeded() {
+        guard let pending = pendingScroll else {
+            return
+        }
+        scrollPosition = pending
+        pendingScroll = nil
+        chartEpoch += 1
+        saveViewport()
+    }
+
+    private func scheduleViewportSave() {
+        viewportSaveTask?.cancel()
+        viewportSaveTask = Task {
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else {
+                return
+            }
+            saveViewport()
+        }
+    }
+
+    private func saveViewport() {
+        viewportSaveTask?.cancel()
+        viewportSaveTask = nil
+        HistoryViewport(visibleLength: visibleLength, scrollPosition: pendingScroll ?? scrollPosition)
+            .save(forKey: viewportKey)
+    }
+
     private func show(length: TimeInterval, endingAt end: Date) {
+        pendingScroll = nil
         visibleLength = length
         scrollPosition = end.addingTimeInterval(-length)
+        saveViewport()
     }
 
     /// Shows the days picked in the calendar, as far as the zoom limits allow.
@@ -549,9 +621,11 @@ struct TemperatureHistoryView: View {
         if atNow {
             show(length: length, endingAt: now)
         } else {
+            pendingScroll = nil
             let center = scrollPosition.addingTimeInterval(visibleLength / 2)
             visibleLength = length
             scrollPosition = min(center.addingTimeInterval(-length / 2), now.addingTimeInterval(-length))
+            saveViewport()
         }
     }
 }

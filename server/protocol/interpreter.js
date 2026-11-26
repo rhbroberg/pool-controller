@@ -61,19 +61,24 @@ class FrameInterpreter {
         this.heaterAuto = heaterAuto;
     }
 
-    // a one-degree bounce back to the reading before is the sensor flickering, not a change
+    // a one-degree bounce back to the reading before is the sensor flickering, not a change.
+    // leave present alone on a bounce: updating it to the bounce made 50→51→50→51 keep
+    // storing every other reading, so the value twitched forever around one degree
     addIfChanged(changes, text, name) {
         if (!text) {
             return;
         }
         const value = Number(text);
-        if (this.present[name] !== value) {
-            const flicker = typeof this.previous[name] !== 'undefined' && value === this.previous[name] && Math.abs(this.present[name] - value) === 1;
-            if (!flicker) {
-                changes.push({ name, value });
-                this.previous[name] = this.present[name];
-            }
+        if (this.present[name] === value) {
+            return;
         }
+        const flicker = typeof this.previous[name] !== 'undefined' && value === this.previous[name]
+            && Math.abs(this.present[name] - value) === 1;
+        if (flicker) {
+            return;
+        }
+        changes.push({ name, value });
+        this.previous[name] = this.present[name];
         this.present[name] = value;
     }
 

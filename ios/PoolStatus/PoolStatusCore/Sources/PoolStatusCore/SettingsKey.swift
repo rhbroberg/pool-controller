@@ -17,4 +17,8 @@ public enum SettingsKey {
     public static let showHeater = "showHeater"
     public static let showHeatPump = "showHeatPump"
     public static let historyHelpSeen = "historyHelpSeen"
+    /// Last zoom and pan of each history graph, so coming back opens where you left it.
+    public static let poolTemperatureHistory = "poolTemperatureHistoryViewport"
+    public static let spaTemperatureHistory = "spaTemperatureHistoryViewport"
+    public static let saltHistory = "saltHistoryViewport"
 }

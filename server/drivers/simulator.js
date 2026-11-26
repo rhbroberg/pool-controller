@@ -76,16 +76,22 @@ var loadCapture = (filename) => {
         if (kind === 'DisplayUpdateEvent' && !displayTemplate && frame.length === 49) {
             displayTemplate = frame;
         }
-        const display = kind === 'DisplayUpdateEvent';
-        const poolTemp = display ? event.getPoolTemp() : undefined;
+        // panel and wireless remote screens both carry readings; treat them alike so a recorded
+        // 63°F pool temp or heater mode on the remote doesn't fight the simulated values
+        const text = typeof event.getPoolTemp === 'function';
+        const poolTemp = text ? event.getPoolTemp() : undefined;
         if (typeof poolTemp !== 'undefined' && typeof poolTempF === 'undefined') {
             poolTempF = Number(poolTemp);
         }
         frames.push({
             kind,
             frame,
-            heater: display && typeof event.getHeater1Mode() !== 'undefined',
-            pool: typeof poolTemp !== 'undefined'
+            heater: text && typeof event.getHeater1Mode() !== 'undefined',
+            pool: typeof poolTemp !== 'undefined',
+            // spa (and other reading screens) from the capture are dropped; the loop injects spa itself
+            recordedReading: text && (typeof poolTemp !== 'undefined'
+                || typeof event.getHeater1Mode() !== 'undefined'
+                || typeof event.getSpaTemp() !== 'undefined')
         });
     });
     if (!statusTemplate) {
@@ -208,9 +214,9 @@ var listen = ((filename, cb) => {
 
     let next = 0;
     setInterval(() => {
-        const { kind, frame, heater, pool } = frames[next];
+        const { kind, frame, heater, pool, recordedReading } = frames[next];
         next = (next + 1) % frames.length;
-        if (kind === 'DisplayUpdateEvent' && Date.now() < echoUntil) {
+        if ((kind === 'DisplayUpdateEvent' || kind === 'WirelessDisplayEvent') && Date.now() < echoUntil) {
             return;
         }
         if (kind === 'StatusEvent') {
@@ -219,7 +225,8 @@ var listen = ((filename, cb) => {
             emit(heaterFrame());
         } else if (pool) {
             emit(displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
-        } else if (kind === 'DisplayUpdateEvent' && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
+        } else if ((kind === 'DisplayUpdateEvent' || kind === 'WirelessDisplayEvent')
+                   && Date.now() - spaTempShownAt > SPA_TEMP_EVERY_MS) {
             spaTempShownAt = Date.now();
             // the panel cycles through the heater's mode and the temperatures; the spa's sensor is
             // just downstream of the spa filter pump, so its temperature only shows while that runs
@@ -232,6 +239,8 @@ var listen = ((filename, cb) => {
                     ? displayFrame(`Spa Temp   ${spaTempF}_F`, '')
                     : displayFrame(`Pool Temp   ${poolTempF}_F`, ''));
             }
+        } else if (recordedReading) {
+            // skip captured pool/spa/heater screens; they flash old values over the simulation
         } else {
             emit(frame);
         }
