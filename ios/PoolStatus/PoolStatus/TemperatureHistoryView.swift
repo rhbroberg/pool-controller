@@ -40,7 +40,7 @@ struct TemperatureHistoryView: View {
     /// A bucket's range, behind its average.
     static let bandOpacity = 0.16
 
-    private static func stroke(_ source: TemperatureHistoryModel.HeatingSource) -> Color {
+    fileprivate static func stroke(_ source: TemperatureHistoryModel.HeatingSource) -> Color {
         switch source {
         case .water: waterColor
         case .heater: heaterColor
@@ -73,6 +73,9 @@ struct TemperatureHistoryView: View {
     @State private var pendingScroll: Date?
     /// Bumped to remount the chart once the restored pan is safe to show.
     @State private var chartEpoch = 0
+    /// Y scale locked for the current strip so a fetch doesn't rebuild the scrollable chart mid-pan.
+    @State private var axisYDomain: ClosedRange<Double> = 40...100
+    @State private var axisYStrip: Date?
     @State private var viewportSaveTask: Task<Void, Never>?
 
     init(water: WaterBody, initialPreset: Preset = .day) {
@@ -101,15 +104,61 @@ struct TemperatureHistoryView: View {
         scrollPosition...scrollPosition.addingTimeInterval(visibleLength)
     }
 
-    /// Includes the restored pan from the first frame so Charts has room to show it.
-    private var domain: ClosedRange<Date> {
-        let floor = now.addingTimeInterval(-visibleLength)
-        let start = [model.earliest, scrollPosition, pendingScroll, floor].compactMap { $0 }.min() ?? floor
-        return start...now
+    /// The strip of history drawn around the view; marks and the Y scale stay put while scrolling inside it.
+    private var plotWindow: ClosedRange<Date> {
+        let aim = pendingScroll ?? scrollPosition
+        let window = HistoryWindow.around(aim, visibleLength: visibleLength)
+        let upper = min(window.upperBound, now)
+        let dataStart = model.earliest ?? window.lowerBound
+        let lower = max(min(window.lowerBound, upper), min(dataStart, upper))
+        return lower...upper
+    }
+
+    /// Scrollable X domain near the view—not `earliest...now`. A multi-year domain makes Charts
+    /// treat history as one huge scroll view; at day zoom a fling warps months and can snap to the start.
+    /// Steps in 4× the visible length so neighboring strip draws don't rewrite the scale every screen.
+    private var scrollDomain: ClosedRange<Date> {
+        let aim = pendingScroll ?? scrollPosition
+        let step = visibleLength * 4
+        let window = HistoryWindow.around(aim, visibleLength: step)
+        var lo = window.lowerBound
+        var hi = min(window.upperBound, now)
+        if let earliest = model.earliest {
+            lo = max(lo, earliest)
+        }
+        if hi.timeIntervalSince(lo) < visibleLength {
+            hi = min(lo.addingTimeInterval(visibleLength), now)
+            if let earliest = model.earliest, hi.timeIntervalSince(lo) < visibleLength {
+                lo = max(earliest, hi.addingTimeInterval(-visibleLength))
+            }
+        }
+        return lo...hi
+    }
+
+    /// Leading edge of the visible window, kept inside captured history.
+    private func clampedScroll(_ value: Date) -> Date {
+        let latestStart = now.addingTimeInterval(-visibleLength)
+        let lo = model.earliest.map { min($0, latestStart) } ?? latestStart
+        let hi = max(lo, latestStart)
+        return min(max(value, lo), hi)
+    }
+
+    private func clampScrollToData() {
+        let next = clampedScroll(scrollPosition)
+        if next != scrollPosition {
+            scrollPosition = next
+        }
+        if let pending = pendingScroll {
+            let clamped = clampedScroll(pending)
+            if clamped != pending {
+                pendingScroll = clamped
+            }
+        }
     }
 
     private struct LoadKey: Equatable {
-        let start: Date
+        let windowStart: Date
+        let windowEnd: Date
         let length: TimeInterval
         let level: Int
     }
@@ -120,9 +169,9 @@ struct TemperatureHistoryView: View {
     }
 
     var body: some View {
+        let window = plotWindow
         let drawn = model.displayLevel(for: level, visible: visibleRange)
         let end = model.loadedThrough(level: drawn).map { min($0, now) } ?? now
-        let window = HistoryWindow.around(scrollPosition, visibleLength: visibleLength)
         let data = model.chartData(through: end, level: drawn, within: window)
         let segments = data.water
         let air = showAir ? data.air : []
@@ -130,6 +179,13 @@ struct TemperatureHistoryView: View {
         let heatPump = showHeatPump ? data.heatPump : []
         let waterSummary = summarySeconds(segments.flatMap(\.samples))
         let airSummary = summarySeconds(air)
+        let ticks = HistoryWindow.ticks(in: window, visibleLength: visibleLength)
+        let plotIdentity = TemperatureChartPlot.Identity(
+            window: window, scrollDomain: scrollDomain, visibleLength: visibleLength,
+            revision: model.revision, drawnLevel: drawn,
+            showAir: showAir, showHeater: showHeater, showHeatPump: showHeatPump,
+            selectedDate: selectedDate, empty: segments.isEmpty && !model.isLoading,
+            yDomain: axisYDomain)
 
         // no scroll view around the graph, so dragging it moves through time and never the page
         VStack(alignment: .leading, spacing: 12) {
@@ -167,15 +223,38 @@ struct TemperatureHistoryView: View {
                 }
             }
 
-            chart(segments: segments, air: air, heater: heater, heatPump: heatPump,
-                  ticks: HistoryWindow.ticks(in: window, visibleLength: visibleLength))
-                // remount after restore so chartScrollPosition opens at the saved pan
-                .id(chartEpoch)
-                .frame(minHeight: 160, maxHeight: .infinity)
-                .overlay(alignment: .topTrailing) {
-                    summaryBadge(water: waterSummary, air: airSummary)
-                        .padding(8)
-                }
+            TemperatureChartPlot(
+                identity: plotIdentity,
+                water: water,
+                segments: segments,
+                air: air,
+                heater: heater,
+                heatPump: heatPump,
+                ticks: ticks,
+                scrollPosition: $scrollPosition,
+                selectedDate: $selectedDate,
+                chartWidth: $chartWidth
+            )
+            .equatable()
+            .transaction { $0.animation = nil }
+            .simultaneousGesture(
+                MagnifyGesture()
+                    .onChanged { gesture in
+                        let start = pinchStartLength ?? visibleLength
+                        pinchStartLength = start
+                        setLength(start / gesture.magnification)
+                    }
+                    .onEnded { _ in
+                        pinchStartLength = nil
+                    }
+            )
+            // remount after restore so chartScrollPosition opens at the saved pan
+            .id(chartEpoch)
+            .frame(minHeight: 160, maxHeight: .infinity)
+            .overlay(alignment: .topTrailing) {
+                summaryBadge(water: waterSummary, air: airSummary)
+                    .padding(8)
+            }
 
             legend
 
@@ -206,16 +285,31 @@ struct TemperatureHistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemGroupedBackground))
         .onChange(of: scrollPosition) { _, _ in
+            // Don't rewrite scrollPosition here: clamping mid-gesture fights Charts and loops.
             guard pendingScroll == nil else {
                 return
             }
             scheduleViewportSave()
         }
         .onChange(of: visibleLength) { _, _ in
+            clampScrollToData()
             guard pendingScroll == nil else {
                 return
             }
             scheduleViewportSave()
+        }
+        .onChange(of: model.earliest) { _, _ in
+            clampScrollToData()
+        }
+        .onChange(of: model.revision) { _, _ in
+            guard !segments.isEmpty || !air.isEmpty else {
+                return
+            }
+            // Lock Y for the strip after the first readings arrive; later fetches keep the scale.
+            if axisYStrip != window.lowerBound {
+                axisYDomain = Self.yDomain(segments: segments, air: air)
+                axisYStrip = window.lowerBound
+            }
         }
         .onDisappear {
             helpSeen = true
@@ -243,20 +337,18 @@ struct TemperatureHistoryView: View {
                 show(range)
             }
         }
-        .task(id: LoadKey(start: pendingScroll ?? scrollPosition, length: visibleLength, level: level)) {
+        .task(id: LoadKey(windowStart: window.lowerBound, windowEnd: window.upperBound,
+                          length: visibleLength, level: level)) {
             // let scrolling and pinching settle before asking for more data
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else {
                 return
             }
-            let aim = pendingScroll ?? scrollPosition
-            let margin = visibleLength / 2
-            let start = aim.addingTimeInterval(-margin)
-            let end = min(now, aim.addingTimeInterval(visibleLength + margin))
-            guard start < end else {
+            // fetch the drawn strip, not every scroll tick
+            guard window.lowerBound < window.upperBound else {
                 return
             }
-            await model.ensureLoaded(start...end, level: level, client: store.client)
+            await model.ensureLoaded(window, level: level, client: store.client)
             guard !Task.isCancelled else {
                 return
             }
@@ -307,103 +399,6 @@ struct TemperatureHistoryView: View {
         }
     }
 
-    private func chart(segments: [TemperatureHistoryModel.Segment], air: [HistorySample],
-                       heater: [TemperatureHistoryModel.HeatingSpan],
-                       heatPump: [TemperatureHistoryModel.HeatingSpan], ticks: [Date]) -> some View {
-        let waterLines = TemperatureHistoryModel.coloredWaterLines(segments: segments, heater: heater,
-                                                                   heatPump: heatPump)
-        let heated = selectedDate.flatMap { TemperatureHistoryModel.heating(at: $0, heater: heater, heatPump: heatPump) }
-        return Chart {
-            ForEach(waterLines) { segment in
-                ForEach(segment.samples.filter { $0.low != nil }) { sample in
-                    AreaMark(x: .value("Time", sample.date),
-                             yStart: .value("Lowest", sample.low ?? sample.value),
-                             yEnd: .value("Highest", sample.high ?? sample.value),
-                             series: .value("Range", "water range \(segment.id)"))
-                        .foregroundStyle(Self.stroke(segment.source).opacity(Self.bandOpacity))
-                        .interpolationMethod(.stepEnd)
-                }
-            }
-            ForEach(air) { sample in
-                LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
-                         series: .value("Line", "air"))
-                    .foregroundStyle(Self.airColor)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                    .interpolationMethod(.stepEnd)
-            }
-            ForEach(waterLines) { segment in
-                ForEach(segment.samples) { sample in
-                    LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
-                             series: .value("Line", "water \(segment.id)"))
-                        .foregroundStyle(Self.stroke(segment.source))
-                        .lineStyle(StrokeStyle(lineWidth: 2.5))
-                        .interpolationMethod(.stepEnd)
-                }
-            }
-            if let selectedDate {
-                RuleMark(x: .value("Selected", selectedDate))
-                    .foregroundStyle(Color.secondary.opacity(0.6))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                if let value = waterValue(at: selectedDate, segments: segments) {
-                    PointMark(x: .value("Selected", selectedDate), y: .value("Temperature", value))
-                        .foregroundStyle(Self.stroke(heated ?? .water))
-                        .symbolSize(70)
-                }
-            }
-        }
-        .chartXSelection(value: $selectedDate)
-        .chartXScale(domain: domain)
-        .chartYScale(domain: yDomain(segments: segments, air: air))
-        .chartScrollableAxes(.horizontal)
-        .chartXVisibleDomain(length: visibleLength)
-        .chartScrollPosition(x: $scrollPosition)
-        .chartYAxis {
-            AxisMarks(position: .leading) { value in
-                AxisGridLine()
-                AxisValueLabel {
-                    if let degrees = value.as(Double.self) {
-                        Text("\(Int(degrees))°F")
-                    }
-                }
-            }
-        }
-        .chartXAxis {
-            AxisMarks(values: ticks) { _ in
-                AxisGridLine()
-                AxisValueLabel(format: visibleLength <= 2 * 24 * 60 * 60
-                               ? .dateTime.hour()
-                               : visibleLength <= 200 * 24 * 60 * 60
-                               ? .dateTime.month(.abbreviated).day()
-                               : .dateTime.month(.abbreviated).year(.twoDigits),
-                               collisionResolution: .greedy)
-            }
-        }
-        .overlay {
-            if segments.isEmpty && !model.isLoading {
-                Text("No \(water.title.lowercased()) temperature readings yet")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
-        } action: { width in
-            chartWidth = width
-        }
-        .simultaneousGesture(
-            MagnifyGesture()
-                .onChanged { gesture in
-                    let start = pinchStartLength ?? visibleLength
-                    pinchStartLength = start
-                    setLength(start / gesture.magnification)
-                }
-                .onEnded { _ in
-                    pinchStartLength = nil
-                }
-        )
-        .padding()
-        .cardBackground()
-    }
 
     /// One row where it fits, otherwise two, so no entry is cut short on a narrow phone.
     private var legend: some View {
@@ -486,7 +481,7 @@ struct TemperatureHistoryView: View {
                                   air: [HistorySample],
                                   heater: [TemperatureHistoryModel.HeatingSpan],
                                   heatPump: [TemperatureHistoryModel.HeatingSpan]) -> some View {
-        let water = waterValue(at: date, segments: segments)
+        let water = Self.waterValue(at: date, segments: segments)
         let airValue = air.last { $0.date <= date }?.value
         let heated = TemperatureHistoryModel.heating(at: date, heater: heater, heatPump: heatPump)
         let when = Text(date, format: .dateTime.month(.abbreviated).day().hour().minute())
@@ -522,7 +517,7 @@ struct TemperatureHistoryView: View {
     }
 
     /// The water temperature at `date`, or nil when the pump was off and the line has a gap.
-    private func waterValue(at date: Date, segments: [TemperatureHistoryModel.Segment]) -> Double? {
+    fileprivate static func waterValue(at date: Date, segments: [TemperatureHistoryModel.Segment]) -> Double? {
         for segment in segments {
             guard let first = segment.samples.first, let last = segment.samples.last,
                   first.date <= date, date <= last.date else {
@@ -546,12 +541,12 @@ struct TemperatureHistoryView: View {
         return "\(visibleRange.lowerBound.formatted(format)) – \(visibleRange.upperBound.formatted(format))"
     }
 
-    /// Fits the readings in view, with a little room above and below.
-    private func yDomain(segments: [TemperatureHistoryModel.Segment], air: [HistorySample]) -> ClosedRange<Double> {
-        let range = visibleRange
-        let visible = (segments.flatMap(\.samples) + air).filter { range.contains($0.date) }
+    /// Fits the readings in the drawn strip, so a small pan doesn't rescale the graph.
+    fileprivate static func yDomain(segments: [TemperatureHistoryModel.Segment],
+                                    air: [HistorySample]) -> ClosedRange<Double> {
+        let values = (segments.flatMap(\.samples) + air)
             .flatMap { [$0.value, $0.low, $0.high].compactMap(\.self) }
-        guard let low = visible.min(), let high = visible.max() else {
+        guard let low = values.min(), let high = values.max() else {
             return 40...100
         }
         return (low - 3).rounded(.down)...(high + 3).rounded(.up)
@@ -589,7 +584,7 @@ struct TemperatureHistoryView: View {
     private func show(length: TimeInterval, endingAt end: Date) {
         pendingScroll = nil
         visibleLength = length
-        scrollPosition = end.addingTimeInterval(-length)
+        scrollPosition = clampedScroll(end.addingTimeInterval(-length))
         saveViewport()
     }
 
@@ -623,6 +618,126 @@ struct TemperatureHistoryView: View {
             scrollPosition = min(center.addingTimeInterval(-length / 2), now.addingTimeInterval(-length))
             saveViewport()
         }
+    }
+}
+
+/// The plot itself. Equality ignores the scroll binding, so a pan doesn't rebuild every mark.
+private struct TemperatureChartPlot: View, Equatable {
+    struct Identity: Equatable {
+        var window: ClosedRange<Date>
+        var scrollDomain: ClosedRange<Date>
+        var visibleLength: TimeInterval
+        var revision: Int
+        var drawnLevel: Int
+        var showAir: Bool
+        var showHeater: Bool
+        var showHeatPump: Bool
+        var selectedDate: Date?
+        var empty: Bool
+        var yDomain: ClosedRange<Double>
+    }
+
+    let identity: Identity
+    let water: WaterBody
+    let segments: [TemperatureHistoryModel.Segment]
+    let air: [HistorySample]
+    let heater: [TemperatureHistoryModel.HeatingSpan]
+    let heatPump: [TemperatureHistoryModel.HeatingSpan]
+    let ticks: [Date]
+    @Binding var scrollPosition: Date
+    @Binding var selectedDate: Date?
+    @Binding var chartWidth: CGFloat
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.identity == rhs.identity
+    }
+
+    var body: some View {
+        let waterLines = TemperatureHistoryModel.coloredWaterLines(segments: segments, heater: heater,
+                                                                   heatPump: heatPump)
+        let heated = selectedDate.flatMap {
+            TemperatureHistoryModel.heating(at: $0, heater: heater, heatPump: heatPump)
+        }
+        Chart {
+            ForEach(waterLines) { segment in
+                ForEach(segment.samples.filter { $0.low != nil }) { sample in
+                    AreaMark(x: .value("Time", sample.date),
+                             yStart: .value("Lowest", sample.low ?? sample.value),
+                             yEnd: .value("Highest", sample.high ?? sample.value),
+                             series: .value("Range", "water range \(segment.id)"))
+                        .foregroundStyle(TemperatureHistoryView.stroke(segment.source)
+                            .opacity(TemperatureHistoryView.bandOpacity))
+                        .interpolationMethod(.stepEnd)
+                }
+            }
+            ForEach(air) { sample in
+                LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
+                         series: .value("Line", "air"))
+                    .foregroundStyle(TemperatureHistoryView.airColor)
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                    .interpolationMethod(.stepEnd)
+            }
+            ForEach(waterLines) { segment in
+                ForEach(segment.samples) { sample in
+                    LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
+                             series: .value("Line", "water \(segment.id)"))
+                        .foregroundStyle(TemperatureHistoryView.stroke(segment.source))
+                        .lineStyle(StrokeStyle(lineWidth: 2.5))
+                        .interpolationMethod(.stepEnd)
+                }
+            }
+            if let selectedDate {
+                RuleMark(x: .value("Selected", selectedDate))
+                    .foregroundStyle(Color.secondary.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                if let value = TemperatureHistoryView.waterValue(at: selectedDate, segments: segments) {
+                    PointMark(x: .value("Selected", selectedDate), y: .value("Temperature", value))
+                        .foregroundStyle(TemperatureHistoryView.stroke(heated ?? .water))
+                        .symbolSize(70)
+                }
+            }
+        }
+        .chartXSelection(value: $selectedDate)
+        .chartXScale(domain: identity.scrollDomain)
+        .chartYScale(domain: identity.yDomain)
+        .chartScrollableAxes(.horizontal)
+        .chartXVisibleDomain(length: identity.visibleLength)
+        .chartScrollPosition(x: $scrollPosition)
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let degrees = value.as(Double.self) {
+                        Text("\(Int(degrees))°F")
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: ticks) { _ in
+                AxisGridLine()
+                AxisValueLabel(format: identity.visibleLength <= 2 * 24 * 60 * 60
+                               ? .dateTime.hour()
+                               : identity.visibleLength <= 200 * 24 * 60 * 60
+                               ? .dateTime.month(.abbreviated).day()
+                               : .dateTime.month(.abbreviated).year(.twoDigits),
+                               collisionResolution: .greedy)
+            }
+        }
+        .overlay {
+            if identity.empty {
+                Text("No \(water.title.lowercased()) temperature readings yet")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            chartWidth = width
+        }
+        .padding()
+        .cardBackground()
     }
 }
 

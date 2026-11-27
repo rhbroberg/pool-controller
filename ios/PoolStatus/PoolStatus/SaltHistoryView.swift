@@ -53,6 +53,9 @@ struct SaltHistoryView: View {
     @State private var pendingScroll: Date?
     /// Bumped to remount the chart once the restored pan is safe to show.
     @State private var chartEpoch = 0
+    /// Y scale locked for the current strip so a fetch doesn't rebuild the scrollable chart mid-pan.
+    @State private var axisYDomain: ClosedRange<Double> = 2500...3500
+    @State private var axisYStrip: Date?
     @State private var viewportSaveTask: Task<Void, Never>?
 
     init(initialPreset: Preset = .month) {
@@ -74,11 +77,56 @@ struct SaltHistoryView: View {
         scrollPosition...scrollPosition.addingTimeInterval(visibleLength)
     }
 
-    /// Includes the restored pan from the first frame so Charts has room to show it.
-    private var domain: ClosedRange<Date> {
-        let floor = now.addingTimeInterval(-visibleLength)
-        let start = [model.earliest, scrollPosition, pendingScroll, floor].compactMap { $0 }.min() ?? floor
-        return start...now
+    /// The strip of history drawn around the view; marks and the Y scale stay put while scrolling inside it.
+    private var plotWindow: ClosedRange<Date> {
+        let aim = pendingScroll ?? scrollPosition
+        let window = HistoryWindow.around(aim, visibleLength: visibleLength)
+        let upper = min(window.upperBound, now)
+        let dataStart = model.earliest ?? window.lowerBound
+        let lower = max(min(window.lowerBound, upper), min(dataStart, upper))
+        return lower...upper
+    }
+
+    /// Scrollable X domain near the view—not `earliest...now`. A multi-year domain makes Charts
+    /// treat history as one huge scroll view; at day zoom a fling warps months and can snap to the start.
+    /// Steps in 4× the visible length so neighboring strip draws don't rewrite the scale every screen.
+    private var scrollDomain: ClosedRange<Date> {
+        let aim = pendingScroll ?? scrollPosition
+        let step = visibleLength * 4
+        let window = HistoryWindow.around(aim, visibleLength: step)
+        var lo = window.lowerBound
+        var hi = min(window.upperBound, now)
+        if let earliest = model.earliest {
+            lo = max(lo, earliest)
+        }
+        if hi.timeIntervalSince(lo) < visibleLength {
+            hi = min(lo.addingTimeInterval(visibleLength), now)
+            if let earliest = model.earliest, hi.timeIntervalSince(lo) < visibleLength {
+                lo = max(earliest, hi.addingTimeInterval(-visibleLength))
+            }
+        }
+        return lo...hi
+    }
+
+    /// Leading edge of the visible window, kept inside captured history.
+    private func clampedScroll(_ value: Date) -> Date {
+        let latestStart = now.addingTimeInterval(-visibleLength)
+        let lo = model.earliest.map { min($0, latestStart) } ?? latestStart
+        let hi = max(lo, latestStart)
+        return min(max(value, lo), hi)
+    }
+
+    private func clampScrollToData() {
+        let next = clampedScroll(scrollPosition)
+        if next != scrollPosition {
+            scrollPosition = next
+        }
+        if let pending = pendingScroll {
+            let clamped = clampedScroll(pending)
+            if clamped != pending {
+                pendingScroll = clamped
+            }
+        }
     }
 
     private var maxPoints: Int {
@@ -86,13 +134,20 @@ struct SaltHistoryView: View {
     }
 
     private struct LoadKey: Equatable {
-        let start: Date
+        let windowStart: Date
+        let windowEnd: Date
         let length: TimeInterval
         let maxPoints: Int
     }
 
     var body: some View {
-        let summarySeconds = summarySpan()
+        let window = plotWindow
+        let samples = model.samples(within: window)
+        let summarySeconds = summarySpan(in: samples)
+        let plotIdentity = SaltChartPlot.Identity(
+            window: window, scrollDomain: scrollDomain, visibleLength: visibleLength, revision: model.revision,
+            selectedDate: selectedDate, empty: samples.isEmpty && !model.isLoading && model.errorMessage == nil,
+            yDomain: axisYDomain, sampleCount: samples.count)
 
         VStack(alignment: .leading, spacing: 12) {
             Picker("Range", selection: $preset) {
@@ -109,7 +164,7 @@ struct SaltHistoryView: View {
             }
 
             HStack(alignment: .firstTextBaseline) {
-                if let selectedDate, let value = value(at: selectedDate) {
+                if let selectedDate, let value = value(at: selectedDate, in: samples) {
                     Text(selectedDate, format: .dateTime.month(.abbreviated).day().hour().minute())
                         .foregroundStyle(.secondary)
                     Text("\(Int(value)) ppm")
@@ -131,14 +186,33 @@ struct SaltHistoryView: View {
                 }
             }
 
-            chart
-                // remount after restore so chartScrollPosition opens at the saved pan
-                .id(chartEpoch)
-                .frame(minHeight: 160, maxHeight: .infinity)
-                .overlay(alignment: .topTrailing) {
-                    summaryBadge(seconds: summarySeconds)
-                        .padding(8)
-                }
+            SaltChartPlot(
+                identity: plotIdentity,
+                samples: samples,
+                scrollPosition: $scrollPosition,
+                selectedDate: $selectedDate,
+                chartWidth: $chartWidth
+            )
+            .equatable()
+            .transaction { $0.animation = nil }
+            .simultaneousGesture(
+                MagnifyGesture()
+                    .onChanged { gesture in
+                        let start = pinchStartLength ?? visibleLength
+                        pinchStartLength = start
+                        setLength(start / gesture.magnification)
+                    }
+                    .onEnded { _ in
+                        pinchStartLength = nil
+                    }
+            )
+            // remount after restore so chartScrollPosition opens at the saved pan
+            .id(chartEpoch)
+            .frame(minHeight: 160, maxHeight: .infinity)
+            .overlay(alignment: .topTrailing) {
+                summaryBadge(seconds: summarySeconds)
+                    .padding(8)
+            }
 
             if let errorMessage = model.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -163,16 +237,30 @@ struct SaltHistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(.systemGroupedBackground))
         .onChange(of: scrollPosition) { _, _ in
+            // Don't rewrite scrollPosition here: clamping mid-gesture fights Charts and loops.
             guard pendingScroll == nil else {
                 return
             }
             scheduleViewportSave()
         }
         .onChange(of: visibleLength) { _, _ in
+            clampScrollToData()
             guard pendingScroll == nil else {
                 return
             }
             scheduleViewportSave()
+        }
+        .onChange(of: model.earliest) { _, _ in
+            clampScrollToData()
+        }
+        .onChange(of: model.revision) { _, _ in
+            guard !samples.isEmpty else {
+                return
+            }
+            if axisYStrip != window.lowerBound {
+                axisYDomain = Self.yDomain(samples: samples)
+                axisYStrip = window.lowerBound
+            }
         }
         .onDisappear {
             helpSeen = true
@@ -200,20 +288,17 @@ struct SaltHistoryView: View {
                 show(picked)
             }
         }
-        .task(id: LoadKey(start: pendingScroll ?? scrollPosition, length: visibleLength, maxPoints: maxPoints)) {
+        .task(id: LoadKey(windowStart: window.lowerBound, windowEnd: window.upperBound,
+                          length: visibleLength, maxPoints: maxPoints)) {
             // let scrolling and pinching settle before asking for more data
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else {
                 return
             }
-            let aim = pendingScroll ?? scrollPosition
-            let margin = visibleLength / 2
-            let start = aim.addingTimeInterval(-margin)
-            let end = min(now, aim.addingTimeInterval(visibleLength + margin))
-            guard start < end else {
+            guard window.lowerBound < window.upperBound else {
                 return
             }
-            await model.load(from: start, to: end, maxPoints: maxPoints, client: store.client)
+            await model.ensureLoaded(window, maxPoints: maxPoints, client: store.client)
             guard !Task.isCancelled else {
                 return
             }
@@ -227,19 +312,18 @@ struct SaltHistoryView: View {
                 if following {
                     scrollPosition = now.addingTimeInterval(-visibleLength)
                 }
-                let start = scrollPosition.addingTimeInterval(-visibleLength / 2)
-                let end = min(now, scrollPosition.addingTimeInterval(visibleLength + visibleLength / 2))
-                guard start < end else {
+                let refreshWindow = plotWindow
+                guard refreshWindow.lowerBound < refreshWindow.upperBound else {
                     continue
                 }
-                await model.load(from: start, to: end, maxPoints: maxPoints, client: store.client)
+                await model.ensureLoaded(refreshWindow, maxPoints: maxPoints, client: store.client)
             }
         }
     }
 
-    private func summarySpan() -> Int {
+    private func summarySpan(in samples: [HistorySample]) -> Int {
         let range = visibleRange
-        let span = model.samples.compactMap { sample -> TimeInterval? in
+        let span = samples.compactMap { sample -> TimeInterval? in
             guard sample.span > 0 else { return nil }
             let stop = sample.date.addingTimeInterval(sample.span)
             return sample.date < range.upperBound && stop > range.lowerBound ? sample.span : nil
@@ -264,112 +348,22 @@ struct SaltHistoryView: View {
         }
     }
 
-    private var chart: some View {
-        Chart {
-            // a long range comes back as buckets, each shaded across its lowest to highest level
-            ForEach(model.samples.filter { $0.low != nil }) { sample in
-                AreaMark(x: .value("Time", sample.date),
-                         yStart: .value("Lowest", sample.low ?? sample.value),
-                         yEnd: .value("Highest", sample.high ?? sample.value))
-                    .foregroundStyle(Self.lineColor.opacity(Self.bandOpacity))
-                    .interpolationMethod(.stepEnd)
-            }
-            ForEach(model.samples) { sample in
-                LineMark(x: .value("Time", sample.date), y: .value("Salt", sample.value))
-                    .foregroundStyle(Self.lineColor)
-                    .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.stepEnd)
-            }
-            // a reading or two make too short a line to see
-            if model.samples.count < 3 {
-                ForEach(model.samples) { sample in
-                    PointMark(x: .value("Time", sample.date), y: .value("Salt", sample.value))
-                        .foregroundStyle(Self.lineColor)
-                }
-            }
-            if let selectedDate, let value = value(at: selectedDate) {
-                RuleMark(x: .value("Selected", selectedDate))
-                    .foregroundStyle(Color.secondary.opacity(0.6))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                PointMark(x: .value("Selected", selectedDate), y: .value("Salt", value))
-                    .foregroundStyle(Self.lineColor)
-                    .symbolSize(70)
-            }
-        }
-        .chartXSelection(value: $selectedDate)
-        .chartXScale(domain: domain)
-        .chartYScale(domain: yDomain)
-        .chartScrollableAxes(.horizontal)
-        .chartXVisibleDomain(length: visibleLength)
-        .chartScrollPosition(x: $scrollPosition)
-        .chartYAxis {
-            AxisMarks(position: .leading) { value in
-                AxisGridLine()
-                AxisValueLabel {
-                    if let ppm = value.as(Double.self) {
-                        Text("\(Int(ppm))")
-                    }
-                }
-            }
-        }
-        .chartXAxis {
-            AxisMarks(values: HistoryWindow.ticks(in: HistoryWindow.around(scrollPosition, visibleLength: visibleLength),
-                                                   visibleLength: visibleLength)) { _ in
-                AxisGridLine()
-                AxisValueLabel(format: visibleLength <= 2 * 24 * 60 * 60
-                               ? .dateTime.hour()
-                               : visibleLength <= 200 * 24 * 60 * 60
-                               ? .dateTime.month(.abbreviated).day()
-                               : .dateTime.month(.abbreviated).year(.twoDigits),
-                               collisionResolution: .greedy)
-            }
-        }
-        .chartYAxisLabel("ppm", position: .topLeading)
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
-        } action: { width in
-            chartWidth = width
-        }
-        .simultaneousGesture(
-            MagnifyGesture()
-                .onChanged { gesture in
-                    let start = pinchStartLength ?? visibleLength
-                    pinchStartLength = start
-                    setLength(start / gesture.magnification)
-                }
-                .onEnded { _ in
-                    pinchStartLength = nil
-                }
-        )
-        .overlay {
-            if model.samples.isEmpty && !model.isLoading && model.errorMessage == nil {
-                Text("No salt readings in this range")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding()
-        .cardBackground()
-    }
-
     private var rangeDescription: String {
         let format = Date.FormatStyle.dateTime.month(.abbreviated).day().hour().minute()
         return "\(visibleRange.lowerBound.formatted(format)) – \(visibleRange.upperBound.formatted(format))"
     }
 
-    /// Fits the readings in view, with room above and below.
-    private var yDomain: ClosedRange<Double> {
-        let range = visibleRange
-        let values = model.samples.filter { range.contains($0.date) }
-            .flatMap { [$0.value, $0.low, $0.high].compactMap(\.self) }
+    /// Fits the readings in the drawn strip, so a small pan doesn't rescale the graph.
+    fileprivate static func yDomain(samples: [HistorySample]) -> ClosedRange<Double> {
+        let values = samples.flatMap { [$0.value, $0.low, $0.high].compactMap(\.self) }
         guard let low = values.min(), let high = values.max() else {
             return 2000...4000
         }
         return max(0, (low - 200).rounded(.down))...(high + 200).rounded(.up)
     }
 
-    private func value(at date: Date) -> Double? {
-        model.samples.last { $0.date <= date }?.value
+    private func value(at date: Date, in samples: [HistorySample]) -> Double? {
+        samples.last { $0.date <= date }?.value
     }
 
     /// After the first fetch widens the domain, remount the chart on the saved pan.
@@ -404,7 +398,7 @@ struct SaltHistoryView: View {
     private func show(length: TimeInterval, endingAt end: Date) {
         pendingScroll = nil
         visibleLength = length
-        scrollPosition = end.addingTimeInterval(-length)
+        scrollPosition = clampedScroll(end.addingTimeInterval(-length))
         saveViewport()
     }
 
@@ -438,6 +432,105 @@ struct SaltHistoryView: View {
             scrollPosition = min(center.addingTimeInterval(-length / 2), now.addingTimeInterval(-length))
             saveViewport()
         }
+    }
+}
+
+/// The plot itself. Equality ignores the scroll binding, so a pan doesn't rebuild every mark.
+private struct SaltChartPlot: View, Equatable {
+    struct Identity: Equatable {
+        var window: ClosedRange<Date>
+        var scrollDomain: ClosedRange<Date>
+        var visibleLength: TimeInterval
+        var revision: Int
+        var selectedDate: Date?
+        var empty: Bool
+        var yDomain: ClosedRange<Double>
+        var sampleCount: Int
+    }
+
+    let identity: Identity
+    let samples: [HistorySample]
+    @Binding var scrollPosition: Date
+    @Binding var selectedDate: Date?
+    @Binding var chartWidth: CGFloat
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.identity == rhs.identity
+    }
+
+    var body: some View {
+        Chart {
+            ForEach(samples.filter { $0.low != nil }) { sample in
+                AreaMark(x: .value("Time", sample.date),
+                         yStart: .value("Lowest", sample.low ?? sample.value),
+                         yEnd: .value("Highest", sample.high ?? sample.value))
+                    .foregroundStyle(SaltHistoryView.lineColor.opacity(SaltHistoryView.bandOpacity))
+                    .interpolationMethod(.stepEnd)
+            }
+            ForEach(samples) { sample in
+                LineMark(x: .value("Time", sample.date), y: .value("Salt", sample.value))
+                    .foregroundStyle(SaltHistoryView.lineColor)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    .interpolationMethod(.stepEnd)
+            }
+            // a reading or two make too short a line to see
+            if samples.count < 3 {
+                ForEach(samples) { sample in
+                    PointMark(x: .value("Time", sample.date), y: .value("Salt", sample.value))
+                        .foregroundStyle(SaltHistoryView.lineColor)
+                }
+            }
+            if let selectedDate, let value = samples.last(where: { $0.date <= selectedDate })?.value {
+                RuleMark(x: .value("Selected", selectedDate))
+                    .foregroundStyle(Color.secondary.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                PointMark(x: .value("Selected", selectedDate), y: .value("Salt", value))
+                    .foregroundStyle(SaltHistoryView.lineColor)
+                    .symbolSize(70)
+            }
+        }
+        .chartXSelection(value: $selectedDate)
+        .chartXScale(domain: identity.scrollDomain)
+        .chartYScale(domain: identity.yDomain)
+        .chartScrollableAxes(.horizontal)
+        .chartXVisibleDomain(length: identity.visibleLength)
+        .chartScrollPosition(x: $scrollPosition)
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let ppm = value.as(Double.self) {
+                        Text("\(Int(ppm))")
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: HistoryWindow.ticks(in: identity.window, visibleLength: identity.visibleLength)) { _ in
+                AxisGridLine()
+                AxisValueLabel(format: identity.visibleLength <= 2 * 24 * 60 * 60
+                               ? .dateTime.hour()
+                               : identity.visibleLength <= 200 * 24 * 60 * 60
+                               ? .dateTime.month(.abbreviated).day()
+                               : .dateTime.month(.abbreviated).year(.twoDigits),
+                               collisionResolution: .greedy)
+            }
+        }
+        .chartYAxisLabel("ppm", position: .topLeading)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            chartWidth = width
+        }
+        .overlay {
+            if identity.empty {
+                Text("No salt readings in this range")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .cardBackground()
     }
 }
 
