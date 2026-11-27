@@ -13,16 +13,16 @@ const mallory = { sub: 'mallory-1', email: 'carol@example.com', emailVerified: f
 const owner = { sub: 'owner-1', email: 'owner@example.com', name: 'Pool Owner' };
 
 describe('external sign-in', () => {
-    let server;
-    let issuer;
-    let api;
-    let adminToken;
+    let server: any;
+    let issuer: any;
+    let api: any;
+    let adminToken: any;
 
     /**
      * follows the redirects of a sign-in through the fake service as a browser would; resolves
      * with where it ended up and the outcome's parameters
      **/
-    const signIn = async (person, { provider = 'test', client = 'web', link, formPost = false } = {}) => {
+    const signIn = async (person: any, { provider = 'test', client = 'web', link, formPost = false }: { provider?: string; client?: string; link?: string | null; formPost?: boolean } = {}) => {
         issuer.person = person;
         const query = new URLSearchParams({ client });
         if (link) {
@@ -44,7 +44,7 @@ describe('external sign-in', () => {
             if (location.startsWith(server.base)) {
                 assert.equal(response.headers.get('cache-control'), 'no-store');
             }
-            location = response.headers.get('location');
+            location = response.headers.get('location') || '';
             if (location.startsWith('poolstatus:')) {
                 return { location, params: Object.fromEntries(new URL(location).searchParams) };
             }
@@ -56,7 +56,7 @@ describe('external sign-in', () => {
         throw new Error(`too many redirects, last ${location}`);
     };
 
-    const exchange = (ticket) => api('POST', '/users/login/external', { body: { ticket } });
+    const exchange = (ticket: any) => api('POST', '/users/login/external', { body: { ticket } });
 
     const requests = async () => (await api('GET', '/users/requests', { token: adminToken })).body;
 
@@ -207,8 +207,8 @@ describe('external sign-in', () => {
         it('a callback that does not match a sign-in under way is an error', async () => {
             const response = await fetch(`${server.base}/auth/test/callback?code=abc&state=forged`, { redirect: 'manual' });
             assert.equal(response.status, 302);
-            const outcome = new URLSearchParams(response.headers.get('location').split('#/signin/complete?')[1]);
-            assert.match(outcome.get('error'), /That sign-in has expired/);
+            const outcome = new URLSearchParams((response.headers.get('location') || '').split('#/signin/complete?')[1]);
+            assert.match(outcome.get('error') || '', /That sign-in has expired/);
         });
     });
 
@@ -237,7 +237,7 @@ describe('external sign-in', () => {
             assert.equal(login.body.email, 'Carol@Example.com');
             assert.equal(login.body.role, 'viewer');
             assert.deepEqual((await api('GET', '/users/invitations', { token: adminToken })).body, []);
-            assert.ok(!(await requests()).some((request) => request.email === carol.email), 'the earlier request is gone');
+            assert.ok(!(await requests()).some((request: any) => request.email === carol.email), 'the earlier request is gone');
         });
 
         it('can be withdrawn', async () => {
@@ -335,7 +335,7 @@ describe('external sign-in', () => {
 
         it('records what admins did in the event log', async () => {
             const events = await api('GET', '/events?types=action&limit=100');
-            const summaries = events.body.events.map((event) => event.summary).join('\n');
+            const summaries = events.body.events.map((event: any) => event.summary).join('\n');
             assert.match(summaries, /Added Test ID for signing in/);
             assert.match(summaries, /Approved alice@example.com \(Test ID\) as user/);
             assert.match(summaries, /Signed in with Test ID/);

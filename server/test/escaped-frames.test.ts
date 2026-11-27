@@ -13,18 +13,18 @@ const { stuff } = require('../protocol/parse');
 // a wireless remote screen recorded on 2020-07-19: air 102°F, its checksum 08 10 sent as 08 10 00
 const WIRELESS_AIR = Buffer.from('EAIECoMAAyAgQWlyIFRlbXAgIDEwMl9GICAgICAgICAgICAgICAgICAgICAgICAACBAAEAM=', 'base64');
 
-var frame = (type, body) => {
+var frame = (type: any, body: any) => {
     const bytes = [0x10, 0x02, ...type, ...body];
     const sum = bytes.reduce((total, byte) => total + byte, 0);
     return Buffer.from([...bytes, (sum >> 8) & 0xff, sum & 0xff, 0x10, 0x03]);
 };
 
 describe('escaped frames', () => {
-    let server;
-    let api;
-    let token;
-    let connection;
-    let dir;
+    let server: any;
+    let api: any;
+    let token: any;
+    let connection: any;
+    let dir: any;
 
     before(async () => {
         dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pool-escaped-'));

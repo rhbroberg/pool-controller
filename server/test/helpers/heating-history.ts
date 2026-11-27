@@ -1,7 +1,7 @@
 'use strict';
 // A pool that follows the heating model exactly, for tests: events as the server stores them, from
 // known numbers the fit should get back.
-const sun = require('../../heating/sun');
+import * as sun from '../../heating/sun';
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -12,8 +12,12 @@ const START = Date.UTC(2020, 5, 1);
 const TRUTH = { heater: 1.2, pumpBase: 0.9, pumpSlope: 0.02, loss: 0.015, solar: 0.5 };
 const sunAt = sun.forTimeZone('UTC');
 
+type DayPlan = { heater: number; pump: number; air: number };
+type Truth = typeof TRUTH;
+type HistoryEvent = { t: number; type: string; status: Array<{ name: string; value: number }> };
+
 // deterministic noise
-var random = (seed) => () => {
+var random = (seed: number) => () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
     return seed / 4294967296;
 };
@@ -24,12 +28,28 @@ var random = (seed) => () => {
  * are whole degrees reported every five minutes.
  *   plan(day) => { heater, pump, air }
  **/
-var simulate = ({ days, plan, spa = false, truth = TRUTH, noise = 0, seed = 7, initial = 80 }) => {
+var simulate = ({
+    days,
+    plan,
+    spa = false,
+    truth = TRUTH,
+    noise = 0,
+    seed = 7,
+    initial = 80
+}: {
+    days: number;
+    plan: (day: number) => DayPlan;
+    spa?: boolean;
+    truth?: Truth;
+    noise?: number;
+    seed?: number;
+    initial?: number;
+}): HistoryEvent[] => {
     const rnd = random(seed);
-    const events = [];
+    const events: HistoryEvent[] = [];
     let temperature = initial;
-    const switches: any = {};
-    const set = (t, name, value) => {
+    const switches: Record<string, number> = {};
+    const set = (t: number, name: string, value: number) => {
         if (switches[name] !== value) {
             switches[name] = value;
             events.push({ t, type: 'status', status: [{ name, value }] });
@@ -62,9 +82,9 @@ var simulate = ({ days, plan, spa = false, truth = TRUTH, noise = 0, seed = 7, i
 };
 
 // the days cycle through each source and a range of air temperatures
-var cyclePlan = (day) => {
+var cyclePlan = (day: number): DayPlan => {
     const sources = [{ heater: 1, pump: 0 }, { heater: 0, pump: 1 }, { heater: 1, pump: 1 }, { heater: 0, pump: 1 }];
     return Object.assign({ air: 48 + (day * 7) % 45 }, sources[day % sources.length]);
 };
 
-module.exports = { START, TRUTH, sunAt, simulate, cyclePlan, MINUTE, HOUR, DAY };
+export { START, TRUTH, sunAt, simulate, cyclePlan, MINUTE, HOUR, DAY };

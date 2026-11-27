@@ -6,8 +6,8 @@ const { io } = require('socket.io-client');
 const { startServer } = require('./helpers/server');
 
 describe('streaming', () => {
-    let server;
-    let socket;
+    let server: any;
+    let socket: any;
 
     before(async () => {
         server = await startServer({ database: 'PoolRestTest-streaming' });
@@ -32,8 +32,8 @@ describe('streaming', () => {
     });
 
     it('streams controller frames to connected clients', async () => {
-        const message = await new Promise((resolve) => {
-            const received = (cleartext) => {
+        const message: any = await new Promise((resolve: any) => {
+            const received = (cleartext: any) => {
                 socket.off('info', received);
                 socket.off('status', received);
                 resolve(JSON.parse(cleartext));
@@ -47,10 +47,10 @@ describe('streaming', () => {
     });
 
     it('acknowledges a client joining the data stream', async () => {
-        const peers = new Promise((resolve) => socket.once('peers', resolve));
+        const peers = new Promise((resolve: any) => socket.once('peers', resolve));
         await socket.timeout(5000).emitWithAck('join', {});
         assert.match(await peers, /another streamer/);
-        const stillRunning = new Promise((resolve) => setTimeout(() => resolve('running'), 500));
+        const stillRunning = new Promise((resolve: any) => setTimeout(() => resolve('running'), 500));
         assert.equal(await Promise.race([server.exited, stillRunning]), 'running');
     });
 });

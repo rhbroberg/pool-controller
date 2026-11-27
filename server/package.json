@@ -7,7 +7,7 @@
     "scripts": {
         "test": "node --import tsx --test --test-concurrency=4 \"test/**/*.test.ts\"",
         "coverage": "c8 node --import tsx --test --test-concurrency=4 \"test/**/*.test.ts\"",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
         "replay": "tsx server.ts",
         "test-realistic": "tsx server.ts -f /tmp/in -d tail",
         "simulate": "tsx server.ts -f test/test-data/sample-various-bin -d sim",

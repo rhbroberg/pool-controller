@@ -5,11 +5,11 @@ const assert = require('node:assert/strict');
 const { startServer, commission, account } = require('./helpers/server');
 
 describe('accounts', () => {
-    let server;
-    let api;
-    let adminToken;
-    let viewerToken;
-    let operatorToken;
+    let server: any;
+    let api: any;
+    let adminToken: any;
+    let viewerToken: any;
+    let operatorToken: any;
 
     before(async () => {
         server = await startServer({ database: 'PoolRestTest-accounts' });
@@ -66,9 +66,9 @@ describe('accounts', () => {
 
             const list = await api('GET', '/users', { token: adminToken });
             assert.equal(list.status, 200);
-            assert.deepEqual(list.body.map((user) => [user.email, user.role]).sort(),
+            assert.deepEqual(list.body.map((user: any) => [user.email, user.role]).sort(),
                 [['operator', 'user'], ['owner', 'admin'], ['viewer', 'viewer']]);
-            assert.ok(list.body.every((user) => user.password === undefined && user.tokens === undefined),
+            assert.ok(list.body.every((user: any) => user.password === undefined && user.tokens === undefined),
                 'accounts are listed without secrets');
         });
 

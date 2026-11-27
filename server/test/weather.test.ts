@@ -31,12 +31,12 @@ describe('weather conditions', () => {
 });
 
 describe('weather', () => {
-    let services;
-    let server;
-    let api;
-    let admin;
-    let viewer;
-    let connection;
+    let services: any;
+    let server: any;
+    let api: any;
+    let admin: any;
+    let viewer: any;
+    let connection: any;
 
     const runJob = async () => {
         const run = await api('POST', '/system/jobs/weather/run', { token: admin });

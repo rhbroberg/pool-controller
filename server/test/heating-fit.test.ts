@@ -7,23 +7,23 @@ const { timeToReach, currentRate } = require('../heating/estimate');
 const sun = require('../heating/sun');
 const { START, TRUTH, sunAt, simulate, cyclePlan, MINUTE, HOUR } = require('./helpers/heating-history');
 
-var windowsOf = (events, options) => {
+var windowsOf = (events: any, options: any) => {
     const extractor = new WindowExtractor({}, Object.assign({ sun: sunAt }, options));
-    events.forEach((event) => extractor.push(event));
+    events.forEach((event: any) => extractor.push(event));
     return extractor.finish(events[events.length - 1].t);
 };
 
-var near = (actual, expected, tolerance, label) =>
+var near = (actual: any, expected: any, tolerance: any, label: any) =>
     assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: ${actual} is not within ${tolerance} of ${expected}`);
 
 test('the extractor finds a window for each run with the right sources and slope', () => {
     const windows = windowsOf(simulate({ days: 2, plan: () => ({ heater: 0, pump: 1, air: 70 }) }), {});
-    const heating = windows.filter((window) => window.sources === 'heatpump' && window.suitable);
+    const heating = windows.filter((window: any) => window.sources === 'heatpump' && window.suitable);
     assert.ok(heating.length >= 1, 'a heat pump window');
     const expected = TRUTH.pumpBase + TRUTH.pumpSlope * 10;
     assert.ok(heating[0].slope > expected - 0.7 && heating[0].slope < expected + 1, `slope ${heating[0].slope}`);
-    assert.ok(windows.some((window) => window.sources === 'cooling' && window.suitable), 'a cooling window');
-    assert.equal(windows.filter((window) => window.suitable).every((window) => window.body === 'pool'), true);
+    assert.ok(windows.some((window: any) => window.sources === 'cooling' && window.suitable), 'a cooling window');
+    assert.equal(windows.filter((window: any) => window.suitable).every((window: any) => window.body === 'pool'), true);
 });
 
 test('the start of a run, while the sensor still shows what was before, is left out', () => {
@@ -35,14 +35,14 @@ test('the start of a run, while the sensor still shows what was before, is left 
         events.push({ t: START + minute * MINUTE, type: 'info', status: [{ name: 'pool temp', value: minute < 12 ? 60 : 80 }, { name: 'ambient', value: 70 }] });
     }
     const windows = windowsOf(events, {});
-    const window = windows.find((candidate) => candidate.sources === 'cooling' && candidate.suitable);
+    const window = windows.find((candidate: any) => candidate.sources === 'cooling' && candidate.suitable);
     assert.ok(window, 'a window');
     near(window.slope, 0, 0.05, 'flat after the settle period');
 });
 
 test('a heater that flickers off and on is one run', () => {
     const events = [{ t: START, type: 'info', status: [{ name: 'pool temp', value: 70 }, { name: 'ambient', value: 70 }] }];
-    const at = (minute, name, value) => events.push({ t: START + minute * MINUTE, type: 'status', status: [{ name, value }] });
+    const at = (minute: any, name: any, value: any) => events.push({ t: START + minute * MINUTE, type: 'status', status: [{ name, value }] });
     at(1, 'filter', 1);
     at(2, 'heater1', 1);
     at(60, 'heater1', 0);
@@ -52,7 +52,7 @@ test('a heater that flickers off and on is one run', () => {
         events.push({ t: START + minute * MINUTE, type: 'info', status: [{ name: 'pool temp', value: 70 + Math.floor(minute / 30) }, { name: 'ambient', value: 70 }] });
     }
     events.sort((a, b) => a.t - b.t);
-    const windows = windowsOf(events, {}).filter((window) => window.sources === 'heater');
+    const windows = windowsOf(events, {}).filter((window: any) => window.sources === 'heater');
     assert.equal(windows.length, 1);
     assert.ok(windows[0].hours > 2.5);
 });
@@ -69,11 +69,11 @@ test('silence from the controller ends a run and forgets the switches', () => {
     events.push({ t: START + 10 * HOUR, type: 'info', status: [{ name: 'pool temp', value: 90 }, { name: 'ambient', value: 70 }] });
     events.push({ t: START + 11 * HOUR, type: 'info', status: [{ name: 'pool temp', value: 90 }, { name: 'ambient', value: 70 }] });
     const windows = windowsOf(events, {});
-    assert.ok(windows.every((window) => window.end <= START + 2.1 * HOUR), 'nothing is made of the silence');
+    assert.ok(windows.every((window: any) => window.end <= START + 2.1 * HOUR), 'nothing is made of the silence');
 });
 
 test('the fit recovers the heater, heat pump, loss and sun of a simulated pool', () => {
-    const windows = windowsOf(simulate({ days: 120, plan: cyclePlan, noise: 0.01 }), {}).filter((window) => window.suitable);
+    const windows = windowsOf(simulate({ days: 120, plan: cyclePlan, noise: 0.01 }), {}).filter((window: any) => window.suitable);
     const fit = fitBody(windows);
     assert.equal(fit.available, true);
     near(fit.heater, TRUTH.heater, 0.35, 'heater');
@@ -86,15 +86,15 @@ test('the fit recovers the heater, heat pump, loss and sun of a simulated pool',
 
 test('a heat pump that weakens in cold air is seen in the heat pump windows', () => {
     const truth = Object.assign({}, TRUTH, { pumpBase: 0.8, pumpSlope: 0.04 });
-    const events = simulate({ days: 160, plan: (day) => ({ heater: 0, pump: 1, air: 45 + (day * 11) % 50 }), truth });
-    const fit = fitBody(windowsOf(events, {}).filter((window) => window.suitable));
+    const events = simulate({ days: 160, plan: (day: any) => ({ heater: 0, pump: 1, air: 45 + (day * 11) % 50 }), truth });
+    const fit = fitBody(windowsOf(events, {}).filter((window: any) => window.suitable));
     assert.ok(fit.heatPump.slope > 0.015, `slope ${fit.heatPump.slope}`);
     assert.ok(fit.heatPump.minimumAirTemperature < 60);
 });
 
 test('with no heater windows the heater is not made up', () => {
-    const events = simulate({ days: 60, plan: (day) => ({ heater: 0, pump: 1, air: 55 + (day * 7) % 35 }) });
-    const fit = fitBody(windowsOf(events, {}).filter((window) => window.suitable));
+    const events = simulate({ days: 60, plan: (day: any) => ({ heater: 0, pump: 1, air: 55 + (day * 7) % 35 }) });
+    const fit = fitBody(windowsOf(events, {}).filter((window: any) => window.suitable));
     assert.equal(fit.available, true);
     assert.equal(fit.heater, null);
     assert.ok(fit.heatPump.base > 0.3);
@@ -107,9 +107,9 @@ test('too few windows is not enough to fit', () => {
 });
 
 test('a window that stands far apart from the rest is set aside', () => {
-    const windows = windowsOf(simulate({ days: 120, plan: cyclePlan }), {}).filter((window) => window.suitable);
-    const bad = windows.filter((window) => window.sources === 'heatpump').slice(0, 3).map((window) => Object.assign({}, window, { slope: -3 }));
-    const rest = windows.filter((window) => !bad.some((other) => other.id === window.id));
+    const windows = windowsOf(simulate({ days: 120, plan: cyclePlan }), {}).filter((window: any) => window.suitable);
+    const bad = windows.filter((window: any) => window.sources === 'heatpump').slice(0, 3).map((window: any) => Object.assign({}, window, { slope: -3 }));
+    const rest = windows.filter((window: any) => !bad.some((other: any) => other.id === window.id));
     const fit = fitBody(rest.concat(bad));
     assert.ok(fit.outliers >= 3, `${fit.outliers} set aside`);
     near(fit.heatPump.base, TRUTH.pumpBase, 0.4, 'heat pump');
@@ -129,7 +129,7 @@ test('the time to the setpoint is exact for a model with a known answer', () => 
 });
 
 test('losing heat makes it take longer, and a colder day longer still', () => {
-    var hours = (air) => timeToReach(MODEL, { temperature: 80, airTemperature: air, sources: [{ name: 'heatpump', setpoint: 84 }] });
+    var hours = (air: any) => timeToReach(MODEL, { temperature: 80, airTemperature: air, sources: [{ name: 'heatpump', setpoint: 84 }] });
     const warm = hours(80);
     const cool = hours(60);
     assert.equal(warm.status, 'ready');

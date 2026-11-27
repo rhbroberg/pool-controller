@@ -1,10 +1,11 @@
 'use strict';
 // Stand-ins for Zippopotam.us and Open-Meteo, answering the way they do for the few places the
 // tests use: today is sunny, 88° and 71°, and every other day rainy.
-const http = require('node:http');
-const tz = require('../../utils/timezone');
+import http from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import * as tz from '../../utils/timezone';
 
-const PLACES = {
+const PLACES: Record<string, { 'place name': string; 'state abbreviation': string; state: string; latitude: string; longitude: string }> = {
     32801: { 'place name': 'Orlando', 'state abbreviation': 'FL', state: 'Florida', latitude: '28.5399', longitude: '-81.3898' },
     80202: { 'place name': 'Denver', 'state abbreviation': 'CO', state: 'Colorado', latitude: '39.7491', longitude: '-104.9946' }
 };
@@ -12,12 +13,33 @@ const HOUR_S = 3600;
 const TODAY = { high: 88, low: 71, code: 0, rain: 10 };
 const OTHER_DAY = { high: 75, low: 60, code: 61, rain: 80 };
 
-var forecastFor = (timeZone) => {
+var forecastFor = (timeZone: string | null) => {
     const now = Date.now();
-    const today = tz.startOfDay(now, timeZone);
-    const first = tz.addDays(today, -2, timeZone);
-    const last = tz.addDays(today, 3, timeZone);
-    const hourly = { time: [], temperature_2m: [], relative_humidity_2m: [], cloud_cover: [], shortwave_radiation: [], wind_speed_10m: [], precipitation: [], precipitation_probability: [], weather_code: [] };
+    const zone = timeZone || 'UTC';
+    const today = tz.startOfDay(now, zone);
+    const first = tz.addDays(today, -2, zone);
+    const last = tz.addDays(today, 3, zone);
+    const hourly: {
+        time: number[];
+        temperature_2m: number[];
+        relative_humidity_2m: number[];
+        cloud_cover: number[];
+        shortwave_radiation: number[];
+        wind_speed_10m: number[];
+        precipitation: number[];
+        precipitation_probability: number[];
+        weather_code: number[];
+    } = {
+        time: [],
+        temperature_2m: [],
+        relative_humidity_2m: [],
+        cloud_cover: [],
+        shortwave_radiation: [],
+        wind_speed_10m: [],
+        precipitation: [],
+        precipitation_probability: [],
+        weather_code: []
+    };
     for (let t = first / 1000; t < last / 1000; t += HOUR_S) {
         hourly.time.push(t);
         hourly.temperature_2m.push(80);
@@ -29,8 +51,24 @@ var forecastFor = (timeZone) => {
         hourly.precipitation_probability.push(10);
         hourly.weather_code.push(1);
     }
-    const daily = { time: [], temperature_2m_max: [], temperature_2m_min: [], weather_code: [], precipitation_probability_max: [], sunrise: [], sunset: [] };
-    for (let day = first; day < last; day = tz.addDays(day, 1, timeZone)) {
+    const daily: {
+        time: number[];
+        temperature_2m_max: number[];
+        temperature_2m_min: number[];
+        weather_code: number[];
+        precipitation_probability_max: number[];
+        sunrise: number[];
+        sunset: number[];
+    } = {
+        time: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        weather_code: [],
+        precipitation_probability_max: [],
+        sunrise: [],
+        sunset: []
+    };
+    for (let day = first; day < last; day = tz.addDays(day, 1, zone)) {
         const values = day === today ? TODAY : OTHER_DAY;
         daily.time.push(day / 1000);
         daily.temperature_2m_max.push(values.high);
@@ -40,17 +78,21 @@ var forecastFor = (timeZone) => {
         daily.sunrise.push(day / 1000 + 7 * HOUR_S);
         daily.sunset.push(day / 1000 + 18 * HOUR_S);
     }
-    return { timezone: timeZone, hourly, daily };
+    return { timezone: zone, hourly, daily };
 };
 
 /**
  * starts both services on one port; down makes every answer a 500
  **/
 var startWeatherServices = async () => {
-    const services = { down: false, forecastRequests: [], geocodeRequests: [] };
-    const server = http.createServer((req, res) => {
-        const url = new URL(req.url, 'http://localhost');
-        const json = (status, body) => {
+    const services: {
+        down: boolean;
+        forecastRequests: Array<Record<string, string>>;
+        geocodeRequests: string[];
+    } = { down: false, forecastRequests: [], geocodeRequests: [] };
+    const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
+        const url = new URL(req.url || '/', 'http://localhost');
+        const json = (status: number, body: unknown) => {
             res.writeHead(status, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(body));
         };
@@ -74,12 +116,14 @@ var startWeatherServices = async () => {
             json(404, {});
         }
     });
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const base = `http://127.0.0.1:${server.address().port}`;
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+    const base = `http://127.0.0.1:${port}`;
     return Object.assign(services, {
         env: { GEOCODE_URL: base, FORECAST_URL: `${base}/v1/forecast` },
-        stop: () => new Promise((resolve) => server.close(resolve))
+        stop: () => new Promise<void>((resolve) => server.close(() => resolve()))
     });
 };
 
-module.exports = { startWeatherServices, TODAY, OTHER_DAY };
+export { startWeatherServices, TODAY, OTHER_DAY };

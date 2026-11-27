@@ -11,17 +11,17 @@ const { StatusEvent } = require('../protocol/events');
 // the status service's model opens a database connection, which would keep the run going
 after(() => mongoose.disconnect());
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: any) => new Promise((resolve: any) => setTimeout(resolve, ms));
 
 /** stands in for the socket.io server, recording what's sent to every client */
 const fakeIo = () => {
-    const sent = [];
-    return { sent, emit: (kind, payload) => sent.push({ kind, payload }) };
+    const sent: any[] = [];
+    return { sent, emit: (kind: any, payload: any) => sent.push({ kind, payload }) };
 };
 
-const statusEvent = (on) => {
+const statusEvent = (on: any) => {
     let mask = 0;
-    on.forEach((name) => {
+    on.forEach((name: any) => {
         mask |= 1 << StatusEvent.bitPosition(name);
     });
     const frame = Buffer.from([0x10, 0x02, 0x01, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10, 0x03]);
@@ -42,16 +42,16 @@ describe('live service', () => {
         const entry = { name: 'filter', category: 'status', value: 1, timestamp: new Date() };
         liveService.readings([entry]);
         liveService.readings([{ ...entry, name: 'pool temp', category: 'info', value: 80 }]);
-        assert.deepEqual(io.sent.map((message) => message.kind), ['readings', 'readings'], 'readings go at once');
+        assert.deepEqual(io.sent.map((message: any) => message.kind), ['readings', 'readings'], 'readings go at once');
         assert.deepEqual(io.sent[0].payload, { readings: [entry] });
 
         await sleep(400);
-        assert.deepEqual(io.sent.map((message) => message.kind), ['readings', 'readings', 'heating']);
+        assert.deepEqual(io.sent.map((message: any) => message.kind), ['readings', 'readings', 'heating']);
         assert.deepEqual(io.sent[2].payload, { minimum: 65, asked: 1 }, 'asked for heating only once');
 
         liveService.heatingChanged();
         await sleep(400);
-        assert.equal(io.sent.filter((message) => message.kind === 'heating').length, 2, 'a later change pushes again');
+        assert.equal(io.sent.filter((message: any) => message.kind === 'heating').length, 2, 'a later change pushes again');
     });
 
     it('pushes nothing for no readings', async () => {
@@ -80,18 +80,18 @@ describe('switches of a status frame', () => {
 
     it('lists every named switch, on or off, as GET /status does', () => {
         const switches = switchesOf(statusEvent(['filter', 'aux3', 'superchlorinate']), at);
-        const byName = Object.fromEntries(switches.map((entry) => [entry.name, entry.value]));
+        const byName = Object.fromEntries(switches.map((entry: any) => [entry.name, entry.value]));
         assert.equal(byName.filter, 1);
         assert.equal(byName.aux3, 1);
         assert.equal(byName.superchlorinate, 1);
         assert.equal(byName.lights, 0);
         assert.equal(byName.spa, 0);
-        assert.ok(switches.every((entry) => entry.category === 'status' && entry.timestamp === at));
+        assert.ok(switches.every((entry: any) => entry.category === 'status' && entry.timestamp === at));
     });
 
     it('leaves out bits nobody has identified, and sorts names as people read them', () => {
-        const names = switchesOf(statusEvent([]), at).map((entry) => entry.name);
-        assert.ok(names.every((name) => !name.startsWith('unknown')), names.join(', '));
+        const names = switchesOf(statusEvent([]), at).map((entry: any) => entry.name);
+        assert.ok(names.every((name: any) => !name.startsWith('unknown')), names.join(', '));
         assert.ok(names.indexOf('aux3') < names.indexOf('aux14'), 'aux3 before aux14');
         assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
     });

@@ -58,18 +58,6 @@ type ProviderLike = {
 };
 type Identity = { provider: string; subject: string; email?: string | null; linkedAt?: Date };
 type ExternalProfile = { subject: string; email?: string; emailVerified?: boolean; name?: string };
-type AuthUserDoc = {
-    _id: { toString(): string; equals(other: unknown): boolean };
-    email: string;
-    role: string;
-    displayName?: string;
-    identities: Identity[];
-    lastSignInAt?: Date;
-    hasPassword(): boolean;
-    save(): Promise<unknown>;
-    generateAuthToken(): Promise<string>;
-    describe(): Record<string, unknown>;
-};
 type AccessRequestDoc = {
     _id: { toString(): string };
     provider: string;

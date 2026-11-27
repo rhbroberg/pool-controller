@@ -12,18 +12,18 @@ const BATCH = 5000;
 const SIMULATED_FROM = Date.parse('2026-01-01T00:00:00Z');
 
 describe('heating estimates', () => {
-    let server;
-    let api;
-    let admin;
-    let viewer;
-    let connection;
-    let scan;
-    let windows;
+    let server: any;
+    let api: any;
+    let admin: any;
+    let viewer: any;
+    let connection: any;
+    let scan: any;
+    let windows: any;
 
-    const near = (actual, expected, tolerance, label) =>
+    const near = (actual: any, expected: any, tolerance: any, label: any) =>
         assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: ${actual} is not within ${tolerance} of ${expected}`);
 
-    const findWindows = async (body) => {
+    const findWindows = async (body: any) => {
         const started = await api('POST', '/heating/model/scan', { token: admin, body });
         assert.equal(started.status, 202, started.text);
         return eventually(async () => {
@@ -44,7 +44,7 @@ describe('heating estimates', () => {
         viewer = await account(api, admin, 'watcher', 'viewer');
         connection = await mongoose.createConnection(server.uri).asPromise();
         const events = connection.db.collection('events');
-        const history = simulate({ days: DAYS, plan: cyclePlan, noise: 0.01 }).map((event) => ({
+        const history = simulate({ days: DAYS, plan: cyclePlan, noise: 0.01 }).map((event: any) => ({
             _id: new mongoose.Types.ObjectId(),
             source: 'panel',
             eventType: event.type,
@@ -117,11 +117,11 @@ describe('heating estimates', () => {
         assert.equal(listed.body.scanId, scan.id);
         windows = listed.body.windows;
         assert.equal(windows.length, scan.summary.windows);
-        const window = windows.find((each) => each.suitable && each.sources === 'heatpump');
+        const window = windows.find((each: any) => each.suitable && each.sources === 'heatpump');
         assert.equal(window.body, 'pool');
         assert.ok(window.hours > 0.5 && window.hours <= 4.01);
         assert.equal(typeof window.slope, 'number');
-        assert.ok(windows.every((each) => Date.parse(each.start) < SIMULATED_FROM), 'none of the simulator’s days');
+        assert.ok(windows.every((each: any) => Date.parse(each.start) < SIMULATED_FROM), 'none of the simulator’s days');
     });
 
     it('can be asked about a range, and wont scan two at once', async () => {
@@ -141,7 +141,7 @@ describe('heating estimates', () => {
         windows = (await api('GET', '/heating/model/scan/windows', { token: admin })).body.windows;
     });
 
-    let preview;
+    let preview: any;
     it('previews a model without keeping it, beside the one in use', async () => {
         const response = await api('POST', '/heating/model/preview', { token: admin, body: { scanId: scan.id } });
         assert.equal(response.status, 200, response.text);
@@ -159,7 +159,7 @@ describe('heating estimates', () => {
         assert.equal(preview.bodies.spa.available, false);
         assert.match(preview.bodies.spa.reason, /at least/);
         assert.ok(preview.samples.length > 0);
-        const sample = preview.samples.find((each) => each.body === 'pool' && each.sources === 'heatpump' && each.airTemperature === 80);
+        const sample = preview.samples.find((each: any) => each.body === 'pool' && each.sources === 'heatpump' && each.airTemperature === 80);
         assert.equal(sample.status, 'ready');
         assert.ok(sample.minutes > 0);
 
@@ -168,7 +168,7 @@ describe('heating estimates', () => {
     });
 
     it('leaves out the windows it is told to, and the kinds it is not asked for', async () => {
-        const exclude = windows.filter((each) => each.suitable && each.sources === 'heater').map((each) => each.id);
+        const exclude = windows.filter((each: any) => each.suitable && each.sources === 'heater').map((each: any) => each.id);
         const without = await api('POST', '/heating/model/preview', { token: admin, body: { scanId: scan.id, excludeWindowIds: exclude } });
         assert.equal(without.status, 200, without.text);
         assert.equal(without.body.excludedWindows, exclude.length);
@@ -225,7 +225,7 @@ describe('heating estimates', () => {
         assert.equal(next.body.current.id, saved.body.model.id, 'a new preview comes beside the model in use');
         const activity = await eventually(async () => {
             const response = await api('GET', '/events?types=action&limit=20', { token: admin });
-            return response.body.events.find((event) => /heating estimate model/.test(event.summary));
+            return response.body.events.find((event: any) => /heating estimate model/.test(event.summary));
         }, { message: 'the save in the event log' });
         assert.ok(activity);
     });

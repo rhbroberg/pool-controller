@@ -6,9 +6,9 @@ const assert = require('node:assert/strict');
 const { startServer, commission } = require('./helpers/server');
 
 describe('without a controller', () => {
-    let server;
-    let api;
-    let token;
+    let server: any;
+    let api: any;
+    let token: any;
 
     before(async () => {
         server = await startServer({ database: 'PoolRestTest-standalone', driver: 'none' });

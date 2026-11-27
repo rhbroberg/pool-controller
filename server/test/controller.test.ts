@@ -10,16 +10,16 @@ const { startServer, commission, account, reading, eventually } = require('./hel
 const spec = jsyaml.safeLoad(fs.readFileSync(path.join(__dirname, '../api/openapi.yaml'), 'utf8'));
 
 describe('controller', () => {
-    let server;
-    let api;
-    let token;
+    let server: any;
+    let api: any;
+    let token: any;
 
     // waits for GET /status to report `name` as `value`
-    const statusShows = (name, value) => eventually(async () => (await reading(api, name)) === value,
+    const statusShows = (name: any, value: any) => eventually(async () => (await reading(api, name)) === value,
         { message: `${name} to read ${value}` });
 
     // the server refuses a change until the controller has reported the state it would change
-    const whenReady = (method, route) => eventually(async () => {
+    const whenReady = (method: any, route: any) => eventually(async () => {
         const response = await api(method, route, { token });
         return response.status === 200 ? response : undefined;
     }, { message: `${method} ${route} to be accepted` });
@@ -49,14 +49,14 @@ describe('controller', () => {
         it('reports the latest value of every reading', async () => {
             const status = await eventually(async () => {
                 const response = await api('GET', '/status');
-                const names = (response.body || []).map((entry) => entry.name);
+                const names = (response.body || []).map((entry: any) => entry.name);
                 return names.includes('filter') && names.includes('pool temp') ? response : undefined;
             }, { message: 'status and temperature readings' });
             for (const entry of status.body) {
                 assert.ok(['status', 'info'].includes(entry.category), `${entry.name} has category ${entry.category}`);
                 assert.ok(!entry.name.startsWith('unknown'), 'unidentified bits are left out');
             }
-            assert.equal(new Set(status.body.map((entry) => entry.name)).size, status.body.length, 'one entry per reading');
+            assert.equal(new Set(status.body.map((entry: any) => entry.name)).size, status.body.length, 'one entry per reading');
         });
 
         it('shows what the panel last displayed', async () => {
@@ -252,7 +252,7 @@ describe('controller', () => {
             const from = new Date(Date.now() - 60 * 60 * 1000).toISOString();
             const history = await api('GET', `/history?names=pool%20temp,filter&from=${from}&to=${to}`);
             assert.equal(history.status, 200);
-            assert.deepEqual(history.body.series.map((series) => series.name), ['pool temp', 'filter']);
+            assert.deepEqual(history.body.series.map((series: any) => series.name), ['pool temp', 'filter']);
             const filter = history.body.series[1];
             assert.ok(filter.points.length > 0, 'the filter changed during the tests');
             assert.ok(history.body.earliest);
@@ -271,8 +271,8 @@ describe('controller', () => {
             assert.ok(first.body.next);
             const second = await api('GET', `/events?types=action&limit=2&cursor=${encodeURIComponent(first.body.next)}`);
             assert.equal(second.status, 200);
-            const ids = new Set(first.body.events.map((event) => event.id));
-            assert.ok(second.body.events.every((event) => !ids.has(event.id)), 'pages do not repeat events');
+            const ids = new Set(first.body.events.map((event: any) => event.id));
+            assert.ok(second.body.events.every((event: any) => !ids.has(event.id)), 'pages do not repeat events');
             assert.ok(first.body.events[0].timestamp >= second.body.events[0].timestamp, 'newest first');
         });
 
@@ -280,8 +280,8 @@ describe('controller', () => {
             const mine = await api('GET', '/events?types=action&user=operator&order=asc&limit=50');
             assert.equal(mine.status, 200);
             assert.ok(mine.body.events.length > 0);
-            assert.ok(mine.body.events.every((event) => event.user === 'operator'));
-            const times = mine.body.events.map((event) => event.timestamp);
+            assert.ok(mine.body.events.every((event: any) => event.user === 'operator'));
+            const times = mine.body.events.map((event: any) => event.timestamp);
             assert.deepEqual(times, [...times].sort());
         });
 
@@ -289,7 +289,7 @@ describe('controller', () => {
             const status = await api('GET', '/events?types=status&limit=5');
             assert.equal(status.status, 200);
             assert.ok(status.body.events.length > 0);
-            assert.ok(status.body.events.every((event) => event.type === 'status'));
+            assert.ok(status.body.events.every((event: any) => event.type === 'status'));
         });
     });
 
@@ -305,13 +305,13 @@ describe('controller', () => {
     describe('faults', () => {
         it('says why the panel asks for the system to be checked', async () => {
             const reason = await eventually(async () => {
-                const entry = ((await api('GET', '/status')).body || []).find((each) => each.name === 'check system reason');
+                const entry = ((await api('GET', '/status')).body || []).find((each: any) => each.name === 'check system reason');
                 return entry && entry.value > 0 ? entry : undefined;
             }, { message: 'a reason to check the system' });
             assert.equal(reason.category, 'info');
             assert.equal(reason.message, 'Low Salt', 'the recording’s fault');
             const log = await api('GET', '/events?types=info&order=asc&limit=200');
-            assert.ok(log.body.events.some((event) => event.summary === 'Check System: Low Salt'), 'in the event log');
+            assert.ok(log.body.events.some((event: any) => event.summary === 'Check System: Low Salt'), 'in the event log');
         });
     });
 });

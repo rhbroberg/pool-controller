@@ -11,13 +11,13 @@ const WIRELESS_AIR = Buffer.from('EAIECoMAAyAgQWlyIFRlbXAgIDEwMl9GICAgICAgICAgIC
 // the remote's "Check System / Low Salt" screen, from mystic-pool-rs485-various
 const WIRELESS_LOW_SALT = Buffer.from('1002040a8300020c000000000000000320202020436865636b2053797374656d202020202020202020204c6f772053616c74202020202020000a9d1003', 'hex');
 
-var frame = (type, body) => {
+var frame = (type: any, body: any) => {
     const bytes = [0x10, 0x02, ...type, ...body];
     const sum = bytes.reduce((total, byte) => total + byte, 0);
     return Buffer.from([...bytes, (sum >> 8) & 0xff, sum & 0xff, 0x10, 0x03]);
 };
-var display = (text) => frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]);
-var status = (bytes) => frame([0x01, 0x02], [...bytes, 0, 0, 0, 0]);
+var display = (text: any) => frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]);
+var status = (bytes: any) => frame([0x01, 0x02], [...bytes, 0, 0, 0, 0]);
 
 describe('framing', () => {
     it('undoes the escaping of a 0x10 inside a frame, and keeps the bytes as they arrived', () => {
@@ -45,18 +45,18 @@ describe('framing', () => {
     it('finds each frame in a stream split anywhere', () => {
         const stream = Buffer.concat([stuff(status([0x20, 0, 0, 0])), WIRELESS_AIR, stuff(display('  Pool Temp   80_F'))]);
         const parser = new FrameParser();
-        const found = [];
+        const found: any[] = [];
         for (let i = 0; i < stream.length; i += 7) {
-            parser.parse(stream.subarray(i, i + 7), (parsed) => found.push(Buffer.from(parsed)));
+            parser.parse(stream.subarray(i, i + 7), (parsed: any) => found.push(Buffer.from(parsed)));
         }
         assert.equal(found.length, 3);
-        assert.deepEqual(found.map((each) => new EventFactory().create(each).constructor.name), ['StatusEvent', 'WirelessDisplayEvent', 'DisplayUpdateEvent']);
+        assert.deepEqual(found.map((each: any) => new EventFactory().create(each).constructor.name), ['StatusEvent', 'WirelessDisplayEvent', 'DisplayUpdateEvent']);
     });
 
     it('drops a frame that never ends instead of overrunning', () => {
         const parser = new FrameParser();
-        const found = [];
-        parser.parse(Buffer.concat([Buffer.from([0x10, 0x02]), Buffer.alloc(600, 0x41), stuff(status([0x20, 0, 0, 0]))]), (parsed) => found.push(parsed));
+        const found: any[] = [];
+        parser.parse(Buffer.concat([Buffer.from([0x10, 0x02]), Buffer.alloc(600, 0x41), stuff(status([0x20, 0, 0, 0]))]), (parsed: any) => found.push(parsed));
         assert.ok(parser.parseErrors > 0);
         assert.equal(found.length, 1, 'the next frame is still found');
     });
@@ -64,7 +64,7 @@ describe('framing', () => {
 
 describe('interpreting frames', () => {
     const factory = new EventFactory();
-    const read = (interpreter, bytes) => interpreter.interpret(factory.create(bytes));
+    const read = (interpreter: any, bytes: any) => interpreter.interpret(factory.create(bytes));
 
     it('stores a reading when it changes, but not a one-degree bounce back', () => {
         const interpreter = new FrameInterpreter();

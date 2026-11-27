@@ -2,20 +2,52 @@
 // A tiny OpenID Connect service for the sign-in tests: discovery, an authorize endpoint that
 // signs in whichever person the test chose, a token endpoint that checks the client secret and
 // PKCE, and the key that signs its ID tokens.
-const crypto = require('node:crypto');
-const http = require('node:http');
-const jwt = require('jsonwebtoken');
+import crypto from 'node:crypto';
+import http from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import jwt from 'jsonwebtoken';
 
 const KEY_ID = 'test-key';
 
-var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-secret' } = {}) => {
-    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
-    const codes = new Map();
-    const issuer = { clientId, clientSecret, person: null, tokenRequests: 0 };
+export type IssuerPerson = {
+    sub: string;
+    email: string;
+    emailVerified?: boolean;
+    name?: string;
+};
 
-    const server = http.createServer((req, res) => {
-        const url = new URL(req.url, issuer.base);
-        const json = (status, body) => {
+export type TestIssuer = {
+    clientId: string;
+    clientSecret: string;
+    person: IssuerPerson | null;
+    people?: IssuerPerson[];
+    tokenRequests: number;
+    base: string;
+    stop: () => Promise<void>;
+};
+
+var startIssuer = async ({
+    clientId = 'pool-test',
+    clientSecret = 'pool-test-secret'
+}: { clientId?: string; clientSecret?: string } = {}): Promise<TestIssuer> => {
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const codes = new Map<string, {
+        person: IssuerPerson;
+        nonce: string | null;
+        challenge: string | null;
+        redirectUri: string | null;
+        clientId: string | null;
+    }>();
+    const issuer: Partial<TestIssuer> & {
+        clientId: string;
+        clientSecret: string;
+        person: IssuerPerson | null;
+        tokenRequests: number;
+    } = { clientId, clientSecret, person: null, tokenRequests: 0 };
+
+    const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
+        const url = new URL(req.url || '/', issuer.base || 'http://127.0.0.1');
+        const json = (status: number, body: unknown) => {
             res.writeHead(status, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(body));
         };
@@ -35,7 +67,7 @@ var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-sec
             json(200, { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: KEY_ID, alg: 'RS256', use: 'sig' }] });
         } else if (url.pathname === '/authorize' && issuer.people && !url.searchParams.has('pick')) {
             // for trying sign-in in a browser: a page asking who to sign in as
-            const choice = (pick, label) => {
+            const choice = (pick: string, label: string) => {
                 const next = new URL(url);
                 next.searchParams.set('pick', pick);
                 return `<p><a href="${next.href.replace(/&/g, '&amp;')}">${label}</a></p>`;
@@ -45,8 +77,16 @@ var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-sec
                 issuer.people.map((person, index) => choice(String(index), `${person.name} &lt;${person.email}&gt;`)).join('')
             }${choice('cancel', 'Cancel')}`);
         } else if (url.pathname === '/authorize') {
-            const back = new URL(url.searchParams.get('redirect_uri'));
-            back.searchParams.set('state', url.searchParams.get('state'));
+            const redirectUri = url.searchParams.get('redirect_uri');
+            if (!redirectUri) {
+                json(400, { error: 'invalid_request' });
+                return;
+            }
+            const back = new URL(redirectUri);
+            const state = url.searchParams.get('state');
+            if (state) {
+                back.searchParams.set('state', state);
+            }
             if (issuer.people) {
                 issuer.person = issuer.people[Number(url.searchParams.get('pick'))] || null;
             }
@@ -67,7 +107,7 @@ var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-sec
             res.end();
         } else if (url.pathname === '/token' && req.method === 'POST') {
             let body = '';
-            req.on('data', (chunk) => { body += chunk; });
+            req.on('data', (chunk: Buffer | string) => { body += chunk; });
             req.on('end', () => {
                 issuer.tokenRequests += 1;
                 const form = new URLSearchParams(body);
@@ -75,8 +115,9 @@ var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-sec
                 const [basicId, basicSecret] = basic ? Buffer.from(basic, 'base64').toString().split(':').map(decodeURIComponent) : [];
                 const id = form.get('client_id') || basicId;
                 const secret = form.get('client_secret') || basicSecret;
-                const grant = codes.get(form.get('code'));
-                codes.delete(form.get('code'));
+                const code = form.get('code') || '';
+                const grant = codes.get(code);
+                codes.delete(code);
                 const challenge = crypto.createHash('sha256').update(form.get('code_verifier') || '').digest('base64url');
                 if (id !== clientId || secret !== clientSecret) {
                     json(401, { error: 'invalid_client' });
@@ -95,13 +136,15 @@ var startIssuer = async ({ clientId = 'pool-test', clientSecret = 'pool-test-sec
         }
     });
 
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    issuer.base = `http://127.0.0.1:${server.address().port}`;
-    issuer.stop = () => new Promise((resolve) => {
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+    issuer.base = `http://127.0.0.1:${port}`;
+    issuer.stop = () => new Promise<void>((resolve) => {
         server.closeAllConnections();
         server.close(() => resolve());
     });
-    return issuer;
+    return issuer as TestIssuer;
 };
 
-module.exports = { startIssuer };
+export { startIssuer };

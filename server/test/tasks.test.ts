@@ -8,18 +8,18 @@ const { startServer, commission, account, reading, eventually } = require('./hel
 const SLOW = { timeoutMs: 60000, intervalMs: 250 };
 
 describe('tasks', () => {
-    let server;
-    let api;
-    let admin;
-    let viewer;
+    let server: any;
+    let api: any;
+    let admin: any;
+    let viewer: any;
 
     const tasks = async () => (await api('GET', '/tasks')).body;
-    const put = (task, body, token = admin) => api('PUT', `/tasks/${task}`, { token, body });
-    const switchOn = async (name) => (await reading(api, name)) === true;
+    const put = (task: any, body: any, token: any = admin) => api('PUT', `/tasks/${task}`, { token, body });
+    const switchOn = async (name: any) => (await reading(api, name)) === true;
     // GET /status reads stored history, which can be a moment behind the tasks
-    const expectSwitch = (name, on, why) => eventually(async () => (await switchOn(name)) === on,
+    const expectSwitch = (name: any, on: any, why?: any) => eventually(async () => (await switchOn(name)) === on,
         Object.assign({ message: why || `${name} ${on ? 'on' : 'off'}` }, SLOW));
-    const settle = (check, message) => eventually(check, Object.assign({ message }, SLOW));
+    const settle = (check: any, message: any) => eventually(check, Object.assign({ message }, SLOW));
 
     before(async () => {
         server = await startServer({
@@ -151,7 +151,7 @@ describe('tasks', () => {
             return now.spaPreheat.scheduled === null && now.spaPreheat.on;
         }, 'the scheduled preheat to start');
         const log = await api('GET', '/events?types=action&limit=40', { token: admin });
-        assert.ok(log.body.events.some((event) => /Started the spa preheat scheduled/.test(event.summary)), 'the start is in the event log');
+        assert.ok(log.body.events.some((event: any) => /Started the spa preheat scheduled/.test(event.summary)), 'the start is in the event log');
 
         await put('spaPreheat', { on: false });
     });

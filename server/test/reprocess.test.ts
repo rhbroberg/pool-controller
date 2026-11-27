@@ -14,31 +14,31 @@ const SPA = [0x10, 0, 0, 0];
 const SPA_AND_FILTER = [0x30, 0, 0, 0];
 const CHECK_SYSTEM = [0x04, 0, 0, 0];
 
-var frame = (type, body) => {
+var frame = (type: any, body: any) => {
     const bytes = [0x10, 0x02, ...type, ...body];
     const sum = bytes.reduce((total, byte) => total + byte, 0);
     return Buffer.from([...bytes, (sum >> 8) & 0xff, sum & 0xff, 0x10, 0x03]);
 };
-var display = (text) => stuff(frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]));
-var status = (bytes) => stuff(frame([0x01, 0x02], [...bytes, 0, 0, 0, 0]));
+var display = (text: any) => stuff(frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]));
+var status = (bytes: any) => stuff(frame([0x01, 0x02], [...bytes, 0, 0, 0, 0]));
 
 describe('reprocessing history', () => {
-    let server;
-    let api;
-    let admin;
-    let viewer;
-    let connection;
-    let events;
+    let server: any;
+    let api: any;
+    let admin: any;
+    let viewer: any;
+    let connection: any;
+    let events: any;
     const start = Date.now() - 2 * 24 * 60 * MINUTE_MS;
-    const at = (minutes) => new Date(start + minutes * MINUTE_MS);
+    const at = (minutes: any) => new Date(start + minutes * MINUTE_MS);
     const ids: any = {};
 
-    const add = (name, eventType, minutes, raw, status = []) => {
+    const add = (name: any, eventType: any, minutes: any, raw: any, status: Array<{ name: string; value: number }> = []) => {
         ids[name] = new mongoose.Types.ObjectId();
         return { _id: ids[name], source: 'panel', eventType, timestamp: at(minutes), raw, status };
     };
 
-    const reprocess = async (body) => {
+    const reprocess = async (body: any) => {
         const started = await api('POST', '/system/reprocess', { token: admin, body });
         assert.equal(started.status, 202, started.text);
         const run = await eventually(async () => {
@@ -49,9 +49,9 @@ describe('reprocessing history', () => {
         return run;
     };
 
-    const doc = (name) => events.findOne({ _id: ids[name] });
-    const readings = async (name) => (await doc(name)).status.map((entry) => [entry.name, entry.value]);
-    const transition = (run, from, to) => (run.transitions.find((each) => each.from === from && each.to === to) || { count: 0 }).count;
+    const doc = (name: any) => events.findOne({ _id: ids[name] });
+    const readings = async (name: any) => (await doc(name)).status.map((entry: any) => [entry.name, entry.value]);
+    const transition = (run: any, from: any, to: any) => (run.transitions.find((each: any) => each.from === from && each.to === to) || { count: 0 }).count;
     const first = { from: at(-1).toISOString(), to: at(10).toISOString() };
     const fault = { from: at(39).toISOString(), to: at(44).toISOString() };
     const second = { from: at(95).toISOString(), to: at(110).toISOString() };
@@ -140,13 +140,13 @@ describe('reprocessing history', () => {
 
         const rollups = await eventually(async () => {
             const jobs = await api('GET', '/system/jobs', { token: admin });
-            const job = jobs.body.find((each) => each.name === 'rollups');
+            const job = jobs.body.find((each: any) => each.name === 'rollups');
             return job && job.runs > 1 && !job.running ? job : undefined;
         }, { message: 'the rollups job to run after reprocessing' });
         assert.match(rollups.lastSummary, new RegExp(`rebuilding from ${first.from.slice(0, 16)}`));
 
         const log = await api('GET', '/events?types=action', { token: admin });
-        assert.ok(log.body.events.some((event) => /^Reprocessed history/.test(event.summary)), JSON.stringify(log.body.events));
+        assert.ok(log.body.events.some((event: any) => /^Reprocessed history/.test(event.summary)), JSON.stringify(log.body.events));
     });
 
     it('answers the same the second time', async () => {

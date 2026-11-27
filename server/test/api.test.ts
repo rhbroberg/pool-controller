@@ -5,12 +5,12 @@ const assert = require('node:assert/strict');
 const { startServer, commission, account } = require('./helpers/server');
 
 describe('api', () => {
-    let server;
-    let api;
-    let viewerToken;
+    let server: any;
+    let api: any;
+    let viewerToken: any;
 
     // the { code, message } body every refusal carries, which the iOS app shows
-    const refusal = (response, code, message) => {
+    const refusal = (response: any, code: any, message: any) => {
         assert.equal(response.status, code);
         assert.equal(response.body.code, code);
         assert.match(response.body.message, message);
@@ -47,10 +47,10 @@ describe('api', () => {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"email":'
             });
             assert.equal(malformed.status, 400);
-            assert.equal((await malformed.json()).code, 400);
+            assert.equal(((await malformed.json()) as any).code, 400);
             const text = await fetch(`${base}/users/login`, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: 'admin' });
             assert.equal(text.status, 415);
-            assert.match((await text.json()).message, /application\/json/);
+            assert.match(((await text.json()) as any).message, /application\/json/);
         });
 
         it('distinguishes an unknown route from an unsupported method', async () => {
@@ -72,8 +72,8 @@ describe('api', () => {
         it('accepts a list either comma separated or repeated', async () => {
             const commas = await api('GET', '/history?names=pool%20temp,filter');
             const repeated = await api('GET', '/history?names=pool%20temp&names=filter');
-            assert.deepEqual(commas.body.series.map((series) => series.name), ['pool temp', 'filter']);
-            assert.deepEqual(repeated.body.series.map((series) => series.name), ['pool temp', 'filter']);
+            assert.deepEqual(commas.body.series.map((series: any) => series.name), ['pool temp', 'filter']);
+            assert.deepEqual(repeated.body.series.map((series: any) => series.name), ['pool temp', 'filter']);
         });
     });
 
@@ -82,8 +82,8 @@ describe('api', () => {
             const response = await fetch(`http://127.0.0.1:${server.port}/api-docs`);
             assert.equal(response.status, 200);
             const doc = await response.json();
-            assert.match(doc.openapi, /^3\./);
-            assert.equal(doc.servers[0].url, '/rhbroberg/pool-api/1.0.0');
+            assert.match((doc as any).openapi, /^3\./);
+            assert.equal((doc as any).servers[0].url, '/rhbroberg/pool-api/1.0.0');
         });
 
         it('serves Swagger UI', async () => {

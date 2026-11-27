@@ -21,17 +21,17 @@ const GAP = { from: 100, to: 110 };
  * swinging daily, salt once a day, the filter on twelve hours a day and the heater an hour on
  * even days; plus a user action long ago and one recently
  **/
-var generate = (now) => {
+var generate = (now: any) => {
     const start = Math.floor((now - HISTORY_DAYS * DAY_MS) / HOUR_MS) * HOUR_MS;
     const end = Math.floor((now - HOUR_MS) / HOUR_MS) * HOUR_MS;
     const events = [];
-    const add = (eventType, t, name, value) => events.push({
+    const add = (eventType: any, t: any, name: any, value: any) => events.push({
         _id: new mongoose.Types.ObjectId(), source: 'test', eventType, timestamp: new Date(t), status: [{ name, value }]
     });
-    let pool;
-    let filter;
-    let heater;
-    let aux14;
+    let pool: any;
+    let filter: any;
+    let heater: any;
+    let aux14: any;
     for (let t = start; t < end; t += HOUR_MS / 2) {
         const daysAgo = (now - t) / DAY_MS;
         const inGap = daysAgo >= GAP.from && daysAgo < GAP.to;
@@ -76,26 +76,26 @@ var generate = (now) => {
     return events;
 };
 
-var plan = (explained) => JSON.stringify(explained.queryPlanner ? explained.queryPlanner.winningPlan : explained);
+var plan = (explained: any) => JSON.stringify(explained.queryPlanner ? explained.queryPlanner.winningPlan : explained);
 
 describe('long history', () => {
-    let server;
-    let api;
-    let admin;
-    let viewer;
-    let db;
-    let connection;
-    let generated;
+    let server: any;
+    let api: any;
+    let admin: any;
+    let viewer: any;
+    let db: any;
+    let connection: any;
+    let generated: any;
     const now = Date.now();
 
-    const history = async (query) => {
+    const history = async (query: any) => {
         const response = await api('GET', `/history?${new URLSearchParams(query)}`);
         assert.equal(response.status, 200, response.text);
         return response.body;
     };
-    const series = (body, name) => body.series.find((each) => each.name === name);
+    const series = (body: any, name: any) => body.series.find((each: any) => each.name === name);
 
-    const runJob = async (name) => {
+    const runJob = async (name: any) => {
         for (let attempt = 0; attempt < 30; attempt++) {
             const run = await api('POST', `/system/jobs/${name}/run`, { token: admin });
             assert.equal(run.status, 200, run.text);
@@ -156,8 +156,8 @@ describe('long history', () => {
         it('lists the maintenance jobs, which only run when asked with --no-jobs', async () => {
             const jobs = await api('GET', '/system/jobs', { token: admin });
             assert.equal(jobs.status, 200);
-            assert.deepEqual(jobs.body.map((job) => job.name), ['rollups', 'retention', 'weather']);
-            assert.ok(jobs.body.every((job) => job.scheduled === false && job.nextRunAt === null));
+            assert.deepEqual(jobs.body.map((job: any) => job.name), ['rollups', 'retention', 'weather']);
+            assert.ok(jobs.body.every((job: any) => job.scheduled === false && job.nextRunAt === null));
             assert.equal((await api('POST', '/system/jobs/vacuum/run', { token: admin })).status, 404);
         });
     });
@@ -199,10 +199,10 @@ describe('long history', () => {
             const to = new Date(now);
             const body = await history({ names: 'pool temp', from: from.toISOString(), to: to.toISOString(), maxPoints: 1000 });
             const pool = series(body, 'pool temp');
-            const expected = generated.filter((e) => e.status[0] && e.status[0].name === 'pool temp' && e.timestamp >= from && e.timestamp < to);
+            const expected = generated.filter((e: any) => e.status[0] && e.status[0].name === 'pool temp' && e.timestamp >= from && e.timestamp < to);
             assert.equal(pool.resolution, 0);
             assert.equal(pool.downsampled, false);
-            assert.deepEqual(pool.points.map((p) => p.v), expected.map((e) => e.status[0].value));
+            assert.deepEqual(pool.points.map((p: any) => p.v), expected.map((e: any) => e.status[0].value));
             assert.equal(typeof pool.before.v, 'number');
         });
 
@@ -232,7 +232,7 @@ describe('long history', () => {
             const heating = series(body, 'heating:pool:heater1');
             assert.equal(heating.resolution, 0);
             assert.ok(heating.points.length >= 50, `${heating.points.length} changes`);
-            assert.ok(heating.points.every((p) => p.v === 0 || p.v === 1));
+            assert.ok(heating.points.every((p: any) => p.v === 0 || p.v === 1));
         });
 
         it('buckets the derived heating series by how long it heated', async () => {
@@ -240,9 +240,9 @@ describe('long history', () => {
             const heating = series(body, 'heating:pool:heater1');
             assert.equal(heating.resolution, 172800);
             // one hour heated in every two days
-            const middle = heating.points.slice(1, -1).map((p) => p.v);
+            const middle = heating.points.slice(1, -1).map((p: any) => p.v);
             assert.ok(middle.length > 150);
-            assert.ok(middle.every((v) => v > 0.015 && v < 0.025), `two-day averages ${middle.slice(0, 5).join(', ')}`);
+            assert.ok(middle.every((v: any) => v > 0.015 && v < 0.025), `two-day averages ${middle.slice(0, 5).join(', ')}`);
         });
 
         it('returns finer buckets when zoomed in over the same window', async () => {
@@ -266,10 +266,10 @@ describe('long history', () => {
             const whole = series(await history({ names: 'pool temp', from: new Date(from).toISOString(), to: new Date(now).toISOString(), maxPoints: 80 }), 'pool temp');
             const first = series(await history({ names: 'pool temp', from: new Date(from).toISOString(), to: new Date(middle).toISOString(), maxPoints: 40 }), 'pool temp');
             assert.equal(whole.resolution, first.resolution);
-            const byTime = new Map(whole.points.map((p) => [p.t, p.v]));
-            const shared = first.points.filter((p) => byTime.has(p.t) && new Date(p.t).getTime() + whole.resolution * 1000 <= middle);
+            const byTime = new Map(whole.points.map((p: any) => [p.t, p.v]));
+            const shared = first.points.filter((p: any) => byTime.has(p.t) && new Date(p.t).getTime() + whole.resolution * 1000 <= middle);
             assert.ok(shared.length > 10);
-            assert.ok(shared.every((p) => byTime.get(p.t) === p.v));
+            assert.ok(shared.every((p: any) => byTime.get(p.t) === p.v));
         });
 
         it('caps the points a request can ask for', async () => {
@@ -282,10 +282,10 @@ describe('long history', () => {
         it('marks days with pool, spa or salt readings and not the days without', async () => {
             const response = await api('GET', `/history/availability?from=${new Date(now - 200 * DAY_MS).toISOString()}&to=${new Date(now).toISOString()}`);
             assert.equal(response.status, 200);
-            const days = new Set(response.body.days.map((day) => day.date));
-            const spaDays = new Set(generated.filter((event) => event.status[0] && event.status[0].name === 'spa temp').map((event) => tz.dayKey(event.timestamp.getTime(), NEW_YORK)));
+            const days = new Set(response.body.days.map((day: any) => day.date));
+            const spaDays = new Set(generated.filter((event: any) => event.status[0] && event.status[0].name === 'spa temp').map((event: any) => tz.dayKey(event.timestamp.getTime(), NEW_YORK)));
             assert.equal(response.body.timeZone, NEW_YORK);
-            assert.ok(response.body.days.every((day) => day.readings > 0));
+            assert.ok(response.body.days.every((day: any) => day.readings > 0));
             for (let ago = GAP.from + 1; ago < GAP.to - 1; ago++) {
                 const key = tz.dayKey(now - ago * DAY_MS, NEW_YORK);
                 if (spaDays.has(key)) {
@@ -307,16 +307,16 @@ describe('long history', () => {
             const spa = await api('GET', `/history/availability?names=spa%20temp&from=${from}&to=${to}`);
             assert.equal(pool.status, 200);
             assert.equal(spa.status, 200);
-            const poolDays = new Set(pool.body.days.map((day) => day.date));
-            const spaDays = new Set(spa.body.days.map((day) => day.date));
-            const spaOnly = generated.find((event) => {
+            const poolDays = new Set(pool.body.days.map((day: any) => day.date));
+            const spaDays = new Set(spa.body.days.map((day: any) => day.date));
+            const spaOnly = generated.find((event: any) => {
                 const ago = event.status[0] && event.status[0].name === 'spa temp' ? (now - event.timestamp.getTime()) / DAY_MS : -1;
                 return ago >= GAP.from && ago < GAP.to;
             });
             assert.ok(spaOnly, 'the gap has a spa temperature and no pool temperature');
             const spaOnlyDay = tz.dayKey(spaOnly.timestamp.getTime(), NEW_YORK);
             assert.ok(!spaDays.has(spaOnlyDay), 'a spa temperature while the spa filter is off is not graphable');
-            const running = generated.find((event) => {
+            const running = generated.find((event: any) => {
                 if (!event.status[0] || event.status[0].name !== 'spa temp') {
                     return false;
                 }
@@ -328,8 +328,8 @@ describe('long history', () => {
             const heldDay = tz.dayKey(tz.addDays(tz.startOfDay(running.timestamp.getTime(), NEW_YORK), 1, NEW_YORK), NEW_YORK);
             assert.ok(spaDays.has(runningDay), 'the day the spa filter ran with a new temperature');
             assert.ok(spaDays.has(heldDay), 'the next morning the temperature held while the spa filter ran');
-            assert.ok(!generated.some((event) => event.status[0] && event.status[0].name === 'spa temp' && tz.dayKey(event.timestamp.getTime(), NEW_YORK) === heldDay));
-            const poolOnly = [...poolDays].find((day) => !spaDays.has(day));
+            assert.ok(!generated.some((event: any) => event.status[0] && event.status[0].name === 'spa temp' && tz.dayKey(event.timestamp.getTime(), NEW_YORK) === heldDay));
+            const poolOnly = [...poolDays].find((day: any) => !spaDays.has(day));
             assert.ok(poolOnly, 'a pool temperature does not mark the spa calendar');
             assert.equal((await api('GET', `/history/availability?names=ambient&from=${from}&to=${to}`)).status, 400);
         });
@@ -342,9 +342,9 @@ describe('long history', () => {
 
     describe('indexes', () => {
         it('drops the old indexes and keeps the ones history needs', async () => {
-            const names = (await db.collection('events').indexes()).map((index) => index.name).sort();
+            const names = (await db.collection('events').indexes()).map((index: any) => index.name).sort();
             assert.deepEqual(names, ['_id_', 'eventType_statusName_timestamp', 'eventType_timestamp', 'timestamp', 'user_timestamp']);
-            const rollupIndexes = (await db.collection('rollups').indexes()).map((index) => index.name).sort();
+            const rollupIndexes = (await db.collection('rollups').indexes()).map((index: any) => index.name).sort();
             assert.deepEqual(rollupIndexes, ['_id_', 'name_res_start']);
         });
 

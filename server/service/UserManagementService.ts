@@ -1,7 +1,5 @@
 'use strict';
 
-import type { AuthUser, UserRole } from '../types/domain';
-
 import { User as UserModel, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } from '../models/user';
 const User: any = UserModel;
 import * as utils from '../utils/writer';

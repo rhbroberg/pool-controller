@@ -19,12 +19,12 @@ const { stuff } = require('../protocol/parse');
 
 const HOUR_MS = 3600 * 1000;
 
-var frame = (type, body) => {
+var frame = (type: any, body: any) => {
     const bytes = [0x10, 0x02, ...type, ...body];
     const sum = bytes.reduce((total, byte) => total + byte, 0);
     return Buffer.from([...bytes, (sum >> 8) & 0xff, sum & 0xff, 0x10, 0x03]);
 };
-var display = (text) => stuff(frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]));
+var display = (text: any) => stuff(frame([0x01, 0x03], [...Buffer.from(text.padEnd(40), 'ascii'), 0x00]));
 
 var finished = async () => {
     for (let attempt = 0; attempt < 200; attempt++) {
@@ -32,7 +32,7 @@ var finished = async () => {
         if (run && !['waiting', 'running'].includes(run.state)) {
             return run;
         }
-        await new Promise((resolve) => setTimeout(resolve, 25));
+        await new Promise((resolve: any) => setTimeout(resolve, 25));
     }
     throw new Error('reprocessing never finished');
 };
@@ -47,7 +47,7 @@ describe('reprocessing service', () => {
         await mongoose.connection.asPromise();
         await mongoose.connection.dropDatabase();
         // the server builds these at startup; reprocessing walks each kind by its index
-        await Promise.all([Event, Rollup].map((model) => model.syncIndexes()));
+        await Promise.all([Event, Rollup].map((model: any) => model.syncIndexes()));
     });
 
     after(async () => {
@@ -56,11 +56,11 @@ describe('reprocessing service', () => {
     });
 
     it('turns down a second run while one waits for the job queue', async () => {
-        let release;
-        const busy = scheduler.exclusive(() => new Promise((resolve) => { release = resolve; }));
+        let release: any;
+        const busy = scheduler.exclusive(() => new Promise((resolve: any) => { release = resolve; }));
         const waiting = await Reprocess.start({ from: from.toISOString(), to: to.toISOString(), dryRun: true });
         assert.equal(waiting.state, 'waiting');
-        await assert.rejects(Reprocess.start({ from: from.toISOString(), to: to.toISOString() }), (error) => error.code === 409);
+        await assert.rejects(Reprocess.start({ from: from.toISOString(), to: to.toISOString() }), (error: any) => error.code === 409);
         release();
         await busy;
         const run = await finished();
