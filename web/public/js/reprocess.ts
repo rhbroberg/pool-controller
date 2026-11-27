@@ -1,3 +1,4 @@
+import { errorMessageOf } from './types.js';
 // The Reprocess History page apart from its drawing: the range and kinds chosen, what may start,
 // what is sent, and the run followed until it's done.
 
@@ -138,7 +139,7 @@ export class ReprocessForm {
             this.run = await this.store.reprocessRun();
             this.error = null;
         } catch (error) {
-            this.error = error.message;
+            this.error = errorMessageOf(error);
         }
         this.changed();
         this.follow();
@@ -152,7 +153,7 @@ export class ReprocessForm {
         try {
             this.run = await this.store.startReprocess({ from, to, eventTypes: this.eventTypes, dryRun });
         } catch (error) {
-            this.error = error.message;
+            this.error = errorMessageOf(error);
         } finally {
             this.starting = false;
             this.changed();
@@ -176,7 +177,7 @@ export class ReprocessForm {
                     this.run = await this.store.reprocessRun();
                     this.error = null;
                 } catch (error) {
-                    this.error = error.message;
+                    this.error = errorMessageOf(error);
                 }
                 this.changed();
             }

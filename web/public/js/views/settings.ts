@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Settings: the pool's name and the account signed in. Signing in is the sign-in page's; Settings
 // shows only once someone has. The event log and server maintenance open from the main page.
 
@@ -46,7 +47,7 @@ export const mountSettings = (root: any, app: any) => {
             const { url } = await client.linkIdentity(provider.id, token());
             location.assign(url);
         } catch (error) {
-            methodsError = error.message;
+            methodsError = errorMessageOf(error);
             linking = null;
             redraw();
         }
@@ -67,7 +68,7 @@ export const mountSettings = (root: any, app: any) => {
             methodsError = null;
             await store.refreshAccount();
         } catch (error) {
-            methodsError = error.message;
+            methodsError = errorMessageOf(error);
         }
         redraw();
     };
@@ -194,7 +195,7 @@ export const mountChangePassword = (root: any, app: any) => {
             await store.changePassword(current, password);
             navigate('settings');
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             saving = false;
             redraw();

@@ -1,3 +1,4 @@
+import { errorMessageOf } from './types.js';
 // The days with the named readings, for marking the history calendar, fetched a few months at a
 // time as the calendar pages. With no names, days that have a pool or spa temperature or a salt
 // reading are marked. Days are the server's, in its time zone, so the month grid is laid out
@@ -67,7 +68,7 @@ export class HistoryCalendar {
             this.errorMessage = null;
         } catch (error) {
             if (!isAbort(error)) {
-                this.errorMessage = error.message;
+                this.errorMessage = errorMessageOf(error);
             }
         } finally {
             this.isLoading = false;

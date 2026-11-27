@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Shown after signing in with the default admin / admin account: the account must be renamed and
 // given a new password before it can change anything.
 
@@ -38,7 +39,7 @@ const openCommissioning = (store: any) => {
         try {
             await store.commission(name.trim(), password);
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             saving = false;
             dialog.update();

@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Admin: how people sign in. Passwords on or off, whether newcomers may ask to join, and the
 // OpenID Connect services (Google, Microsoft, Apple, ...) offered on the sign-in form.
 
@@ -32,9 +33,10 @@ export const mountSignInSettings = (root: any, app: any) => {
             settings = await client.fetchSignInSettings(token());
             errorMessage = null;
         } catch (error) {
-            errorMessage = error.status === 404
+            const status = error && typeof error === 'object' && 'status' in error ? (error as { status?: number }).status : undefined;
+            errorMessage = status === 404
                 ? 'This server doesn’t have sign-in services yet. Update it to offer Google, Microsoft or Apple sign-in.'
-                : error.message;
+                : (errorMessageOf(error) ?? 'Something went wrong.');
         } finally {
             isLoading = false;
             redraw();
@@ -48,7 +50,7 @@ export const mountSignInSettings = (root: any, app: any) => {
         try {
             settings = await client.updateSignInSettings(changes, token());
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             saving = false;
             redraw();
@@ -189,7 +191,7 @@ const openService = (app: any, settings: any, service: any) => {
             }
             close(true);
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             saving = false;
             dialog.update();
@@ -210,7 +212,7 @@ const openService = (app: any, settings: any, service: any) => {
             await client.deleteSignInService(service.id, token());
             close(true);
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
             dialog.update();
         }
     };

@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Admin: every account on the server, with ways to add, change and remove them, and the people
 // waiting to be let in through a sign-in service.
 
@@ -49,7 +50,7 @@ export const mountAccounts = (root: any, app: any) => {
             services = signIn ? signIn.providers : [];
             errorMessage = null;
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             isLoading = false;
             redraw();
@@ -61,7 +62,7 @@ export const mountAccounts = (root: any, app: any) => {
             await work();
             errorMessage = null;
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         }
         redraw();
     };
@@ -112,7 +113,7 @@ export const mountAccounts = (root: any, app: any) => {
             accounts = accounts.filter((a) => a.email !== account.email);
             errorMessage = null;
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         }
         redraw();
     };
@@ -266,7 +267,7 @@ const openNewAccount = (app: any, services: any) => {
                 ? { invitation: await client.createInvitation({ email: email.trim(), role, provider: service || null }, token) }
                 : await client.createAccount(name.trim(), password, role, token));
         } catch (error) {
-            errorMessage = error.message;
+            errorMessage = errorMessageOf(error);
         } finally {
             saving = false;
             dialog.update();
@@ -361,7 +362,7 @@ export const mountAccountDetail = (root: any, app: any, name: any) => {
             }
         } catch (error) {
             failed = true;
-            message = error.message;
+            message = errorMessageOf(error);
         } finally {
             loading = false;
             redraw();
@@ -385,7 +386,7 @@ export const mountAccountDetail = (root: any, app: any, name: any) => {
             }
         } catch (error) {
             failed = true;
-            message = error.message;
+            message = errorMessageOf(error);
         } finally {
             saving = false;
             redraw();

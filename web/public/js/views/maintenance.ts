@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // The accounts and how people sign in, the pool's location for weather, the time zone and
 // history settings, the maintenance jobs, restart and factory reset: everything an admin keeps
 // the server running with.
@@ -60,7 +61,7 @@ export const mountMaintenance = (root: any, app: any) => {
             await action();
             message = done;
         } catch (error) {
-            message = error.message;
+            message = errorMessageOf(error);
         } finally {
             working = false;
             redraw();
@@ -101,7 +102,7 @@ export const mountMaintenance = (root: any, app: any) => {
             ]);
             settingsError = null;
         } catch (error) {
-            settingsError = error.message;
+            settingsError = errorMessageOf(error);
         }
         redraw();
     };
@@ -113,7 +114,7 @@ export const mountMaintenance = (root: any, app: any) => {
             // a new time zone redoes the daily summaries, which shows in the jobs
             jobs = await store.maintenanceJobs().catch(() => jobs);
         } catch (error) {
-            settingsError = error.message;
+            settingsError = errorMessageOf(error);
         }
         redraw();
     };
@@ -128,7 +129,7 @@ export const mountMaintenance = (root: any, app: any) => {
             zipDraft = null;
             jobs = await store.maintenanceJobs().catch(() => jobs);
         } catch (error) {
-            locationError = error.message;
+            locationError = errorMessageOf(error);
         } finally {
             savingZip = false;
             redraw();
@@ -143,7 +144,7 @@ export const mountMaintenance = (root: any, app: any) => {
             jobs = jobs.map((each) => each.name === ran.name ? ran : each);
             settingsError = ran.more ? `${JOB_TITLES[ran.name] || ran.name} has more to do and carries on by itself.` : null;
         } catch (error) {
-            settingsError = error.message;
+            settingsError = errorMessageOf(error);
         } finally {
             runningJob = null;
             redraw();

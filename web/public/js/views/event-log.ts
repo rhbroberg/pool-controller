@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Every recorded event, newest first, loaded a page at a time as the list scrolls.
 
 import { h } from '../dom.js';
@@ -55,7 +56,7 @@ export const mountEventLog = (root: any, app: any) => {
             errorMessage = null;
         } catch (error) {
             if (!isAbort(error) && started === generation) {
-                errorMessage = error.message;
+                errorMessage = errorMessageOf(error);
             }
         } finally {
             if (started === generation) {

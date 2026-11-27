@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // What the page shows while signed out: only the pool's sign-in, with nothing from the pool
 // until it succeeds.
 
@@ -35,7 +36,7 @@ export const mountSignIn = (root: any, app: any) => {
             await store.signIn(email.trim(), password);
             password = '';
         } catch (error) {
-            signInError = error.message;
+            signInError = errorMessageOf(error);
         } finally {
             signingIn = false;
             redraw();

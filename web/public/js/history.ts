@@ -1,3 +1,4 @@
+import { errorMessageOf } from './types.js';
 // Temperature, air and heating history for one body of water. Each graph resolution keeps its
 // own fetched windows, so zooming in asks only for the finer readings it doesn't have yet, and
 // zooming back out finds the coarser ones still there. Times are milliseconds.
@@ -137,7 +138,7 @@ export class TemperatureHistory {
             this.evict(level);
         } catch (error) {
             if (!isAbort(error)) {
-                this.errorMessage = error.message;
+                this.errorMessage = errorMessageOf(error);
             }
         } finally {
             this.isLoading = false;

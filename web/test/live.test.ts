@@ -248,7 +248,7 @@ describe('live connection', () => {
 
     it('calls the browser’s timers unbound, as browsers insist', () => {
         const saved = globalThis.setTimeout;
-        const strict = function (fn: any, ms: any) {
+        const strict = function (this: unknown, fn: any, ms: any) {
             if (this !== undefined && this !== globalThis) {
                 throw new TypeError('Illegal invocation');
             }

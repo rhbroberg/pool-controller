@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types.js';
 // Salt level against time. Zoom, pan, presets and restore match the temperature graphs.
 
 import { h } from '../dom.js';
@@ -167,7 +168,7 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
             start = clampStart(start);
         } catch (error) {
             if (!isAbort(error) && loading === generation) {
-                errorMessage = error.message;
+                errorMessage = errorMessageOf(error) ?? 'Something went wrong.';
             }
         } finally {
             if (loading === generation) {
