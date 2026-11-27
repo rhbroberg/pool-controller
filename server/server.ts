@@ -315,7 +315,7 @@ var handleHunk = (data: Buffer) => {
             processingErrors++;
             logger.error(`event exception '${e}' received (${processingErrors} so far), continuing`);
             if (e === 'checksum failure') {
-                logger.error(e.stack);
+                logger.error(String(e));
             }
             saveStatus([], wire, 'failed', new Date().getTime());
         }

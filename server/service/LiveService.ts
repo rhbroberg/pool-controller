@@ -1,4 +1,6 @@
 'use strict';
+
+import { errorMessageOf } from '../types/domain';
 // Pushes changes to the apps the moment the controller reports them, over socket.io, so they
 // needn't wait for their next poll:
 //
@@ -60,7 +62,7 @@ const pushSoon = (name: PushName) => {
                 io!.emit(name, body);
             }
         } catch (e: any) {
-            logger.warn(`could not push ${name}: ${e.message}`);
+            logger.warn(`could not push ${name}: ${errorMessageOf(e)}`);
         }
     }, HEATING_DELAY_MS);
     timers[name]!.unref();

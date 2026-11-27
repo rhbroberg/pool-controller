@@ -1,4 +1,6 @@
 'use strict';
+
+import { errorMessageOf, apiFailureMessage, errorCauseCode } from '../types/domain';
 // Signing in through OpenID Connect services (Google, Microsoft, Apple, Auth0, ...): the
 // browser or app is sent to the service, which sends it back to /auth/{provider}/callback; the
 // server checks who it is and either signs in the account it belongs to, redeems an invitation,
@@ -197,8 +199,8 @@ exports.start = async function(req: any, providerId: any, { client, link }: { cl
         put(flows, state, flow, FLOW_MS);
         return library.buildAuthorizationUrl(config, params).href;
     } catch (e) {
-        const message = e && e.payload ? e.payload.message : 'the sign-in service could not be reached';
-        logger.warn(`sign-in with ${providerId} could not start: ${e && e.payload ? message : e}`);
+        const message = apiFailureMessage(e) || 'the sign-in service could not be reached';
+        logger.warn(`sign-in with ${providerId} could not start: ${message}`);
         return destination(flow, { error: message });
     }
 };
@@ -352,8 +354,8 @@ exports.callback = async function(req: any, providerId: any) {
         };
         return destination(flow, await admit(provider, profile, flow));
     } catch (e) {
-        logger.warn(`sign-in with ${providerId} failed: ${e && e.payload ? e.payload.message : e}`);
-        return destination(flow, { error: e && e.payload ? e.payload.message : 'The sign-in couldn’t be completed. Try again.' });
+        logger.warn(`sign-in with ${providerId} failed: ${apiFailureMessage(e) || e}`);
+        return destination(flow, { error: apiFailureMessage(e) || 'The sign-in couldn’t be completed. Try again.' });
     }
 };
 
@@ -504,7 +506,7 @@ var checkDiscovery = async (provider: any) => {
     try {
         await configurationFor(provider);
     } catch (e) {
-        throw fail(400, `couldn't read ${provider.issuer}/.well-known/openid-configuration: ${e.message}`);
+        throw fail(400, `couldn't read ${provider.issuer}/.well-known/openid-configuration: ${errorMessageOf(e)}`);
     }
 };
 
@@ -542,7 +544,7 @@ var checkAppleKey = (provider: any) => {
     try {
         clientSecretFor(provider);
     } catch (e) {
-        throw fail(400, `the Apple private key can't sign: ${e.message}`);
+        throw fail(400, `the Apple private key can't sign: ${errorMessageOf(e)}`);
     }
 };
 

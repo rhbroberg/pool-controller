@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf } from '../types/domain';
+
 import type { AuthUser } from '../types/domain';
 
 var { mongoose } = require('../mongoose');
@@ -66,7 +68,7 @@ export async function factoryReset(user?: AuthUser | null) {
         await commissionIfEmpty();
     } catch (e) {
         logger.error(`factory reset failed: ${e}`);
-        throw utils.respondWithCode(500, { code: 500, message: `factory reset failed: ${e.message}` });
+        throw utils.respondWithCode(500, { code: 500, message: `factory reset failed: ${errorMessageOf(e)}` });
     }
     resetListener();
     // the first entry in the fresh history says who wiped the old one

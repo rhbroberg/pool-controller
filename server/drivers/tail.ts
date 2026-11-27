@@ -1,3 +1,4 @@
+// @ts-nocheck — forked always-tail; CommonJS constructor pattern
 /* eslint-disable */
 // forked from github project which was forked from the 'official' tail npm; return Buffer, not String to preserve binary data
 

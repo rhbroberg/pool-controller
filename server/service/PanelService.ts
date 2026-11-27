@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf } from '../types/domain';
+
 import log4js from 'log4js';
 import type { AuthUser, PanelKey } from '../types/domain';
 import { respondWithCode } from '../utils/writer';
@@ -46,8 +48,8 @@ export function pressPanelKey(key: PanelKey | string, user?: AuthUser | null) {
         try {
             keyListener!(key, who);
         } catch (e: any) {
-            logger.warn(`REST ${who}: rejected panel key ${key}: ${e.message}`);
-            reject(respondWithCode(400, { code: 400, message: e.message }));
+            logger.warn(`REST ${who}: rejected panel key ${key}: ${errorMessageOf(e)}`);
+            reject(respondWithCode(400, { code: 400, message: errorMessageOf(e) }));
             return;
         }
         logger.info(`REST ${who}: pressed panel key ${key}`);

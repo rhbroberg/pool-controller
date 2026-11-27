@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types/domain';
 import type { ReprocessRunState } from '../types/domain';
 'use strict';
 // Reads stored frames again with the server's current protocol code and stores what it makes of
@@ -267,7 +268,7 @@ var execute = async (run: any, user: any) => {
         if (!run.dryRun && (run.updated > 0 || run.removed > 0)) {
             // the summaries hold values until they change, so everything after the range can move too
             await rollups.invalidateFrom(run.from);
-            scheduler.runNow(rollups.ROLLUPS_JOB, 'reprocessed history').catch((e: any) => logger.error(`rollups after reprocessing: ${e.message}`));
+            scheduler.runNow(rollups.ROLLUPS_JOB, 'reprocessed history').catch((e: any) => logger.error(`rollups after reprocessing: ${errorMessageOf(e)}`));
         }
         run.state = 'finished';
         const summary = `${run.examined} events from ${run.from.toISOString()} to ${run.to.toISOString()} (${run.eventTypes.join(', ')}): ${run.updated} rewritten, ${run.removed} removed, ${run.unchanged} unchanged`;
@@ -277,8 +278,8 @@ var execute = async (run: any, user: any) => {
         }
     } catch (e) {
         run.state = 'failed';
-        run.error = e.message;
-        logger.error(`reprocessing history failed: ${e.stack || e.message}`);
+        run.error = errorMessageOf(e);
+        logger.error(`reprocessing history failed: ${(e instanceof Error ? e.stack : undefined) || errorMessageOf(e)}`);
     } finally {
         run.finishedAt = new Date();
         run.through = run.to;

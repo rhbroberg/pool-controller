@@ -1,3 +1,4 @@
+import { errorMessageOf } from '../types/domain';
 import type { HeatingEstimateStatus } from '../types/domain';
 'use strict';
 
@@ -190,7 +191,7 @@ var validate = (body: any, device: any) => {
     }
 };
 
-var badRequest = (e: any) => utils.respondWithCode(400, { code: 400, message: e.message });
+var badRequest = (e: any) => utils.respondWithCode(400, { code: 400, message: errorMessageOf(e) });
 
 /**
  * the setpoint `device` uses for `body`
@@ -260,7 +261,7 @@ export async function setSetpoint(body: any, device: any, degrees: any, user: an
             throw new Error(`a setpoint must be a whole number from ${heating.SETPOINT_MIN_F} to ${heating.SETPOINT_MAX_F}°F`);
         }
     } catch (e) {
-        logger.warn(`REST ${who}: rejected ${body} ${device} setpoint ${degrees}: ${e.message}`);
+        logger.warn(`REST ${who}: rejected ${body} ${device} setpoint ${degrees}: ${errorMessageOf(e)}`);
         throw badRequest(e);
     }
 

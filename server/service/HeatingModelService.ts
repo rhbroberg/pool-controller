@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf } from '../types/domain';
+
 import { WATER_BODIES } from '../types/domain';
 // Learns how long each body of water takes to warm, from the history of what the pump, heater and
 // heat pump did and what the water and air temperatures did meanwhile.
@@ -224,8 +226,8 @@ var executeScan = async (run: any) => {
         logger.info(`scanned ${run.scanned} events from ${run.from.toISOString()} to ${run.to.toISOString()}: ${summary.windows} windows, ${summary.suitable} suitable`);
     } catch (e) {
         run.state = 'failed';
-        run.error = e.message;
-        logger.error(`scanning history for heating windows failed: ${e.stack || e.message}`);
+        run.error = errorMessageOf(e);
+        logger.error(`scanning history for heating windows failed: ${(e instanceof Error ? e.stack : undefined) || errorMessageOf(e)}`);
     } finally {
         run.finishedAt = new Date();
         run.through = run.to;

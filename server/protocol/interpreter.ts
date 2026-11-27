@@ -46,13 +46,13 @@ const isTextDisplay = (event: unknown): event is TextDisplayLike =>
     && typeof (event as TextDisplayLike).getHeater1Mode === 'function';
 
 class FrameInterpreter {
-    present: Record<string, number>;
-    previous: Record<string, number>;
-    statusMask: number;
-    enabledSwitches: string[];
+    present!: Record<string, number>;
+    previous!: Record<string, number>;
+    statusMask!: number;
+    enabledSwitches!: string[];
     // 1 for auto, 0 for off, undefined until the panel displays the heater line
     heaterAuto: number | undefined;
-    reasons: string[];
+    reasons!: string[];
 
     constructor() {
         this.reset();

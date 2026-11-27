@@ -1,4 +1,6 @@
 'use strict';
+
+import { errorMessageOf } from '../types/domain';
 require('../config/config');
 const _ = require('lodash'); // eslint-disable-line no-unused-vars
 
@@ -138,8 +140,8 @@ export function setDeviceState(requestedId: any, state: any, user: any) {
         try {
             wasOn = controlCB(deviceId, desiredOn, who);
         } catch (e) {
-            logger.warn(`REST ${who}: rejected ${label} ${onOff(desiredOn)}: ${e.message}`);
-            reject(utils.respondWithCode(400, { code: 400, message: e.message }));
+            logger.warn(`REST ${who}: rejected ${label} ${onOff(desiredOn)}: ${errorMessageOf(e)}`);
+            reject(utils.respondWithCode(400, { code: 400, message: errorMessageOf(e) }));
             return;
         }
 

@@ -143,3 +143,31 @@ export function errorMessageOf(error: unknown): string {
     }
     return String(error);
 }
+
+
+/** message from an ApiError-shaped or Error-shaped unknown rejection */
+export function apiFailureMessage(error: unknown): string {
+    if (error && typeof error === 'object') {
+        const e = error as { payload?: { message?: unknown }; message?: unknown; body?: { message?: unknown } };
+        if (e.payload && typeof e.payload.message === 'string') {
+            return e.payload.message;
+        }
+        if (e.body && typeof e.body.message === 'string') {
+            return e.body.message;
+        }
+        if (typeof e.message === 'string') {
+            return e.message;
+        }
+    }
+    return String(error);
+}
+
+export function errorCauseCode(error: unknown): string | undefined {
+    if (error && typeof error === 'object' && 'cause' in error) {
+        const cause = (error as { cause?: { code?: unknown } }).cause;
+        if (cause && typeof cause.code === 'string') {
+            return cause.code;
+        }
+    }
+    return undefined;
+}

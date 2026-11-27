@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf } from '../types/domain';
+
 import log4js from 'log4js';
 import type { AuthUser, WaterMode } from '../types/domain';
 import { respondWithCode } from '../utils/writer';
@@ -29,8 +31,8 @@ export function setWaterMode(mode: WaterMode | string, user?: AuthUser | null) {
         try {
             previous = modeListener!(mode, who);
         } catch (e: any) {
-            logger.warn(`REST ${who}: rejected water flow ${mode}: ${e.message}`);
-            reject(respondWithCode(400, { code: 400, message: e.message }));
+            logger.warn(`REST ${who}: rejected water flow ${mode}: ${errorMessageOf(e)}`);
+            reject(respondWithCode(400, { code: 400, message: errorMessageOf(e) }));
             return;
         }
 

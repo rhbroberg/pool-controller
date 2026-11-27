@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf } from '../types/domain';
+
 import type { AuthUser } from '../types/domain';
 import type { GeoLocation, HeatingRules } from '../types/domain';
 
@@ -164,7 +166,7 @@ var locate = async (zipCode: any) => {
     try {
         place = await weatherProviders.geocode(match[1]);
     } catch (e) {
-        throw utils.respondWithCode(502, { code: 502, message: `couldn’t look up zip code ${match[1]}: ${e.message}` });
+        throw utils.respondWithCode(502, { code: 502, message: `couldn’t look up zip code ${match[1]}: ${errorMessageOf(e)}` });
     }
     if (!place) {
         throw validationError(`no place has the zip code ${match[1]}`);

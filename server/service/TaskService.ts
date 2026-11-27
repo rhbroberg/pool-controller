@@ -1,5 +1,7 @@
 'use strict';
 
+import { errorMessageOf, apiFailureMessage, errorCauseCode } from '../types/domain';
+
 import { TASKS } from '../types/domain';
 // The everyday jobs the apps offer in place of single switches. Each is a set of switches the
 // controller already has, so whether a task is on is read from those switches:
@@ -83,7 +85,7 @@ export async function load() {
         logger.info(`a spa preheat is scheduled to be ready at ${new Date(scheduled.readyAt).toISOString()}`);
     }
     if (!ticker) {
-        ticker = setInterval(() => tick().catch((e) => logger.error(`scheduled preheat: ${e.message}`)), tickMs());
+        ticker = setInterval(() => tick().catch((e) => logger.error(`scheduled preheat: ${errorMessageOf(e)}`)), tickMs());
         ticker.unref();
     }
 };
@@ -209,7 +211,7 @@ var apply = async (steps: any, user: any) => {
                 await deviceService.setDeviceState(SWITCHES[step.device], String(step.on), user);
             }
         } catch (e) {
-            const message = e && e.payload && e.payload.message ? e.payload.message : (e && e.message) || String(e);
+            const message = apiFailureMessage(e);
             problems.push(message);
         }
     }
@@ -325,7 +327,7 @@ export async function tick() {
     try {
         await startPreheat(user);
     } catch (e) {
-        const message = e && e.payload && e.payload.message ? e.payload.message : e.message;
+        const message = apiFailureMessage(e);
         logger.warn(`the scheduled spa preheat didn't fully start: ${message}`);
     }
 };

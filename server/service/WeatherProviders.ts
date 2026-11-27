@@ -1,4 +1,6 @@
 'use strict';
+
+import { errorMessageOf, errorCauseCode } from '../types/domain';
 // The free services weather comes from: Zippopotam.us turns a US zip code into a place, and
 // Open-Meteo forecasts for it. Neither needs a key. GEOCODE_URL and FORECAST_URL point them
 // elsewhere, as the tests do.
@@ -36,7 +38,7 @@ var getJson = async (url: any, service: any) => {
     try {
         response = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
     } catch (e) {
-        throw new Error(`${service} can’t be reached (${e.cause && e.cause.code ? e.cause.code : e.message})`);
+        throw new Error(`${service} can’t be reached (${errorCauseCode(e) || errorMessageOf(e)})`);
     }
     const body = await response.json().catch(() => undefined);
     return { status: response.status, body };
