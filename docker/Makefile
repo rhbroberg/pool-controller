@@ -19,12 +19,28 @@ SIM_LOCAL = $(SIM) -f docker-compose.local-certs.yml
 TEST_HOSTNAME ?= pooltest.brobasino.onthegrid.net
 TEST_ACME_CA ?= https://acme-staging-v02.api.letsencrypt.org/directory
 
-.PHONY: up down logs scout sim sim-letsencrypt sim-down sim-logs sim-root-cert
+# linux/arm64 matches Raspberry Pi OS 64-bit (and Apple Silicon Docker Desktop). IMAGE_TAG is what
+# Hub and compose use; override for a one-off (IMAGE_TAG=abc123 make push-rpi). BUILDX_OUTPUT is
+# --load for the local docker store, or --push for Hub (see push-rpi).
+IMAGE_TAG ?= latest
+RPI_PLATFORM ?= linux/arm64
+BUILDX_OUTPUT ?= --load
+
+.PHONY: up up-pull pull down logs scout \
+	build-rpi build-rpi-caddy build-rpi-web build-rpi-pool push-rpi \
+	sim sim-letsencrypt sim-down sim-logs sim-root-cert
 
 # --pull on the build, not on up, which pulls only the images services run and not the Dockerfiles'
 # base images; fresh bases match what make scout checks
 up:
 	$(COMPOSE) build --pull
+	$(COMPOSE) up -d
+
+# run images already on Hub (after make push-rpi on a Mac); no local build
+pull:
+	$(COMPOSE) pull
+
+up-pull: pull
 	$(COMPOSE) up -d
 
 down:
@@ -37,6 +53,31 @@ logs:
 # pre-commit hook runs it when a commit changes what goes into an image
 scout:
 	./scout-check.sh
+
+# arm64 images for the Pi, built with buildx (works from macOS; Apple Silicon is native, Intel
+# uses QEMU). --load puts them in the local store; push-rpi sends them to Docker Hub instead.
+build-rpi: build-rpi-caddy build-rpi-web build-rpi-pool
+
+build-rpi-caddy:
+	docker buildx build --platform $(RPI_PLATFORM) --pull \
+		-t rhbroberg/pool-caddy:$(IMAGE_TAG) \
+		$(BUILDX_OUTPUT) ./caddy
+
+build-rpi-web:
+	docker buildx build --platform $(RPI_PLATFORM) --pull \
+		-t rhbroberg/pool-web:$(IMAGE_TAG) \
+		--build-arg POOL_GIT_COMMIT=$(POOL_GIT_COMMIT) \
+		$(BUILDX_OUTPUT) ../web
+
+build-rpi-pool:
+	docker buildx build --platform $(RPI_PLATFORM) --pull \
+		-t rhbroberg/pool-controller:$(IMAGE_TAG) \
+		--build-arg POOL_GIT_COMMIT=$(POOL_GIT_COMMIT) \
+		$(BUILDX_OUTPUT) ../server
+
+# needs docker login; Hub then serves the arm64 images to make up-pull on the Pi
+push-rpi: BUILDX_OUTPUT=--push
+push-rpi: build-rpi
 
 # https://localhost:8443 with a certificate from Caddy's own CA
 sim:
