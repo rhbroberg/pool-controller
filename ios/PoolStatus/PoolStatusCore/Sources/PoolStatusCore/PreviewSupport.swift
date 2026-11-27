@@ -45,7 +45,7 @@ public nonisolated enum PreviewServer {
     public static let guestCode = "preview-guest-code"
     /// The link in that guest's QR code, at the pretend server `host`.
     public static func guestLink(host: String = "home.test:3000") -> String {
-        "http://\(host)/#/join?name=\(guestName)&code=\(guestCode)"
+        "http://\(host)/join?name=\(guestName)&code=\(guestCode)"
     }
 
     /// Sets a task as PUT /tasks/{task} would, so a test can start from it.

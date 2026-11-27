@@ -1,6 +1,7 @@
-// What a guest's link and QR code open: #/join?name=…&code=…. The code signs the guest in once to
-// choose a password; once it has one, or without a code, the link opens the sign-in with the
-// guest's name filled in.
+// What a guest's link and QR code open: /join?name=…&code=… (and the hash form). The code signs
+// the guest in once to choose a password; once it has one, or without a code, the link opens
+// the sign-in with the guest's name filled in. On an iPhone with Pool Status installed, the
+// page hands the same name and code to the app so it adds the site and signs in there too.
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
@@ -11,10 +12,41 @@ import { mountSignIn } from './sign-in.js';
 
 type JoinState = 'trying' | 'choosing' | 'used' | 'failed';
 
+/** the custom URL the Pool Status app registers for a guest's link */
+export const appJoinURL = (origin: string, name: string, code: string) => {
+    const params = new URLSearchParams({ server: origin, name });
+    if (code) {
+        params.set('code', code);
+    }
+    return `poolstatus://join?${params}`;
+};
+
+const isApplePhone = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+/**
+ * asks Pool Status to take over when it's installed. Universal Links do this without Safari
+ * when the site’s apple-app-site-association is in place; this custom URL covers installs that
+ * only have the app scheme. The web sign-in below still runs if the app doesn’t open.
+ **/
+const openInApp = (name: string, code: string) => {
+    if (!isApplePhone() || !name) {
+        return;
+    }
+    const url = appJoinURL(location.origin, name, code);
+    const link = document.createElement('a');
+    link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+
 export const mountJoin = (root: any, app: any, query: URLSearchParams) => {
     const { store } = app;
     const name = (query.get('name') || '').trim();
     const code = query.get('code') || '';
+
+    openInApp(name, code);
 
     if (store.credentials) {
         if (store.credentials.email === name || !name) {

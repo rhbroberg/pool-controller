@@ -38,6 +38,15 @@ struct PoolStatusApp: App {
                 }
                 .environment(session)
             }
+            // a guest link opened into the app (share sheet, Continuity, or a future universal link)
+            .onOpenURL { url in
+                guard let link = GuestLink(url.absoluteString) else {
+                    return
+                }
+                Task {
+                    try? await session.open(link)
+                }
+            }
             .onChange(of: session.watchContext) { _, context in
                 watchLink.send(context)
             }

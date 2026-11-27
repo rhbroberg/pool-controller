@@ -59,8 +59,9 @@ final class SiteSession {
         openID = site.id
     }
 
-    /// Opens the site for a guest's link, adding it once its server answers, and leaves the link
-    /// for its sign-in page. A site already signed in as someone else is left alone.
+    /// Opens the site for a guest's link, adding it once its server answers, and signs in with
+    /// the one-time code when the link still has one (as the web join page does). A site already
+    /// signed in as someone else is left alone.
     func open(_ link: GuestLink) async throws {
         let site: Site
         if let known = sites.sites.first(where: { link.isServer($0.address) }) {
@@ -78,6 +79,18 @@ final class SiteSession {
         }
         pendingGuestLink = link
         open(site)
+        guard let store, let code = link.code else {
+            return
+        }
+        do {
+            try await store.auth.signInAsGuest(name: link.name, code: code)
+            pendingGuestLink = nil
+        } catch StatusClientError.server(code: 409, message: _) {
+            // code already used; the sign-in page fills in the name for a password
+        } catch {
+            pendingGuestLink = nil
+            throw error
+        }
     }
 
     /// Back to the list; the site stays the one the app opens at the next launch.

@@ -64,6 +64,22 @@ describe('web service', () => {
         assert.match(await response.text(), /<div id="app">/);
     });
 
+    it('serves the guest join page so a phone’s camera can open the QR link', async () => {
+        const response = await fetch(`${base}/join?name=sunny-otter&code=a1-b2_c3`);
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('content-type')!, /text\/html/);
+        assert.match(await response.text(), /<div id="app">/);
+    });
+
+    it('serves the Apple app site association for Universal Links into Pool Status', async () => {
+        const response = await fetch(`${base}/.well-known/apple-app-site-association`);
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('content-type')!, /application\/json/);
+        const body = await response.json();
+        assert.equal(body.applinks.details[0].appID, 'J73Y2DMB58.com.rhbroberg.PoolStatus');
+        assert.deepEqual(body.applinks.details[0].paths, ['/join', '/join/*']);
+    });
+
     it('serves scripts as JavaScript modules can be loaded', async () => {
         const response = await fetch(`${base}/js/app.js`);
         assert.equal(response.status, 200);

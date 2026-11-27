@@ -30,6 +30,14 @@ const CONTENT_TYPES: Record<string, string> = {
     '.webmanifest': 'application/manifest+json'
 };
 
+/** apple-app-site-association has no extension; Safari still needs application/json */
+const contentTypeFor = (filePath: string) => {
+    if (filePath.endsWith('/apple-app-site-association') || filePath.endsWith('\\apple-app-site-association')) {
+        return 'application/json';
+    }
+    return CONTENT_TYPES[path.extname(filePath)] || 'application/octet-stream';
+};
+
 /** the git commit this service was built from; an image has no .git, so its build passes it in */
 export const describeCommit = () => {
     if (process.env.POOL_GIT_COMMIT) {
@@ -62,8 +70,10 @@ const serveFile = (req: any, res: any, pathname: any, publicDir: any) => {
         sendJson(res, 400, { code: 400, message: 'the path is not valid' });
         return;
     }
+    // guest QR codes open /join; the SPA lives in index.html
+    const page = decoded === '/' || decoded === '/join' ? '/index.html' : decoded;
     // normalizing the absolute path resolves any .. against the root, never above it
-    const file = path.join(publicDir, path.normalize(decoded === '/' ? '/index.html' : decoded));
+    const file = path.join(publicDir, path.normalize(page));
     if (!file.startsWith(publicDir + path.sep)) {
         sendJson(res, 404, { code: 404, message: 'not found' });
         return;
@@ -74,7 +84,7 @@ const serveFile = (req: any, res: any, pathname: any, publicDir: any) => {
             return;
         }
         res.writeHead(200, {
-            'Content-Type': CONTENT_TYPES[path.extname(file)] || 'application/octet-stream',
+            'Content-Type': contentTypeFor(file),
             'Content-Length': stats.size,
             // small files on a local network; always revalidate so an upgrade shows at once
             'Cache-Control': 'no-cache',

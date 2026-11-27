@@ -69,7 +69,7 @@ struct GuestQRView: View {
                             .accessibilityLabel("QR code for \(account.name)")
                     }
                     Text(account.setupCode != nil
-                         ? "Scan it with a phone’s camera, or with the QR button on the Pool Status app’s sign-in. It lets \(account.name) in once to choose a password."
+                         ? "Scan it with a phone’s camera. With Pool Status installed it opens the app and signs \(account.name) in to choose a password; otherwise it does the same in the browser."
                          : "\(account.name) has chosen a password. The code now opens the sign-in with the name filled in.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

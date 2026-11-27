@@ -148,6 +148,26 @@ describe('status store', () => {
         assert.deepEqual(store.credentials, { email: 'rick', token: 'renamed-rick', role: 'admin', methods: null });
     });
 
+    it('signs a guest in with its QR code and holds it aside until it chooses a password', async () => {
+        const client = fakeClient({
+            signInAsGuest: async (name: any, code: any) => {
+                client.calls.push(['signInAsGuest', name, code]);
+                return { email: name, token: 'guest-setup', role: 'user', mustChangeCredentials: true };
+            }
+        });
+        const store = newStore(client);
+        await store.signInAsGuest('sunny-otter', 'a1-b2_c3');
+        assert.deepEqual(client.calls, [['signInAsGuest', 'sunny-otter', 'a1-b2_c3']]);
+        assert.equal(store.credentials, null);
+        assert.equal(store.commissioning!.email, 'sunny-otter');
+        assert.equal(store.commissioning!.guest, true);
+        assert.equal(prefs.read('credentials', null), null);
+
+        await store.commission('sunny-otter', 'surf-password');
+        assert.equal(store.commissioning, null);
+        assert.deepEqual(store.credentials, { email: 'sunny-otter', token: 'renamed-sunny-otter', role: 'admin', methods: null });
+    });
+
     it('checks the current password before changing it', async () => {
         const store = newStore(fakeClient({ signIn: async () => { throw new ApiError('unauthorized'); } }));
         store.save({ email: 'rick', token: 't', role: 'user' });

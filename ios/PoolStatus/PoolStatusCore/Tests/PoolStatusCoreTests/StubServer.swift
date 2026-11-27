@@ -161,4 +161,9 @@ nonisolated enum Fixture {
     static func login(_ name: String, role: String = "user", mustChange: Bool = false) -> String {
         #"{"email":"\#(name)","token":"token-\#(name)","role":"\#(role)","mustChangeCredentials":\#(mustChange)}"#
     }
+
+    static func guest(_ name: String, setupCode: String, expiresInDays: Int = 7) -> String {
+        let expires = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(expiresInDays * 24 * 3600)))
+        return #"{"email":"\#(name)","role":"user","mustChangeCredentials":true,"methods":[],"guest":true,"setupCode":"\#(setupCode)","createdAt":"\#(time)","firstSignInAt":null,"lastSignInAt":null,"expiresAt":"\#(expires)","archivedAt":null}"#
+    }
 }

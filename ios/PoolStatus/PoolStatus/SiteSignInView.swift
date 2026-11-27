@@ -56,6 +56,19 @@ struct SiteSignInView: View {
                 }
 
                 Section {
+                    Button {
+                        signInError = nil
+                        codeMessage = nil
+                        scanningCode = true
+                    } label: {
+                        Label("Sign In with QR Code", systemImage: "qrcode.viewfinder")
+                    }
+                    .accessibilityIdentifier("sign-in-qr")
+                } footer: {
+                    Text("Scan the guest QR code an admin shared. It uses the same link a phone’s camera opens in the browser.")
+                }
+
+                Section {
                     if choices.passwordSignIn {
                         TextField("Account Name", text: $accountName)
                             .textContentType(.username)
@@ -76,13 +89,6 @@ struct SiteSignInView: View {
                             }
                         }
                         .disabled(!canSignIn)
-                        Button {
-                            signInError = nil
-                            codeMessage = nil
-                            scanningCode = true
-                        } label: {
-                            Label("Sign In with QR Code", systemImage: "qrcode.viewfinder")
-                        }
                     }
                     ForEach(choices.providers) { provider in
                         Button {

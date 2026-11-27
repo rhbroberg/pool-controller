@@ -156,18 +156,45 @@ public nonisolated struct GuestLink: Equatable, Sendable {
         self.code = code
     }
 
-    /// Reads `https://host[:port]/#/join?name=…&code=…`; nil for anything else.
+    /// Reads a guest QR / join link:
+    /// - `https://host[:port]/join?name=…&code=…` (and the older `/#/join?…` form)
+    /// - `poolstatus://join?server=https://host&name=…&code=…` (the app’s own URL)
     public init?(_ text: String) {
         guard let components = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme),
-              let host = components.host, !host.isEmpty,
-              let fragment = components.fragment else {
+              let scheme = components.scheme?.lowercased() else {
             return nil
         }
-        let parts = fragment.split(separator: "?", maxSplits: 1).map(String.init)
-        guard parts.first == "/join", parts.count == 2,
-              let items = URLComponents(string: "?\(parts[1])")?.queryItems,
-              let name = items.first(where: { $0.name == "name" })?.value?.trimmingCharacters(in: .whitespaces), !name.isEmpty else {
+        if scheme == "poolstatus" {
+            guard components.host == "join" || components.path == "join" || components.path == "/join",
+                  let items = components.queryItems,
+                  let name = items.first(where: { $0.name == "name" })?.value?.trimmingCharacters(in: .whitespaces), !name.isEmpty,
+                  let server = items.first(where: { $0.name == "server" })?.value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !server.isEmpty else {
+                return nil
+            }
+            serverAddress = server
+            self.name = name
+            code = items.first { $0.name == "code" }?.value.flatMap { $0.isEmpty ? nil : $0 }
+            return
+        }
+        guard ["http", "https"].contains(scheme), let host = components.host, !host.isEmpty else {
+            return nil
+        }
+        let items: [URLQueryItem]
+        if let fragment = components.fragment {
+            let parts = fragment.split(separator: "?", maxSplits: 1).map(String.init)
+            guard parts.first == "/join", parts.count == 2,
+                  let queryItems = URLComponents(string: "?\(parts[1])")?.queryItems else {
+                return nil
+            }
+            items = queryItems
+        } else if components.path == "/join" || components.path.hasSuffix("/join"),
+                  let queryItems = components.queryItems {
+            items = queryItems
+        } else {
+            return nil
+        }
+        guard let name = items.first(where: { $0.name == "name" })?.value?.trimmingCharacters(in: .whitespaces), !name.isEmpty else {
             return nil
         }
         let port = components.port.map { ":\($0)" } ?? ""
@@ -176,7 +203,7 @@ public nonisolated struct GuestLink: Equatable, Sendable {
         code = items.first { $0.name == "code" }?.value.flatMap { $0.isEmpty ? nil : $0 }
     }
 
-    /// The link for `account` on the server at `serverAddress`, as the web page makes it.
+    /// The https link for `account` on the server at `serverAddress`, as the web page puts in the QR code.
     public static func url(serverAddress: String, account: AccountInfo) -> URL? {
         var base = serverAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         if !base.contains("://") {
@@ -191,7 +218,19 @@ public nonisolated struct GuestLink: Equatable, Sendable {
         guard let encoded = query.percentEncodedQuery else {
             return nil
         }
-        return URL(string: "\(base)/#/join?\(encoded)")
+        return URL(string: "\(base)/join?\(encoded)")
+    }
+
+    /// The app URL the join page opens on an iPhone so Pool Status can take over from Safari.
+    public var appURL: URL? {
+        var query = URLComponents()
+        query.scheme = "poolstatus"
+        query.host = "join"
+        query.queryItems = [
+            URLQueryItem(name: "server", value: serverAddress),
+            URLQueryItem(name: "name", value: name)
+        ] + (code.map { [URLQueryItem(name: "code", value: $0)] } ?? [])
+        return query.url
     }
 
     /// Whether `address`, as a site keeps it, is this link's server.

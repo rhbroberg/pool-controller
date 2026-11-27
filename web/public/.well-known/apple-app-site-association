@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "J73Y2DMB58.com.rhbroberg.PoolStatus",
+        "paths": [ "/join", "/join/*" ]
+      }
+    ]
+  }
+}

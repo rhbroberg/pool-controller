@@ -2,6 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis, bodyHeating, guestLink, accountNote } from '../public/js/model.js';
+import { appJoinURL } from '../public/js/views/join.js';
 
 const control = (name: any) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name: any, value: any) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -235,9 +236,16 @@ describe('guests and expiring accounts', () => {
 
     it('links a guest to this page with its name and one-time code, and only its name once used', () => {
         assert.equal(guestLink('https://pool.example.com:8443', { email: 'sunny-otter', setupCode: 'a1-b2_c3' }),
-            'https://pool.example.com:8443/#/join?name=sunny-otter&code=a1-b2_c3');
-        assert.equal(guestLink('https://pool.example.com', { email: 'sunny-otter', setupCode: null }),
-            'https://pool.example.com/#/join?name=sunny-otter');
+            'https://pool.example.com:8443/join?name=sunny-otter&code=a1-b2_c3');
+        assert.equal(guestLink('https://pool.example.com/', { email: 'sunny-otter', setupCode: null }),
+            'https://pool.example.com/join?name=sunny-otter');
+    });
+
+    it('builds the Pool Status app URL the join page opens on an iPhone', () => {
+        assert.equal(appJoinURL('https://pool.example.com:8443', 'sunny-otter', 'a1-b2_c3'),
+            'poolstatus://join?server=https%3A%2F%2Fpool.example.com%3A8443&name=sunny-otter&code=a1-b2_c3');
+        assert.equal(appJoinURL('https://pool.example.com', 'sunny-otter', ''),
+            'poolstatus://join?server=https%3A%2F%2Fpool.example.com&name=sunny-otter');
     });
 
     it('says an account is archived, a guest yet to use its link, or when it expires', () => {

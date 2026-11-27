@@ -104,6 +104,13 @@ struct SitesView: View {
             .navigationTitle("Sites")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
+                    Button("Scan QR Code", systemImage: "qrcode.viewfinder") {
+                        scanningCode = true
+                    }
+                    .disabled(openingLink != nil)
+                    .accessibilityIdentifier("sites-scan-qr")
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button("Add Site", systemImage: "plus") { session.isAddingSite = true }
                 }
             }

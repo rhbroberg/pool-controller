@@ -6,7 +6,7 @@ import Testing
 struct GuestTests {
     @Test("reads a guest's link: the server, the name and the one-time code")
     func readsLink() throws {
-        let link = try #require(GuestLink("https://pool.example.com:8443/#/join?name=sunny-otter&code=a1-b2_c3"))
+        let link = try #require(GuestLink("https://pool.example.com:8443/join?name=sunny-otter&code=a1-b2_c3"))
         #expect(link.serverAddress == "https://pool.example.com:8443")
         #expect(link.name == "sunny-otter")
         #expect(link.code == "a1-b2_c3")
@@ -14,16 +14,29 @@ struct GuestTests {
         #expect(link.isServer("https://POOL.example.com:8443/"))
         #expect(!link.isServer("pool.example.com"))
 
-        let used = try #require(GuestLink("http://192.168.1.20:8080/#/join?name=sunny-otter"))
+        let legacy = try #require(GuestLink("https://pool.example.com:8443/#/join?name=sunny-otter&code=a1-b2_c3"))
+        #expect(legacy == link)
+
+        let used = try #require(GuestLink("http://192.168.1.20:8080/join?name=sunny-otter"))
         #expect(used.serverAddress == "http://192.168.1.20:8080")
         #expect(used.code == nil, "once the guest has a password, the link only names it")
+
+        let app = try #require(GuestLink("poolstatus://join?server=https://pool.example.com:8443&name=sunny-otter&code=a1-b2_c3"))
+        #expect(app == link)
+        #expect(link.appURL?.absoluteString
+                == "poolstatus://join?server=https://pool.example.com:8443&name=sunny-otter&code=a1-b2_c3")
+
+        // URLSearchParams on the join page percent-encodes the server
+        let encoded = try #require(GuestLink(
+            "poolstatus://join?server=https%3A%2F%2Fpool.example.com%3A8443&name=sunny-otter&code=a1-b2_c3"))
+        #expect(encoded == link)
     }
 
     @Test("turns away anything that isn't a guest's link")
     func rejects() {
         #expect(GuestLink("https://pool.example.com/#/settings") == nil)
-        #expect(GuestLink("https://pool.example.com/#/join?code=abc") == nil, "no name")
-        #expect(GuestLink("poolstatus://join?name=a") == nil)
+        #expect(GuestLink("https://pool.example.com/join?code=abc") == nil, "no name")
+        #expect(GuestLink("poolstatus://join?name=a") == nil, "app URL needs the server")
         #expect(GuestLink("not a link") == nil)
     }
 
@@ -31,14 +44,14 @@ struct GuestTests {
     func makesLink() throws {
         let guest = AccountInfo(name: "sunny-otter", role: .user, guest: true, setupCode: "a1-b2_c3")
         let url = try #require(GuestLink.url(serverAddress: "pool.example.com:8443", account: guest))
-        #expect(url.absoluteString == "https://pool.example.com:8443/#/join?name=sunny-otter&code=a1-b2_c3")
+        #expect(url.absoluteString == "https://pool.example.com:8443/join?name=sunny-otter&code=a1-b2_c3")
         let local = try #require(GuestLink.url(serverAddress: "192.168.1.20:3000", account: guest))
-        #expect(local.absoluteString == "http://192.168.1.20:3000/#/join?name=sunny-otter&code=a1-b2_c3")
+        #expect(local.absoluteString == "http://192.168.1.20:3000/join?name=sunny-otter&code=a1-b2_c3")
         #expect(GuestLink(url.absoluteString) == GuestLink(serverAddress: "https://pool.example.com:8443", name: "sunny-otter", code: "a1-b2_c3"))
 
         let claimed = AccountInfo(name: "sunny-otter", role: .user, guest: true, setupCode: nil)
         #expect(GuestLink.url(serverAddress: "https://pool.example.com", account: claimed)?.absoluteString
-                == "https://pool.example.com/#/join?name=sunny-otter")
+                == "https://pool.example.com/join?name=sunny-otter")
     }
 
     @Test("reads an account's dates, and that it's a guest or archived")
@@ -83,6 +96,22 @@ struct GuestTests {
         #expect(auth.commissioning == nil && !auth.commissioningGuest)
         #expect(saved.load()?.token == "token-sunny-otter")
         #expect(server.requests == ["POST users/login/guest", "PUT users/me/credentials"])
+    }
+
+    @Test("an admin creates a guest with an expiry for its QR code")
+    func createsGuest() async throws {
+        let server = StubServer { method, path, _ in
+            switch (method, path) {
+            case ("POST", "users/guests"): .ok(Fixture.guest("sunny-otter", setupCode: "a1-b2_c3"))
+            default: .status(404)
+            }
+        }
+        let auth = AuthSession(client: server.client, store: InMemoryCredentialStore(Credentials(name: "rick", token: "t", role: .admin)))
+        let guest = try await auth.createGuest(expiry: .at(Date(timeIntervalSince1970: 1_795_046_400)))
+        #expect(guest.name == "sunny-otter")
+        #expect(guest.setupCode == "a1-b2_c3")
+        #expect(guest.isGuest)
+        #expect(server.requests == ["POST users/guests"])
     }
 
     @Test("lists archived accounts too, and removes them all at once")

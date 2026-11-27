@@ -89,7 +89,7 @@ export const openGuestQr = (account: {
         h('div', { class: 'sheet-content guest-qr' },
             h('img', { class: 'qr-image', src: image, alt: `QR code for ${account.email}`, width: 240, height: 240 }),
             h('p', { class: 'qr-help' }, account.setupCode
-                ? `Scan it with a phone’s camera, or with the QR button on the Pool Status app’s sign-in. It lets ${account.email} in once to choose a password.`
+                ? `Scan it with a phone’s camera. With Pool Status installed it opens the app and signs ${account.email} in to choose a password; otherwise it does the same in the browser.`
                 : `${account.email} has chosen a password. The code now opens the sign-in with the name filled in.`),
             account.expiresAt ? h('p', { class: 'qr-help' }, `Expires ${formatMonthDayYearTime(new Date(account.expiresAt))}.`) : null,
             h('div', { class: 'qr-link' }, link),

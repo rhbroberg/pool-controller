@@ -359,15 +359,16 @@ export const GUEST_DAYS = 7;
 
 /**
  * the link in a guest's QR code: this page at origin, which signs the guest in with its one-time
- * code to set a password, or, once it has one, asks for it. The iPhone app reads the server's
- * address from it too.
+ * code to set a password, or, once it has one, asks for it. Path form so a phone’s camera can
+ * open the Pool Status app (via the join page) as well as the browser. The app reads the
+ * server’s address from it too.
  **/
 export const guestLink = (origin: string, account: { email: string; setupCode?: string | null }) => {
     const params = new URLSearchParams({ name: account.email });
     if (account.setupCode) {
         params.set('code', account.setupCode);
     }
-    return `${origin}/#/join?${params}`;
+    return `${origin.replace(/\/$/, '')}/join?${params}`;
 };
 
 const asDate = (value: unknown) => value ? new Date(value as string | number | Date) : null;

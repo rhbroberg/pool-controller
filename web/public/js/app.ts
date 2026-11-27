@@ -148,4 +148,11 @@ fetch('/config.json', { cache: 'no-store' })
 
 watchCommissioning(app);
 store.startPolling();
-route();
+
+// guest QR codes use /join?… so a phone’s camera opens this page (and can hand off to the app);
+// the router still lives on the hash
+if (location.pathname === '/join' || location.pathname.endsWith('/join')) {
+    location.replace(`${location.origin}/#/join${location.search}`);
+} else {
+    route();
+}
