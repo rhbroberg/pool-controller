@@ -55,10 +55,10 @@ export const mountReprocess = (root: any, app: any) => {
 
     const runSection = (run: any) => formSection({ header: run.dryRun ? 'Preview' : 'Last Run', footer: runFooter(run) },
         formRow(
-            h('span', { class: ['label', run.state === 'failed' ? 'warning' : ''] }, runStateText(run, formatMonthDayYearTime)),
+            h('span', { class: ['label', run.state === 'failed' ? 'warning' : ''] }, runStateText(run, (d) => formatMonthDayYearTime(d as any))),
             isActive(run) ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null),
         valueRow('Range', `${formatMonthDayYearTime(run.from)} – ${formatMonthDayYearTime(run.to)}`),
-        ...runRows(run).map(([label, count]) => valueRow(label, count.toLocaleString())));
+        ...runRows(run).map(([label, count]) => valueRow(label, Number(count).toLocaleString())));
 
     const render = () => {
         const disabled = !form.canStart(store.isAdmin);

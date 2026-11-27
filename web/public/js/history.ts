@@ -3,6 +3,7 @@
 // zooming back out finds the coarser ones still there. Times are milliseconds.
 
 import { isAbort } from './api.js';
+import type { HistoryResponse, HistorySample } from './types.js';
 
 export const AIR = 'ambient';
 export const HEATER = 'heater1';
@@ -40,7 +41,14 @@ export const pointsFor = (_spanMs: any, _level: any) => MAX_POINTS;
 export const heatingName = (water: any, source: any) => `heating:${water}:${source}`;
 
 /** a point from the server as a sample: a reading holds until the next; a bucket for its span */
-const sampleOf = (point: any, resolution: any) => ({ t: point.t, v: point.v, low: point.low ?? null, high: point.high ?? null, span: resolution * 1000 });
+const sampleOf = (point: HistorySample, resolution: number) => ({ t: point.t, v: point.v, low: point.low ?? null, high: point.high ?? null, span: resolution * 1000 });
+
+/** history client: production Client, or a test fake that returns HistoryResponse */
+export type HistoryClient = {
+    fetchHistory(names: string[], from: number | Date, to: number | Date, opts?: { signal?: AbortSignal; maxPoints?: number; resolution?: number }): Promise<HistoryResponse>;
+};
+
+export const asHistoryClient = <T extends object>(client: T): HistoryClient => client as unknown as HistoryClient;
 
 /** drops buckets a finer answer replaces; a reading (span 0) is already the finest */
 const dropCoarser = (known: any, from: any, to: any, span: any) => {
@@ -57,9 +65,9 @@ export class TemperatureHistory {
     /**
      * water is pool or spa; changed is called whenever there's something new to draw
      **/
-    constructor(water: any, client: any, changed = () => {}) {
+    constructor(water: any, client: HistoryClient | object, changed = () => {}) {
         this.water = water;
-        this.client = client;
+        this.client = asHistoryClient(client);
         this.changed = changed;
         this.earliest = null;
         this.isLoading = false;

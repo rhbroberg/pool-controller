@@ -3,26 +3,42 @@
 import { ApiError, isAbort, toReading } from './api.js';
 import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo, taskInfo, taskOn, scheduledPreheat } from './model.js';
 import * as prefs from './prefs.js';
-import type { ConnectionState, Credentials, Reading, SignInResult } from './types.js';
+import type { ConnectionState, Credentials, HeatingEstimate, LiveReadingsPush, Reading, ReprocessRun, SignInResult } from './types.js';
+import { errorMessageOf } from './types.js';
 import type { LiveConnection } from './live.js';
+import type { HistoryResponse } from './types.js';
 
-/** production uses Client; tests pass plain fakes with the methods each case needs */
+/**
+ * API surface the store needs. Production passes Client; tests pass Partial fakes via asStoreClient.
+ * Index signature removed so method return types stay generic-friendly.
+ **/
 export type StoreClient = {
     fetchStatus(): Promise<Reading[]>;
-    fetchHeating(): Promise<any>;
-    fetchTasks(): Promise<any>;
-    fetchWeather(): Promise<any>;
-    setDevice(name: string, on: boolean, token: string): Promise<any>;
-    setWaterMode(mode: string, token: string): Promise<any>;
-    setTask(task: string, on: boolean, readyAt: Date | string | null | undefined, token: string): Promise<any>;
-    setSetpoint(degrees: number, device: string, body: string, token: string): Promise<any>;
+    fetchHeating(): Promise<{ estimate?: HeatingEstimate | null; [key: string]: unknown } | null>;
+    fetchTasks(): Promise<Record<string, unknown> | null>;
+    fetchWeather(): Promise<Record<string, unknown> | null>;
+    setDevice(name: string, on: boolean, token: string): Promise<unknown>;
+    setWaterMode(mode: string, token: string): Promise<unknown>;
+    setTask(task: string, on: boolean, readyAt: Date | string | null | undefined, token: string): Promise<Record<string, unknown>>;
+    setSetpoint(degrees: number, device: string, body: string, token: string): Promise<unknown>;
     signIn(email: string, password: string): Promise<SignInResult>;
     signInWithTicket(ticket: string): Promise<SignInResult>;
     changeCredentials(name: string, password: string, token: string): Promise<SignInResult>;
     fetchAccount(token: string): Promise<{ email: string; role: string; methods?: string[] }>;
-    signOut(token: string): Promise<any>;
-    [key: string]: any;
+    signOut(token: string): Promise<unknown>;
+    fetchHistory(names: string[], from: Date | string | number, to: Date | string | number, opts?: { signal?: AbortSignal; maxPoints?: number; resolution?: number }): Promise<HistoryResponse>;
+    startReprocess(request: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean }, token: string): Promise<ReprocessRun>;
+    fetchReprocess(token: string): Promise<ReprocessRun | null>;
+    fetchSettings(token: string): Promise<any>;
+    updateSettings(changes: Record<string, unknown>, token: string): Promise<any>;
+    fetchJobs(token: string): Promise<any>;
+    runJob(name: string, token: string): Promise<any>;
+    factoryReset(token: string): Promise<string | unknown>;
+    restartServer(token: string): Promise<unknown>;
 };
+
+/** cast a test fake (or Client) to StoreClient without an any escape hatch at each call site */
+export const asStoreClient = <T extends object>(client: T): StoreClient => client as unknown as StoreClient;
 
 export const REFRESH_SECONDS = 15;
 // while live updates arrive, polling only catches anything they missed
@@ -52,9 +68,9 @@ const signedInAs = (result: SignInResult): Credentials => ({
 export class StatusStore {
     client: StoreClient;
     readings: Reading[];
-    heating: any;
-    weather: any;
-    tasks: any;
+    heating: { estimate?: HeatingEstimate | null; devices?: Record<string, unknown>; setpoints?: Record<string, Record<string, number>>; [key: string]: unknown } | null;
+    weather: Record<string, unknown> | null;
+    tasks: Record<string, unknown> | null;
     pendingTasks: Record<string, boolean>;
     weatherCheckedAt: number;
     lastRefresh: Date | null;
@@ -92,7 +108,7 @@ export class StatusStore {
         confirmationPollMs?: number;
         live?: StatusStore['live'];
     } = {}) {
-        this.client = client as StoreClient;
+        this.client = asStoreClient(client);
         this.readings = [];
         // setpoints and what the heater and heat pump are doing; null from a server without them
         this.heating = null;
@@ -280,7 +296,7 @@ export class StatusStore {
 
     // MARK: live updates
 
-    liveChanged(isLive: any) {
+    liveChanged(isLive: boolean) {
         this.isLive = isLive;
         // refresh at once: joining may have missed a change, and losing the live updates means
         // polling more often again, or finding the server is gone
@@ -290,15 +306,15 @@ export class StatusStore {
         this.changed();
     }
 
-    receivePush(name: any, data: any) {
-        if (name === 'readings' && data && Array.isArray(data.readings)) {
-            this.applyReadings(data.readings.map(toReading));
+    receivePush(name: string, data: unknown) {
+        if (name === 'readings' && data && typeof data === 'object' && Array.isArray((data as LiveReadingsPush).readings)) {
+            this.applyReadings((data as LiveReadingsPush).readings.map(toReading));
         } else if (name === 'heating' && data && typeof data === 'object') {
-            this.heating = data;
+            this.heating = data as StatusStore['heating'];
             this.pushesApplied += 1;
             this.changed();
         } else if (name === 'tasks' && data && typeof data === 'object') {
-            this.tasks = data;
+            this.tasks = data as Record<string, unknown>;
             this.pushesApplied += 1;
             // a task is confirmed by this push rather than the readings before it
             this.pushWaiters.forEach((wake) => wake(true));
@@ -714,7 +730,7 @@ export class StatusStore {
         const credentials = this.requireCredentials();
         try {
             for (const [body, degrees] of Object.entries(setpoints as Record<string, number>)) {
-                const current = this.heating && this.heating.setpoints[body] ? this.heating.setpoints[body][deviceId] : undefined;
+                const current = this.heating?.setpoints?.[body] ? this.heating.setpoints[body][deviceId] : undefined;
                 if (degrees !== current) {
                     await this.client.setSetpoint(degrees, deviceId, body, credentials.token);
                 }
@@ -740,7 +756,7 @@ export class StatusStore {
         this.connectionFailure = null;
     }
 
-    handle(error: any) {
+    handle(error: unknown) {
         if (isAbort(error)) {
             return;
         }
@@ -750,7 +766,7 @@ export class StatusStore {
         } else {
             // the server answered, so the connection is fine even though the request failed
             this.markConnected();
-            this.errorMessage = error.message;
+            this.errorMessage = errorMessageOf(error) || 'Something went wrong.';
         }
         this.changed();
     }

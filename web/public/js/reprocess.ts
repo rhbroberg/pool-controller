@@ -2,6 +2,7 @@
 // what is sent, and the run followed until it's done.
 
 import { EVENT_KINDS } from './model.js';
+import type { ReprocessRun, ReprocessTransition } from './types.js';
 
 export const POLL_MS = 1000;
 // user actions come from accounts, not the controller, so there are no frames to read again
@@ -27,36 +28,40 @@ export const fromInput = (text: any) => {
     return date && !Number.isNaN(date.getTime()) ? date : null;
 };
 
-export const isActive = (run: any) => Boolean(run) && (run.state === 'waiting' || run.state === 'running');
+export const isActive = (run: ReprocessRun | null | undefined) => Boolean(run) && (run!.state === 'waiting' || run!.state === 'running');
 
 /** "Failed frames → Readings": one of a run's kind changes */
-export const transitionTitle = ({from, to}: any) => `${TYPE_TITLES[from] || from} → ${TYPE_TITLES[to] || to}`;
+export const transitionTitle = ({ from, to }: Pick<ReprocessTransition, 'from' | 'to'>) => `${TYPE_TITLES[from] || from} → ${TYPE_TITLES[to] || to}`;
 
 /** how a run is going, in a sentence; formatTime writes a date */
-export const runStateText = (run: any, formatTime: any) => {
+export const runStateText = (run: ReprocessRun, formatTime: (value: Date | string | null | undefined) => string) => {
     const kind = run.dryRun ? 'Preview' : 'Reprocessing';
     switch (run.state) {
     case 'waiting': return `${kind} waits for a maintenance job to finish`;
     case 'running': return run.through ? `${kind} is through ${formatTime(run.through)}` : `${kind} has started`;
     case 'failed': return `${kind} stopped: ${run.error || 'an error'}`;
-    default: return run.dryRun ? 'Previewed' : 'Reprocessed';
+    case 'finished': return run.dryRun ? 'Previewed' : 'Reprocessed';
+    default: {
+        const _exhaustive: never = run;
+        return _exhaustive;
+    }
     }
 };
 
 /** a run's counts, labelled for a preview or for changes made */
-export const runRows = (run: any) => {
-    const label = (text: any) => run.dryRun ? `Would be ${text.toLowerCase()}` : text;
+export const runRows = (run: ReprocessRun) => {
+    const label = (text: string) => run.dryRun ? `Would be ${text.toLowerCase()}` : text;
     return [
         ['Events read again', run.examined],
         [label('Rewritten'), run.updated],
         [label('Removed'), run.removed],
         ['Unchanged', run.unchanged],
-        ...run.transitions.map((each: any) => [transitionTitle(each), each.count])
+        ...run.transitions.map((each) => [transitionTitle(each), each.count])
     ];
 };
 
 /** what the page says under a finished run, or null */
-export const runFooter = (run: any) => {
+export const runFooter = (run: ReprocessRun) => {
     if (run.state !== 'finished') {
         return null;
     }

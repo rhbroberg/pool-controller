@@ -103,7 +103,7 @@ export const waterBody = (id: any) => WATER_BODIES.find((body) => body.id === id
  * setpoint among them, and when the estimate says the water gets there ("7:30 PM", in the
  * server's time zone); null unless one is on and a pump sends water to that body
  **/
-export const bodyHeating = (heating: any, bodyId: any, now = new Date()) => {
+export const bodyHeating = (heating: { estimate?: import('./types.js').HeatingEstimate | null; devices?: Record<string, any> } | null | undefined, bodyId: any, now = new Date()) => {
     const devices = heating && heating.devices ? heating.devices : {};
     const sources = HEATING_DEVICES
         .filter((device) => devices[device.id] && devices[device.id].enabled === true && devices[device.id].body === bodyId)
@@ -117,7 +117,7 @@ export const bodyHeating = (heating: any, bodyId: any, now = new Date()) => {
         return null;
     }
     const setpoints = sources.map((source) => source.setpoint).filter((setpoint) => typeof setpoint === 'number');
-    const estimate = heating.estimate;
+    const estimate = heating && heating.estimate;
     const ready = estimate && estimate.body === bodyId && estimate.status === 'ready' && estimate.readyAt
         ? taskTime(new Date(estimate.readyAt), now, estimate.timeZone)
         : null;
@@ -196,7 +196,7 @@ export const scheduledPreheat = (tasks: any) => tasks && tasks.spaPreheat && !ta
     : null;
 
 /** "7:30 PM", or "Sat 7:30 AM" when it isn't the same day as now; in timeZone if given */
-export const taskTime = (date: any, now = new Date(), timeZone = undefined) => {
+export const taskTime = (date: any, now = new Date(), timeZone: string | undefined = undefined) => {
     const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone });
     const day = (d: any) => d.toLocaleDateString('en-CA', { timeZone });
     return day(date) === day(now)

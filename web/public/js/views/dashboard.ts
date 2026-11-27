@@ -9,7 +9,9 @@ import { topbar, barButton, navigate, spinner, renderer } from '../ui.js';
 import { accessNote, updateFooter } from './equipment.js';
 import { taskSection } from './tasks.js';
 
-const CONNECTION_TITLES: Record<string, string> = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Offline' };
+import type { ConnectionState } from '../types.js';
+
+const CONNECTION_TITLES = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Offline' } satisfies Record<ConnectionState, string>;
 // redraws this often so "Updated just now" and the retry countdown stay current
 const TICK_MS = 1000;
 
@@ -18,8 +20,11 @@ export const mountDashboard = (root: any, app: any) => {
 
     // MARK: pieces
 
-    const connectionIndicator = () => h('span', { class: ['connection-indicator', store.connection], 'aria-label': `Server ${CONNECTION_TITLES[store.connection]}` },
-        h('span', { class: 'dot' }), CONNECTION_TITLES[store.connection]);
+    const connectionIndicator = () => {
+        const connection = store.connection as ConnectionState;
+        return h('span', { class: ['connection-indicator', connection], 'aria-label': `Server ${CONNECTION_TITLES[connection]}` },
+            h('span', { class: 'dot' }), CONNECTION_TITLES[connection]);
+    };
 
     const checkSystemBar = () => {
         const reason = store.checkSystemReason;

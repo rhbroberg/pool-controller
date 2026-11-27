@@ -1,11 +1,12 @@
 // The Reprocess History page: what it lets you start, what it sends, and how it follows a run.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import type { ReprocessRun } from '../public/js/types.js';
 import { ReprocessForm, inputValue, fromInput, isActive, transitionTitle, runStateText, runRows, runFooter, POLL_MS } from '../public/js/reprocess.js';
 
 const NOW = new Date(2026, 10, 9, 19, 30);
 const run = (changes = {}) => ({
-    state: 'finished', dryRun: true, from: new Date(2020, 6, 19), to: new Date(2020, 6, 21), through: null, error: null,
+    state: 'finished' as const, dryRun: true, from: new Date(2020, 6, 19), to: new Date(2020, 6, 21), through: null, error: null,
     examined: 1458, updated: 7, removed: 1451, unchanged: 0,
     transitions: [{ from: 'failed', to: 'removed', count: 1451 }, { from: 'failed', to: 'info', count: 7 }],
     ...changes

@@ -1,6 +1,7 @@
 // The pool server's REST API, reached through the web service that serves this page.
 
-import type { Reading, SignInResult } from './types.js';
+import type { HistoryPoint, HistoryResponse, HistorySample, HistorySeries, Reading, ReprocessRun, SignInResult } from './types.js';
+import { errorNameOf } from './types.js';
 
 export const API_PATH = '/rhbroberg/pool-api/1.0.0';
 const DEFAULT_TIMEOUT_MS = 10000;
@@ -38,17 +39,19 @@ export class ApiError extends Error {
 }
 
 export const isAbort = (error: unknown) => {
-    const err = error as { name?: string } | null | undefined;
-    return Boolean(err && (err.name === 'AbortError' || err.name === 'TimeoutError'));
+    const name = errorNameOf(error);
+    return name === 'AbortError' || name === 'TimeoutError';
 };
 
 const toDate = (value: string | number | Date | null | undefined) => value ? new Date(value) : null;
 
 /** a reading as GET /status and the live updates send it, with its value a number */
-export const toReading = (reading: { name: string; category: string; value: any; timestamp?: any; message?: string }): Reading => ({
-    ...reading,
+export const toReading = (reading: { name: string; category: string; value: unknown; timestamp?: unknown; message?: string }): Reading => ({
+    name: reading.name,
+    category: reading.category,
     value: Number(reading.value),
-    timestamp: toDate(reading.timestamp)
+    timestamp: toDate(reading.timestamp as string | number | Date | null | undefined),
+    message: reading.message
 });
 
 const anySignal = (signals: AbortSignal[]) => {
@@ -94,7 +97,7 @@ export class Client {
         return url;
     }
 
-    async send<T = any>(method: string, path: string, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal }: { token?: string | null; body?: any; query?: Record<string, any>; timeout?: number; signal?: AbortSignal } = {}): Promise<T> {
+    async send<T = any>(method: string, path: string, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal }: { token?: string | null; body?: unknown; query?: Record<string, string | number | boolean | undefined | null>; timeout?: number; signal?: AbortSignal } = {}): Promise<T> {
         const headers: Record<string, string> = {
             Accept: 'application/json',
             // the server's validator rejects any request without a JSON content type, body or not
@@ -120,8 +123,7 @@ export class Client {
             if (signal && signal.aborted) {
                 throw error;
             }
-            const name = error && typeof error === 'object' && 'name' in error ? String((error as { name: unknown }).name) : '';
-            const message = name === 'TimeoutError' ? 'The pool server didn’t answer in time.' : 'Can’t reach the web service.';
+            const message = errorNameOf(error) === 'TimeoutError' ? 'The pool server didn’t answer in time.' : 'Can’t reach the web service.';
             throw new ApiError('unreachable', { message });
         }
         const text = await response.text();
@@ -218,23 +220,34 @@ export class Client {
      * readings comes back as buckets at least resolution seconds long: each point is the
      * bucket's time-weighted average, with its lowest (low) and highest (high) value.
      **/
-    async fetchHistory(names: string[], from: Date | string | number, to: Date | string | number, { signal, maxPoints, resolution }: { signal?: AbortSignal; maxPoints?: number; resolution?: number } = {}) {
-        const response = await this.send('GET', 'history', {
+    async fetchHistory(names: string[], from: Date | string | number, to: Date | string | number, { signal, maxPoints, resolution }: { signal?: AbortSignal; maxPoints?: number; resolution?: number } = {}): Promise<HistoryResponse> {
+        const response = await this.send<{
+            from: string;
+            to: string;
+            timeZone?: string;
+            earliest?: string;
+            series?: Array<{ name: string; resolution?: number; before?: HistoryPoint | null; points?: HistoryPoint[] }>;
+        }>('GET', 'history', {
             query: { names: names.join(','), from: new Date(from).toISOString(), to: new Date(to).toISOString(), maxPoints, resolution },
             timeout: 30000,
             signal
         });
-        const point = (p: any) => p ? { t: Date.parse(p.t), v: p.v, low: p.min ?? null, high: p.max ?? null } : null;
+        const point = (p: HistoryPoint | null | undefined): HistorySample | null => p ? {
+            t: Date.parse(String(p.t)),
+            v: p.v,
+            low: p.min ?? null,
+            high: p.max ?? null
+        } : null;
         return {
             from: Date.parse(response.from),
             to: Date.parse(response.to),
             timeZone: response.timeZone || null,
             earliest: response.earliest ? Date.parse(response.earliest) : null,
-            series: (response.series || []).map((series: any) => ({
+            series: (response.series || []).map((series): HistorySeries => ({
                 name: series.name,
                 resolution: series.resolution || 0,
                 before: point(series.before),
-                points: (series.points || []).map(point)
+                points: (series.points || []).map((p) => point(p)!).filter(Boolean)
             }))
         };
     }
@@ -421,19 +434,19 @@ export class Client {
      * reads stored frames from `from` up to `to` again, rewriting events of eventTypes (every kind
      * when empty); with dryRun, only counts what would change. Answers at once with the run
      **/
-    async startReprocess({ from, to, eventTypes, dryRun }: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean }, token: string) {
-        const body: Record<string, any> = { from: new Date(from).toISOString(), to: new Date(to).toISOString(), dryRun: Boolean(dryRun) };
+    async startReprocess({ from, to, eventTypes, dryRun }: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean }, token: string): Promise<ReprocessRun & { from: Date | null; to: Date | null; through: Date | null }> {
+        const body: Record<string, unknown> = { from: new Date(from).toISOString(), to: new Date(to).toISOString(), dryRun: Boolean(dryRun) };
         if (eventTypes && eventTypes.length) {
             body.eventTypes = eventTypes;
         }
-        return withRunDates(await this.send('POST', 'system/reprocess', { token, body }));
+        return withRunDates(await this.send<ReprocessRun & Record<string, unknown>>('POST', 'system/reprocess', { token, body }));
     }
 
     /** the reprocessing run under way or the last one, or null when there hasn't been one */
     async fetchReprocess(token: string) {
         try {
-            return withRunDates(await this.send('GET', 'system/reprocess', { token }));
-        } catch (error) {
+            return withRunDates(await this.send<ReprocessRun & Record<string, unknown>>('GET', 'system/reprocess', { token }));
+        } catch (error: unknown) {
             if (error instanceof ApiError && error.status === 404) {
                 return null;
             }
@@ -442,19 +455,19 @@ export class Client {
     }
 }
 
-const withRunDates = (run: any) => ({
+const withRunDates = <T extends Record<string, unknown>>(run: T) => ({
     ...run,
-    from: toDate(run.from),
-    to: toDate(run.to),
-    requestedAt: toDate(run.requestedAt),
-    startedAt: toDate(run.startedAt),
-    finishedAt: toDate(run.finishedAt),
-    through: toDate(run.through)
+    from: toDate(run.from as string | number | Date | null | undefined),
+    to: toDate(run.to as string | number | Date | null | undefined),
+    requestedAt: toDate(run.requestedAt as string | number | Date | null | undefined),
+    startedAt: toDate(run.startedAt as string | number | Date | null | undefined),
+    finishedAt: toDate(run.finishedAt as string | number | Date | null | undefined),
+    through: toDate(run.through as string | number | Date | null | undefined)
 });
 
-const withJobDates = (job: any) => ({
+const withJobDates = <T extends Record<string, unknown>>(job: T) => ({
     ...job,
-    nextRunAt: toDate(job.nextRunAt),
-    lastStartedAt: toDate(job.lastStartedAt),
-    lastFinishedAt: toDate(job.lastFinishedAt)
+    nextRunAt: toDate(job.nextRunAt as string | number | Date | null | undefined),
+    lastStartedAt: toDate(job.lastStartedAt as string | number | Date | null | undefined),
+    lastFinishedAt: toDate(job.lastFinishedAt as string | number | Date | null | undefined)
 });

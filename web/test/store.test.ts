@@ -83,14 +83,14 @@ describe('status store', () => {
         const client = fakeClient();
         const store = newStore(client);
         await store.refresh();
-        assert.equal(store.weather.today.high, 88);
+        assert.equal((store.weather! as any).today.high, 88);
         await store.refresh();
         assert.equal(client.weatherRequests, 1);
 
         store.weatherCheckedAt = 0;
         client.fetchWeather = async () => { throw new ApiError('server', { status: 500 }); };
         await store.refresh();
-        assert.equal(store.weather.today.high, 88, 'the last forecast stays');
+        assert.equal((store.weather! as any).today.high, 88, 'the last forecast stays');
         assert.equal(store.connection, 'connected');
     });
 
@@ -202,7 +202,7 @@ describe('status store', () => {
 
         assert.deepEqual(client.calls, [['setTask', 'pool', true, null, 't']]);
         assert.equal(store.pendingTasks.pool, undefined);
-        assert.equal(store.tasks.pool.on, true);
+        assert.equal((store.tasks! as any).pool.on, true);
         assert.equal(store.confirmedChanges, 1);
         assert.equal(store.errorMessage, null);
     });
@@ -222,7 +222,7 @@ describe('status store', () => {
         store.save({ email: 'rick', token: 't', role: 'user' });
         await store.setTask('spaPreheat', true, readyAt);
         assert.deepEqual(client.calls, [['setTask', 'spaPreheat', true, readyAt, 't']]);
-        assert.equal(store.tasks.spaPreheat.scheduled.leadMinutes, 60);
+        assert.equal((store.tasks! as any).spaPreheat.scheduled.leadMinutes, 60);
         assert.equal(store.errorMessage, null);
     });
 

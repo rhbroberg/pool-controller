@@ -360,7 +360,7 @@ describe('status store with live updates', () => {
         const live = fakeLive();
         const store = new StatusStore(fakeClient([]), { live });
         (live as any).onEvent('heating', { minimum: 70, devices: {} });
-        assert.equal(store.heating.minimum, 70);
+        assert.equal(store.heating!.minimum, 70);
         (live as any).onEvent('weather', { today: {} });
         (live as any).onEvent('readings', 'not readings');
         assert.deepEqual(store.readings, []);

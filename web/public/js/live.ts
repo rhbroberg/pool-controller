@@ -75,7 +75,7 @@ export const liveUrl = (location: Location | { protocol: string; host: string })
 
 export class LiveConnection {
     url: string;
-    onEvent: (name: string, data: any) => void;
+    onEvent: (name: string, data: unknown) => void;
     onStateChange: (isLive: boolean) => void;
     WebSocketImpl: any;
     setTimer: any;

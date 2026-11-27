@@ -210,22 +210,22 @@ describe('heating on the temperature card', () => {
     const now = new Date('2026-11-10T17:00:00Z');
 
     it('shows the sources that are on, the highest setpoint and when it will be there', () => {
-        const spa = bodyHeating(heating(), 'spa', now);
+        const spa = bodyHeating(heating() as any, 'spa', now);
         assert.deepEqual(spa!.sources.map((source) => [source.id, source.heating, source.control!.icon]), [['heater1', true, 'flame'], ['heatpump', false, 'heatWaves']]);
         assert.equal(spa!.setpoint, 102);
         assert.match(spa!.ready!, /^6:30/);
-        assert.equal(bodyHeating(heating(), 'pool', now), null, 'no water flows to the pool');
+        assert.equal(bodyHeating(heating() as any, 'pool', now), null, 'no water flows to the pool');
     });
 
     it('leaves out a source that is off, and the time when there is no estimate', () => {
-        const spa = bodyHeating(heating({ heaterOn: false, status: 'unreachable' }), 'spa', now);
+        const spa = bodyHeating(heating({ heaterOn: false, status: 'unreachable' }) as any, 'spa', now);
         assert.deepEqual(spa!.sources.map((source) => source.id), ['heatpump']);
         assert.equal(spa!.setpoint, 100);
         assert.equal(spa!.ready, null);
     });
 
     it('is nothing while no pump runs, or before the server has said', () => {
-        assert.equal(bodyHeating(heating({ target: null, status: null }), 'spa', now), null);
+        assert.equal(bodyHeating(heating({ target: null, status: null }) as any, 'spa', now), null);
         assert.equal(bodyHeating(null, 'spa', now), null);
     });
 });
