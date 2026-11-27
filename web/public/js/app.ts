@@ -9,6 +9,7 @@ import { mountDashboard } from './views/dashboard.js';
 import { mountPanel } from './views/panel.js';
 import { mountEquipment } from './views/equipment.js';
 import { mountTemperatureHistory } from './views/temperature-history.js';
+import { mountThermostat } from './views/thermostat.js';
 import { mountSaltHistory } from './views/salt-history.js';
 import { mountSettings, mountChangePassword } from './views/settings.js';
 import { mountEventLog } from './views/event-log.js';
@@ -32,6 +33,7 @@ const ROUTES: [RegExp, RouteHandler][] = [
     [/^$/, (root, app) => mountDashboard(root, app)],
     [/^equipment$/, (root, app) => mountEquipment(root, app)],
     [/^panel$/, (root, app) => mountPanel(root, app)],
+    [/^thermostat\/(pool|spa)$/, (root, app, [water]) => mountThermostat(root, app, water)],
     [/^history\/(pool|spa)$/, (root, app, [water]) => mountTemperatureHistory(root, app, water)],
     [/^history\/salt$/, (root, app, _, query) => mountSaltHistory(root, app, query)],
     [/^settings$/, (root, app) => mountSettings(root, app)],

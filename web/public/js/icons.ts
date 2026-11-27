@@ -64,6 +64,7 @@ const ICONS: Record<string, any> = {
     chevronRight: [path('m9 18 6-6-6-6')],
     chevronLeft: [path('m15 18-6-6 6-6')],
     chevronDown: [path('m6 9 6 6 6-6')],
+    chevronUp: [path('m18 15-6-6-6 6')],
     thermometer: [path('M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z')],
     target: [circle(12, 12, 9), circle(12, 12, 5), circle(12, 12, 1)],
     wrench: [path('M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z')],

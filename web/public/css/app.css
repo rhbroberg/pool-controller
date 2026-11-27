@@ -1469,6 +1469,193 @@ button.form-row:disabled {
     font-size: 15px;
 }
 
+/* MARK: thermostat */
+
+.thermostat-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 24px;
+}
+
+.thermostat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 16px 24px;
+}
+
+.thermostat-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: min(100%, 320px);
+}
+
+.thermostat-dial {
+    width: 100%;
+    max-width: 320px;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+}
+
+.thermostat-dial.dragging {
+    cursor: grabbing;
+}
+
+.thermostat-track {
+    stroke: var(--separator);
+    stroke-width: 18;
+    stroke-linecap: round;
+}
+
+.thermostat-fill {
+    stroke: var(--orange);
+    stroke-width: 18;
+    stroke-linecap: round;
+}
+
+.thermostat-thumb {
+    fill: var(--card);
+    stroke: var(--orange);
+    stroke-width: 4;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.18));
+}
+
+.thermostat-current-dot {
+    fill: var(--blue);
+    stroke: var(--card);
+    stroke-width: 2;
+}
+
+.thermostat-setpoint {
+    fill: var(--text);
+    font-family: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+    font-size: 56px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.thermostat-caption {
+    fill: var(--secondary);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.thermostat-water {
+    fill: var(--secondary);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+.thermostat-steps {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--fill);
+}
+
+.thermostat-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+}
+
+.thermostat-step + .thermostat-step {
+    border-left: 1px solid var(--separator);
+}
+
+.thermostat-step:disabled {
+    opacity: 0.35;
+}
+
+.thermostat-step .icon {
+    width: 22px;
+    height: 22px;
+}
+
+.thermostat-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    max-width: 360px;
+}
+
+.thermostat-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.thermostat-devices {
+    width: 100%;
+    max-width: 360px;
+}
+
+.thermostat-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 360px;
+}
+
+.thermostat-device {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border: 1px solid var(--separator);
+    border-radius: 12px;
+    background: var(--bg);
+    color: inherit;
+    text-align: left;
+}
+
+.thermostat-device:disabled {
+    opacity: 1;
+}
+
+.thermostat-device.active {
+    border-color: var(--orange);
+    box-shadow: inset 0 0 0 1px var(--orange);
+}
+
+.thermostat-device .title {
+    font-size: 13px;
+    color: var(--secondary);
+}
+
+.thermostat-device .value {
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.thermostat-note {
+    margin: 0;
+    max-width: 360px;
+    font-size: 13px;
+    color: var(--secondary);
+    text-align: center;
+}
+
 /* MARK: history charts */
 
 /* the graph fills the window, so dragging it moves through time and never the page */

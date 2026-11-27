@@ -100,7 +100,7 @@ export const mountDashboard = (root: any, app: any) => {
             spoken.push(`heading for ${heating.setpoint}°${heating.ready ? ` by ${heating.ready}` : ''}`);
         }
         spoken.push(...sources.map((source) => `${source.title} ${source.heating ? 'heating' : 'on'}`));
-        return h('a', { class: 'water-column', href: `#/history/${body.id}`, title: 'Show the temperature history', 'aria-label': spoken.join(', ') },
+        return h('a', { class: 'water-column', href: `#/thermostat/${body.id}`, title: 'Set the temperature', 'aria-label': spoken.join(', ') },
             h('span', { class: 'link-title' },
                 water.title,
                 icon('chevronRight'),
