@@ -9,10 +9,10 @@ var Water = require('../service/WaterService');
 
 module.exports.setWaterMode = function setWaterMode (req: AuthedRequest, res: Response) {
   Water.setWaterMode(swaggerValue(req, 'mode'), req.user)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

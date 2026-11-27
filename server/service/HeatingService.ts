@@ -21,16 +21,16 @@ const DEFAULT_SETTLE_MINUTES = 15;
 // setpoint starts at 80, and a change lasts until the server restarts without reaching the controller
 var memorySetpoints = () => {
     const values: any = {};
-    heating.BODIES.forEach((body) => {
+    heating.BODIES.forEach((body: any) => {
         values[body] = {};
-        heating.DEVICES.forEach((device) => {
+        heating.DEVICES.forEach((device: any) => {
             values[body][device] = DEFAULT_SETPOINT_F;
         });
     });
     return {
         reachesController: false,
-        get: (body, device) => values[body][device],
-        set: (body, device, degrees) => {
+        get: (body: any, device: any) => values[body][device],
+        set: (body: any, device: any, degrees: any) => {
             values[body][device] = degrees;
         }
     };
@@ -45,17 +45,17 @@ var stateSource = () => ({ enabled: {} as Record<string, any>, temperatures: {} 
  *
  * store  { reachesController, get(body, device), set(body, device, degrees) }
  **/
-export function registerSetpoints(store) {
+export function registerSetpoints(store: any) {
     setpoints = store;
 };
 
-export function registerStateSource(source) {
+export function registerStateSource(source: any) {
     stateSource = source;
 };
 
 // the body the pumps have been driving toward and since when; unknown (null) until it changes
 // once after the server started, as the pump may have been running for hours already
-var targetSeen;
+var targetSeen: any;
 var targetSince = null as any;
 
 var settleMs = () => {
@@ -78,26 +78,26 @@ export function stateChanged() {
     }
 };
 
-var round = (value, places) => typeof value === 'number' ? Math.round(value * Math.pow(10, places)) / Math.pow(10, places) : null;
+var round = (value: any, places: any) => typeof value === 'number' ? Math.round(value * Math.pow(10, places)) / Math.pow(10, places) : null;
 
 /**
  * how long until the water reaches its setpoint, or null while nothing is heating it: the pump is
  * running and a heat source is enabled and calling for heat
  **/
-var estimateFor = (state, target, devices) => {
-    const calling = heating.DEVICES.filter((device) => devices[device].callingForHeat);
+var estimateFor = (state: any, target: any, devices: any) => {
+    const calling = heating.DEVICES.filter((device: any) => devices[device].callingForHeat);
     if (!target || calling.length === 0) {
         return null;
     }
     const now = Date.now();
     const temperature = state.temperatures[target];
     const air = state.ambient;
-    const sources = calling.map((device) => ({ name: device, setpoint: devices[device].setpoint }));
+    const sources = calling.map((device: any) => ({ name: device, setpoint: devices[device].setpoint }));
     const estimate: any = {
         status: 'noReading',
         body: target,
         temperature: typeof temperature === 'number' ? temperature : null,
-        setpoint: Math.max(...sources.map((source) => source.setpoint)),
+        setpoint: Math.max(...sources.map((source: any) => source.setpoint)),
         airTemperature: typeof air === 'number' ? air : null,
         minutes: null,
         readyAt: null,
@@ -157,7 +157,7 @@ var estimateFor = (state, target, devices) => {
         temperature,
         airTemperature,
         sources,
-        sun: (hours) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
+        sun: (hours: any) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
     });
     estimate.status = outcome.status === 'atSetpoint' ? 'ready' : outcome.status;
     if (outcome.status === 'ready' || outcome.status === 'atSetpoint') {
@@ -171,16 +171,16 @@ var estimateFor = (state, target, devices) => {
 
 var allSetpoints = () => {
     const all: any = {};
-    heating.BODIES.forEach((body) => {
+    heating.BODIES.forEach((body: any) => {
         all[body] = {};
-        heating.DEVICES.forEach((device) => {
+        heating.DEVICES.forEach((device: any) => {
             all[body][device] = setpoints.get(body, device);
         });
     });
     return all;
 };
 
-var validate = (body, device) => {
+var validate = (body: any, device: any) => {
     if (!heating.BODIES.includes(body)) {
         throw new Error(`the body of water must be one of ${heating.BODIES.join(', ')}`);
     }
@@ -189,12 +189,12 @@ var validate = (body, device) => {
     }
 };
 
-var badRequest = (e) => utils.respondWithCode(400, { code: 400, message: e.message });
+var badRequest = (e: any) => utils.respondWithCode(400, { code: 400, message: e.message });
 
 /**
  * the setpoint `device` uses for `body`
  **/
-export function setpoint(body, device) {
+export function setpoint(body: any, device: any) {
     return setpoints.get(body, device);
 };
 
@@ -208,7 +208,7 @@ export async function getHeating() {
     const state = stateSource();
     const target = heating.targetBody(state);
     const devices: any = {};
-    heating.DEVICES.forEach((device) => {
+    heating.DEVICES.forEach((device: any) => {
         const enabled = state.enabled[device];
         const setpoint = target ? setpoints.get(target, device) : null;
         const temperature = target ? state.temperatures[target] : undefined;
@@ -239,7 +239,7 @@ export async function getHeating() {
 /**
  * returns Setpoint
  **/
-export async function getSetpoint(body, device) {
+export async function getSetpoint(body: any, device: any) {
     try {
         validate(body, device);
     } catch (e) {
@@ -251,7 +251,7 @@ export async function getSetpoint(body, device) {
 /**
  * returns SetpointChange
  **/
-export async function setSetpoint(body, device, degrees, user) {
+export async function setSetpoint(body: any, device: any, degrees: any, user: any) {
     const who = user && user.email ? user.email : 'unknown user';
     try {
         validate(body, device);

@@ -12,10 +12,10 @@ const FRAME_INTERVAL_MS = 25;
 const RESPONSE_DELAY_MS = 100;
 // the simulator has no panel menus; it acknowledges a navigation key on the display instead
 const KEY_ECHO_MS = 4000;
-const panelKeyLabels = { menu: 'MENU', left: '< LEFT', right: 'RIGHT >', minus: '- DOWN', plus: '+ UP' };
+const panelKeyLabels: Record<string, string> = { menu: 'MENU', left: '< LEFT', right: 'RIGHT >', minus: '- DOWN', plus: '+ UP' };
 
 // in sample-various-bin, the aux14 (spa filter) key brings valve3 and aux1 on and off with it
-const linkedSwitches = {
+const linkedSwitches: Record<string, string[]> = {
     aux14: ['valve3', 'aux1']
 };
 // the captures never show a spa temperature and rarely the pool's; the simulator shows the pool
@@ -31,29 +31,29 @@ const POOL_COOLING_STEPS = 4;
 const switchMessages = panelLabels;
 
 var frames = [] as any[];
-var statusTemplate;
-var displayTemplate;
+var statusTemplate: any;
+var displayTemplate: any;
 var switchMask = 0;
 var heaterAuto = false;
 var echoUntil = 0;
 var spaTempShownAt = 0;
 var temperaturesShown = 0;
-var poolTempF;
+var poolTempF: any;
 var spaTempF = 98;
 var tempSteps = 0;
-var emit;
+var emit: any;
 // the controller keeps a setpoint per body for each device; these are the simulator's
-var setpointValues = {
+var setpointValues: Record<string, Record<string, number>> = {
     pool: { heater1: 84, heatpump: 82 },
     spa: { heater1: 102, heatpump: 100 }
 };
 
-var isOn = (name) => ((switchMask >>> StatusEvent.bitPosition(name)) & 1) === 1;
+var isOn = (name: any) => ((switchMask >>> StatusEvent.bitPosition(name)) & 1) === 1;
 
-var loadCapture = (filename) => {
+var loadCapture = (filename: any) => {
     const parser = new FrameParser();
     const factory = new EventFactory();
-    parser.parse(fs.readFileSync(filename), (buf) => {
+    parser.parse(fs.readFileSync(filename), (buf: any) => {
         const frame = Buffer.from(buf);
         let event;
         try {
@@ -99,7 +99,7 @@ var loadCapture = (filename) => {
     }
 };
 
-var writeChecksum = (frame) => {
+var writeChecksum = (frame: any) => {
     let checksum = 0;
     for (let i = 0; i < frame.length - 4; i++) {
         checksum += frame.readUInt8(i);
@@ -115,13 +115,13 @@ var statusFrame = () => {
     return writeChecksum(frame);
 };
 
-var centered = (text, width) => {
+var centered = (text: any, width: any) => {
     const left = Math.max(0, Math.floor((width - text.length) / 2));
     return (' '.repeat(left) + text).padEnd(width).slice(0, width);
 };
 
 // two 20 character lines, laid out like the panel's own display frames
-var displayFrame = (line1, line2) => {
+var displayFrame = (line1: any, line2: any) => {
     const frame = Buffer.from(displayTemplate);
     const text = centered(line1, 20) + centered(line2, 20);
     frame.write(text, 4, 40, 'ascii');
@@ -130,7 +130,7 @@ var displayFrame = (line1, line2) => {
 
 var heaterFrame = () => displayFrame('Heater1', heaterAuto ? 'Auto Control' : 'Manual Off');
 
-var setSwitch = (name, on) => {
+var setSwitch = (name: any, on: any) => {
     const bit = 1 << StatusEvent.bitPosition(name);
     switchMask = on ? (switchMask | bit) >>> 0 : (switchMask & ~bit) >>> 0;
 };
@@ -159,7 +159,7 @@ var heatedBodies = () => {
 
 var targetBody = () => heating.targetBody({ filter: isOn('filter'), spaFilter: isOn('aux14'), waterMode: waterMode() });
 
-var callsForHeat = (device) => {
+var callsForHeat = (device: any) => {
     const body = targetBody();
     return Boolean(body) && heating.callsForHeat(body === 'spa' ? spaTempF : poolTempF, setpointValues[body][device]);
 };
@@ -195,9 +195,9 @@ var stepTemperatures = () => {
     }
 };
 
-var listen = ((filename, cb) => {
+var listen = ((filename: any, cb: any) => {
     // frames go on the bus escaped, as the controller sends them
-    emit = (frame) => cb(stuff(frame));
+    emit = (frame: any) => cb(stuff(frame));
     // frames that fail their checksum are dropped; don't log each one while loading
     const level = logger.level;
     logger.level = 'off';
@@ -247,7 +247,7 @@ var listen = ((filename, cb) => {
     }, FRAME_INTERVAL_MS);
 });
 
-var writeEvent = ((message) => {
+var writeEvent = ((message: any) => {
     const [sent] = framesIn(Buffer.from(message));
     if (!sent) {
         logger.warn('simulator received bytes that hold no frame');
@@ -258,10 +258,10 @@ var writeEvent = ((message) => {
     logger.debug('simulator received control event:', pressed.join(', '));
 
     setTimeout(() => {
-        const keys = pressed.filter((name) => panelKeyLabels[name]);
+        const keys = pressed.filter((name: any) => panelKeyLabels[name]);
         if (keys.length > 0 && displayTemplate) {
             echoUntil = Date.now() + KEY_ECHO_MS;
-            emit(displayFrame('SIMULATOR', keys.map((key) => panelKeyLabels[key]).join(' ')));
+            emit(displayFrame('SIMULATOR', keys.map((key: any) => panelKeyLabels[key]).join(' ')));
         }
 
         if (pressed.includes('heater1') && displayTemplate) {
@@ -277,7 +277,7 @@ var writeEvent = ((message) => {
             emit(displayFrame('SIMULATOR', `${mode.toUpperCase()} MODE`));
         }
 
-        pressed.filter((name) => !panelKeyLabels[name] && name !== 'heater1' && name !== 'spillover').forEach((name) => {
+        pressed.filter((name: any) => !panelKeyLabels[name] && name !== 'heater1' && name !== 'spillover').forEach((name: any) => {
             const statusName = name;
             const bit = StatusEvent.bitPosition(statusName);
             if (typeof bit === 'undefined') {
@@ -286,7 +286,7 @@ var writeEvent = ((message) => {
             }
             switchMask = (switchMask ^ (1 << bit)) >>> 0;
             const nowOn = isOn(statusName);
-            (linkedSwitches[statusName] || []).forEach((linked) => {
+            (linkedSwitches[statusName] || []).forEach((linked: any) => {
                 const linkedBit = StatusEvent.bitPosition(linked);
                 switchMask = nowOn ? (switchMask | (1 << linkedBit)) >>> 0 : (switchMask & ~(1 << linkedBit)) >>> 0;
             });
@@ -303,8 +303,8 @@ var writeEvent = ((message) => {
 
 var setpoints = {
     reachesController: true,
-    get: (body, device) => setpointValues[body][device],
-    set: (body, device, degrees) => {
+    get: (body: any, device: any) => setpointValues[body][device],
+    set: (body: any, device: any, degrees: any) => {
         setpointValues[body][device] = degrees;
         logger.debug(`simulator: ${body} ${device} setpoint is now ${degrees}°F`);
     }

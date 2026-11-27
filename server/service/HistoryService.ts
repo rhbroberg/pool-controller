@@ -19,9 +19,9 @@ const MAX_AVAILABILITY_DAYS = 1500;
 // bucket lengths in seconds; a window is bucketed at the shortest that keeps it within maxPoints
 const RESOLUTIONS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 604800, 1209600, 2592000];
 
-var badRequest = (message) => utils.respondWithCode(400, { code: 400, message: message });
+var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message: message });
 
-var parseDate = (text, fallback, label) => {
+var parseDate = (text: any, fallback: any, label: any) => {
     if (typeof text === 'undefined' || text === '') {
         return fallback;
     }
@@ -35,25 +35,25 @@ var parseDate = (text, fallback, label) => {
 /**
  * the shortest bucket at least `requested` seconds long that keeps the window within maxPoints
  **/
-var chooseResolution = (spanMs, maxPoints, requested = 0) => {
+var chooseResolution = (spanMs: any, maxPoints: any, requested = 0) => {
     const shortest = Math.max(requested, spanMs / 1000 / maxPoints);
     return RESOLUTIONS.find((seconds) => seconds >= shortest && Math.ceil(spanMs / 1000 / seconds) + 1 <= maxPoints)
         || RESOLUTIONS[RESOLUTIONS.length - 1];
 };
 
-var pointAt = (reading) => (reading ? { t: new Date(reading.t), v: reading.v } : null);
+var pointAt = (reading: any) => (reading ? { t: new Date(reading.t), v: reading.v } : null);
 
-var countRaw = (name, from, to) => Event.countDocuments({ eventType: rollups.eventTypeOf(name), 'status.name': name, timestamp: { $gte: from, $lt: to } });
+var countRaw = (name: any, from: any, to: any) => Event.countDocuments({ eventType: rollups.eventTypeOf(name), 'status.name': name, timestamp: { $gte: from, $lt: to } });
 
 // every reading as recorded, which is what a short window gets
-var rawSeries = async (name, from, to) => {
+var rawSeries = async (name: any, from: any, to: any) => {
     if (rollups.isDerived(name)) {
         const line = (await rollups.timelines([name], from.getTime(), to.getTime()))[name];
         return {
             name,
             resolution: 0,
             before: line.initial === null ? null : { t: from, v: line.initial },
-            points: line.events.map((event) => ({ t: new Date(event.t), v: event.v })),
+            points: line.events.map((event: any) => ({ t: new Date(event.t), v: event.v })),
             downsampled: false
         };
     }
@@ -68,21 +68,21 @@ var rawSeries = async (name, from, to) => {
         name,
         resolution: 0,
         before: pointAt(before),
-        points: docs.map((doc) => {
-            const entry = doc.status.find((reading) => reading.name === name);
+        points: docs.map((doc: any) => {
+            const entry = doc.status.find((reading: any) => reading.name === name);
             return { t: doc.timestamp, v: entry ? entry.value : null };
         }),
         downsampled: false
     };
 };
 
-var asPart = (doc) => ({ start: doc.start.getTime(), end: doc.end.getTime(), count: doc.count, min: doc.min, max: doc.max, sum: doc.sum, knownMs: doc.knownMs, last: doc.last });
+var asPart = (doc: any) => ({ start: doc.start.getTime(), end: doc.end.getTime(), count: doc.count, min: doc.min, max: doc.max, sum: doc.sum, knownMs: doc.knownMs, last: doc.last });
 
 /**
  * one point per bucket of `seconds`: stored rollups as far as the rollups job has got, then raw
  * events for the rest, or hourly rollups where raw events have expired
  **/
-var bucketedSeries = async (name, from, to, seconds, context) => {
+var bucketedSeries = async (name: any, from: any, to: any, seconds: any, context: any) => {
     const edges = rollups.edgesFor(from.getTime(), to.getTime(), seconds, context.timeZone);
     const end = edges[edges.length - 1];
     const rolled = rollups.ROLLED_NAMES.includes(name);
@@ -107,7 +107,7 @@ var bucketedSeries = async (name, from, to, seconds, context) => {
         }
     }
     if (cursor < end) {
-        const rest = [cursor, ...edges.filter((edge) => edge > cursor)];
+        const rest = [cursor, ...edges.filter((edge: any) => edge > cursor)];
         parts.push(...(await rollups.bucketsFromRaw([name], rest))[name]);
     }
 
@@ -130,11 +130,11 @@ var bucketedSeries = async (name, from, to, seconds, context) => {
     return { name, resolution: seconds, before, points, downsampled: true };
 };
 
-var seriesFor = async (name, from, to, maxPoints, resolution, context) => {
+var seriesFor = async (name: any, from: any, to: any, maxPoints: any, resolution: any, context: any) => {
     const rawKept = typeof context.oldestRaw === 'number' && from.getTime() >= context.oldestRaw;
     if (rawKept) {
         const counted = rollups.isDerived(name) ? rollups.rawNamesFor([name]) : [name];
-        const count = (await Promise.all(counted.map((each) => countRaw(each, from, to)))).reduce((a, b) => a + b, 0);
+        const count = (await Promise.all(counted.map((each: any) => countRaw(each, from, to)))).reduce((a, b) => a + b, 0);
         if (count <= maxPoints) {
             return rawSeries(name, from, to);
         }
@@ -147,7 +147,7 @@ var seriesFor = async (name, from, to, maxPoints, resolution, context) => {
     return bucketedSeries(name, from, to, seconds, context);
 };
 
-var earliestReading = async (oldestRaw) => {
+var earliestReading = async (oldestRaw: any) => {
     const first = await Rollup.findOne({ res: rollups.HOUR }).sort({ start: 1 }).select({ start: 1 }).lean();
     const candidates = [oldestRaw, first ? first.start.getTime() : undefined].filter((ms) => typeof ms === 'number');
     return candidates.length ? new Date(Math.min(...candidates)) : null;
@@ -161,8 +161,8 @@ var earliestReading = async (oldestRaw) => {
  *
  * returns History
  **/
-export async function getHistory(names, fromText, toText, maxPoints, resolution) {
-    const requested = (names || []).map((name) => name.trim()).filter((name) => name.length > 0);
+export async function getHistory(names: any, fromText: any, toText: any, maxPoints: any, resolution: any) {
+    const requested = (names || []).map((name: any) => name.trim()).filter((name: any) => name.length > 0);
     if (requested.length === 0 || requested.length > MAX_NAMES) {
         throw badRequest(`ask for between 1 and ${MAX_NAMES} names`);
     }
@@ -177,7 +177,7 @@ export async function getHistory(names, fromText, toText, maxPoints, resolution)
     const [watermarks, oldestRaw] = await Promise.all([rollups.watermarks(), rollups.oldestRaw()]);
     const context = { timeZone: settings.timeZone(), watermarks, oldestRaw };
     const [series, earliest] = await Promise.all([
-        Promise.all(requested.map((name) => seriesFor(name, from, to, limit, resolution || 0, context))),
+        Promise.all(requested.map((name: any) => seriesFor(name, from, to, limit, resolution || 0, context))),
         earliestReading(oldestRaw)
     ]);
     logger.debug(`history for ${requested.join(', ')} from ${from.toISOString()} to ${to.toISOString()} at ${series.map((s) => s.resolution).join('/')}s in ${Date.now() - started}ms`);
@@ -186,14 +186,14 @@ export async function getHistory(names, fromText, toText, maxPoints, resolution)
 };
 
 // a temperature is current only while its pump runs: the sensor sits downstream of it
-const PUMP_FOR_TEMPERATURE = { 'pool temp': 'filter', 'spa temp': 'aux14' };
+const PUMP_FOR_TEMPERATURE: Record<string, string> = { 'pool temp': 'filter', 'spa temp': 'aux14' };
 
 /**
  * the readings a calendar may mark. Omitting names marks every water reading. Naming a pool or
  * spa temperature marks days that temperature was known while its pump ran, which is when the
  * history graph can draw it. Salt has no pump, so naming it marks days it was recorded.
  **/
-var availabilityNames = (names) => {
+var availabilityNames = (names: any) => {
     if (names === undefined || names === null || names === '') {
         return rollups.WATER_NAMES;
     }
@@ -241,27 +241,27 @@ var graphableRollupDays = (name: string, from?: any, to?: any, limit?: number) =
     ]);
 };
 
-var remember = (counts, key, readings) => {
+var remember = (counts: any, key: any, readings: any) => {
     counts.set(key, (counts.get(key) || 0) + Math.max(readings || 0, 1));
 };
 
 /**
  * local days in [from, to) where `name` was known at the same time its pump was on
  **/
-var graphableEventDays = async (name, from, to, timeZone, firstOnly = false) => {
+var graphableEventDays = async (name: any, from: any, to: any, timeZone: any, firstOnly = false) => {
     const pump = PUMP_FOR_TEMPERATURE[name];
     const [tempBefore, pumpBefore, events] = await Promise.all([
         rollups.rawValueBefore(name, from),
         rollups.rawValueBefore(pump, from),
         rollups.rawEvents([name, pump], from, to)
     ]);
-    const changes = [...(events[name] || []).map((event) => ({ ...event, kind: 'temp' })), ...(events[pump] || []).map((event) => ({ ...event, kind: 'pump' }))]
+    const changes = [...(events[name] || []).map((event: any) => ({ ...event, kind: 'temp' })), ...(events[pump] || []).map((event: any) => ({ ...event, kind: 'pump' }))]
         .sort((a, b) => a.t - b.t || (a.kind === 'pump' ? -1 : 1));
     let temp = tempBefore && typeof tempBefore.v === 'number' ? tempBefore.v : null;
     let running = pumpBefore && typeof pumpBefore.v === 'number' ? pumpBefore.v : 0;
     let cursor = from;
     const counts = new Map();
-    const cover = (upTo) => {
+    const cover = (upTo: any) => {
         if (temp !== null && running > 0 && upTo > cursor) {
             let day = tz.startOfDay(cursor, timeZone);
             while (day < upTo) {
@@ -292,7 +292,7 @@ var graphableEventDays = async (name, from, to, timeZone, firstOnly = false) => 
     return counts;
 };
 
-var earliestRecorded = async (names, timeZone) => {
+var earliestRecorded = async (names: any, timeZone: any) => {
     const [firstDay, firstRaw] = await Promise.all([
         Rollup.findOne({ name: { $in: names }, res: rollups.DAY, count: { $gt: 0 } }).sort({ start: 1 }).select({ start: 1 }).lean(),
         Event.findOne({ eventType: 'info', 'status.name': { $in: names } }).sort({ timestamp: 1 }).select({ timestamp: 1 }).lean()
@@ -301,9 +301,9 @@ var earliestRecorded = async (names, timeZone) => {
     return firsts.length ? tz.dayKey(Math.min(...firsts), timeZone) : null;
 };
 
-var earliestGraphable = async (names, timeZone, dayWatermark) => {
+var earliestGraphable = async (names: any, timeZone: any, dayWatermark: any) => {
     let earliest = null as any;
-    const consider = (key) => {
+    const consider = (key: any) => {
         if (key && (earliest === null || key < earliest)) {
             earliest = key;
         }
@@ -333,7 +333,7 @@ var earliestGraphable = async (names, timeZone, dayWatermark) => {
  *
  * returns HistoryAvailability
  **/
-export async function getAvailability(fromText, toText, names) {
+export async function getAvailability(fromText: any, toText: any, names: any) {
     const requested = availabilityNames(names);
     const to = parseDate(toText, new Date(), 'to');
     const from = parseDate(fromText, new Date(to.getTime() - 366 * tz.DAY_MS), 'from');
@@ -350,7 +350,7 @@ export async function getAvailability(fromText, toText, names) {
     const counts = new Map();
     // salt, and a request that mixes it with the temperatures, marks days a reading was stored.
     // a pool or spa calendar marks days the graph can draw: the temperature was known while that pump ran
-    const graphable = requested.every((name) => PUMP_FOR_TEMPERATURE[name]) ? requested : [] as any[];
+    const graphable = requested.every((name: any) => PUMP_FOR_TEMPERATURE[name]) ? requested : [] as any[];
     const recorded = graphable.length ? [] : requested;
 
     // days the rollups job has finished, from their daily rollups
@@ -380,7 +380,7 @@ export async function getAvailability(fromText, toText, names) {
             .select({ timestamp: 1, status: 1 })
             .lean();
         for (const doc of docs) {
-            const readings = doc.status.filter((entry) => recorded.includes(entry.name)).length;
+            const readings = doc.status.filter((entry: any) => recorded.includes(entry.name)).length;
             remember(counts, tz.dayKey(doc.timestamp.getTime(), timeZone), readings);
         }
     }

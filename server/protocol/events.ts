@@ -263,7 +263,7 @@ class StatusEvent extends ChecksummedEvent {
     }
 
     // bit position of a named switch within rawMask(), or undefined
-    static bitPosition(name) {
+    static bitPosition(name: any) {
         for (let byte = 0; byte < statusMap.length; byte++) {
             const bit = statusMap[byte].indexOf(name);
             if (bit !== -1) {
@@ -273,7 +273,7 @@ class StatusEvent extends ChecksummedEvent {
         return undefined;
     }
 
-    textBitMaskFromByte(byte) {
+    textBitMaskFromByte(byte: any) {
         let mask = `${this.bitToInt(byte, 0x01)}${this.bitToInt(byte, 0x02)}${this.bitToInt(byte, 0x04)}${this.bitToInt(byte, 0x08)}`;
         mask += `.${this.bitToInt(byte, 0x10)}${this.bitToInt(byte, 0x20)}${this.bitToInt(byte, 0x40)}${this.bitToInt(byte, 0x80)}`;
 
@@ -289,7 +289,7 @@ class StatusEvent extends ChecksummedEvent {
         return msg;
     }
 
-    bitsToName(callback) {
+    bitsToName(callback: any) {
         for (let byte = 0; byte < 4; byte++) {
             for (let bit = 0; bit < 8; bit++) {
                 callback(statusMap[byte][bit], this.bitToInt(this.frame.readUInt8(byte + 4), Math.pow(2, bit)));
@@ -306,7 +306,7 @@ class StatusEvent extends ChecksummedEvent {
         return mask;
     }
 
-    diff(previousMask) {
+    diff(previousMask: any) {
         let nowEnabled = [] as any[];
         let nowDisabled = [] as any[];
 
@@ -367,7 +367,7 @@ class TextDisplayEvent extends ChecksummedEvent {
         return { lines, blinking };
     }
 
-    extractValue(clause) {
+    extractValue(clause: any) {
         const match = this.text.match(clause);
         return match ? match[1] : undefined;
     }
@@ -443,11 +443,11 @@ class ControlEvent extends ChecksummedEvent {
         return [0x00, 0x8c];
     }
 
-    static isControl(name) {
+    static isControl(name: any) {
         return typeof controlMap.fromName(name) !== 'undefined';
     }
 
-    textBitMaskFromByte(byte) {
+    textBitMaskFromByte(byte: any) {
         let mask = `${this.bitToInt(byte, 0x80)}${this.bitToInt(byte, 0x40)}${this.bitToInt(byte, 0x20)}${this.bitToInt(byte, 0x10)}`;
         mask += `.${this.bitToInt(byte, 0x08)}${this.bitToInt(byte, 0x04)}${this.bitToInt(byte, 0x02)}${this.bitToInt(byte, 0x01)}`;
 
@@ -463,7 +463,7 @@ class ControlEvent extends ChecksummedEvent {
         return mask;
     }
 
-    bitsToName(callback) {
+    bitsToName(callback: any) {
         let commandBits = this.rawMask();
 
         logger.trace('individual command bytes are ',
@@ -489,10 +489,10 @@ class ControlEvent extends ChecksummedEvent {
 
     // extend this class for InitiateControlEvent?
 
-    toggleControls(toToggle) {
+    toggleControls(toToggle: any) {
         let bytes = [0, 0, 0, 0];
 
-        toToggle.forEach((s) => {
+        toToggle.forEach((s: any) => {
             const bitPosition = Number(controlMap.fromName(s));
             const whichByte = Math.floor(bitPosition / 8);
             bytes[whichByte] |= (0x01 << (bitPosition % 8));
@@ -507,7 +507,7 @@ class ControlEvent extends ChecksummedEvent {
         logger.debug('created control message:', this.asString(), this.prettyBits(1));
     }
 
-    toggleControlsAlternate(toToggle) {
+    toggleControlsAlternate(toToggle: any) {
         // first build the mask from each bit location
         var mask = 0;
         toToggle.forEach((s: string) => {
@@ -528,7 +528,7 @@ class ControlEvent extends ChecksummedEvent {
         logger.debug('created conrol message:', this.asString(), this.prettyBits(1));
     }
 
-    myToHexString(buf) {
+    myToHexString(buf: any) {
         var readable;
 
         for (var i = 0; i < buf.length; i++) {

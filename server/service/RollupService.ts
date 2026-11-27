@@ -26,11 +26,11 @@ const HEATING_NAMES = BODIES.flatMap((body) => HEAT_SOURCES.map((source) => `hea
 const ROLLED_NAMES = ['pool temp', 'spa temp', 'ambient', 'salt', 'filter', 'aux14', 'spa', 'spillover', 'heater1', 'valve4', ...HEATING_NAMES];
 const ROLLUPS_JOB = 'rollups';
 
-var isDerived = (name) => HEATING_NAMES.includes(name);
-var eventTypeOf = (name) => (INFO_NAMES.includes(name) ? 'info' : 'status');
+var isDerived = (name: any) => HEATING_NAMES.includes(name);
+var eventTypeOf = (name: any) => (INFO_NAMES.includes(name) ? 'info' : 'status');
 var unique = (values: any[]): any[] => [...new Set(values)];
-var componentsOf = (name) => [name.split(':')[2], ...CIRCULATION];
-var rawNamesFor = (names) => unique(names.flatMap((name) => (isDerived(name) ? componentsOf(name) : [name])));
+var componentsOf = (name: any) => [name.split(':')[2], ...CIRCULATION];
+var rawNamesFor = (names: any) => unique(names.flatMap((name: any) => (isDerived(name) ? componentsOf(name) : [name])));
 
 // MARK: the bucket grid
 
@@ -38,7 +38,7 @@ var rawNamesFor = (names) => unique(names.flatMap((name) => (isDerived(name) ? c
  * the start of the bucket of `seconds` holding ms: on multiples of `seconds` since the epoch for
  * buckets shorter than a day, and on local midnights, counted from 1970-01-01, for days
  **/
-var bucketStart = (ms, seconds, timeZone) => {
+var bucketStart = (ms: any, seconds: any, timeZone: any) => {
     if (seconds < DAY) {
         return Math.floor(ms / (seconds * 1000)) * seconds * 1000;
     }
@@ -48,13 +48,13 @@ var bucketStart = (ms, seconds, timeZone) => {
     return offset === 0 ? dayStart : tz.addDays(dayStart, -offset, timeZone);
 };
 
-var nextBucket = (start, seconds, timeZone) => (seconds < DAY ? start + seconds * 1000 : tz.addDays(start, Math.round(seconds / DAY), timeZone));
+var nextBucket = (start: any, seconds: any, timeZone: any) => (seconds < DAY ? start + seconds * 1000 : tz.addDays(start, Math.round(seconds / DAY), timeZone));
 
 /**
  * the edges of the buckets covering [from, to): the first starts at or before from, the last
  * ends at or after to
  **/
-var edgesFor = (from, to, seconds, timeZone) => {
+var edgesFor = (from: any, to: any, seconds: any, timeZone: any) => {
     const edges = [bucketStart(from, seconds, timeZone)];
     while (edges[edges.length - 1] < to) {
         edges.push(nextBucket(edges[edges.length - 1], seconds, timeZone));
@@ -67,9 +67,9 @@ var edgesFor = (from, to, seconds, timeZone) => {
 
 // MARK: the math
 
-var emptyBucket = (start, end): any => ({ start, end, count: 0, min: null, max: null, sum: 0, knownMs: 0, last: null });
+var emptyBucket = (start: any, end: any): any => ({ start, end, count: 0, min: null, max: null, sum: 0, knownMs: 0, last: null });
 
-var note = (bucket, value) => {
+var note = (bucket: any, value: any) => {
     bucket.min = bucket.min === null ? value : Math.min(bucket.min, value);
     bucket.max = bucket.max === null ? value : Math.max(bucket.max, value);
 };
@@ -79,7 +79,7 @@ var note = (bucket, value) => {
  * before the first event and the events [{ t, v }] in time order; time after `until` (now)
  * isn't counted, since nothing is known about it yet
  **/
-var summarize = (initial, events, edges, until = Infinity) => {
+var summarize = (initial: any, events: any, edges: any, until = Infinity) => {
     const buckets = [] as any[];
     let value = typeof initial === 'number' ? initial : null;
     let next = 0;
@@ -90,7 +90,7 @@ var summarize = (initial, events, edges, until = Infinity) => {
     for (let i = 0; i + 1 < edges.length; i++) {
         const bucket = emptyBucket(edges[i], edges[i + 1]);
         let cursor = bucket.start;
-        const hold = (upTo) => {
+        const hold = (upTo: any) => {
             const stop = Math.min(upTo, until);
             if (value !== null && stop > cursor) {
                 bucket.sum += value * (stop - cursor);
@@ -118,7 +118,7 @@ var summarize = (initial, events, edges, until = Infinity) => {
 /**
  * one bucket from consecutive smaller ones, such as a day from its hours
  **/
-var combine = (parts, start, end) => {
+var combine = (parts: any, start: any, end: any) => {
     const bucket = emptyBucket(start, end);
     for (const part of parts) {
         bucket.count += part.count || 0;
@@ -138,7 +138,7 @@ var combine = (parts, start, end) => {
 /**
  * the point a history response gives for a bucket, or undefined when nothing was known in it
  **/
-var pointOf = (bucket) => {
+var pointOf = (bucket: any) => {
     if (bucket.knownMs <= 0 && bucket.count === 0) {
         return undefined;
     }
@@ -154,7 +154,7 @@ var pointOf = (bucket) => {
 // heat reaches the water only while a pump (the filter or the spa filter) moves it through the
 // heaters, as in protocol/heating.js; then both bodies in spillover, otherwise the spa while
 // water flows through it (spa mode or the spa filter), and the pool the rest of the time
-var heats = (state, body) => {
+var heats = (state: any, body: any) => {
     if (state.filter !== 1 && state.aux14 !== 1) {
         return false;
     }
@@ -165,7 +165,7 @@ var heats = (state, body) => {
     return body === 'spa' ? toSpa : !toSpa;
 };
 
-var heatingValue = (name, state) => {
+var heatingValue = (name: any, state: any) => {
     const [, body, source] = name.split(':');
     if (state[source] === null || typeof state[source] === 'undefined') {
         return null;
@@ -176,14 +176,14 @@ var heatingValue = (name, state) => {
 /**
  * a derived heating series from its switches: the value as the window opens and every change
  **/
-var derive = (name, initials, eventsByName) => {
+var derive = (name: any, initials: any, eventsByName: any) => {
     const state: any = {};
     for (const component of componentsOf(name)) {
         state[component] = typeof initials[component] === 'number' ? initials[component] : null;
     }
     const initial = heatingValue(name, state);
     const changes = componentsOf(name)
-        .flatMap((component) => (eventsByName[component] || []).map((event) => ({ t: event.t, name: component, v: event.v })))
+        .flatMap((component) => (eventsByName[component] || []).map((event: any) => ({ t: event.t, name: component, v: event.v })))
         .sort((a, b) => a.t - b.t);
     const events = [] as any[];
     let current = initial;
@@ -204,13 +204,13 @@ var derive = (name, initials, eventsByName) => {
  * the value of a raw reading in effect just before ms: its last event, or once those have
  * expired, the value its latest hourly rollup ended on
  **/
-var rawValueBefore = async (name, ms) => {
+var rawValueBefore = async (name: any, ms: any) => {
     const doc = await Event.findOne({ eventType: eventTypeOf(name), 'status.name': name, timestamp: { $lt: new Date(ms) } })
         .sort({ timestamp: -1 })
         .select({ timestamp: 1, status: 1 })
         .lean();
     if (doc) {
-        const entry = doc.status.find((reading) => reading.name === name);
+        const entry = doc.status.find((reading: any) => reading.name === name);
         return { t: doc.timestamp.getTime(), v: entry && typeof entry.value === 'number' ? entry.value : null };
     }
     const rollup = await Rollup.findOne({ name, res: HOUR, start: { $lt: new Date(ms) } }).sort({ start: -1 }).lean();
@@ -220,8 +220,8 @@ var rawValueBefore = async (name, ms) => {
 /**
  * every event for the raw names in [from, to), by name, in time order
  **/
-var rawEvents = async (names, from, to) => {
-    const byName = Object.fromEntries(names.map((name) => [name, []]));
+var rawEvents = async (names: any, from: any, to: any) => {
+    const byName = Object.fromEntries(names.map((name: any) => [name, []]));
     const types = unique(names.map(eventTypeOf));
     const docs = await Event.find({ eventType: { $in: types }, 'status.name': { $in: names }, timestamp: { $gte: new Date(from), $lt: new Date(to) } })
         .sort({ timestamp: 1 })
@@ -241,7 +241,7 @@ var rawEvents = async (names, from, to) => {
  * the value in effect before ms and every change in [ms, to) for each name, derived heating
  * series included
  **/
-var timelines = async (names, from, to) => {
+var timelines = async (names: any, from: any, to: any) => {
     const raw = rawNamesFor(names);
     const [befores, eventsByName] = await Promise.all([
         Promise.all(raw.map((name) => rawValueBefore(name, from))),
@@ -263,7 +263,7 @@ var timelines = async (names, from, to) => {
 /**
  * each name summarized over the buckets between edges, from raw events
  **/
-var bucketsFromRaw = async (names, edges, until = Date.now()) => {
+var bucketsFromRaw = async (names: any, edges: any, until = Date.now()) => {
     const lines = await timelines(names, edges[0], edges[edges.length - 1]);
     const result: any = {};
     for (const name of names) {
@@ -297,7 +297,7 @@ var docsFor = (res: any, bucketsByName: Record<string, any[]>) => {
 /**
  * replaces the stored buckets of `res` between from and to
  **/
-var store = async (res, from, to, bucketsByName) => {
+var store = async (res: any, from: any, to: any, bucketsByName: any) => {
     await Rollup.deleteMany({ res, name: { $in: Object.keys(bucketsByName) }, start: { $gte: new Date(from), $lt: new Date(to) } });
     const docs = docsFor(res, bucketsByName);
     if (docs.length > 0) {
@@ -309,20 +309,20 @@ var store = async (res, from, to, bucketsByName) => {
 /**
  * stored buckets of one name at one resolution with starts in [from, to), oldest first
  **/
-var stored = (name, res, from, to) => Rollup.find({ name, res, start: { $gte: new Date(from), $lt: new Date(to) } })
+var stored = (name: any, res: any, from: any, to: any) => Rollup.find({ name, res, start: { $gte: new Date(from), $lt: new Date(to) } })
     .sort({ start: 1 })
     .lean();
 
 /**
  * daily buckets from the hourly ones, for days whose raw events have already expired
  **/
-var daysFromHours = async (names, edges) => {
+var daysFromHours = async (names: any, edges: any) => {
     const result: any = {};
     for (const name of names) {
         const hours = await stored(name, HOUR, edges[0], edges[edges.length - 1]);
         result[name] = [];
         for (let i = 0; i + 1 < edges.length; i++) {
-            const inside = hours.filter((hour) => hour.start.getTime() >= edges[i] && hour.start.getTime() < edges[i + 1]);
+            const inside = hours.filter((hour: any) => hour.start.getTime() >= edges[i] && hour.start.getTime() < edges[i + 1]);
             result[name].push(combine(inside, edges[i], edges[i + 1]));
         }
     }
@@ -348,7 +348,7 @@ var watermarks = async () => {
  * makes the rollups job recompute everything from `date` on, as after history is added or
  * removed in the past
  **/
-var invalidateFrom = async (date) => {
+var invalidateFrom = async (date: any) => {
     const from = new Date(date);
     // the job clears it to null once it has rebuilt, and $min would keep a null, which sorts first
     const earlier = await JobState.updateOne(

@@ -27,7 +27,7 @@ export async function refresh() {
     const fetchedAt = new Date();
     const zipCode = location.zipCode;
     if (hours.length > 0) {
-        await WeatherHour.bulkWrite(hours.map((hour) => ({
+        await WeatherHour.bulkWrite(hours.map((hour: any) => ({
             updateOne: {
                 filter: { zipCode, time: hour.time },
                 update: { $set: Object.assign({}, hour, { zipCode, fetchedAt, forecast: hour.time > fetchedAt }) },
@@ -37,7 +37,7 @@ export async function refresh() {
     }
     if (days.length > 0) {
         const today = tz.dayKey(fetchedAt.getTime(), settings.timeZone());
-        await WeatherDay.bulkWrite(days.map((day) => ({
+        await WeatherDay.bulkWrite(days.map((day: any) => ({
             updateOne: {
                 filter: { zipCode, date: day.date },
                 update: { $set: Object.assign({}, day, { zipCode, fetchedAt, forecast: day.date >= today }) },
@@ -84,7 +84,7 @@ export async function getWeather() {
 /**
  * the conditions in the hour containing `time` at the zip code, or undefined if none were kept
  **/
-export async function conditionsAt(time) {
+export async function conditionsAt(time: any) {
     const location = settings.location();
     if (!location) {
         return undefined;
@@ -96,7 +96,7 @@ export async function conditionsAt(time) {
 /**
  * the hours kept from now through `hours` ahead, oldest first
  **/
-export async function forecast(hours) {
+export async function forecast(hours: any) {
     const location = settings.location();
     if (!location) {
         return [];

@@ -8,11 +8,11 @@ import { ApiError } from '../utils/writer';
 var utils = require('../utils/writer');
 var Tasks = require('../service/TaskService');
 
-var answer = (res, promise) => promise
-  .then(function (response) {
+var answer = (res: any, promise: any) => promise
+  .then(function (response: any) {
     utils.writeJson(res, response);
   })
-  .catch(function (response) {
+  .catch(function (response: any) {
     if (response instanceof ApiError) {
       utils.writeJson(res, response.body, response.code);
       return;

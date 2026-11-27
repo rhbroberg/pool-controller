@@ -6,7 +6,7 @@
  * lightId String 
  * returns LightingZoneStatus
  **/
-exports.getLightingState = function(lightId) { // eslint-disable-line no-unused-vars
+exports.getLightingState = function(lightId: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -47,7 +47,7 @@ exports.getLights = function() {
  * state String 
  * returns LightingZoneStatus
  **/
-exports.setLightingState = function(lightId, state) { // eslint-disable-line no-unused-vars
+exports.setLightingState = function(lightId: any, state: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {

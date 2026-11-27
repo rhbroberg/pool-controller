@@ -38,9 +38,9 @@ var tickets = new Map();
 var links = new Map();
 // provider id -> its discovered metadata, so each sign-in doesn't fetch it again
 var discovered = new Map();
-var oidcModule;
+var oidcModule: any;
 
-var fail = (code, message) => utils.respondWithCode(code, { code, message });
+var fail = (code: any, message: any) => utils.respondWithCode(code, { code, message });
 
 // openid-client is published only as an ES module
 var oidc = async () => {
@@ -50,7 +50,7 @@ var oidc = async () => {
     return oidcModule;
 };
 
-var put = (map, key, value, ms) => {
+var put = (map: any, key: any, value: any, ms: any) => {
     const now = Date.now();
     for (const [k, entry] of map) {
         if (entry.expires < now) {
@@ -61,7 +61,7 @@ var put = (map, key, value, ms) => {
 };
 
 // the entry for key, once; undefined if there is none or it has expired
-var take = (map, key) => {
+var take = (map: any, key: any) => {
     const entry = map.get(key);
     map.delete(key);
     return entry && entry.expires >= Date.now() ? entry : undefined;
@@ -72,7 +72,7 @@ var randomToken = () => crypto.randomBytes(24).toString('base64url');
 var passwordSignInForced = () => process.env.POOL_FORCE_PASSWORD_SIGNIN === '1';
 
 // plain http issuers are only for tests, which run a fake service on localhost
-var insecureAllowed = (issuer) => process.env.OIDC_ALLOW_INSECURE === '1' && new URL(issuer).protocol === 'http:';
+var insecureAllowed = (issuer: any) => process.env.OIDC_ALLOW_INSECURE === '1' && new URL(issuer).protocol === 'http:';
 
 /**
  * reads the sign-in settings and forgets cached services and sign-ins under way; run at startup
@@ -101,20 +101,20 @@ exports.passwordSignInAllowed = function() {
  * the address the browser reached this server at: POOL_PUBLIC_URL if set, otherwise what the
  * proxies in front of it report
  **/
-var publicOrigin = (req) => {
+var publicOrigin = (req: any) => {
     if (process.env.POOL_PUBLIC_URL) {
         return process.env.POOL_PUBLIC_URL.replace(/\/+$/, '');
     }
-    const first = (value) => value ? String(value).split(',')[0].trim() : undefined;
+    const first = (value: any) => value ? String(value).split(',')[0].trim() : undefined;
     const proto = first(req.headers['x-forwarded-proto']) || req.protocol || 'http';
     const host = first(req.headers['x-forwarded-host']) || req.headers.host;
     return `${proto}://${host}`;
 };
 
-var redirectUri = (origin, providerId) => `${origin}${API_BASE}/auth/${providerId}/callback`;
+var redirectUri = (origin: any, providerId: any) => `${origin}${API_BASE}/auth/${providerId}/callback`;
 
 // Apple's client secret is a short-lived JWT signed with the key from the developer account
-var clientSecretFor = (provider) => {
+var clientSecretFor = (provider: any) => {
     if (provider.kind !== 'apple') {
         return provider.clientSecret || undefined;
     }
@@ -129,7 +129,7 @@ var clientSecretFor = (provider) => {
     });
 };
 
-var configurationFor = async (provider) => {
+var configurationFor = async (provider: any) => {
     const client = await oidc();
     const insecure = insecureAllowed(provider.issuer);
     const stamp = `${provider.issuer} ${provider.updatedAt ? provider.updatedAt.getTime() : ''}`;
@@ -147,7 +147,7 @@ var configurationFor = async (provider) => {
     return config;
 };
 
-var enabledProvider = async (id) => {
+var enabledProvider = async (id: any) => {
     const provider = await Provider.findById(id);
     if (!provider || !provider.enabled) {
         throw fail(404, `signing in with ${id} isn't available here`);
@@ -156,7 +156,7 @@ var enabledProvider = async (id) => {
 };
 
 // where the browser or app goes once the service sends it back
-var destination = (flow, query) => {
+var destination = (flow: any, query: any) => {
     const search = new URLSearchParams(query).toString();
     return flow.client === 'ios' ? `${IOS_CALLBACK}?${search}` : `${flow.origin}/#/signin/complete?${search}`;
 };
@@ -165,7 +165,7 @@ var destination = (flow, query) => {
  * where to send the browser to sign in with a service; client is web or ios, link a code from
  * linkIdentity when an account is adding the service
  **/
-exports.start = async function(req, providerId, { client, link }: { client?: string; link?: string } = {}) {
+exports.start = async function(req: any, providerId: any, { client, link }: { client?: string; link?: string } = {}) {
     const flow: Record<string, any> = { provider: providerId, client: client === 'ios' ? 'ios' : 'web', origin: publicOrigin(req) };
     try {
         const provider = await enabledProvider(providerId);
@@ -203,7 +203,7 @@ exports.start = async function(req, providerId, { client, link }: { client?: str
     }
 };
 
-var appleName = (user) => {
+var appleName = (user: any) => {
     try {
         const name = (typeof user === 'string' ? JSON.parse(user) : user || {}).name || {};
         return [name.firstName, name.lastName].filter(Boolean).join(' ') || undefined;
@@ -212,7 +212,7 @@ var appleName = (user) => {
     }
 };
 
-var uniqueName = async (wanted) => {
+var uniqueName = async (wanted: any) => {
     const base = (wanted || 'user').trim() || 'user';
     let name = RESERVED_NAMES.includes(base.toLowerCase()) ? `${base}-1` : base;
     for (let n = 2; await User.exists({ email: name }); n++) {
@@ -221,7 +221,7 @@ var uniqueName = async (wanted) => {
     return name;
 };
 
-var createExternalAccount = async (provider, profile, role) => {
+var createExternalAccount = async (provider: any, profile: any, role: any) => {
     const account = new User({
         email: await uniqueName(profile.email || profile.name || `${provider._id}-user`),
         role,
@@ -233,7 +233,7 @@ var createExternalAccount = async (provider, profile, role) => {
     return account;
 };
 
-var redeemInvitation = async (provider, profile) => {
+var redeemInvitation = async (provider: any, profile: any) => {
     if (!provider.trustEmail || !profile.emailVerified || !profile.email) {
         return null;
     }
@@ -252,7 +252,7 @@ var redeemInvitation = async (provider, profile) => {
 };
 
 // pending, denied or refused
-var requestAccess = async (provider, profile) => {
+var requestAccess = async (provider: any, profile: any) => {
     const existing = await AccessRequest.findOne({ provider: provider._id, subject: profile.subject });
     if (existing) {
         if (existing.status === 'denied') {
@@ -274,7 +274,7 @@ var requestAccess = async (provider, profile) => {
     return 'pending';
 };
 
-var linkIdentity = async (provider, profile, userId) => {
+var linkIdentity = async (provider: any, profile: any, userId: any) => {
     const owner = await User.findByIdentity(provider._id, profile.subject);
     if (owner && !owner._id.equals(userId)) {
         return { error: `That ${provider.displayName} account already signs in as ${owner.email}.` };
@@ -284,7 +284,7 @@ var linkIdentity = async (provider, profile, userId) => {
         return { error: 'The account to link no longer exists.' };
     }
     if (!owner) {
-        account.identities = account.identities.filter((identity) => identity.provider !== provider._id)
+        account.identities = account.identities.filter((identity: any) => identity.provider !== provider._id)
             .concat({ provider: provider._id, subject: profile.subject, email: profile.email });
         await account.save();
         await AccessRequest.deleteOne({ provider: provider._id, subject: profile.subject });
@@ -294,7 +294,7 @@ var linkIdentity = async (provider, profile, userId) => {
     return { status: 'linked', provider: provider.displayName };
 };
 
-var admit = async (provider, profile, flow) => {
+var admit = async (provider: any, profile: any, flow: any) => {
     if (flow.linkUser) {
         return linkIdentity(provider, profile, flow.linkUser);
     }
@@ -310,7 +310,7 @@ var admit = async (provider, profile, flow) => {
 /**
  * the service has sent the browser back; answers where to send it next
  **/
-exports.callback = async function(req, providerId) {
+exports.callback = async function(req: any, providerId: any) {
     const params = req.method === 'POST' ? req.body || {} : req.query || {};
     const flow = params.state ? take(flows, String(params.state)) : undefined;
     if (!flow || flow.provider !== providerId) {
@@ -326,7 +326,7 @@ exports.callback = async function(req, providerId) {
         const provider = await enabledProvider(providerId);
         const config = await configurationFor(provider);
         const callbackUrl = redirectUri(flow.origin, providerId);
-        let current;
+        let current: any;
         if (req.method === 'POST') {
             current = new Request(callbackUrl, {
                 method: 'POST',
@@ -361,7 +361,7 @@ exports.callback = async function(req, providerId) {
  * trades the ticket a completed sign-in sent back for a token, as POST /users/login does for a
  * password
  **/
-exports.exchangeTicket = async function(ticket) {
+exports.exchangeTicket = async function(ticket: any) {
     const entry = ticket ? take(tickets, String(ticket)) : undefined;
     const account = entry ? await User.findById(entry.userId) : null;
     if (!account) {
@@ -381,7 +381,7 @@ exports.listProviders = async function() {
     const providers = await Provider.find({ enabled: true }).sort({ displayName: 1 });
     return {
         passwordSignIn: exports.passwordSignInAllowed(),
-        providers: providers.map((provider) => ({ id: provider._id, displayName: provider.displayName }))
+        providers: providers.map((provider: any) => ({ id: provider._id, displayName: provider.displayName }))
     };
 };
 
@@ -390,7 +390,7 @@ exports.listProviders = async function() {
 /**
  * where to send the signed-in account's browser to add a service to it
  **/
-exports.linkStart = async function(req, user, providerId, client) {
+exports.linkStart = async function(req: any, user: any, providerId: any, client: any) {
     const provider = await enabledProvider(providerId);
     const code = randomToken();
     put(links, code, { userId: user._id.toString(), provider: provider._id }, LINK_MS);
@@ -398,8 +398,8 @@ exports.linkStart = async function(req, user, providerId, client) {
     return { url: `${publicOrigin(req)}${API_BASE}/auth/${provider._id}/start?${query}` };
 };
 
-exports.unlink = async function(user, providerId) {
-    const remaining = user.identities.filter((identity) => identity.provider !== providerId);
+exports.unlink = async function(user: any, providerId: any) {
+    const remaining = user.identities.filter((identity: any) => identity.provider !== providerId);
     if (remaining.length === user.identities.length) {
         throw fail(404, `this account doesn't sign in with ${providerId}`);
     }
@@ -415,7 +415,7 @@ exports.unlink = async function(user, providerId) {
 
 // MARK: admin: services and settings
 
-var providerView = (provider, origin) => ({
+var providerView = (provider: any, origin: any) => ({
     id: provider._id,
     displayName: provider.displayName,
     kind: provider.kind,
@@ -432,30 +432,30 @@ var providerView = (provider, origin) => ({
     redirectUri: redirectUri(origin, provider._id)
 });
 
-exports.getSignInSettings = async function(req) {
+exports.getSignInSettings = async function(req: any) {
     const providers = await Provider.find({}).sort({ displayName: 1 });
     return {
         passwordSignIn: settings.passwordSignIn,
         passwordSignInForced: passwordSignInForced(),
         signInRequests: settings.signInRequests,
         redirectUriTemplate: redirectUri(publicOrigin(req), '{id}'),
-        providers: providers.map((provider) => providerView(provider, publicOrigin(req)))
+        providers: providers.map((provider: any) => providerView(provider, publicOrigin(req)))
     };
 };
 
 // true if an admin could still sign in through the enabled services other than excluding
 var externalAdminRemains = async (excluding?: any) => {
-    const ids = (await Provider.find({ enabled: true }).distinct('_id')).filter((id) => id !== excluding);
+    const ids = (await Provider.find({ enabled: true }).distinct('_id')).filter((id: any) => id !== excluding);
     return Boolean(await User.exists({ role: 'admin', 'identities.provider': { $in: ids } }));
 };
 
-var requireAdminSignIn = async (excluding) => {
+var requireAdminSignIn = async (excluding: any) => {
     if (!settings.passwordSignIn && !await externalAdminRemains(excluding)) {
         throw fail(409, 'password sign-in is off, and no admin would be able to sign in any other way');
     }
 };
 
-exports.updateSignInSettings = async function(req, admin, changes) {
+exports.updateSignInSettings = async function(req: any, admin: any, changes: any) {
     const update: any = {};
     if (typeof changes.passwordSignIn === 'boolean') {
         if (!changes.passwordSignIn && !await externalAdminRemains()) {
@@ -486,7 +486,7 @@ exports.updateSignInSettings = async function(req, admin, changes) {
     return exports.getSignInSettings(req);
 };
 
-var checkIssuer = (issuer) => {
+var checkIssuer = (issuer: any) => {
     let url;
     try {
         url = new URL(issuer);
@@ -499,7 +499,7 @@ var checkIssuer = (issuer) => {
 };
 
 // fetches the service's discovery document, so a typo shows when it's saved rather than at sign-in
-var checkDiscovery = async (provider) => {
+var checkDiscovery = async (provider: any) => {
     discovered.delete(provider._id);
     try {
         await configurationFor(provider);
@@ -508,7 +508,7 @@ var checkDiscovery = async (provider) => {
     }
 };
 
-var applyProviderChanges = (provider, changes) => {
+var applyProviderChanges = (provider: any, changes: any) => {
     ['displayName', 'issuer', 'clientId'].forEach((field) => {
         if (typeof changes[field] === 'string' && changes[field].trim()) {
             provider[field] = changes[field].trim();
@@ -534,7 +534,7 @@ var applyProviderChanges = (provider, changes) => {
     }
 };
 
-var checkAppleKey = (provider) => {
+var checkAppleKey = (provider: any) => {
     const { teamId, keyId, privateKey } = provider.apple || {};
     if (!teamId || !keyId || !privateKey) {
         throw fail(400, 'Apple needs the team ID, key ID and private key');
@@ -546,7 +546,7 @@ var checkAppleKey = (provider) => {
     }
 };
 
-exports.createProvider = async function(req, admin, body) {
+exports.createProvider = async function(req: any, admin: any, body: any) {
     const id = String(body.id || '').trim().toLowerCase();
     if (!PROVIDER_ID.test(id) || RESERVED_PROVIDER_IDS.includes(id)) {
         throw fail(400, 'the id must be lowercase letters, digits and dashes, such as google');
@@ -579,7 +579,7 @@ exports.createProvider = async function(req, admin, body) {
     return providerView(provider, publicOrigin(req));
 };
 
-exports.updateProvider = async function(req, admin, id, changes) {
+exports.updateProvider = async function(req: any, admin: any, id: any, changes: any) {
     const provider = await Provider.findById(id);
     if (!provider) {
         throw fail(404, `there is no service with the id ${id}`);
@@ -603,7 +603,7 @@ exports.updateProvider = async function(req, admin, id, changes) {
     return providerView(provider, publicOrigin(req));
 };
 
-exports.deleteProvider = async function(admin, id) {
+exports.deleteProvider = async function(admin: any, id: any) {
     const provider = await Provider.findById(id);
     if (!provider) {
         throw fail(404, `there is no service with the id ${id}`);
@@ -619,7 +619,7 @@ exports.deleteProvider = async function(admin, id) {
 
 // MARK: admin: requests and invitations
 
-var checkRole = (role) => {
+var checkRole = (role: any) => {
     if (!ROLES.includes(role)) {
         throw fail(400, `role must be one of ${ROLES.join(', ')}`);
     }
@@ -627,10 +627,10 @@ var checkRole = (role) => {
 
 var providerNames = async () => {
     const providers = await Provider.find({}, { displayName: 1 }).lean();
-    return Object.fromEntries(providers.map((provider) => [provider._id, provider.displayName]));
+    return Object.fromEntries(providers.map((provider: any) => [provider._id, provider.displayName]));
 };
 
-var requestView = (request, names) => ({
+var requestView = (request: any, names: any) => ({
     id: request._id.toString(),
     provider: request.provider,
     providerName: names[request.provider] || request.provider,
@@ -644,10 +644,10 @@ var requestView = (request, names) => ({
 
 exports.listRequests = async function() {
     const [requests, names] = await Promise.all([AccessRequest.find({}).sort({ lastSeen: -1 }), providerNames()]);
-    return requests.map((request) => requestView(request, names));
+    return requests.map((request: any) => requestView(request, names));
 };
 
-var findRequest = async (id) => {
+var findRequest = async (id: any) => {
     const request = /^[0-9a-f]{24}$/.test(id) ? await AccessRequest.findById(id) : null;
     if (!request) {
         throw fail(404, 'there is no such request');
@@ -655,7 +655,7 @@ var findRequest = async (id) => {
     return request;
 };
 
-exports.approveRequest = async function(admin, id, role) {
+exports.approveRequest = async function(admin: any, id: any, role: any) {
     checkRole(role);
     const request = await findRequest(id);
     const provider = await Provider.findById(request.provider);
@@ -672,7 +672,7 @@ exports.approveRequest = async function(admin, id, role) {
     return account.describe();
 };
 
-exports.denyRequest = async function(admin, id) {
+exports.denyRequest = async function(admin: any, id: any) {
     const request = await findRequest(id);
     request.status = 'denied';
     await request.save();
@@ -682,14 +682,14 @@ exports.denyRequest = async function(admin, id) {
     return requestView(request, await providerNames());
 };
 
-exports.forgetRequest = async function(admin, id) {
+exports.forgetRequest = async function(admin: any, id: any) {
     const request = await findRequest(id);
     await request.deleteOne();
     logger.info(`REST ${admin.email}: forgot the request from ${request.email || request.subject}`);
     return { code: 200, message: 'forgotten' };
 };
 
-var invitationView = (invitation, names) => ({
+var invitationView = (invitation: any, names: any) => ({
     id: invitation._id.toString(),
     email: invitation.email,
     provider: invitation.provider,
@@ -701,10 +701,10 @@ var invitationView = (invitation, names) => ({
 
 exports.listInvitations = async function() {
     const [invitations, names] = await Promise.all([Invitation.find({}).sort({ email: 1 }), providerNames()]);
-    return invitations.map((invitation) => invitationView(invitation, names));
+    return invitations.map((invitation: any) => invitationView(invitation, names));
 };
 
-exports.createInvitation = async function(admin, body) {
+exports.createInvitation = async function(admin: any, body: any) {
     const email = String(body.email || '').trim().toLowerCase();
     const role = body.role || 'user';
     if (!/^[^@\s]+@[^@\s]+$/.test(email)) {
@@ -724,7 +724,7 @@ exports.createInvitation = async function(admin, body) {
     return invitationView(invitation, await providerNames());
 };
 
-exports.deleteInvitation = async function(admin, id) {
+exports.deleteInvitation = async function(admin: any, id: any) {
     const invitation = /^[0-9a-f]{24}$/.test(id) ? await Invitation.findById(id) : null;
     if (!invitation) {
         throw fail(404, 'there is no such invitation');

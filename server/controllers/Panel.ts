@@ -9,10 +9,10 @@ var Panel = require('../service/PanelService');
 
 module.exports.getPanelDisplay = function getPanelDisplay (req: AuthedRequest, res: Response) {
   Panel.getPanelDisplay()
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
@@ -20,10 +20,10 @@ module.exports.getPanelDisplay = function getPanelDisplay (req: AuthedRequest, r
 module.exports.pressPanelKey = function pressPanelKey (req: AuthedRequest, res: Response) {
   var key = swaggerValue(req, 'key');
   Panel.pressPanelKey(key, req.user)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

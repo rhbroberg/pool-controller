@@ -25,12 +25,12 @@ const READINGS = ['pool temp', 'spa temp', 'salt', 'ambient'];
 const WRITE_BATCH = 1000;
 const PROGRESS_EVERY = 2000;
 
-var badRequest = (message) => utils.respondWithCode(400, { code: 400, message });
+var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message });
 
 // the latest run, kept until the next one starts
 var latest = null as any;
 
-var parseDate = (text, label) => {
+var parseDate = (text: any, label: any) => {
     const date = new Date(text);
     if (typeof text !== 'string' || isNaN(date.getTime())) {
         throw badRequest(`${label} is not a date: ${text}`);
@@ -38,7 +38,7 @@ var parseDate = (text, label) => {
     return date;
 };
 
-var chosenTypes = (eventTypes) => {
+var chosenTypes = (eventTypes: any) => {
     if (eventTypes === undefined || eventTypes === null || (Array.isArray(eventTypes) && eventTypes.length === 0)) {
         return EVENT_TYPES;
     }
@@ -52,9 +52,9 @@ var chosenTypes = (eventTypes) => {
     return list;
 };
 
-var statusKey = (status) => (status || []).map((entry) => `${entry.name}=${entry.value}`).sort().join('|');
+var statusKey = (status: any) => (status || []).map((entry: any) => `${entry.name}=${entry.value}`).sort().join('|');
 
-var asBuffer = (raw) => {
+var asBuffer = (raw: any) => {
     if (!raw) {
         return null;
     }
@@ -72,7 +72,7 @@ var asBuffer = (raw) => {
  * gave a new reason to check the system, or null when it changes nothing; undefined when the bytes
  * hold no whole frame, which leaves the event alone
  **/
-var reinterpret = (raw, factory, interpreter) => {
+var reinterpret = (raw: any, factory: any, interpreter: any) => {
     const bytes = asBuffer(raw);
     const frames = bytes ? framesIn(bytes) : [] as any[];
     if (frames.length === 0) {
@@ -110,30 +110,30 @@ var reinterpret = (raw, factory, interpreter) => {
  * the state history held as `from` opens: each reading's last value, the switches last on and the
  * heater's mode
  **/
-var stateBefore = async (from) => {
+var stateBefore = async (from: any) => {
     // only stored events: an hourly summary can reach past from, into what is being reprocessed
-    const last = async (eventType, name) => {
+    const last = async (eventType: any, name: any) => {
         const doc = await Event.findOne({ eventType, 'status.name': name, timestamp: { $lt: from } })
             .sort({ timestamp: -1 }).select({ status: 1 }).lean();
-        const entry = doc && doc.status.find((each) => each.name === name);
+        const entry = doc && doc.status.find((each: any) => each.name === name);
         return entry && typeof entry.value === 'number' ? entry.value : undefined;
     };
     const switchNames = statusMap.flat();
     const [readings, switches, heaterAuto] = await Promise.all([
         Promise.all(READINGS.map((name) => last('info', name))),
-        Promise.all(switchNames.map((name) => last('status', name))),
+        Promise.all(switchNames.map((name: any) => last('status', name))),
         last('info', HEATER_MODE)
     ]);
     return {
         readings: Object.fromEntries(READINGS.map((name, index) => [name, readings[index]])),
-        switchesOn: switchNames.filter((name, index) => switches[index] === 1),
+        switchesOn: switchNames.filter((name: any, index: any) => switches[index] === 1),
         heaterAuto
     };
 };
 
 // each kind has an index on eventType then timestamp; sorting kinds together has none, and the raw
 // frames don't fit in MongoDB's in-memory sort
-var cursorFor = (eventType, from, to, withRaw) => Event.find({ eventType, timestamp: { $gte: from, $lt: to } })
+var cursorFor = (eventType: any, from: any, to: any, withRaw: any) => Event.find({ eventType, timestamp: { $gte: from, $lt: to } })
     .sort({ timestamp: 1 })
     .hint('eventType_timestamp')
     .select(withRaw ? { timestamp: 1, eventType: 1, status: 1, message: 1, raw: 1 } : { timestamp: 1, eventType: 1, status: 1, message: 1 })
@@ -143,7 +143,7 @@ var cursorFor = (eventType, from, to, withRaw) => Event.find({ eventType, timest
 // at one time, readings before the frames they might repeat
 const ORDER = ['info', 'status', 'control', 'failed', 'unrecognized'];
 
-var replay = async (run) => {
+var replay = async (run: any) => {
     const { from, to, eventTypes, dryRun } = run;
     const interpreter = new FrameInterpreter();
     interpreter.seed(await stateBefore(from));
@@ -158,7 +158,7 @@ var replay = async (run) => {
     const rewritten = new Set();
     let updates = [] as any[];
     let removals = [] as any[];
-    const flush = async (force) => {
+    const flush = async (force: any) => {
         if (dryRun) {
             updates = [];
             removals = [];
@@ -174,7 +174,7 @@ var replay = async (run) => {
         }
     };
 
-    const transition = (before, after) => {
+    const transition = (before: any, after: any) => {
         const key = `${before}>${after}`;
         run.transitions[key] = (run.transitions[key] || 0) + 1;
     };
@@ -232,7 +232,7 @@ var replay = async (run) => {
     await Promise.all(cursors.map((each) => each.cursor.close()));
 };
 
-var describe = (run) => run && {
+var describe = (run: any) => run && {
     state: run.state,
     from: run.from,
     to: run.to,
@@ -258,7 +258,7 @@ var describe = (run) => run && {
     error: run.error || null
 };
 
-var execute = async (run, user) => {
+var execute = async (run: any, user: any) => {
     run.state = 'running';
     run.startedAt = new Date();
     try {
@@ -266,7 +266,7 @@ var execute = async (run, user) => {
         if (!run.dryRun && (run.updated > 0 || run.removed > 0)) {
             // the summaries hold values until they change, so everything after the range can move too
             await rollups.invalidateFrom(run.from);
-            scheduler.runNow(rollups.ROLLUPS_JOB, 'reprocessed history').catch((e) => logger.error(`rollups after reprocessing: ${e.message}`));
+            scheduler.runNow(rollups.ROLLUPS_JOB, 'reprocessed history').catch((e: any) => logger.error(`rollups after reprocessing: ${e.message}`));
         }
         run.state = 'finished';
         const summary = `${run.examined} events from ${run.from.toISOString()} to ${run.to.toISOString()} (${run.eventTypes.join(', ')}): ${run.updated} rewritten, ${run.removed} removed, ${run.unchanged} unchanged`;

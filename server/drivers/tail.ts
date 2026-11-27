@@ -1,21 +1,21 @@
 /* eslint-disable */
 // forked from github project which was forked from the 'official' tail npm; return Buffer, not String to preserve binary data
 
-var Tail, environment, events, fs,
-    __bind = function(fn, me) { return function() { return fn.apply(me, arguments); }; },
+var Tail, environment, events: any, fs: any,
+    __bind = function(fn: any, me: any) { return function() { return fn.apply(me, arguments); }; },
     __hasProp: any = {}.hasOwnProperty,
-    __extends = function(child, parent) {
+    __extends = function(child: any, parent: any) {
         for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
 
-        function ctor() { this.constructor = child; } ctor.prototype = parent.prototype;
-        child.prototype = new ctor();
+        function ctor(this: any) { this.constructor = child; } ctor.prototype = parent.prototype;
+        child.prototype = new (ctor as any)();
         child.__super__ = parent.prototype;
         return child;
     };
 
 var debug = require('debug')('always-tail');
-var events = require("events");
-var fs = require('fs');
+events = require("events");
+fs = require('fs');
 
 const log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -31,7 +31,7 @@ Tail = (function(_super) {
      * @private
      */
     Tail.prototype.readBlock = function() {
-        var block, stream,
+        var block: any, stream,
             self = this;
 
         var next = function() {
@@ -48,7 +48,7 @@ Tail = (function(_super) {
 
             block = this.queue.shift();
 
-            fs.fstat(block.fd, function(err, stat) {
+            fs.fstat(block.fd, function(err: any, stat: any) {
 
                 if (err) { return next(); };
 
@@ -72,7 +72,7 @@ Tail = (function(_super) {
                 var buffer = Buffer.alloc(size);
 
                 debug("reading:", block.fd, size, start);
-                fs.read(block.fd, buffer, 0, size, start, function(err, bytesRead, buff) {
+                fs.read(block.fd, buffer, 0, size, start, function(err: any, bytesRead: any, buff: any) {
                     var chunk, parts, _i, _len, _results;
 
                     if (err) { return self.emit('error', err); };
@@ -118,7 +118,7 @@ Tail = (function(_super) {
      * @param {Integer} options.interval (optional) interval to monitor for changes, default: 5000ms 
      *
      */
-    function Tail(filename, separator, options) {
+    function Tail(filename: any, separator: any, options: any) {
         var self = this;
         options = options || {};
 
@@ -200,7 +200,7 @@ Tail = (function(_super) {
      *
      * @private
      */
-    Tail.prototype.closeCurrent = function(callback) {
+    Tail.prototype.closeCurrent = function(callback: any) {
         var self = this;
         callback = callback || function() {};
 
@@ -228,15 +228,15 @@ Tail = (function(_super) {
 
         self.checking = false;
 
-        self.watcher = fs.watchFile(this.filename, { interval: self.interval }, function(curr, prev) {
+        self.watcher = fs.watchFile(this.filename, { interval: self.interval }, function(curr: any, prev: any) {
 
             if (self.checking) return;
 
             self.checking = true;
 
-            var checkOpen = function(callback) {
+            var checkOpen = function(callback: any) {
                 if (self.fd == null) {
-                    fs.exists(self.filename, function(exists) {
+                    fs.exists(self.filename, function(exists: any) {
                         if (exists) {
                             self.fd = fs.openSync(self.filename, 'r');
                             self.inode = curr.ino;
@@ -250,7 +250,7 @@ Tail = (function(_super) {
             };
 
             // add a read event;
-            var readPending = function(callback) {
+            var readPending = function(callback: any) {
                 if (self.fd != null) {
                     self.queue.push({
                         type: 'read',

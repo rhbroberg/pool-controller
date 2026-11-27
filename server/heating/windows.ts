@@ -41,7 +41,7 @@ const DEFAULTS = {
 const SOURCES = [...HEATING_SOURCES];
 
 const SWITCHES = ['filter', 'aux14', 'spa', 'spillover', 'heater1', 'valve4'];
-const SERIES = { pool: 'pool temp', spa: 'spa temp' };
+const SERIES: Record<string, string> = { pool: 'pool temp', spa: 'spa temp' };
 const AIR = 'ambient';
 
 interface SeriesPoint { t: number; v: number; }
@@ -123,7 +123,7 @@ const meanOver = (series: SeriesPoint[], start: number, end: number): number | u
     let at = start;
     let known = 0;
     let total = 0;
-    const move = (to) => {
+    const move = (to: any) => {
         if (typeof value === 'number') {
             total += value * (to - at);
             known += to - at;
@@ -228,7 +228,7 @@ class WindowExtractor {
 
     // after the server was down, it reports the switches that are on as new again; any it doesn't
     // mention are off
-    gap(from, to) {
+    gap(from: any, to: any) {
         this.gaps.push({ from, to });
         this.close(from);
         SWITCHES.forEach((name) => {
@@ -246,7 +246,7 @@ class WindowExtractor {
         return body ? { body, heater: sw.heater1 === 1, pump: sw.valve4 === 1 } : null;
     }
 
-    classify(t) {
+    classify(t: any) {
         const now = this.current();
         const open = this.open;
         const same = open && now && open.body === now.body && open.heater === now.heater && open.pump === now.pump;
@@ -259,7 +259,7 @@ class WindowExtractor {
         }
     }
 
-    close(t) {
+    close(t: any) {
         if (this.open) {
             this.open.end = t;
             this.segments.push(this.open);
@@ -268,7 +268,7 @@ class WindowExtractor {
     }
 
     /** the windows, once every event has been pushed; `end` closes a run still going */
-    finish(end) {
+    finish(end: any) {
         this.close(typeof end === 'number' ? Math.min(end, this.last ?? end) : this.last);
         const windows = [] as any[];
         this.joinFlickers().forEach((segment) => {
@@ -305,7 +305,7 @@ class WindowExtractor {
 
     // a run's unsettled start is left out, as is the end of a heat pump's: with no signal of its
     // own, it is on while the water is already at its setpoint; then the temperature stops rising
-    windowsOf(segment) {
+    windowsOf(segment: any) {
         const { settleMs, maxWindowMs } = this.options;
         const start = segment.start + settleMs;
         let end = segment.end;
@@ -329,7 +329,7 @@ class WindowExtractor {
         return windows;
     }
 
-    measure(window) {
+    measure(window: any) {
         const { minHeatingMs, minCoolingMs, minHeatingReadings, minCoolingReadings, maxScatterF } = this.options;
         const sources = sourcesOf(window.heater, window.pump);
         const cooling = sources === 'cooling';
@@ -353,7 +353,7 @@ class WindowExtractor {
             suitable: false,
             reason: null as string | null
         };
-        const reject = (reason) => Object.assign(result, { reason });
+        const reject = (reason: any) => Object.assign(result, { reason });
 
         if (window.settling) {
             return reject('settling');

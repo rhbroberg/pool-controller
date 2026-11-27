@@ -9,20 +9,20 @@ var EventLog = require('../service/EventLogService');
 
 module.exports.getEvents = function getEvents (req: AuthedRequest, res: Response) {
   EventLog.getEvents(swaggerValue(req, 'types'), swaggerValue(req, 'user'), swaggerValue(req, 'cursor'), swaggerValue(req, 'order'), swaggerValue(req, 'limit'))
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.getEventUsers = function getEventUsers (req: AuthedRequest, res: Response) {
   EventLog.getEventUsers()
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

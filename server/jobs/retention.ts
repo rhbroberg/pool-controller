@@ -28,7 +28,7 @@ var run = async (): Promise<{ summary: string; more?: boolean }> => {
     let more = false;
     while (Date.now() < deadline) {
         const ids = (await Event.find({ timestamp: { $lt: new Date(safe) } }).sort({ timestamp: 1 }).limit(BATCH).select({ _id: 1 }).lean())
-            .map((doc) => doc._id);
+            .map((doc: any) => doc._id);
         if (ids.length === 0) {
             break;
         }

@@ -9,7 +9,7 @@ const log4js = require('log4js');
 var logger = log4js.getLogger();
 
 // lines up with strings in db storage
-const tempNames = {
+const tempNames: Record<string, string> = {
     'pool': 'pool temp',
     'spa': 'spa temp'
 };
@@ -20,7 +20,7 @@ const tempNames = {
  * poolId String 
  * returns HeaterState
  **/
-exports.getHeaterState = async function(poolId) {
+exports.getHeaterState = async function(poolId: any) {
     const heater = (await heatingService.getHeating()).devices.heater1;
     return {
         'id': 'heater1',
@@ -37,7 +37,7 @@ exports.getHeaterState = async function(poolId) {
  * poolId String 
  * returns TemperatueZoneStatus
  **/
-exports.getPoolTemperature = async function(poolId, date, limit) {
+exports.getPoolTemperature = async function(poolId: any, date: any, limit: any) {
     var statuses = [] as any[];
     var examples: any = {};
 
@@ -51,8 +51,8 @@ exports.getPoolTemperature = async function(poolId, date, limit) {
             timestamp: { $gte: date }
         }).select('timestamp').select('status').sort('timestamp').limit(typeof limit !== 'undefined' ? limit : 0);
 
-        let lastTime;
-        events.forEach(function(event) {
+        let lastTime: any;
+        events.forEach(function(event: any) {
             logger.trace('event: ', event.timestamp, event.status[0].value);
             if (limit === -1 /* code disabled for now; option to fill in time slots*/ ) {
                 const nextTime = new Date(event.timestamp).getTime();
@@ -91,7 +91,7 @@ exports.getPoolTemperature = async function(poolId, date, limit) {
  * state String 
  * returns ApiResponse
  **/
-exports.setHeaterState = function(poolId, state) { // eslint-disable-line no-unused-vars
+exports.setHeaterState = function(poolId: any, state: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -106,7 +106,7 @@ exports.setHeaterState = function(poolId, state) { // eslint-disable-line no-unu
     });
 };
 
-async function getMostRecentInfo(name, statuses) {
+async function getMostRecentInfo(name: any, statuses: any) {
     const doc = await Event.findOne({ eventType: 'info', 'status': { $elemMatch: { 'name': name } } }).sort({ timestamp: -1 });
     logger.debug('found newest env for ', name, doc);
     if (doc) {
@@ -122,7 +122,7 @@ async function getMostRecentInfo(name, statuses) {
 
 var controlCB; // eslint-disable-line no-unused-vars
 
-exports.registerControlListener = function(cb) {
+exports.registerControlListener = function(cb: any) {
     controlCB = cb;
 };
 

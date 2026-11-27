@@ -139,7 +139,7 @@ export function location() {
     return stored.location;
 };
 
-var publicLocation = (location) => location ? {
+var publicLocation = (location: any) => location ? {
     zipCode: location.zipCode,
     countryCode: location.countryCode,
     placeName: location.placeName,
@@ -151,7 +151,7 @@ var publicLocation = (location) => location ? {
  * the place for a zip code: null clears it, an unknown code or one that isn't five digits is a
  * 400, and a lookup service that can't be reached is a 502
  **/
-var locate = async (zipCode) => {
+var locate = async (zipCode: any) => {
     const text = zipCode === null || typeof zipCode === 'undefined' ? '' : String(zipCode).trim();
     if (text === '') {
         return null;

@@ -113,7 +113,7 @@ const solve = (matrix: number[][], vector: number[]): number[] | undefined => {
  **/
 const nonNegativeFit = (rows: number[][], slopes: number[], weights: number[], allowed: boolean[]): number[] => {
     let best = { error: Infinity, coefficients: new Array(COLUMNS).fill(0) };
-    const error = (coefficients) => rows.reduce((sum, line, index) => {
+    const error = (coefficients: any) => rows.reduce((sum, line, index) => {
         const predicted = line.reduce((total, value, column) => total + value * coefficients[column], 0);
         return sum + weights[index] * Math.pow(slopes[index] - predicted, 2);
     }, 0);

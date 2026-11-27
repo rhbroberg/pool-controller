@@ -25,12 +25,12 @@ var resolveParameter = (parameter: any) => {
     if (!parameter.$ref) {
         return parameter;
     }
-    return parameter.$ref.split('/').slice(1).reduce((node, key) => node[key], apiDoc);
+    return parameter.$ref.split('/').slice(1).reduce((node: any, key: any) => node[key], apiDoc);
 };
 
 // controllers read their inputs as req.swagger.params[name].value, the validated and coerced values
 var operationParams = (req: AuthedRequest, operation: any) => {
-    const sources = { path: req.openapi?.pathParams, query: req.query, header: req.headers };
+    const sources: Record<string, any> = { path: req.openapi?.pathParams, query: req.query, header: req.headers };
     const params: any = {};
     for (const parameter of (operation.parameters || []).map(resolveParameter)) {
         const source = sources[parameter.in] || {};
@@ -90,7 +90,7 @@ var initializeServer = (cb: (app: any, server: any) => void) => {
     const app = express();
     app.disable('x-powered-by');
 
-    app.get('/api-docs', (req, res) => res.json(apiDoc));
+    app.get('/api-docs', (req: any, res: any) => res.json(apiDoc));
     app.use('/docs', swaggerUi.serve, swaggerUi.setup(apiDoc));
 
     app.use(express.json());

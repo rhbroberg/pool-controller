@@ -8,7 +8,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "strictNullChecks": true,
     "noImplicitThis": false,
     "useDefineForClassFields": false,

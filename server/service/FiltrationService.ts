@@ -31,7 +31,7 @@ exports.getFiltrationDevices = function() {
  * pumpId String 
  * returns ApiResponse
  **/
-exports.getFiltrationState = function(pumpId) { // eslint-disable-line no-unused-vars
+exports.getFiltrationState = function(pumpId: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -53,7 +53,7 @@ exports.getFiltrationState = function(pumpId) { // eslint-disable-line no-unused
  * state String 
  * returns ApiResponse
  **/
-exports.setFiltrationState = function(pumpId, state) { // eslint-disable-line no-unused-vars
+exports.setFiltrationState = function(pumpId: any, state: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {

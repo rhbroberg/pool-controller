@@ -41,36 +41,36 @@ var tickMs = () => {
 const SPA_READING_FRESH_MS = 3 * HOUR_MS;
 // what the spa is assumed to be with no reading and no air temperature
 const UNKNOWN_SPA_F = 70;
-const SWITCHES = { filter: 'filter', spaFilter: 'aux14', heater: 'heater1', heatPump: 'valve4', blower: 'aux5', lights: 'lights' };
-const TITLES = { pool: 'Pool', spaPreheat: 'Spa Preheat', spaParty: 'Spa Party' };
+const SWITCHES: Record<string, string> = { filter: 'filter', spaFilter: 'aux14', heater: 'heater1', heatPump: 'valve4', blower: 'aux5', lights: 'lights' };
+const TITLES: Record<string, string> = { pool: 'Pool', spaPreheat: 'Spa Preheat', spaParty: 'Spa Party' };
 
 // { isOn(name), waterMode }
 var stateSource: () => { isOn: (name?: string) => boolean; waterMode?: string; ambient?: number } = () => ({ isOn: (_name?: string) => false, waterMode: undefined });
 var scheduled = null as any;
 var listeners = [] as any[];
-var ticker;
+var ticker: any;
 var clock = () => Date.now();
 
-export function registerStateSource(source) {
+export function registerStateSource(source: any) {
     stateSource = source;
 };
 
 /** for the tests: a clock other than the real one */
-export function useClock(now) {
+export function useClock(now: any) {
     clock = now || (() => Date.now());
 };
 
 /** listener() runs when a scheduled preheat is set, cancelled or started */
-export function onChange(listener) {
+export function onChange(listener: any) {
     listeners.push(listener);
 };
 
 var changed = () => listeners.forEach((listener) => listener());
 
-var conflict = (message) => utils.respondWithCode(409, { code: 409, message });
-var badRequest = (message) => utils.respondWithCode(400, { code: 400, message });
+var conflict = (message: any) => utils.respondWithCode(409, { code: 409, message });
+var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message });
 
-var who = (user) => user && user.email ? user.email : 'unknown user';
+var who = (user: any) => user && user.email ? user.email : 'unknown user';
 
 /**
  * reads a preheat scheduled before a restart, and checks every minute whether it's time to start
@@ -88,7 +88,7 @@ export async function load() {
     }
 };
 
-var saveSchedule = async (value) => {
+var saveSchedule = async (value: any) => {
     scheduled = value;
     await Setting.updateOne({ _id: SETTINGS_ID }, { $set: { scheduledPreheat: value } }, { upsert: true });
     changed();
@@ -100,7 +100,7 @@ var spaSetpoint = () => Math.max(heatingService.setpoint('spa', 'heater1'), heat
 
 var states = () => {
     const state = stateSource();
-    const on = (name) => state.isOn(SWITCHES[name]) === true;
+    const on = (name: any) => state.isOn(SWITCHES[name]) === true;
     // turning one heat source off leaves the spa heating with the other, so it stays a preheat
     const preheat = on('spaFilter') && (on('heater') || on('heatPump'));
     return {
@@ -114,9 +114,9 @@ var states = () => {
  * the spa's temperature to time a preheat from: its last reading while recent, otherwise the
  * lower of that and the air, since an idle spa cools toward the air
  **/
-var spaStartingTemperature = async (air) => {
+var spaStartingTemperature = async (air: any) => {
     const last = await Event.findOne({ eventType: 'info', 'status.name': 'spa temp' }).sort({ timestamp: -1 }).lean();
-    const entry = last && last.status.find((reading) => reading.name === 'spa temp');
+    const entry = last && last.status.find((reading: any) => reading.name === 'spa temp');
     const reading = entry && typeof entry.value === 'number' && entry.value > 0 ? entry.value : undefined;
     const fresh = reading !== undefined && clock() - new Date(last.timestamp).getTime() < SPA_READING_FRESH_MS;
     if (fresh) {
@@ -145,7 +145,7 @@ var leadTime = async () => {
         temperature,
         airTemperature: air === undefined ? temperature : air,
         sources: [{ name: 'heater1', setpoint }, { name: 'heatpump', setpoint }],
-        sun: (hours) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
+        sun: (hours: any) => sun.averageOver(sunAt, now, now + hours * HOUR_MS)
     });
     let minutes;
     if (outcome.status === 'ready') {
@@ -199,7 +199,7 @@ export async function getTasks() {
  * asks for each switch in turn, going on past one the controller won't take, and fails with
  * what went wrong once all have been asked for
  **/
-var apply = async (steps, user) => {
+var apply = async (steps: any, user: any) => {
     const problems = [] as any[];
     for (const step of steps) {
         try {
@@ -230,7 +230,7 @@ var record = (user: any, task: string, on: boolean, extra?: string) => {
     activity.record(user, what);
 };
 
-var startPreheat = async (user) => {
+var startPreheat = async (user: any) => {
     // the blower off first: spa party is preheat with the blower, so a prior party must not
     // remain on when only a preheat was asked for
     await apply([{ device: 'blower', on: false }, ...preheatSteps()], user);
@@ -241,7 +241,7 @@ var startPreheat = async (user) => {
  *
  * returns Tasks
  **/
-export async function setPool(on, user) {
+export async function setPool(on: any, user: any) {
     record(user, 'pool', on);
     // the pump first, so the water flows as soon as the valves turn
     await apply(on ? [{ device: 'filter', on: true }, { mode: 'spillover' }] : [{ device: 'filter', on: false }], user);
@@ -253,7 +253,7 @@ export async function setPool(on, user) {
  *
  * returns Tasks
  **/
-export async function setSpaPreheat(on, readyAt, user) {
+export async function setSpaPreheat(on: any, readyAt: any, user: any) {
     if (!on) {
         record(user, 'spaPreheat', false, scheduled ? '(and its schedule)' : undefined);
         if (scheduled) {
@@ -288,7 +288,7 @@ export async function setSpaPreheat(on, readyAt, user) {
  *
  * returns Tasks
  **/
-export async function setSpaParty(on, user) {
+export async function setSpaParty(on: any, user: any) {
     record(user, 'spaParty', on);
     if (on) {
         if (scheduled) {

@@ -9,10 +9,10 @@ var Filtration = require('../service/FiltrationService');
 
 module.exports.getFiltrationDevices = function getFiltrationDevices (req: AuthedRequest, res: Response) {
   Filtration.getFiltrationDevices()
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
@@ -20,10 +20,10 @@ module.exports.getFiltrationDevices = function getFiltrationDevices (req: Authed
 module.exports.getFiltrationState = function getFiltrationState (req: AuthedRequest, res: Response) {
   var pumpId = swaggerValue(req, 'pumpId');
   Filtration.getFiltrationState(pumpId)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
@@ -32,10 +32,10 @@ module.exports.setFiltrationState = function setFiltrationState (req: AuthedRequ
   var pumpId = swaggerValue(req, 'pumpId');
   var state = swaggerValue(req, 'state');
   Filtration.setFiltrationState(pumpId,state)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

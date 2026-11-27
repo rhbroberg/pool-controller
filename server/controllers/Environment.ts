@@ -10,10 +10,10 @@ var Environment = require('../service/EnvironmentService');
 module.exports.getHeaterState = function getHeaterState (req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   Environment.getHeaterState(poolId)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
@@ -23,10 +23,10 @@ module.exports.getPoolTemperature = function getPoolTemperature (req: AuthedRequ
   var date = swaggerValue(req, 'date');
   var limit = swaggerValue(req, 'limit');
   Environment.getPoolTemperature(poolId,date,limit)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
@@ -35,20 +35,20 @@ module.exports.setHeaterState = function setHeaterState (req: AuthedRequest, res
   var poolId = swaggerValue(req, 'poolId');
   var state = swaggerValue(req, 'state');
   Environment.setHeaterState(poolId,state)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.temperatureSummary = function temperatureSummary (req: AuthedRequest, res: Response) {
   Environment.temperatureSummary()
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

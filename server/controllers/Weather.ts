@@ -9,10 +9,10 @@ var Weather = require('../service/WeatherService');
 
 module.exports.getWeather = function getWeather (req: AuthedRequest, res: Response) {
   Weather.getWeather()
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       if (response instanceof ApiError) {
         utils.writeJson(res, response.body, response.code);
         return;

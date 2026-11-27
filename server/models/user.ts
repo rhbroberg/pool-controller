@@ -13,7 +13,7 @@ const DEFAULT_ADMIN_PASSWORD = 'admin';
 
 // each role holds every OAuth2 scope of the roles before it
 const ROLES: UserRole[] = [...USER_ROLES];
-const ROLE_SCOPES: Record<UserRole, OAuthScope[]> = {
+const ROLE_SCOPES: Record<string, OAuthScope[]> = {
     viewer: ['account'],
     user: ['account', 'control'],
     admin: ['account', 'control', 'admin']
@@ -83,7 +83,7 @@ UserSchema.methods.hasPassword = function() {
 
 // how the account signs in: password and/or the ids of its external services
 UserSchema.methods.signInMethods = function() {
-    return (this.hasPassword() ? ['password'] : []).concat((this.identities || []).map((identity) => identity.provider));
+    return (this.hasPassword() ? ['password'] : []).concat((this.identities || []).map((identity: any) => identity.provider));
 };
 
 // the account as the API reports it, without secrets
@@ -111,7 +111,7 @@ UserSchema.statics.findByIdentity = function(provider: string, subject: string) 
 };
 
 UserSchema.methods.hasScope = function(scope: string) {
-    return (ROLE_SCOPES[this.role] || []).includes(scope);
+    return (ROLE_SCOPES[this.role] || []).includes(scope as OAuthScope);
 };
 
 UserSchema.methods.generateAuthToken = function() {
@@ -157,7 +157,7 @@ UserSchema.statics.findByToken = function(token: string) {
 UserSchema.statics.findByCredentials = function(email: string, password: string) {
     var User = this;
 
-    return User.findOne({ email }).then((user) => {
+    return User.findOne({ email }).then((user: any) => {
         if (!user || !user.password) {
             return Promise.reject();
         }

@@ -19,11 +19,11 @@ var requireJwtSecret = () => {
     }
 };
 
-var fail = (code, message) => utils.respondWithCode(code, { code: code, message: message });
+var fail = (code: any, message: any) => utils.respondWithCode(code, { code: code, message: message });
 
-var describe = (user) => user.describe();
+var describe = (user: any) => user.describe();
 
-var checkName = (name) => {
+var checkName = (name: any) => {
     if (!name) {
         throw fail(400, 'an account name is required');
     }
@@ -32,26 +32,26 @@ var checkName = (name) => {
     }
 };
 
-var checkPassword = (password) => {
+var checkPassword = (password: any) => {
     if (!password || password.length < MINIMUM_PASSWORD_LENGTH || password === DEFAULT_ADMIN_PASSWORD) {
         throw fail(400, `choose a password of at least ${MINIMUM_PASSWORD_LENGTH} characters`);
     }
 };
 
-var checkRole = (role) => {
+var checkRole = (role: any) => {
     if (!ROLES.includes(role)) {
         throw fail(400, `role must be one of ${ROLES.join(', ')}`);
     }
 };
 
 // keeps at least one admin who can manage the others
-var requireAnotherAdmin = async (user) => {
+var requireAnotherAdmin = async (user: any) => {
     if (user.role === 'admin' && await User.countDocuments({ role: 'admin', _id: { $ne: user._id } }) === 0) {
         throw fail(409, `${user.email} is the only admin`);
     }
 };
 
-var findAccount = async (name) => {
+var findAccount = async (name: any) => {
     const account = await User.findOne({ email: name });
     if (!account) {
         throw fail(404, `there is no account named ${name}`);
@@ -64,7 +64,7 @@ var findAccount = async (name) => {
  *
  * returns User
  **/
-exports.createUser = async function(admin, credentials) {
+exports.createUser = async function(admin: any, credentials: any) {
     const name = (credentials.email || '').trim();
     const role = credentials.role || 'user';
     checkName(name);
@@ -97,7 +97,7 @@ exports.listUsers = async function() {
  *
  * returns User
  **/
-exports.updateUser = async function(admin, name, changes) {
+exports.updateUser = async function(admin: any, name: any, changes: any) {
     const account = await findAccount(name);
     const updated = [] as any[];
     const described = [] as any[];
@@ -134,7 +134,7 @@ exports.updateUser = async function(admin, name, changes) {
  *
  * returns ApiResponse
  **/
-exports.deleteUser = async function(admin, name) {
+exports.deleteUser = async function(admin: any, name: any) {
     const account = await findAccount(name);
     await requireAnotherAdmin(account);
     await account.deleteOne();
@@ -149,7 +149,7 @@ exports.deleteUser = async function(admin, name) {
  *
  * returns User
  **/
-exports.getUser = async function(user) {
+exports.getUser = async function(user: any) {
     return describe(user);
 };
 
@@ -158,7 +158,7 @@ exports.getUser = async function(user) {
  * returns User with a token to send as the x-auth header; mustChangeCredentials means the
  * token is only good for changeCredentials until the account is renamed
  **/
-exports.loginUser = async function(credentials) {
+exports.loginUser = async function(credentials: any) {
     requireJwtSecret();
     if (!externalAuth.passwordSignInAllowed()) {
         throw fail(403, 'password sign-in is turned off here; sign in with one of the services instead');
@@ -185,7 +185,7 @@ exports.loginUser = async function(credentials) {
  *
  * returns User
  **/
-exports.changeCredentials = async function(user, credentials) {
+exports.changeCredentials = async function(user: any, credentials: any) {
     requireJwtSecret();
 
     const name = (credentials.email || '').trim();
@@ -219,7 +219,7 @@ exports.changeCredentials = async function(user, credentials) {
  *
  * returns ApiResponse
  **/
-exports.logoutUser = async function(user, token) {
+exports.logoutUser = async function(user: any, token: any) {
     await user.removeToken(token);
     logger.info(`REST ${user.email}: signed out`);
     activity.record(user, 'Signed out');

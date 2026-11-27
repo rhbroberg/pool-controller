@@ -31,7 +31,7 @@ const DAILY = {
     sunset: 'sunset'
 };
 
-var getJson = async (url, service) => {
+var getJson = async (url: any, service: any) => {
     let response;
     try {
         response = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
@@ -42,13 +42,13 @@ var getJson = async (url, service) => {
     return { status: response.status, body };
 };
 
-var numberOrNull = (value) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+var numberOrNull = (value: any) => typeof value === 'number' && Number.isFinite(value) ? value : null;
 
 /**
  * the place a five-digit US zip code belongs to, or undefined when there's none
  **/
-exports.geocode = async function(zipCode) {
-    const { status, body } = await getJson(`${GEOCODE_URL}/us/${encodeURIComponent(zipCode)}`, 'the zip code service');
+exports.geocode = async function(zipCode: any) {
+    const { status, body }: { status: number; body: any } = await getJson(`${GEOCODE_URL}/us/${encodeURIComponent(zipCode)}`, 'the zip code service');
     if (status === 404) {
         return undefined;
     }
@@ -75,7 +75,7 @@ exports.geocode = async function(zipCode) {
  *
  * returns { hours: [{ time, airTemp, … }], days: [{ date, high, low, … }] }
  **/
-exports.forecast = async function({ latitude, longitude }, timeZone) {
+exports.forecast = async function({latitude, longitude}: any, timeZone: any) {
     const query = new URLSearchParams({
         latitude: String(latitude),
         longitude: String(longitude),
@@ -89,21 +89,21 @@ exports.forecast = async function({ latitude, longitude }, timeZone) {
         hourly: Object.values(HOURLY).join(','),
         daily: Object.values(DAILY).join(',')
     });
-    const { status, body } = await getJson(`${FORECAST_URL}?${query}`, 'the forecast service');
+    const { status, body }: { status: number; body: any } = await getJson(`${FORECAST_URL}?${query}`, 'the forecast service');
     if (status !== 200 || !body || !body.hourly || !body.daily) {
         throw new Error(`the forecast service answered ${status}${body && body.reason ? `: ${body.reason}` : ''}`);
     }
 
-    const hours = (body.hourly.time || []).map((seconds, i) => {
-        const hour = { time: new Date(seconds * 1000) };
+    const hours = (body.hourly.time || []).map((seconds: any, i: any) => {
+        const hour: Record<string, any> = { time: new Date(seconds * 1000) };
         for (const [field, name] of Object.entries(HOURLY)) {
             hour[field] = numberOrNull((body.hourly[name] || [])[i]);
         }
         return hour;
     });
-    const days = (body.daily.time || []).map((seconds, i) => {
-        const value = (name) => numberOrNull((body.daily[name] || [])[i]);
-        const instant = (name) => { const n = value(name); return n === null ? null : new Date(n * 1000); };
+    const days = (body.daily.time || []).map((seconds: any, i: any) => {
+        const value = (name: any) => numberOrNull((body.daily[name] || [])[i]);
+        const instant = (name: any) => { const n = value(name); return n === null ? null : new Date(n * 1000); };
         return {
             // the time is the local midnight starting the day; noon is safely inside it
             date: tz.dayKey(seconds * 1000 + tz.DAY_MS / 2, timeZone),

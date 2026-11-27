@@ -50,7 +50,7 @@ const listen = ((filename: string, cb: (data: Buffer) => void, options?: { fromS
     }
 
     var tail = new Tail(filename, new RegExp(String.fromCharCode(0x03)), { 'interval': 500 });
-    tail.on('line', (data) => {
+    tail.on('line', (data: any) => {
         logger.debug('got another tail hunk');
         cb(data);
     });

@@ -75,7 +75,7 @@ var interpreter = new FrameInterpreter();
 var latestDisplay: any;
 
 // drops indexes the models no longer list, such as the old status.0.name ones, and builds new ones
-var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map((model) => model.syncIndexes().then((dropped) => {
+var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map((model) => model.syncIndexes().then((dropped: any) => {
     if (dropped.length > 0) {
         logger.info(`dropped unused ${model.collection.name} indexes: ${dropped.join(', ')}`);
     }
@@ -85,7 +85,7 @@ var syncIndexes = () => Promise.all([Event, Rollup, WeatherHour, WeatherDay].map
 // history uses the configured time zone
 const startupChecked = mongoose.connection.asPromise()
     .then(() => Promise.all([systemService.commissionIfEmpty(), settingsService.load(), externalAuthService.load(), heatingModelService.load(), syncIndexes()]))
-    .catch((e) => logger.error(`startup checks failed: ${e}`));
+    .catch((e: any) => logger.error(`startup checks failed: ${e}`));
 
 // a new model changes every estimate at once
 heatingModelService.onChange(() => liveService.heatingChanged());
@@ -98,7 +98,7 @@ scheduler.register(weatherJob);
 startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
 // days begin at a different time in a new zone, so the daily rollups are redone right away, and
 // the weather's days with them; a new zip code needs its forecast straight away too
-settingsService.onChange((changes) => {
+settingsService.onChange((changes: any) => {
     // apps show the estimate as the server's settings say, and the zone sets the time of day it ends
     if (changes.heatingEstimateDisplay || changes.timeZone || changes.heatingRules) {
         liveService.heatingChanged();
@@ -108,10 +108,10 @@ settingsService.onChange((changes) => {
         liveService.tasksChanged();
     }
     if (changes.timeZone) {
-        scheduler.runNow(rollupsJob.name, 'time zone change').catch((e) => logger.error(`rollups after a time zone change: ${e.message}`));
+        scheduler.runNow(rollupsJob.name, 'time zone change').catch((e: any) => logger.error(`rollups after a time zone change: ${e.message}`));
     }
     if ((changes.timeZone && settingsService.location()) || changes.location) {
-        scheduler.runNow(weatherJob.name, 'settings change').catch((e) => logger.error(`weather after a settings change: ${e.message}`));
+        scheduler.runNow(weatherJob.name, 'settings change').catch((e: any) => logger.error(`weather after a settings change: ${e.message}`));
     }
 });
 
@@ -120,21 +120,21 @@ if (argv.d !== 'file' && !argv.jobsOnly) {
     logger.info('web server is active');
 
     // only the process that talks to the controller starts scheduled preheats
-    startupChecked.then(() => taskService.load()).catch((e) => logger.error(`could not load scheduled tasks: ${e.message}`));
+    startupChecked.then(() => taskService.load()).catch((e: any) => logger.error(`could not load scheduled tasks: ${e.message}`));
 
-    startupChecked.then(() => initializeServer((app, server) => {
+    startupChecked.then(() => initializeServer((app: any, server: any) => {
         app.use(express.static(publicPath));
         io = socketIO(server);
         liveService.attach(io, { heating: () => heatingService.getHeating(), tasks: () => taskService.getTasks() });
 
-        io.on('connection', (socket) => {
+        io.on('connection', (socket: any) => {
             logger.debug('connecting from client', socket);
             if (argv.fromStart && argv.d === 'tail' && !replayStarted) {
                 replayStarted = true;
                 logger.info('browser connected, replaying', argv.f);
                 driver.listen(argv.f, handleHunk, { fromStart: true });
             }
-            socket.on('join', (params, callback) => {
+            socket.on('join', (params: any, callback: any) => {
                 socket.join('datastream');
 
                 socket.emit('catchup', 'here is where i would stream the data up to this point');
@@ -164,9 +164,9 @@ var saveStatus = (switchesEnabled: any, buf: any, category: string, timestamp: a
         message: message
     });
 
-    return dbStatusEvent.save().then((doc) => {
+    return dbStatusEvent.save().then((doc: any) => {
         logger.trace('saved ', doc);
-    }, (e) => {
+    }, (e: any) => {
         logger.error(`failed saving ${category} Event: ${e}`);
     });
 };
@@ -216,7 +216,7 @@ var dispatchEvent = (buf: Buffer, wire = stuff(buf)) => {
             logger.debug('info: ', event.clearText());
             if (stored) {
                 const at = new Date(timestamp);
-                const readings = stored.status.map((entry) => entry.name === CHECK_SYSTEM_REASON
+                const readings = stored.status.map((entry: any) => entry.name === CHECK_SYSTEM_REASON
                     ? statusService.reasonReading(interpreter.checkSystemReasons(), at)
                     : { name: entry.name, category: 'info', value: entry.value, timestamp: at });
                 if (stored.message) {
@@ -233,7 +233,7 @@ var dispatchEvent = (buf: Buffer, wire = stuff(buf)) => {
                 logger.debug('storing changes', stored.diffs);
                 const switches = statusService.switchesOf(event, new Date(timestamp));
                 // the last fault's reasons don't belong to the next one
-                const reason = stored.status.some((entry) => entry.name === 'check system')
+                const reason = stored.status.some((entry: any) => entry.name === 'check system')
                     ? [statusService.reasonReading(interpreter.checkSystemReasons(), new Date(timestamp))]
                     : [];
                 saveSwitchState(stored.status, wire, 'status', timestamp).then(() => {
@@ -299,7 +299,7 @@ var dispatchEvent = (buf: Buffer, wire = stuff(buf)) => {
 };
 
 var handleHunk = (data: Buffer) => {
-    parser.parse(data, (buf, length, wire) => {
+    parser.parse(data, (buf: any, length: any, wire: any) => {
         logger.debug(parser.toHexString());
         // maybe change Event to take the FrameParser instead of the buf?
         try {
@@ -514,10 +514,10 @@ systemService.registerResetListener(() => {
     controlVerification = [];
     waterModeRequest = undefined;
     // the reset erased the settings along with everything else
-    settingsService.load().catch((e) => logger.error(`could not reload settings: ${e.message}`));
-    heatingModelService.load().then(() => liveService.heatingChanged()).catch((e) => logger.error(`could not reload the heating model: ${e.message}`));
-    externalAuthService.load().catch((e) => logger.error(`could not reload sign-in settings: ${e.message}`));
-    taskService.load().then(() => liveService.tasksChanged()).catch((e) => logger.error(`could not reload scheduled tasks: ${e.message}`));
+    settingsService.load().catch((e: any) => logger.error(`could not reload settings: ${e.message}`));
+    heatingModelService.load().then(() => liveService.heatingChanged()).catch((e: any) => logger.error(`could not reload the heating model: ${e.message}`));
+    externalAuthService.load().catch((e: any) => logger.error(`could not reload sign-in settings: ${e.message}`));
+    taskService.load().then(() => liveService.tasksChanged()).catch((e: any) => logger.error(`could not reload scheduled tasks: ${e.message}`));
 });
 
 // docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish

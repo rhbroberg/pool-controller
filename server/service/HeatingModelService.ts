@@ -46,10 +46,10 @@ var latestScan = null as any;
 var previews = new Map();
 var listeners = [] as any[];
 
-var badRequest = (message) => utils.respondWithCode(400, { code: 400, message });
-var notFound = (message) => utils.respondWithCode(404, { code: 404, message });
+var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message });
+var notFound = (message: any) => utils.respondWithCode(404, { code: 404, message });
 
-var parseDate = (text, label) => {
+var parseDate = (text: any, label: any) => {
     const date = new Date(text);
     if (typeof text !== 'string' || isNaN(date.getTime())) {
         throw badRequest(`${label} is not a date: ${text}`);
@@ -58,11 +58,11 @@ var parseDate = (text, label) => {
 };
 
 /** listener() runs after a model is saved or removed */
-exports.onChange = function(listener) {
+exports.onChange = function(listener: any) {
     listeners.push(listener);
 };
 
-var publicModel = (doc) => doc && {
+var publicModel = (doc: any) => doc && {
     id: String(doc._id),
     createdAt: doc.createdAt,
     createdBy: doc.createdBy || null,
@@ -112,33 +112,33 @@ exports.getModel = async function() {
 };
 
 /** the state the scan starts from: the last each switch and reading had before `from` */
-var stateBefore = async (from) => {
-    const last = async (eventType, name) => {
+var stateBefore = async (from: any) => {
+    const last = async (eventType: any, name: any) => {
         const doc = await Event.findOne({ eventType, 'status.name': name, timestamp: { $lt: from } })
             .sort({ timestamp: -1 }).select({ status: 1 }).lean();
-        const entry = doc && doc.status.find((each) => each.name === name);
+        const entry = doc && doc.status.find((each: any) => each.name === name);
         return entry && typeof entry.value === 'number' ? entry.value : undefined;
     };
     const readingNames = [...Object.values(SERIES), AIR];
     const [switches, readings] = await Promise.all([
-        Promise.all(SWITCHES.map((name) => last('status', name))),
+        Promise.all(SWITCHES.map((name: any) => last('status', name))),
         Promise.all(readingNames.map((name) => last('info', name)))
     ]);
     return {
         t: from.getTime(),
-        switches: Object.fromEntries(SWITCHES.map((name, index) => [name, switches[index] === 1 ? 1 : 0])),
+        switches: Object.fromEntries(SWITCHES.map((name: any, index: any) => [name, switches[index] === 1 ? 1 : 0])),
         readings: Object.fromEntries(readingNames.map((name, index) => [name, readings[index]]))
     };
 };
 
-var cursorFor = (eventType, from, to) => Event.find({ eventType, timestamp: { $gte: from, $lt: to } })
+var cursorFor = (eventType: any, from: any, to: any) => Event.find({ eventType, timestamp: { $gte: from, $lt: to } })
     .sort({ timestamp: 1 })
     .hint('eventType_timestamp')
     .select({ timestamp: 1, eventType: 1, status: 1 })
     .lean()
     .cursor({ batchSize: 1000 });
 
-var scanHistory = async (run) => {
+var scanHistory = async (run: any) => {
     const initial = await stateBefore(run.from);
     const extractor = new WindowExtractor(initial, { sun: sun.forTimeZone(run.timeZone) });
     // readings before switches at the same moment
@@ -166,39 +166,39 @@ var scanHistory = async (run) => {
         }
     }
     await Promise.all(cursors.map((cursor) => cursor.close()));
-    run.windows = extractor.finish(run.to.getTime()).map((window) => Object.assign(window, {
+    run.windows = extractor.finish(run.to.getTime()).map((window: any) => Object.assign(window, {
         start: window.start.toISOString(),
         end: window.end.toISOString()
     }));
     run.gaps = extractor.gaps.length;
 };
 
-var summarize = (windows) => {
+var summarize = (windows: any) => {
     const bodies: any = {};
     BODIES.forEach((body) => {
         bodies[body] = {};
-        SOURCES.forEach((sources) => {
-            const mine = windows.filter((window) => window.body === body && window.sources === sources);
+        SOURCES.forEach((sources: any) => {
+            const mine = windows.filter((window: any) => window.body === body && window.sources === sources);
             bodies[body][sources] = {
                 windows: mine.length,
-                suitable: mine.filter((window) => window.suitable).length,
-                hours: mine.filter((window) => window.suitable).reduce((sum, window) => sum + window.hours, 0)
+                suitable: mine.filter((window: any) => window.suitable).length,
+                hours: mine.filter((window: any) => window.suitable).reduce((sum: any, window: any) => sum + window.hours, 0)
             };
         });
     });
     const reasons: any = {};
-    windows.filter((window) => !window.suitable).forEach((window) => {
+    windows.filter((window: any) => !window.suitable).forEach((window: any) => {
         reasons[window.reason] = (reasons[window.reason] || 0) + 1;
     });
     return {
         windows: windows.length,
-        suitable: windows.filter((window) => window.suitable).length,
+        suitable: windows.filter((window: any) => window.suitable).length,
         bodies,
         reasons: (Object.entries(reasons) as [string, number][]).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count)
     };
 };
 
-var describeScan = (run) => run && {
+var describeScan = (run: any) => run && {
     id: run.id,
     state: run.state,
     from: run.from,
@@ -214,7 +214,7 @@ var describeScan = (run) => run && {
     error: run.error || null
 };
 
-var executeScan = async (run) => {
+var executeScan = async (run: any) => {
     run.state = 'running';
     run.startedAt = new Date();
     try {
@@ -286,7 +286,7 @@ exports.getWindows = async function() {
     return { scanId: latestScan.id, windows: latestScan.windows };
 };
 
-var chosenSources = (includeSources) => {
+var chosenSources = (includeSources: any) => {
     if (includeSources === undefined || includeSources === null) {
         return SOURCES;
     }
@@ -299,7 +299,7 @@ var chosenSources = (includeSources) => {
 };
 
 /** what the model says warming would take, for each body and way of heating, at a few air temperatures */
-var samples = (bodies) => {
+var samples = (bodies: any) => {
     const result = [] as any[];
     BODIES.forEach((body) => {
         const model = bodies[body];
@@ -331,7 +331,7 @@ var samples = (bodies) => {
     return result;
 };
 
-var compact = (window) => ({
+var compact = (window: any) => ({
     id: window.id,
     body: window.body,
     sources: window.sources,
@@ -363,10 +363,10 @@ exports.preview = async function({ scanId, excludeWindowIds, includeSources }: a
     }
     const sources = chosenSources(includeSources);
     const excluded = new Set(Array.isArray(excludeWindowIds) ? excludeWindowIds : [] as any[]);
-    const chosen = latestScan.windows.filter((window) => window.suitable && sources.includes(window.sources) && !excluded.has(window.id));
+    const chosen = latestScan.windows.filter((window: any) => window.suitable && sources.includes(window.sources) && !excluded.has(window.id));
     const bodies: any = {};
     BODIES.forEach((body) => {
-        bodies[body] = fitBody(chosen.filter((window) => window.body === body));
+        bodies[body] = fitBody(chosen.filter((window: any) => window.body === body));
     });
     const preview = {
         previewId: crypto.randomUUID(),
@@ -375,7 +375,7 @@ exports.preview = async function({ scanId, excludeWindowIds, includeSources }: a
         range: { from: latestScan.from, to: latestScan.to },
         timeZone: latestScan.timeZone,
         windowsUsed: chosen.length,
-        excludedWindows: latestScan.windows.filter((window) => window.suitable && excluded.has(window.id)).length,
+        excludedWindows: latestScan.windows.filter((window: any) => window.suitable && excluded.has(window.id)).length,
         sources,
         bodies,
         current: publicModel(activeModel),

@@ -14,20 +14,20 @@ module.exports.getHistory = function getHistory (req: AuthedRequest, res: Respon
   var maxPoints = swaggerValue(req, 'maxPoints');
   var resolution = swaggerValue(req, 'resolution');
   History.getHistory(names, from, to, maxPoints, resolution)
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.getHistoryAvailability = function getHistoryAvailability (req: AuthedRequest, res: Response) {
   History.getAvailability(swaggerValue(req, 'from'), swaggerValue(req, 'to'), swaggerValue(req, 'names'))
-    .then(function (response) {
+    .then(function (response: any) {
       utils.writeJson(res, response);
     })
-    .catch(function (response) {
+    .catch(function (response: any) {
       utils.writeJson(res, response);
     });
 };

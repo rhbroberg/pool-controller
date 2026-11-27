@@ -7,11 +7,11 @@ import { swaggerValue } from '../types/domain';
 var utils = require('../utils/writer');
 var UserManagement = require('../service/UserManagementService');
 
-var respond = (res, promise) => promise
-    .then(function(response) {
+var respond = (res: any, promise: any) => promise
+    .then(function(response: any) {
         utils.writeJson(res, response);
     })
-    .catch(function(response) {
+    .catch(function(response: any) {
         utils.writeJson(res, response);
     });
 

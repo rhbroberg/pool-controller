@@ -7,20 +7,20 @@ import { swaggerValue } from '../types/domain';
 var utils = require('../utils/writer');
 var ExternalAuth = require('../service/ExternalAuthService');
 
-var respond = (res, promise) => promise
-    .then(function(response) {
+var respond = (res: any, promise: any) => promise
+    .then(function(response: any) {
         utils.writeJson(res, response);
     })
-    .catch(function(response) {
+    .catch(function(response: any) {
         utils.writeJson(res, response);
     });
 
-var redirect = (res, location) => {
+var redirect = (res: any, location: any) => {
     res.set('Cache-Control', 'no-store');
     res.redirect(302, location);
 };
 
-var param = <T = any>(req, name: string): T => swaggerValue<T>(req, name);
+var param = <T = any>(req: any, name: string): T => swaggerValue<T>(req, name);
 
 module.exports.listProviders = function listProviders (req: AuthedRequest, res: Response) {
     respond(res, ExternalAuth.listProviders());
@@ -28,13 +28,13 @@ module.exports.listProviders = function listProviders (req: AuthedRequest, res: 
 
 module.exports.startSignIn = function startSignIn (req: AuthedRequest, res: Response, next: NextFunction) {
     ExternalAuth.start(req, param(req, 'provider'), { client: req.query.client, link: req.query.link })
-        .then((location) => redirect(res, location))
+        .then((location: any) => redirect(res, location))
         .catch(next);
 };
 
 module.exports.finishSignIn = function finishSignIn (req: AuthedRequest, res: Response, next: NextFunction) {
     ExternalAuth.callback(req, param(req, 'provider'))
-        .then((location) => redirect(res, location))
+        .then((location: any) => redirect(res, location))
         .catch(next);
 };
 

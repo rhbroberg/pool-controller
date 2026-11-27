@@ -15,11 +15,11 @@ const CONTROLLER = 'controller';
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
-var badRequest = (message) => utils.respondWithCode(400, { code: 400, message: message });
+var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message: message });
 
-var onOff = (value) => value ? 'on' : 'off';
+var onOff = (value: any) => value ? 'on' : 'off';
 
-var readingText = ({ name, value }, message) => {
+var readingText = ({name, value}: any, message: any) => {
     switch (name) {
     case 'check system reason':
         return `Check System: ${message}`;
@@ -36,17 +36,17 @@ var readingText = ({ name, value }, message) => {
     }
 };
 
-var summarize = (doc) => {
+var summarize = (doc: any) => {
     const entries = doc.status || [];
     switch (doc.eventType) {
     case 'action':
         return doc.message;
     case 'status':
-        return entries.map((entry) => `${activity.label(entry.name)} ${onOff(entry.value)}`).join(', ');
+        return entries.map((entry: any) => `${activity.label(entry.name)} ${onOff(entry.value)}`).join(', ');
     case 'info':
-        return entries.map((entry) => readingText(entry, doc.message)).join(', ');
+        return entries.map((entry: any) => readingText(entry, doc.message)).join(', ');
     case 'control':
-        return `Pressed ${entries.map((entry) => activity.label(entry.name)).join(' + ')}`;
+        return `Pressed ${entries.map((entry: any) => activity.label(entry.name)).join(' + ')}`;
     case 'failed':
         return 'A frame failed its checksum';
     default:
@@ -57,20 +57,20 @@ var summarize = (doc) => {
 // a page ends at a timestamp; every id already returned at exactly that time is skipped on the
 // next page, since events sharing a timestamp have no other order. When a run of equal
 // timestamps spans pages, the ids carry over from the previous cursor.
-var encodeCursor = (page, previous) => {
+var encodeCursor = (page: any, previous: any) => {
     const last = page[page.length - 1].timestamp;
-    const sameTime = page.filter((doc) => doc.timestamp.getTime() === last.getTime()).map((doc) => String(doc._id));
+    const sameTime = page.filter((doc: any) => doc.timestamp.getTime() === last.getTime()).map((doc: any) => String(doc._id));
     const carried = previous && previous.timestamp.getTime() === last.getTime() ? previous.seen.map(String) : [];
     return `${last.toISOString()}|${carried.concat(sameTime).join(',')}`;
 };
 
-var decodeCursor = (cursor) => {
+var decodeCursor = (cursor: any) => {
     const [time, ids] = cursor.split('|');
     const timestamp = new Date(time);
     if (isNaN(timestamp.getTime())) {
         throw badRequest('cursor is not one this server returned');
     }
-    const seen = (ids || '').split(',').filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id));
+    const seen = (ids || '').split(',').filter((id: any) => mongoose.Types.ObjectId.isValid(id)).map((id: any) => new mongoose.Types.ObjectId(id));
     return { timestamp, seen };
 };
 
@@ -84,9 +84,9 @@ var decodeCursor = (cursor) => {
  * limit Integer (optional)
  * returns EventPage
  **/
-export async function getEvents(types, user, cursor, order, limit) {
+export async function getEvents(types: any, user: any, cursor: any, order: any, limit: any) {
     const wanted = types && types.length ? types : TYPES;
-    const unknown = wanted.filter((type) => !TYPES.includes(type));
+    const unknown = wanted.filter((type: any) => !TYPES.includes(type));
     if (unknown.length) {
         throw badRequest(`unknown event types: ${unknown.join(', ')}`);
     }
@@ -115,13 +115,13 @@ export async function getEvents(types, user, cursor, order, limit) {
     const page = docs.slice(0, size);
 
     return {
-        events: page.map((doc) => ({
+        events: page.map((doc: any) => ({
             id: String(doc._id),
             timestamp: doc.timestamp,
             type: doc.eventType,
             user: doc.user,
             summary: summarize(doc),
-            details: (doc.status || []).map((entry) => ({ name: entry.name, value: entry.value }))
+            details: (doc.status || []).map((entry: any) => ({ name: entry.name, value: entry.value }))
         })),
         next: docs.length > size ? encodeCursor(page, previous) : null
     };
@@ -134,5 +134,5 @@ export async function getEvents(types, user, cursor, order, limit) {
  **/
 export async function getEventUsers() {
     const users = await Event.distinct('user', { user: { $exists: true } });
-    return users.sort((a, b) => a.localeCompare(b));
+    return users.sort((a: any, b: any) => a.localeCompare(b));
 };
