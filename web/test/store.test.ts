@@ -380,7 +380,7 @@ describe('status store', () => {
         const run = { state: 'waiting', from: '2020-07-19T04:00:00.000Z', to: '2020-07-21T04:00:00.000Z', through: null, transitions: [] };
         answer = { status: 202, body: run } as any;
         const started = await store.startReprocess({ from: new Date(run.from), to: new Date(run.to), eventTypes: ['failed'], dryRun: true });
-        assert.equal(started.from.getTime(), Date.parse(run.from));
+        assert.equal(started.from!.getTime(), Date.parse(run.from));
         assert.deepEqual(requests.at(-1), {
             url: 'http://pool/rhbroberg/pool-api/1.0.0/system/reprocess',
             method: 'POST',

@@ -136,9 +136,9 @@ describe('sign-in services', () => {
     });
 
     it('explains each way a sign-in can stop short', () => {
-        assert.match(outcome('status=pending&provider=Google').message, /sign in with Google was sent to the pool’s admin/);
+        assert.match(outcome('status=pending&provider=Google').message!, /sign in with Google was sent to the pool’s admin/);
         assert.equal(outcome('status=denied&provider=Google').failed, true);
-        assert.match(outcome('status=refused').message, /invited/);
+        assert.match(outcome('status=refused').message!, /invited/);
         assert.equal(outcome('status=cancelled').title, 'Sign-In Cancelled');
         assert.equal(outcome('status=linked&provider=Google').linked, true);
         assert.equal(outcome('error=The service said no').message, 'The service said no');

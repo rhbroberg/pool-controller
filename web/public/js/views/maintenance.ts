@@ -227,7 +227,7 @@ export const mountMaintenance = (root: any, app: any) => {
                 : h('small', { class: 'learned' }, 'Learned from history');
             const label = h('div', { class: 'row-text' }, h('span', null, source.title), caption);
             if (!basis.why) {
-                return formRow(label, h('span', { class: 'value' }, `${Math.round(basis.learned * 100) / 100}°F an hour`));
+                return formRow(label, h('span', { class: 'value' }, `${Math.round(basis.learned! * 100) / 100}°F an hour`));
             }
             const current = settings.heatingRules[body.id][source.id];
             return formRow(label, select({

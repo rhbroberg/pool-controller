@@ -105,3 +105,146 @@ export const errorNameOf = (error: unknown): string | undefined => {
     }
     return undefined;
 };
+
+export interface Location {
+    zipCode?: string;
+    countryCode?: string;
+    placeName?: string;
+    latitude?: number;
+    longitude?: number;
+}
+
+export interface HeatingRule {
+    heater?: number;
+    heatPump?: number;
+}
+
+export interface HeatingRules {
+    pool?: HeatingRule;
+    spa?: HeatingRule;
+}
+
+/** GET /system/settings and PUT /system/settings */
+export interface SystemSettings {
+    timeZone?: string;
+    timeZoneSource?: 'configured' | 'system' | 'default';
+    detectedTimeZone?: string | null;
+    rawRetentionDays?: number;
+    minimumRetentionDays?: number;
+    maximumRetentionDays?: number;
+    location?: Location | null;
+    heatingEstimateDisplay?: 'remaining' | 'readyAt';
+    heatingRules?: HeatingRules;
+    preheatMarginMinutes?: number;
+}
+
+export type SystemSettingsUpdate = Partial<{
+    timeZone: string | null;
+    rawRetentionDays: number;
+    zipCode: string | null;
+    heatingEstimateDisplay: 'remaining' | 'readyAt';
+    heatingRules: HeatingRules;
+    preheatMarginMinutes: number;
+}>;
+
+/** one maintenance job after the client turns ISO dates into Date */
+export interface MaintenanceJob {
+    name: string;
+    description?: string;
+    intervalSeconds?: number;
+    scheduled?: boolean;
+    running?: boolean;
+    nextRunAt?: Date | null;
+    lastStartedAt?: Date | null;
+    lastFinishedAt?: Date | null;
+    lastDurationMs?: number;
+    lastResult?: 'ok' | 'failed';
+    lastError?: string;
+    lastSummary?: string;
+    runs?: number;
+    more?: boolean;
+}
+
+/** one heater or heat pump as GET /heating devices reports it */
+export interface HeatingDeviceStatus {
+    enabled?: boolean | null;
+    heating?: boolean;
+    callingForHeat?: boolean;
+    body?: string | null;
+    setpoint?: number | null;
+    temperature?: number | null;
+}
+
+export interface HeatingStatus {
+    estimate?: HeatingEstimate | null;
+    devices?: Record<string, HeatingDeviceStatus>;
+    setpoints?: Record<string, Record<string, number>>;
+    [key: string]: unknown;
+}
+
+export interface ScheduledPreheat {
+    readyAt: string | Date;
+    startAt: string | Date;
+    leadMinutes?: number;
+    leadFrom?: string;
+    fromTemperature?: number;
+    setpoint?: number;
+    requestedBy?: string | null;
+}
+
+export interface SpaPreheatTask {
+    on?: boolean;
+    scheduled?: ScheduledPreheat | null;
+}
+
+/** GET /tasks */
+export interface TasksState {
+    pool?: { on?: boolean };
+    spaPreheat?: SpaPreheatTask;
+    spaParty?: { on?: boolean };
+    dark?: boolean;
+}
+
+export interface WeatherDay {
+    date?: string;
+    high?: number | null;
+    low?: number | null;
+    condition?: string | null;
+    precipitationProbability?: number | null;
+}
+
+/** GET /weather */
+export interface WeatherForecast {
+    configured?: boolean;
+    location?: { zipCode?: string; placeName?: string } | null;
+    today?: WeatherDay | null;
+    fetchedAt?: Date | string | null;
+    stale?: boolean;
+}
+
+/** GET /system/info — commit and apiVersion are what aboutLine needs */
+export interface SystemInfo {
+    commit?: string | null;
+    apiVersion?: string | null;
+    [key: string]: unknown;
+}
+
+export interface HeatingBodyModel {
+    available: boolean;
+    reason?: string;
+    heater?: number | null;
+    heatPump?: { base: number; slope?: number; referenceAirTemperature?: number; minimumAirTemperature?: number | null } | null;
+}
+
+/** the model in HeatingModelState, for heating rules learned from history */
+export interface HeatingModel {
+    bodies?: {
+        pool?: HeatingBodyModel;
+        spa?: HeatingBodyModel;
+    };
+}
+
+export interface AuthProvider {
+    id: string;
+    displayName?: string;
+}

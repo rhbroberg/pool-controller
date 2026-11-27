@@ -1,8 +1,20 @@
 // What the page knows about this pool: names, equipment, roles and the rules for showing them.
 
+import type {
+    AuthProvider,
+    HeatingDeviceStatus,
+    HeatingModel,
+    HeatingStatus,
+    Reading,
+    ScheduledPreheat,
+    SystemInfo,
+    TasksState,
+    WeatherForecast
+} from './types.js';
+
 export const DEFAULT_POOL_NAME = 'Pool';
 
-const DISPLAY_NAMES: Record<string, any> = {
+const DISPLAY_NAMES: Record<string, string> = {
     'pool temp': 'Pool',
     'spa temp': 'Spa',
     ambient: 'Air',
@@ -17,9 +29,9 @@ const DISPLAY_NAMES: Record<string, any> = {
 
 export const displayName = (name: string) => DISPLAY_NAMES[name] || name.replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-export const isOn = (reading: any) => Boolean(reading) && Number(reading.value) !== 0;
+export const isOn = (reading: Reading | null | undefined) => Boolean(reading) && Number(reading!.value) !== 0;
 
-export const formattedValue = (reading: any) => {
+export const formattedValue = (reading: Reading) => {
     switch (reading.name) {
     case 'pool temp':
     case 'spa temp':
@@ -67,15 +79,17 @@ export const EQUIPMENT = [
     }
 ].map((control) => ({ onText: 'On', offText: 'Off', ...control, title: displayName(control.name), stateName: control.stateReading || control.name }));
 
-export const controlsIn = (group: any) => EQUIPMENT.filter((control) => control.group === group);
+export type EquipmentControl = (typeof EQUIPMENT)[number];
 
-export const stateText = (control: any, on: any) => on ? control.onText : control.offText;
+export const controlsIn = (group: string) => EQUIPMENT.filter((control) => control.group === group);
+
+export const stateText = (control: EquipmentControl, on: boolean) => on ? control.onText : control.offText;
 
 /**
  * shown while the controller hasn't yet reported the requested state; short enough for a
  * half-width tile
  **/
-export const pendingText = (control: any, on: any) => control.onText === 'On' ? `Turning ${stateText(control, on)}…` : `To ${stateText(control, on)}…`;
+export const pendingText = (control: EquipmentControl, on: boolean) => control.onText === 'On' ? `Turning ${stateText(control, on)}…` : `To ${stateText(control, on)}…`;
 
 // MARK: heating
 
@@ -88,14 +102,18 @@ export const HEATING_DEVICES = [
     { id: 'heatpump', title: 'Heat Pump', controlName: 'valve4' }
 ];
 
-export const heatingDeviceFor = (controlName: any) => HEATING_DEVICES.find((device) => device.controlName === controlName) || null;
+export type HeatingDevice = (typeof HEATING_DEVICES)[number];
+
+export const heatingDeviceFor = (controlName: string) => HEATING_DEVICES.find((device) => device.controlName === controlName) || null;
 
 export const WATER_BODIES = [
     { id: 'pool', title: 'Pool', temperatureName: 'pool temp' },
     { id: 'spa', title: 'Spa', temperatureName: 'spa temp' }
 ];
 
-export const waterBody = (id: any) => WATER_BODIES.find((body) => body.id === id) || null;
+export type WaterBody = (typeof WATER_BODIES)[number];
+
+export const waterBody = (id: string) => WATER_BODIES.find((body) => body.id === id) || null;
 
 /**
  * what the heater and heat pump are doing for bodyId, as the temperature card shows it: the
@@ -103,7 +121,7 @@ export const waterBody = (id: any) => WATER_BODIES.find((body) => body.id === id
  * setpoint among them, and when the estimate says the water gets there ("7:30 PM", in the
  * server's time zone); null unless one is on and a pump sends water to that body
  **/
-export const bodyHeating = (heating: { estimate?: import('./types.js').HeatingEstimate | null; devices?: Record<string, any> } | null | undefined, bodyId: any, now = new Date()) => {
+export const bodyHeating = (heating: HeatingStatus | null | undefined, bodyId: string, now = new Date()) => {
     const devices = heating && heating.devices ? heating.devices : {};
     const sources = HEATING_DEVICES
         .filter((device) => devices[device.id] && devices[device.id].enabled === true && devices[device.id].body === bodyId)
@@ -124,14 +142,23 @@ export const bodyHeating = (heating: { estimate?: import('./types.js').HeatingEs
     return { sources, setpoint: setpoints.length ? Math.max(...setpoints) : null, ready };
 };
 
-export const setpointOf = (heating: any, deviceId: any, bodyId: any) => heating && heating.setpoints && heating.setpoints[bodyId] ? heating.setpoints[bodyId][deviceId] : undefined;
+export const setpointOf = (heating: HeatingStatus | null | undefined, deviceId: string, bodyId: string) =>
+    heating?.setpoints?.[bodyId] ? heating.setpoints[bodyId][deviceId] : undefined;
 
 /**
  * What an equipment tile says. For the heater and heat pump, on is enabled and running is
  * producing heat; for everything else they're the same. heating is that device's entry from
  * GET /heating, or null.
  **/
-export const tileState = (control: any, on: any, pending: any, heating: any) => {
+export const tileState = (
+    control: EquipmentControl | undefined,
+    on: boolean,
+    pending: boolean | undefined,
+    heating: HeatingDeviceStatus | null | undefined
+) => {
+    if (!control) {
+        return { running: false, text: '—', targetSetpoint: null };
+    }
     const running = heating ? on && heating.heating === true : on;
     const target = on && pending === undefined && heating ? heating.setpoint ?? null : null;
     let text;
@@ -188,17 +215,24 @@ export type TaskId = typeof TASKS[number]['id'];
 export const taskInfo = (id: string) => TASKS.find((task) => task.id === id) || null;
 
 /** whether `id` is on in GET /tasks's answer */
-export const taskOn = (tasks: any, id: any) => Boolean(tasks && tasks[id] && tasks[id].on);
+export const taskOn = (tasks: TasksState | null | undefined, id: string) => {
+    if (!tasks) {
+        return false;
+    }
+    const entry = tasks[id as keyof TasksState];
+    return Boolean(entry && typeof entry === 'object' && 'on' in entry && entry.on);
+};
 
 /** a spa preheat waiting for its time, or null; not once it has started */
-export const scheduledPreheat = (tasks: any) => tasks && tasks.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
-    ? tasks.spaPreheat.scheduled
-    : null;
+export const scheduledPreheat = (tasks: TasksState | null | undefined): ScheduledPreheat | null =>
+    tasks?.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
+        ? tasks.spaPreheat.scheduled
+        : null;
 
 /** "7:30 PM", or "Sat 7:30 AM" when it isn't the same day as now; in timeZone if given */
-export const taskTime = (date: any, now = new Date(), timeZone: string | undefined = undefined) => {
+export const taskTime = (date: Date, now = new Date(), timeZone?: string) => {
     const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone });
-    const day = (d: any) => d.toLocaleDateString('en-CA', { timeZone });
+    const day = (d: Date) => d.toLocaleDateString('en-CA', { timeZone });
     return day(date) === day(now)
         ? time
         : `${date.toLocaleDateString(undefined, { weekday: 'short', timeZone })} ${time}`;
@@ -208,7 +242,10 @@ export const taskTime = (date: any, now = new Date(), timeZone: string | undefin
 export const NIGHT_LIGHTS = ['lights', 'aux3'];
 
 /** { ready: "Ready by 7:30 PM", start: "Starts about 6:00 PM" } for a scheduled preheat */
-export const scheduleText = (scheduled: any, now = new Date()) => {
+export const scheduleText = (scheduled: ScheduledPreheat | null | undefined, now = new Date()) => {
+    if (!scheduled) {
+        return { ready: '', start: '' };
+    }
     const readyAt = new Date(scheduled.readyAt);
     const startAt = new Date(scheduled.startAt);
     return {
@@ -221,8 +258,8 @@ export const scheduleText = (scheduled: any, now = new Date()) => {
  * spillover if that switch is on, otherwise spa if it is, otherwise pool; unknown until the
  * server has reported the pool switch
  **/
-export const waterModeOf = (readings: any[]) => {
-    const reading = (name: any) => readings.find((r) => r.name === name);
+export const waterModeOf = (readings: Reading[]) => {
+    const reading = (name: string) => readings.find((r) => r.name === name);
     if (isOn(reading('spillover'))) {
         return 'spillover';
     }
@@ -240,14 +277,14 @@ const MEASUREMENT_ORDER = ['pool temp', 'spa temp', 'ambient', 'salt'];
  * Each sensor sits just downstream of its pump, so its reading is current only while that runs:
  * the pool's is the filter pump; the spa's is the spa filter (aux14 here), whatever the flow.
  **/
-export const PUMP_FOR_TEMPERATURE: Record<string, any> = { 'pool temp': 'filter', 'spa temp': 'aux14' };
+export const PUMP_FOR_TEMPERATURE: Record<string, string> = { 'pool temp': 'filter', 'spa temp': 'aux14' };
 
 /**
  * every measurement always has a slot, so the card keeps its shape while readings arrive; pool
  * and spa are dimmed, as stale readings, while their pumps are off
  **/
-export const measurement = (readings: any, name: any) => {
-    const find = (n: any) => readings.find((r: any) => r.name === n);
+export const measurement = (readings: Reading[], name: string) => {
+    const find = (n: string) => readings.find((r) => r.name === n);
     const reading = find(name);
     const pump = PUMP_FOR_TEMPERATURE[name];
     return {
@@ -258,11 +295,11 @@ export const measurement = (readings: any, name: any) => {
     };
 };
 
-export const measurements = (readings: any) => MEASUREMENT_ORDER.map((name) => measurement(readings, name));
+export const measurements = (readings: Reading[]) => MEASUREMENT_ORDER.map((name) => measurement(readings, name));
 
 // MARK: weather
 
-export const WEATHER_CONDITIONS: Record<string, any> = {
+export const WEATHER_CONDITIONS: Record<string, { title: string; icon: string }> = {
     sunny: { title: 'Sunny', icon: 'sun' },
     'partly-cloudy': { title: 'Partly Cloudy', icon: 'cloudSun' },
     cloudy: { title: 'Cloudy', icon: 'cloud' },
@@ -272,18 +309,18 @@ export const WEATHER_CONDITIONS: Record<string, any> = {
     storm: { title: 'Storms', icon: 'cloudLightning' }
 };
 
-const degrees = (value: any) => typeof value === 'number' ? `${Math.round(value)}°` : '--°';
+const degrees = (value: number | null | undefined) => typeof value === 'number' ? `${Math.round(value)}°` : '--°';
 
 /**
  * what the main page shows of today's forecast; null while there's nothing to show, as before
  * an admin sets a zip code
  **/
-export const weatherSummary = (weather: any) => {
+export const weatherSummary = (weather: WeatherForecast | null | undefined) => {
     if (!weather || !weather.configured || !weather.today) {
         return null;
     }
     const { today } = weather;
-    const condition = WEATHER_CONDITIONS[today.condition] || { title: 'Today', icon: 'cloud' };
+    const condition = (today.condition && WEATHER_CONDITIONS[today.condition]) || { title: 'Today', icon: 'cloud' };
     const rain = typeof today.precipitationProbability === 'number' && today.precipitationProbability >= 30
         ? `${Math.round(today.precipitationProbability)}% chance of rain`
         : null;
@@ -322,15 +359,15 @@ export const MINIMUM_PASSWORD_LENGTH = 6;
  * the builds in use: this page's web service, the pool server, and the API version it serves;
  * a dash for any not known, as from a server that is down or too old to say
  **/
-export const aboutLine = (webCommit: any, serverInfo: any) => {
-    const known = (value: any) => value || '—';
+export const aboutLine = (webCommit: string | null | undefined, serverInfo: SystemInfo | null | undefined) => {
+    const known = (value: string | null | undefined) => value || '—';
     return `Web ${known(webCommit)} · Server ${known(serverInfo && serverInfo.commit)} · API ${known(serverInfo && serverInfo.apiVersion)}`;
 };
 
 /**
  * why a new password and its confirmation can't be used yet, once something has been typed
  **/
-export const passwordProblem = (password: any, confirmation: any) => {
+export const passwordProblem = (password: string, confirmation: string) => {
     if (password && password.length < MINIMUM_PASSWORD_LENGTH) {
         return `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
     }
@@ -340,7 +377,8 @@ export const passwordProblem = (password: any, confirmation: any) => {
     return null;
 };
 
-export const passwordAcceptable = (password: any, confirmation: any) => password.length >= MINIMUM_PASSWORD_LENGTH && password === confirmation;
+export const passwordAcceptable = (password: string, confirmation: string) =>
+    password.length >= MINIMUM_PASSWORD_LENGTH && password === confirmation;
 
 // MARK: sign-in services
 
@@ -348,10 +386,19 @@ export const passwordAcceptable = (password: any, confirmation: any) => password
  * what the server's answer at #/signin/complete means: a ticket to trade for a token, or a title
  * and message to show
  **/
-export const signInOutcome = (params: any) => {
+export interface SignInCompleteOutcome {
+    ticket?: string;
+    title?: string;
+    message?: string;
+    failed?: boolean;
+    linked?: boolean;
+}
+
+export const signInOutcome = (params: URLSearchParams): SignInCompleteOutcome => {
     const provider = params.get('provider') || 'the service';
-    if (params.get('ticket')) {
-        return { ticket: params.get('ticket') };
+    const ticket = params.get('ticket');
+    if (ticket) {
+        return { ticket };
     }
     switch (params.get('status')) {
     case 'pending':
@@ -372,7 +419,7 @@ export const signInOutcome = (params: any) => {
 /**
  * the names of how an account signs in, with services' ids replaced by their names
  **/
-export const methodNames = (methods: any, providers: any[] = []) => (methods || []).map((method: any) => {
+export const methodNames = (methods: string[] | null | undefined, providers: AuthProvider[] = []) => (methods || []).map((method) => {
     if (method === 'password') {
         return 'Password';
     }
@@ -404,7 +451,10 @@ export const EVENT_KINDS = [
     { id: 'protocolErrors', title: 'Communication Errors', icon: 'warning', tint: 'orange', serverTypes: ['failed', 'unrecognized'] }
 ];
 
-export const eventKindOf = (serverType: any) => EVENT_KINDS.find((kind) => kind.serverTypes.includes(serverType)) || EVENT_KINDS[EVENT_KINDS.length - 1];
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+export const eventKindOf = (serverType: string): EventKind =>
+    EVENT_KINDS.find((kind) => kind.serverTypes.includes(serverType)) || EVENT_KINDS[EVENT_KINDS.length - 1];
 
 /**
  * starts on what people did and what the equipment did; readings change often enough to bury
@@ -432,11 +482,16 @@ export const HEATING_SOURCES = [
  * whether the heating model in use learned how fast `source` ('heater' or 'heatPump') warms
  * `body`: { learned: °F per hour }, or { why } its rule stands in
  **/
-export const rateBasis = (model: any, body: any, source: any) => {
+export interface RateBasis {
+    learned?: number;
+    why?: string;
+}
+
+export const rateBasis = (model: HeatingModel | null | undefined, body: string, source: string): RateBasis => {
     if (!model) {
         return { why: 'No model has been saved yet.' };
     }
-    const learned = model.bodies ? model.bodies[body] : null;
+    const learned = model.bodies ? model.bodies[body as 'pool' | 'spa'] : null;
     if (!learned || !learned.available) {
         const reason = learned && learned.reason ? learned.reason : 'the model in use has nothing for this water';
         return { why: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.` };

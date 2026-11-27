@@ -1,9 +1,36 @@
 // The pool's state as the page shows it: readings, heating, the connection and the sign-in.
 
 import { ApiError, isAbort, toReading } from './api.js';
-import { canControl, isAdmin, isOn, stateText, heatingDeviceFor, waterModeOf, waterModeInfo, taskInfo, taskOn, scheduledPreheat } from './model.js';
+import {
+    canControl,
+    isAdmin,
+    isOn,
+    stateText,
+    heatingDeviceFor,
+    waterModeOf,
+    waterModeInfo,
+    taskInfo,
+    taskOn,
+    scheduledPreheat,
+    type EquipmentControl,
+    type WaterModeId
+} from './model.js';
 import * as prefs from './prefs.js';
-import type { ConnectionState, Credentials, HeatingEstimate, LiveReadingsPush, Reading, ReprocessRun, SignInResult } from './types.js';
+import type {
+    ConnectionState,
+    Credentials,
+    HeatingDeviceStatus,
+    HeatingStatus,
+    LiveReadingsPush,
+    MaintenanceJob,
+    Reading,
+    ReprocessRun,
+    SignInResult,
+    SystemSettings,
+    SystemSettingsUpdate,
+    TasksState,
+    WeatherForecast
+} from './types.js';
 import { errorMessageOf } from './types.js';
 import type { LiveConnection } from './live.js';
 import type { HistoryResponse } from './types.js';
@@ -14,12 +41,12 @@ import type { HistoryResponse } from './types.js';
  **/
 export type StoreClient = {
     fetchStatus(): Promise<Reading[]>;
-    fetchHeating(): Promise<{ estimate?: HeatingEstimate | null; [key: string]: unknown } | null>;
-    fetchTasks(): Promise<Record<string, unknown> | null>;
-    fetchWeather(): Promise<Record<string, unknown> | null>;
+    fetchHeating(): Promise<HeatingStatus | null>;
+    fetchTasks(): Promise<TasksState | null>;
+    fetchWeather(): Promise<WeatherForecast | null>;
     setDevice(name: string, on: boolean, token: string): Promise<unknown>;
     setWaterMode(mode: string, token: string): Promise<unknown>;
-    setTask(task: string, on: boolean, readyAt: Date | string | null | undefined, token: string): Promise<Record<string, unknown>>;
+    setTask(task: string, on: boolean, readyAt: Date | string | null | undefined, token: string): Promise<TasksState>;
     setSetpoint(degrees: number, device: string, body: string, token: string): Promise<unknown>;
     signIn(email: string, password: string): Promise<SignInResult>;
     signInWithTicket(ticket: string): Promise<SignInResult>;
@@ -27,12 +54,15 @@ export type StoreClient = {
     fetchAccount(token: string): Promise<{ email: string; role: string; methods?: string[] }>;
     signOut(token: string): Promise<unknown>;
     fetchHistory(names: string[], from: Date | string | number, to: Date | string | number, opts?: { signal?: AbortSignal; maxPoints?: number; resolution?: number }): Promise<HistoryResponse>;
-    startReprocess(request: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean }, token: string): Promise<ReprocessRun>;
+    startReprocess(
+        request: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean },
+        token: string
+    ): Promise<ReprocessRun & { from?: Date | null; to?: Date | null; through?: Date | null }>;
     fetchReprocess(token: string): Promise<ReprocessRun | null>;
-    fetchSettings(token: string): Promise<any>;
-    updateSettings(changes: Record<string, unknown>, token: string): Promise<any>;
-    fetchJobs(token: string): Promise<any>;
-    runJob(name: string, token: string): Promise<any>;
+    fetchSettings(token: string): Promise<SystemSettings>;
+    updateSettings(changes: SystemSettingsUpdate, token: string): Promise<SystemSettings>;
+    fetchJobs(token: string): Promise<MaintenanceJob[]>;
+    runJob(name: string, token: string): Promise<MaintenanceJob>;
     factoryReset(token: string): Promise<string | unknown>;
     restartServer(token: string): Promise<unknown>;
 };
@@ -68,9 +98,9 @@ const signedInAs = (result: SignInResult): Credentials => ({
 export class StatusStore {
     client: StoreClient;
     readings: Reading[];
-    heating: { estimate?: HeatingEstimate | null; devices?: Record<string, unknown>; setpoints?: Record<string, Record<string, number>>; [key: string]: unknown } | null;
-    weather: Record<string, unknown> | null;
-    tasks: Record<string, unknown> | null;
+    heating: HeatingStatus | null;
+    weather: WeatherForecast | null;
+    tasks: TasksState | null;
     pendingTasks: Record<string, boolean>;
     weatherCheckedAt: number;
     lastRefresh: Date | null;
@@ -158,7 +188,7 @@ export class StatusStore {
             live.onStateChange = (isLive) => this.liveChanged(isLive);
         }
 
-        prefs.watch((key: any) => {
+        prefs.watch((key: string) => {
             if (key === 'credentials') {
                 this.credentials = prefs.read('credentials', null);
                 this.accountChecked = false;
@@ -167,7 +197,7 @@ export class StatusStore {
         });
     }
 
-    subscribe(listener: any) {
+    subscribe(listener: (store: StatusStore) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }
@@ -179,7 +209,7 @@ export class StatusStore {
         this.notifyQueued = true;
         queueMicrotask(() => {
             this.notifyQueued = false;
-            this.listeners.forEach((listener: any) => listener(this));
+            this.listeners.forEach((listener) => listener(this));
         });
     }
 
@@ -230,23 +260,23 @@ export class StatusStore {
         return prefs.read('lastAccount', null);
     }
 
-    reading(name: any) {
+    reading(name: string) {
         return this.readings.find((reading) => reading.name === name);
     }
 
     /** the state the controller last reported; a requested change shows only once it's confirmed */
-    isOn(control: any) {
-        return isOn(this.reading(control.stateName));
+    isOn(control: EquipmentControl | undefined) {
+        return control ? isOn(this.reading(control.stateName)) : false;
     }
 
-    pendingState(name: any) {
+    pendingState(name: string) {
         return this.pending[name];
     }
 
     /** what the heater or heat pump behind control is doing; null for other equipment */
-    heatingFor(control: any) {
+    heatingFor(control: EquipmentControl): HeatingDeviceStatus | null {
         const device = heatingDeviceFor(control.name);
-        return device && this.heating && this.heating.devices ? this.heating.devices[device.id] || null : null;
+        return device && this.heating?.devices ? this.heating.devices[device.id] || null : null;
     }
 
     // MARK: polling
@@ -314,7 +344,7 @@ export class StatusStore {
             this.pushesApplied += 1;
             this.changed();
         } else if (name === 'tasks' && data && typeof data === 'object') {
-            this.tasks = data as Record<string, unknown>;
+            this.tasks = data as TasksState;
             this.pushesApplied += 1;
             // a task is confirmed by this push rather than the readings before it
             this.pushWaiters.forEach((wake) => wake(true));
@@ -339,9 +369,9 @@ export class StatusStore {
     }
 
     /** true when a push arrives within ms, false otherwise */
-    nextPush(ms: any) {
+    nextPush(ms: number): Promise<boolean | undefined> {
         return new Promise((resolve) => {
-            const wake = (pushed: any) => {
+            const wake = (pushed?: boolean) => {
                 clearTimeout(timer);
                 this.pushWaiters.delete(wake);
                 resolve(pushed);
@@ -351,7 +381,7 @@ export class StatusStore {
         });
     }
 
-    waitForNextPoll(ms: any) {
+    waitForNextPoll(ms: number) {
         if (this.pollSleep) {
             return this.pollSleep(ms);
         }
@@ -412,7 +442,7 @@ export class StatusStore {
 
     // MARK: accounts
 
-    async signIn(email: any, password: any) {
+    async signIn(email: string, password: string) {
         const result = await this.client.signIn(email, password);
         const signedIn = signedInAs(result);
         this.markConnected();
@@ -425,7 +455,7 @@ export class StatusStore {
     }
 
     /** finishes a sign-in through a service with the ticket it came back with */
-    async signInWithTicket(ticket: any) {
+    async signInWithTicket(ticket: string) {
         const result = await this.client.signInWithTicket(ticket);
         this.markConnected();
         this.save(signedInAs(result));
@@ -438,7 +468,7 @@ export class StatusStore {
     }
 
     /** renames the default admin account and sets its password, then signs in as the new account */
-    async commission(name: any, password: any) {
+    async commission(name: string, password: string) {
         if (!this.commissioning) {
             return;
         }
@@ -456,7 +486,7 @@ export class StatusStore {
      * sets a new password once current proves who is asking; the server signs the account out
      * everywhere else, so this keeps the new token it returns
      **/
-    async changePassword(current: any, password: any) {
+    async changePassword(current: string, password: string) {
         const credentials = this.requireCredentials();
         let verified;
         try {
@@ -514,7 +544,7 @@ export class StatusStore {
         this.accountChecked = false;
     }
 
-    save(credentials: any) {
+    save(credentials: Credentials) {
         prefs.write('credentials', credentials);
         prefs.write('lastAccount', credentials.email);
         this.credentials = credentials;
@@ -549,11 +579,11 @@ export class StatusStore {
     }
 
     serverSettings() {
-        return this.adminRequest((token: any) => this.client.fetchSettings(token));
+        return this.adminRequest((token) => this.client.fetchSettings(token));
     }
 
-    async updateServerSettings(changes: any) {
-        const settings = await this.adminRequest((token: any) => this.client.updateSettings(changes, token));
+    async updateServerSettings(changes: SystemSettingsUpdate) {
+        const settings = await this.adminRequest((token) => this.client.updateSettings(changes, token));
         if ('zipCode' in changes || 'timeZone' in changes) {
             // the server fetches the new forecast straight away; the next refresh picks it up
             this.weatherCheckedAt = 0;
@@ -565,26 +595,26 @@ export class StatusStore {
     }
 
     maintenanceJobs() {
-        return this.adminRequest((token: any) => this.client.fetchJobs(token));
+        return this.adminRequest((token) => this.client.fetchJobs(token));
     }
 
     /** runs a maintenance job now; resolves with how the run went */
-    runMaintenanceJob(name: any) {
-        return this.adminRequest((token: any) => this.client.runJob(name, token));
+    runMaintenanceJob(name: string) {
+        return this.adminRequest((token) => this.client.runJob(name, token));
     }
 
     /** starts reading stored frames again; resolves with the run, which goes on in the server */
-    startReprocess(request: any) {
-        return this.adminRequest((token: any) => this.client.startReprocess(request, token));
+    startReprocess(request: Parameters<StoreClient['startReprocess']>[0]) {
+        return this.adminRequest((token) => this.client.startReprocess(request, token));
     }
 
     /** the reprocessing run under way or the last one, or null */
     reprocessRun() {
-        return this.adminRequest((token: any) => this.client.fetchReprocess(token));
+        return this.adminRequest((token) => this.client.fetchReprocess(token));
     }
 
     /** a request needing the admin role; a rejected token signs out */
-    async adminRequest(request: any) {
+    async adminRequest<T>(request: (token: string) => Promise<T>) {
         try {
             return await request(this.requireCredentials().token);
         } catch (error) {
@@ -601,7 +631,10 @@ export class StatusStore {
      * requests the change, then polls status until the controller reports it or the
      * confirmation timeout passes
      **/
-    async setControl(control: any, on: any) {
+    async setControl(control: EquipmentControl | undefined, on: boolean) {
+        if (!control) {
+            return;
+        }
         if (!this.credentials) {
             this.errorMessage = new ApiError('unauthorized').message;
             this.changed();
@@ -656,7 +689,7 @@ export class StatusStore {
     }
 
     /** asks the server for a water flow mode, then polls until the controller reports it */
-    async setWaterMode(mode: any) {
+    async setWaterMode(mode: WaterModeId) {
         if (!this.credentials || mode === this.waterMode) {
             return;
         }
@@ -680,7 +713,7 @@ export class StatusStore {
      * true once reached() holds, false at the timeout, null if the server is lost meanwhile.
      * While live, the controller's report arrives as a push; otherwise it's polled for.
      **/
-    async awaitConfirmation(reached: any, timeoutMs: any) {
+    async awaitConfirmation(reached: () => boolean, timeoutMs: number) {
         const deadline = Date.now() + timeoutMs;
         while (Date.now() < deadline) {
             if (this.isLive) {
@@ -708,7 +741,7 @@ export class StatusStore {
         return false;
     }
 
-    async handleControlError(error: any, signInAgain: any, notAllowed: any) {
+    async handleControlError(error: unknown, signInAgain: string, notAllowed: string) {
         if (error instanceof ApiError && error.kind === 'unauthorized') {
             this.expire();
             this.errorMessage = `Your sign-in is no longer valid. ${signInAgain}`;
@@ -726,10 +759,10 @@ export class StatusStore {
      * saves each changed setpoint for the device, then refreshes so the tiles show the new
      * targets; setpoints is { pool, spa } in °F
      **/
-    async setSetpoints(setpoints: any, deviceId: any) {
+    async setSetpoints(setpoints: Record<string, number>, deviceId: string) {
         const credentials = this.requireCredentials();
         try {
-            for (const [body, degrees] of Object.entries(setpoints as Record<string, number>)) {
+            for (const [body, degrees] of Object.entries(setpoints)) {
                 const current = this.heating?.setpoints?.[body] ? this.heating.setpoints[body][deviceId] : undefined;
                 if (degrees !== current) {
                     await this.client.setSetpoint(degrees, deviceId, body, credentials.token);
