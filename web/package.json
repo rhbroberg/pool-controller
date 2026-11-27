@@ -11,7 +11,7 @@
     "scripts": {
         "build": "npm run build:server && npm run build:client",
         "build:server": "esbuild server.ts --outfile=server.js --platform=node --format=esm --target=node20 --packages=external",
-        "build:client": "esbuild \"public/js/**/*.ts\" \"public/js/views/**/*.ts\" --outdir=public/js --outbase=public/js --format=esm --target=es2022 --sourcemap",
+        "build:client": "esbuild $(find public/js -type f -name '*.ts' ! -name '*.d.ts') --outdir=public/js --outbase=public/js --format=esm --target=es2022 --sourcemap",
         "prestart": "npm run build",
         "start": "node server.js",
         "dev": "PORT=8080 tsx server.ts",
