@@ -15,12 +15,22 @@ const LONGEST_RETRY_MS = 30000;
 // how long to wait for the session to open when the server hasn't said yet
 const OPEN_TIMEOUT_MS = 10000;
 
+/** one Engine.IO / Socket.IO packet as received; null if it isn't one */
+export type LivePacket =
+    | { type: 'open'; pingInterval?: number; pingTimeout?: number }
+    | { type: 'close' }
+    | { type: 'ping' }
+    | { type: 'connect' }
+    | { type: 'disconnect' }
+    | { type: 'refused'; reason: string }
+    | { type: 'event'; name: string; data: unknown };
+
 /** one Engine.IO packet as received; null if it isn't one */
-export const parsePacket = (text: string | null | undefined): any => {
+export const parsePacket = (text: string | null | undefined): LivePacket | null => {
     if (typeof text !== 'string' || text.length === 0) {
         return null;
     }
-    const json = (body: any) => {
+    const json = (body: string): any => {
         try {
             return body ? JSON.parse(body) : null;
         } catch {
@@ -39,7 +49,7 @@ export const parsePacket = (text: string | null | undefined): any => {
     }
 };
 
-const parseMessage = (text: string, json: (body: string) => any): any => {
+const parseMessage = (text: string, json: (body: string) => any): LivePacket | null => {
     // a namespace other than the default one would follow the type, as "/name,"
     if (text.length > 1 && text[1] === '/') {
         return null;
@@ -168,8 +178,16 @@ export class LiveConnection {
                 this.onEvent(packet.name, packet.data);
             }
             break;
-        default:
+        case 'close':
+        case 'disconnect':
+        case 'refused':
             this.lost();
+            break;
+        default: {
+            const _exhaustive: never = packet;
+            void _exhaustive;
+            this.lost();
+        }
         }
     }
 

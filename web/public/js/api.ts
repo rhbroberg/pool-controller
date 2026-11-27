@@ -94,7 +94,7 @@ export class Client {
         return url;
     }
 
-    async send(method: string, path: string, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal }: { token?: string | null; body?: any; query?: Record<string, any>; timeout?: number; signal?: AbortSignal } = {}) {
+    async send<T = any>(method: string, path: string, { token, body, query, timeout = DEFAULT_TIMEOUT_MS, signal }: { token?: string | null; body?: any; query?: Record<string, any>; timeout?: number; signal?: AbortSignal } = {}): Promise<T> {
         const headers: Record<string, string> = {
             Accept: 'application/json',
             // the server's validator rejects any request without a JSON content type, body or not
@@ -116,24 +116,27 @@ export class Client {
                 signal: anySignal(signals),
                 cache: 'no-store'
             });
-        } catch (error) {
+        } catch (error: unknown) {
             if (signal && signal.aborted) {
                 throw error;
             }
-            const message = error.name === 'TimeoutError' ? 'The pool server didn’t answer in time.' : 'Can’t reach the web service.';
+            const name = error && typeof error === 'object' && 'name' in error ? String((error as { name: unknown }).name) : '';
+            const message = name === 'TimeoutError' ? 'The pool server didn’t answer in time.' : 'Can’t reach the web service.';
             throw new ApiError('unreachable', { message });
         }
         const text = await response.text();
-        let data;
+        let data: unknown;
         try {
             data = text ? JSON.parse(text) : undefined;
         } catch {
             data = undefined;
         }
         if (response.ok) {
-            return data;
+            return data as T;
         }
-        const message = data && typeof data.message === 'string' ? data.message : undefined;
+        const message = data && typeof data === 'object' && data !== null && 'message' in data && typeof (data as { message: unknown }).message === 'string'
+            ? (data as { message: string }).message
+            : undefined;
         if (response.headers.get(UNREACHABLE_HEADER)) {
             throw new ApiError('unreachable', { status: response.status, message });
         }

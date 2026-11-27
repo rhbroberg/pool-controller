@@ -307,9 +307,11 @@ export const ROLES = [
     { id: 'viewer', title: 'Viewer', withArticle: 'a viewer', summary: 'Viewers can see everything and change their own password.' },
     { id: 'user', title: 'Operator', withArticle: 'an operator', summary: 'Operators can also change equipment, water flow and panel settings.' },
     { id: 'admin', title: 'Admin', withArticle: 'an admin', summary: 'Admins can also manage accounts, restart the server and factory reset.' }
-];
+] as const;
 
-export const roleInfo = (id: any) => ROLES.find((role) => role.id === id) || null;
+export type RoleId = typeof ROLES[number]['id'];
+
+export const roleInfo = (id: string) => ROLES.find((role) => role.id === id) || null;
 export const canControl = (role: string | null | undefined) => role === 'user' || role === 'admin';
 export const isAdmin = (role: string | null | undefined) => role === 'admin';
 
