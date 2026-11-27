@@ -570,8 +570,19 @@ a {
     color: inherit;
 }
 
-.water-column:hover .link-title {
+.water-column .link-title:hover {
     text-decoration: underline;
+}
+
+.water-column .water-setpoint {
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    border-radius: 8px;
+}
+
+.water-column .water-setpoint:hover .water-value {
+    opacity: 0.75;
 }
 
 .water-column .sources {

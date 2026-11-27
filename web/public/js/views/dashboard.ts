@@ -100,8 +100,9 @@ export const mountDashboard = (root: any, app: any) => {
             spoken.push(`heading for ${heating.setpoint}°${heating.ready ? ` by ${heating.ready}` : ''}`);
         }
         spoken.push(...sources.map((source) => `${source.title} ${source.heating ? 'heating' : 'on'}`));
-        return h('a', { class: 'water-column', href: `#/thermostat/${body.id}`, title: 'Set the temperature', 'aria-label': spoken.join(', ') },
-            h('span', { class: 'link-title' },
+        // title opens the temperature graph; the number opens the thermostat
+        return h('div', { class: 'water-column' },
+            h('a', { class: 'link-title', href: `#/history/${body.id}`, title: 'Show the temperature history' },
                 water.title,
                 icon('chevronRight'),
                 h('span', { class: 'sources' }, sources.map((source) => h('span', {
@@ -109,8 +110,9 @@ export const mountDashboard = (root: any, app: any) => {
                     style: { '--tint': `var(--${source.control!.tint})` },
                     title: `${source.title} ${source.heating ? 'heating' : 'on'}`
                 }, icon(source.control!.icon, { filled: source.heating }))))),
-            h('span', { class: ['water-value', water.isDimmed ? 'dimmed' : ''] }, water.value),
-            waterDetail(water, heating));
+            h('a', { class: 'water-setpoint', href: `#/thermostat/${body.id}`, title: 'Set the temperature', 'aria-label': spoken.join(', ') },
+                h('span', { class: ['water-value', water.isDimmed ? 'dimmed' : ''] }, water.value),
+                waterDetail(water, heating)));
     };
 
     const temperatureCard = () => h('div', { class: 'card temperature-card' },

@@ -26,11 +26,7 @@ struct TemperatureCard: View {
                     if water.body != waters.first?.body {
                         Divider()
                     }
-                    NavigationLink(value: DashboardRoute.thermostat(water.body)) {
-                        WaterColumn(water: water)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Sets the temperature")
+                    WaterColumn(water: water)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -50,30 +46,45 @@ fileprivate struct WaterColumn: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 4) {
-                Text(reading.title)
-                    .foregroundStyle(Color.accentColor)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-                Spacer(minLength: 4)
-                ForEach(water.heating?.sources ?? []) { source in
-                    SourceIcon(source: source)
+            // title link opens the temperature graph; the number below opens the thermostat
+            NavigationLink(value: DashboardRoute.temperatureHistory(water.body)) {
+                HStack(spacing: 4) {
+                    Text(reading.title)
+                        .foregroundStyle(Color.accentColor)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                    Spacer(minLength: 4)
+                    ForEach(water.heating?.sources ?? []) { source in
+                        SourceIcon(source: source)
+                    }
                 }
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
             }
-            .font(.subheadline.weight(.semibold))
-            Text(reading.value)
-                .font(.system(size: temperatureSize, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .foregroundStyle(reading.isDimmed ? .secondary : .primary)
-            detail
+            .buttonStyle(.plain)
+            .accessibilityLabel(reading.title)
+            .accessibilityHint("Shows the temperature history")
+
+            NavigationLink(value: DashboardRoute.thermostat(water.body)) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(reading.value)
+                        .font(.system(size: temperatureSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(reading.isDimmed ? .secondary : .primary)
+                    detail
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(thermostatAccessibilityText)
+            .accessibilityHint("Sets the temperature")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(.rect)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
     }
 
     /// Where the water is headed and by when, or that its pump is off; a line is kept either way
@@ -102,8 +113,8 @@ fileprivate struct WaterColumn: View {
         }
     }
 
-    private var accessibilityText: String {
-        var parts = [reading.title, reading.value]
+    private var thermostatAccessibilityText: String {
+        var parts = [reading.value]
         if let heating = water.heating {
             if let setpoint = heating.setpoint {
                 parts.append(heating.readyText.map { String(localized: "heading for \(setpoint) degrees by \($0)") }
