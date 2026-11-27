@@ -11,7 +11,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthTitle = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const dayTitle = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-const keyAsUtcDate = (key) => {
+const keyAsUtcDate = (key: any) => {
     const { year, month, day } = partsOf(key);
     return new Date(Date.UTC(year, month - 1, day));
 };
@@ -20,7 +20,7 @@ const keyAsUtcDate = (key) => {
  * resolves with [from, to] in milliseconds for the days picked, or undefined when cancelled;
  * initial is the window the graph shows now
  **/
-const dotCaption = (name) => {
+const dotCaption = (name: any) => {
     if (name === 'pool temp') {
         return 'A dot marks a day the pool was running and its temperature was known. Click the first day, then the last.';
     }
@@ -31,18 +31,18 @@ const dotCaption = (name) => {
 };
 
 export const openHistoryCalendar = (app: any, [initialFrom, initialTo]: [any, any], name: string | null = null) => {
-    let sheet;
+    let sheet: any;
     const calendar = new HistoryCalendar(app.client, () => sheet && sheet.update(), name ? [name] as string[] : null);
     let { first, last }: { first: string | null; last: string | null } = calendar.keysIn(initialFrom, initialTo);
     let visible = (({ year, month }) => ({ year, month }))(partsOf(last));
 
-    const page = (offset) => {
+    const page = (offset: any) => {
         visible = shiftMonth(visible, offset);
         calendar.load(visible);
         sheet.update();
     };
 
-    const pick = (key) => {
+    const pick = (key: any) => {
         if (!first || last) {
             first = key;
             last = null;
@@ -60,7 +60,7 @@ export const openHistoryCalendar = (app: any, [initialFrom, initialTo]: [any, an
         return { start, end };
     };
 
-    const dayButton = (day, selection) => {
+    const dayButton = (day: any, selection: any) => {
         if (!day.inMonth) {
             return h('span', { class: 'calendar-day outside', 'aria-hidden': 'true' });
         }
@@ -77,7 +77,7 @@ export const openHistoryCalendar = (app: any, [initialFrom, initialTo]: [any, an
         }, h('span', { class: 'calendar-number' }, String(day.day)), readings ? h('span', { class: 'calendar-dot' }) : null);
     };
 
-    const render = (close) => {
+    const render = (close: any) => {
         const selection = chosen();
         const weeks = calendar.monthGrid(visible);
         const today = partsOf(calendar.today());

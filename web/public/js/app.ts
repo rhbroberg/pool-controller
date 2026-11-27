@@ -54,9 +54,9 @@ const app = {
     listeners: new Set(),
     /** tells every page a setting kept by the page itself, such as the pool name, changed */
     settingsChanged() {
-        this.listeners.forEach((listener) => listener());
+        this.listeners.forEach((listener: any) => listener());
     },
-    onSettingsChanged(listener) {
+    onSettingsChanged(listener: any) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }
@@ -121,7 +121,7 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-prefs.watch((key) => {
+prefs.watch((key: any) => {
     if (key !== 'credentials') {
         app.settingsChanged();
     }

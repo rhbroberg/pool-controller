@@ -9,7 +9,7 @@ export const REPROCESS_KINDS = EVENT_KINDS.filter((kind) => kind.id !== 'actions
 // frames the server couldn't read are what a protocol fix recovers; stored readings and switches
 // also drop repeats the server once recorded, so they're opt-in
 export const DEFAULT_REPROCESS_KINDS = ['protocolErrors'];
-const TYPE_TITLES = {
+const TYPE_TITLES: Record<string, string> = {
     info: 'Readings',
     status: 'Equipment',
     control: 'Panel keys',
@@ -18,22 +18,22 @@ const TYPE_TITLES = {
     removed: 'Removed'
 };
 
-const pad = (n) => String(n).padStart(2, '0');
+const pad = (n: any) => String(n).padStart(2, '0');
 /** a time as a datetime-local input shows it, in this browser's zone */
-export const inputValue = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+export const inputValue = (date: any) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 /** what a datetime-local input holds, or null when it's empty or not a time */
-export const fromInput = (text) => {
+export const fromInput = (text: any) => {
     const date = text ? new Date(text) : null;
     return date && !Number.isNaN(date.getTime()) ? date : null;
 };
 
-export const isActive = (run) => Boolean(run) && (run.state === 'waiting' || run.state === 'running');
+export const isActive = (run: any) => Boolean(run) && (run.state === 'waiting' || run.state === 'running');
 
 /** "Failed frames → Readings": one of a run's kind changes */
-export const transitionTitle = ({ from, to }) => `${TYPE_TITLES[from] || from} → ${TYPE_TITLES[to] || to}`;
+export const transitionTitle = ({from, to}: any) => `${TYPE_TITLES[from] || from} → ${TYPE_TITLES[to] || to}`;
 
 /** how a run is going, in a sentence; formatTime writes a date */
-export const runStateText = (run, formatTime) => {
+export const runStateText = (run: any, formatTime: any) => {
     const kind = run.dryRun ? 'Preview' : 'Reprocessing';
     switch (run.state) {
     case 'waiting': return `${kind} waits for a maintenance job to finish`;
@@ -44,19 +44,19 @@ export const runStateText = (run, formatTime) => {
 };
 
 /** a run's counts, labelled for a preview or for changes made */
-export const runRows = (run) => {
-    const label = (text) => run.dryRun ? `Would be ${text.toLowerCase()}` : text;
+export const runRows = (run: any) => {
+    const label = (text: any) => run.dryRun ? `Would be ${text.toLowerCase()}` : text;
     return [
         ['Events read again', run.examined],
         [label('Rewritten'), run.updated],
         [label('Removed'), run.removed],
         ['Unchanged', run.unchanged],
-        ...run.transitions.map((each) => [transitionTitle(each), each.count])
+        ...run.transitions.map((each: any) => [transitionTitle(each), each.count])
     ];
 };
 
 /** what the page says under a finished run, or null */
-export const runFooter = (run) => {
+export const runFooter = (run: any) => {
     if (run.state !== 'finished') {
         return null;
     }
@@ -72,7 +72,7 @@ export class ReprocessForm {
      * store has reprocessRun() and startReprocess(request); changed is called whenever there's
      * something new to draw; sleep waits between looks at a run under way
      **/
-    constructor(store, { now = new Date(), changed = () => {}, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
+    constructor(store: any, { now = new Date(), changed = () => {}, sleep = (ms: any) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
         this.store = store;
         this.changed = changed;
         this.sleep = sleep;
@@ -115,11 +115,11 @@ export class ReprocessForm {
         return this.starting || isActive(this.run);
     }
 
-    canStart(isAdmin) {
+    canStart(isAdmin: any) {
         return isAdmin && !this.busy && !this.problem;
     }
 
-    toggle(id) {
+    toggle(id: any) {
         this.kinds = new Set(this.kinds);
         if (!this.kinds.delete(id)) {
             this.kinds.add(id);
@@ -139,7 +139,7 @@ export class ReprocessForm {
         this.follow();
     }
 
-    async start(dryRun) {
+    async start(dryRun: any) {
         const [from, to] = this.range;
         this.starting = true;
         this.error = null;

@@ -6,7 +6,7 @@
     "moduleDetection": "force",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "strictNullChecks": true,
     "noImplicitThis": false,
     "useDefineForClassFields": false,

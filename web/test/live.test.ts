@@ -15,19 +15,19 @@ const fakeSockets = () => {
     const sockets: any[] = [];
     class FakeSocket {
     [key: string]: any;
-        constructor(url) {
+        constructor(url: any) {
             this.url = url;
             this.sent = [];
             this.closed = false;
             sockets.push(this);
         }
-        send(text) {
+        send(text: any) {
             this.sent.push(text);
         }
         close() {
             this.closed = true;
         }
-        receive(text) {
+        receive(text: any) {
             this.onmessage({ data: text });
         }
         hangUp() {
@@ -42,14 +42,14 @@ const fakeTimers = () => {
     const pending = new Map();
     let next = 1;
     return {
-        setTimer: (fn, ms) => {
+        setTimer: (fn: any, ms: any) => {
             const id = next++;
             pending.set(id, { fn, ms });
             return id;
         },
-        clearTimer: (id) => pending.delete(id),
+        clearTimer: (id: any) => pending.delete(id),
         waits: () => [...pending.values()].map((timer) => timer.ms),
-        fire: (ms) => {
+        fire: (ms: any) => {
             const [id, timer] = [...pending.entries()].find(([, entry]) => entry.ms === ms) || [];
             assert.ok(timer, `a ${ms}ms timer is pending`);
             pending.delete(id);
@@ -74,7 +74,7 @@ const connection = (options = {}) => {
     return { live, sockets, timers, events, states };
 };
 
-const join = (socket) => {
+const join = (socket: any) => {
     socket.receive(OPEN);
     socket.receive('40{"sid":"def"}');
 };
@@ -222,13 +222,13 @@ describe('live connection', () => {
         const { sockets, FakeSocket } = fakeSockets();
         class Flaky extends FakeSocket {
     [key: string]: any;
-            constructor(url) {
+            constructor(url: any) {
                 if (fail) {
                     throw new Error('blocked');
                 }
                 super(url);
             }
-            send(text) {
+            send(text: any) {
                 if (text === '40') {
                     throw new Error('closed');
                 }
@@ -248,7 +248,7 @@ describe('live connection', () => {
 
     it('calls the browser’s timers unbound, as browsers insist', () => {
         const saved = globalThis.setTimeout;
-        const strict = function (fn, ms) {
+        const strict = function (fn: any, ms: any) {
             if (this !== undefined && this !== globalThis) {
                 throw new TypeError('Illegal invocation');
             }
@@ -284,7 +284,7 @@ const fakeLive = () => ({
     stop() { this.stops += 1; }
 });
 
-const reading = (name, value, category = 'status') => ({ name, category, value, timestamp: new Date('2026-01-02T03:04:05Z') });
+const reading = (name: any, value: any, category = 'status') => ({ name, category, value, timestamp: new Date('2026-01-02T03:04:05Z') });
 
 const fakeClient = (readings: any) => {
     const client = {
@@ -298,7 +298,7 @@ const fakeClient = (readings: any) => {
         fetchHeating: async () => ({ minimum: 65 }),
         fetchTasks: async () => null,
         fetchWeather: async () => null,
-        setDevice: async (name, on) => client.calls.push(['setDevice', name, on])
+        setDevice: async (name: any, on: any) => client.calls.push(['setDevice', name, on])
     };
     return client;
 };
@@ -348,7 +348,7 @@ describe('status store with live updates', () => {
         const live = fakeLive();
         const store = new StatusStore(fakeClient([]), { live });
         const notified: any[] = [];
-        store.subscribe((changed) => notified.push(changed.isLive));
+        store.subscribe((changed: any) => notified.push(changed.isLive));
         (live as any).onStateChange(true);
         await Promise.resolve();
         (live as any).onStateChange(false);

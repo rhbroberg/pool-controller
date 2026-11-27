@@ -19,7 +19,7 @@ const PROXY_TIMEOUT_MS = 30000;
 // tells the page the pool server, rather than this service, could not be reached
 export const UNREACHABLE_HEADER = 'x-pool-web-unreachable';
 
-const CONTENT_TYPES = {
+const CONTENT_TYPES: Record<string, string> = {
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -43,14 +43,14 @@ export const describeCommit = () => {
     }
 };
 
-const isProxied = (pathname) => PROXIED_PREFIXES.some((prefix) => pathname === prefix.replace(/\/$/, '') || pathname.startsWith(prefix));
+const isProxied = (pathname: any) => PROXIED_PREFIXES.some((prefix) => pathname === prefix.replace(/\/$/, '') || pathname.startsWith(prefix));
 
 const sendJson = (res: any, status: number, body: any, headers: Record<string, string> = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
     res.end(JSON.stringify(body));
 };
 
-const serveFile = (req, res, pathname, publicDir) => {
+const serveFile = (req: any, res: any, pathname: any, publicDir: any) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
         sendJson(res, 405, { code: 405, message: 'only GET and HEAD are served here' }, { Allow: 'GET, HEAD' });
         return;
@@ -89,7 +89,7 @@ const serveFile = (req, res, pathname, publicDir) => {
     });
 };
 
-const forwardedHeaders = (req, target) => {
+const forwardedHeaders = (req: any, target: any) => {
     const headers = { ...req.headers, host: target.host };
     const forwardedFor = req.socket.remoteAddress;
     if (forwardedFor) {
@@ -116,8 +116,8 @@ const upstreamRequest = (req: any, target: any, onResponse?: any) => {
     }, onResponse);
 };
 
-const proxy = (req, res, target) => {
-    const upstream = upstreamRequest(req, target, (answer) => {
+const proxy = (req: any, res: any, target: any) => {
+    const upstream = upstreamRequest(req, target, (answer: any) => {
         res.writeHead(answer.statusCode, answer.headers);
         answer.pipe(res);
     });
@@ -135,7 +135,7 @@ const proxy = (req, res, target) => {
     req.pipe(upstream);
 };
 
-const rawHead = (statusLine, rawHeaders) => {
+const rawHead = (statusLine: any, rawHeaders: any) => {
     let head = `${statusLine}\r\n`;
     for (let i = 0; i < rawHeaders.length; i += 2) {
         head += `${rawHeaders[i]}: ${rawHeaders[i + 1]}\r\n`;
@@ -147,7 +147,7 @@ const rawHead = (statusLine, rawHeaders) => {
  * relays a WebSocket upgrade, such as the pool server's live updates, then copies bytes both
  * ways until either side closes
  **/
-const proxyUpgrade = (req, socket, head, target, live) => {
+const proxyUpgrade = (req: any, socket: any, head: any, target: any, live: any) => {
     live.add(socket);
     socket.on('close', () => live.delete(socket));
     const upstream = upstreamRequest(req, target);

@@ -14,9 +14,9 @@ const KEPT_LEVELS = 4;
 // which comes back as the readings themselves when they are still stored
 const SUMMARY_ZOOM = 1.5;
 
-const TEMPERATURE_NAMES = { pool: 'pool temp', spa: 'spa temp' };
+const TEMPERATURE_NAMES: Record<string, string> = { pool: 'pool temp', spa: 'spa temp' };
 // the pump just upstream of each body's temperature sensor
-const PUMP_NAMES = { pool: 'filter', spa: 'aux14' };
+const PUMP_NAMES: Record<string, string> = { pool: 'filter', spa: 'aux14' };
 
 /** the server's bucket lengths, in seconds */
 export const RESOLUTIONS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 604800, 1209600, 2592000];
@@ -24,7 +24,7 @@ export const RESOLUTIONS = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 216
 export const MAX_POINTS = 5000;
 
 /** about one point per pixel across a graph showing lengthMs */
-export const levelFor = (lengthMs, pixels) => {
+export const levelFor = (lengthMs: any, pixels: any) => {
     const wanted = lengthMs / 1000 / Math.max(pixels, 50);
     return RESOLUTIONS.find((seconds) => seconds >= wanted) || RESOLUTIONS[RESOLUTIONS.length - 1];
 };
@@ -34,16 +34,16 @@ export const levelFor = (lengthMs, pixels) => {
  * whenever they are still stored and fit. The bucket length sent with the request is what the
  * server uses when a window has more readings than that
  **/
-export const pointsFor = (_spanMs, _level) => MAX_POINTS;
+export const pointsFor = (_spanMs: any, _level: any) => MAX_POINTS;
 
 /** 1 while source (heater1 or valve4) was warming water; the server works it out from the switches */
-export const heatingName = (water, source) => `heating:${water}:${source}`;
+export const heatingName = (water: any, source: any) => `heating:${water}:${source}`;
 
 /** a point from the server as a sample: a reading holds until the next; a bucket for its span */
-const sampleOf = (point, resolution) => ({ t: point.t, v: point.v, low: point.low ?? null, high: point.high ?? null, span: resolution * 1000 });
+const sampleOf = (point: any, resolution: any) => ({ t: point.t, v: point.v, low: point.low ?? null, high: point.high ?? null, span: resolution * 1000 });
 
 /** drops buckets a finer answer replaces; a reading (span 0) is already the finest */
-const dropCoarser = (known, from, to, span) => {
+const dropCoarser = (known: any, from: any, to: any, span: any) => {
     for (const [t, sample] of known) {
         const stop = sample.span > 0 ? t + sample.span : t;
         if (t < to && stop > from && sample.span > span) {
@@ -57,7 +57,7 @@ export class TemperatureHistory {
     /**
      * water is pool or spa; changed is called whenever there's something new to draw
      **/
-    constructor(water, client, changed = () => {}) {
+    constructor(water: any, client: any, changed = () => {}) {
         this.water = water;
         this.client = client;
         this.changed = changed;
@@ -82,22 +82,22 @@ export class TemperatureHistory {
         return [this.temperatureName, AIR, this.pumpName, heatingName(this.water, HEATER), heatingName(this.water, HEAT_PUMP)];
     }
 
-    level(level) {
+    level(level: any) {
         if (!this.levels.has(level)) {
             this.levels.set(level, { values: new Map(), sorted: new Map(), loaded: [], resolution: 0, used: 0 });
         }
         return this.levels.get(level);
     }
 
-    samples(name, level) {
+    samples(name: any, level: any) {
         const store = this.levels.get(level);
         return (store && store.sorted.get(name)) || [];
     }
 
     /** the latest time level has readings for */
-    loadedThrough(level) {
+    loadedThrough(level: any) {
         const store = this.levels.get(level);
-        return store && store.loaded.length ? Math.max(...store.loaded.map((range) => range.to)) : null;
+        return store && store.loaded.length ? Math.max(...store.loaded.map((range: any) => range.to)) : null;
     }
 
     // MARK: loading
@@ -106,12 +106,12 @@ export class TemperatureHistory {
      * fetches whatever part of [from, to] hasn't been fetched at level yet, after any fetch
      * already under way
      **/
-    ensureLoaded(from, to, level) {
+    ensureLoaded(from: any, to: any, level: any) {
         this.queue = this.queue.then(() => this.load(from, to, level));
         return this.queue;
     }
 
-    async load(from, to, level) {
+    async load(from: any, to: any, level: any) {
         this.level(level).used = ++this.uses;
         const gaps = this.missing(from, to, level);
         if (!gaps.length) {
@@ -123,7 +123,7 @@ export class TemperatureHistory {
             for (const [start, end] of gaps) {
                 const response = await this.client.fetchHistory(this.names, start, end, { maxPoints: pointsFor(end - start, level), resolution: level });
                 this.merge(response, level);
-                this.record(start, end, level, response.series.some((series) => (series.resolution || 0) > 0));
+                this.record(start, end, level, response.series.some((series: any) => (series.resolution || 0) > 0));
                 this.errorMessage = null;
             }
             this.evict(level);
@@ -141,15 +141,15 @@ export class TemperatureHistory {
      * readings answer any window they overlap. A summary answers one only when it isn't much
      * wider, so zooming in asks again and can come back as the readings if they are still stored
      **/
-    covers(loaded, from, to) {
+    covers(loaded: any, from: any, to: any) {
         if (loaded.to <= from || loaded.from >= to) {
             return false;
         }
         return !loaded.summarized || loaded.to - loaded.from <= (to - from) * SUMMARY_ZOOM;
     }
 
-    missing(from, to, level) {
-        const covering = this.level(level).loaded.filter((loaded) => this.covers(loaded, from, to)).sort((a, b) => a.from - b.from);
+    missing(from: any, to: any, level: any) {
+        const covering = this.level(level).loaded.filter((loaded: any) => this.covers(loaded, from, to)).sort((a: any, b: any) => a.from - b.from);
         const gaps: any[] = [];
         let cursor = from;
         for (const loaded of covering) {
@@ -167,7 +167,7 @@ export class TemperatureHistory {
         return gaps.filter(([start, end]) => end - start >= MINIMUM_GAP_MS);
     }
 
-    record(from, to, level, summarized) {
+    record(from: any, to: any, level: any, summarized: any) {
         const store = this.level(level);
         const merged: any[] = [];
         for (const next of [...store.loaded, { from, to, summarized }].sort((a, b) => a.from - b.from)) {
@@ -182,7 +182,7 @@ export class TemperatureHistory {
         store.loaded = merged;
     }
 
-    merge(response, level) {
+    merge(response: any, level: any) {
         if (response.earliest !== null && response.earliest !== undefined) {
             this.earliest = this.earliest === null ? response.earliest : Math.min(this.earliest, response.earliest);
         }
@@ -206,7 +206,7 @@ export class TemperatureHistory {
         }
     }
 
-    evict(current) {
+    evict(current: any) {
         [...this.levels.entries()]
             .filter(([level]) => level !== current)
             .sort((a, b) => b[1].used - a[1].used)
@@ -220,8 +220,8 @@ export class TemperatureHistory {
      * the level to draw from..to from: level once it covers the window, otherwise the most
      * recently used one that does, so zooming in shows the coarser lines until finer arrive
      **/
-    displayLevel(level, from, to, now = Date.now()) {
-        const covers = (store) => store.loaded.some((range) => range.from <= from && range.to >= Math.min(to, now));
+    displayLevel(level: any, from: any, to: any, now = Date.now()) {
+        const covers = (store: any) => store.loaded.some((range: any) => range.from <= from && range.to >= Math.min(to, now));
         const wanted = this.levels.get(level);
         if (wanted && covers(wanted)) {
             return level;
@@ -231,7 +231,7 @@ export class TemperatureHistory {
     }
 
     /** the coarsest bucket length answered at level, or 0 when every series was readings as recorded */
-    resolution(level) {
+    resolution(level: any) {
         const store = this.levels.get(level);
         return store ? store.resolution : 0;
     }
@@ -240,7 +240,7 @@ export class TemperatureHistory {
      * times source (the heater or the heat pump) was warming this body of water, ending no later
      * than end; intensity is the share of each stretch it was on, 1 for exact readings
      **/
-    heatingSpans(source, end, level) {
+    heatingSpans(source: any, end: any, level: any) {
         return holds(this.samples(heatingName(this.water, source), level), end)
             .filter((stretch) => stretch.v > 0)
             .map((stretch) => ({ start: stretch.start, end: stretch.end, intensity: Math.min(stretch.v, 1) }));
@@ -251,8 +251,8 @@ export class TemperatureHistory {
      * to its end. Each sensor sits just downstream of its pump, so the line only covers times that
      * pump ran, starting at that run's first reading, since an earlier one is stale.
      **/
-    waterSegments(end, level) {
-        const readings = this.samples(this.temperatureName, level).filter((sample) => sample.t <= end);
+    waterSegments(end: any, level: any) {
+        const readings = this.samples(this.temperatureName, level).filter((sample: any) => sample.t <= end);
         if (!readings.length) {
             return [];
         }
@@ -262,22 +262,22 @@ export class TemperatureHistory {
         }
         return merged(holds(pump, end).filter((stretch) => stretch.v > 0))
             .map(({ start, end: stop }) => {
-                const inside = readings.filter((sample) => sample.t >= start && sample.t <= stop);
+                const inside = readings.filter((sample: any) => sample.t >= start && sample.t <= stop);
                 return inside.length ? extended(inside, stop) : null;
             })
             .filter(Boolean);
     }
 
-    airLine(end, level) {
-        const readings = this.samples(AIR, level).filter((sample) => sample.t <= end);
+    airLine(end: any, level: any) {
+        const readings = this.samples(AIR, level).filter((sample: any) => sample.t <= end);
         return readings.length ? extended(readings, end) : [];
     }
 }
 
 /** how long each sample's value held: a reading until the next one, a bucket for its span */
-export const holds = (samples, end) => {
+export const holds = (samples: any, end: any) => {
     const result: any[] = [];
-    samples.forEach((sample, index) => {
+    samples.forEach((sample: any, index: any) => {
         if (sample.t >= end) {
             return;
         }
@@ -294,7 +294,7 @@ export const holds = (samples, end) => {
 };
 
 /** back-to-back stretches joined into one */
-const merged = (stretches) => {
+const merged = (stretches: any) => {
     const result: any[] = [];
     for (const stretch of stretches) {
         const last = result[result.length - 1];
@@ -308,13 +308,13 @@ const merged = (stretches) => {
 };
 
 /** readings persist until they change, so the last one holds until end */
-export const extended = (readings, end) => {
+export const extended = (readings: any, end: any) => {
     const last = readings[readings.length - 1];
     return last && last.t < end ? [...readings, { ...last, t: end }] : readings;
 };
 
 /** the value in effect at t on a stepped line, or null outside it */
-export const valueAt = (line, t) => {
+export const valueAt = (line: any, t: any) => {
     if (!line.length || t < line[0].t || t > line[line.length - 1].t) {
         return null;
     }

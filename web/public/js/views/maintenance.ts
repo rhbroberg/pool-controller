@@ -9,16 +9,16 @@ import { relative } from '../format.js';
 import { topbar, formSection, formRow, actionRow, linkRow, select, spinner, renderer } from '../ui.js';
 
 const RETENTION_CHOICES = [30, 90, 180, 365, 730, 1095, 1825, 3650];
-const RULE_CHOICES = { pool: [0.25, 0.5, 0.75, 1, 1.5, 2, 3], spa: [2, 4, 6, 10, 15, 20, 30, 40, 60] };
+const RULE_CHOICES: Record<string, number[]> = { pool: [0.25, 0.5, 0.75, 1, 1.5, 2, 3], spa: [2, 4, 6, 10, 15, 20, 30, 40, 60] };
 const PREHEAT_MARGIN_CHOICES = [0, 10, 15, 30, 45, 60];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
 
-const JOB_TITLES = { rollups: 'History Summaries', retention: 'Old History Cleanup', weather: 'Weather Forecast' };
+const JOB_TITLES: Record<string, string> = { rollups: 'History Summaries', retention: 'Old History Cleanup', weather: 'Weather Forecast' };
 const ZIP_CODE = /^\d{5}(-\d{4})?$/;
 
-export const retentionTitle = (days) => {
-    const plural = (count, unit) => `${count} ${unit}${count === 1 ? '' : 's'}`;
+export const retentionTitle = (days: any) => {
+    const plural = (count: any, unit: any) => `${count} ${unit}${count === 1 ? '' : 's'}`;
     if (days % 365 === 0) {
         return plural(days / 365, 'year');
     }
@@ -28,12 +28,12 @@ export const retentionTitle = (days) => {
     return plural(days, 'day');
 };
 
-const allTimeZones = (current) => {
+const allTimeZones = (current: any) => {
     const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
     return [...new Set([...zones, current])].sort();
 };
 
-export const mountMaintenance = (root, app) => {
+export const mountMaintenance = (root: any, app: any) => {
     const { store, client } = app;
     // whether the server has sign-in services to set up; null until it says, or from one too old
     let choices: any = null;
@@ -52,7 +52,7 @@ export const mountMaintenance = (root, app) => {
     let savingZip = false;
     let locationError: any = null;
 
-    const run = async (action, done) => {
+    const run = async (action: any, done: any) => {
         working = true;
         message = null;
         redraw();
@@ -82,7 +82,7 @@ export const mountMaintenance = (root, app) => {
         }
         try {
             const requests = await client.listRequests(store.credentials.token);
-            pendingRequests = requests.filter((request) => request.status === 'pending').length;
+            pendingRequests = requests.filter((request: any) => request.status === 'pending').length;
             redraw();
         } catch {
             // the count is a hint; Accounts shows any error
@@ -97,7 +97,7 @@ export const mountMaintenance = (root, app) => {
             [settings, jobs, heatingModel] = await Promise.all([
                 store.serverSettings(),
                 store.maintenanceJobs(),
-                store.client.fetchHeatingModel().then((state) => state.model).catch(() => null)
+                store.client.fetchHeatingModel().then((state: any) => state.model).catch(() => null)
             ]);
             settingsError = null;
         } catch (error) {
@@ -106,7 +106,7 @@ export const mountMaintenance = (root, app) => {
         redraw();
     };
 
-    const apply = async (changes) => {
+    const apply = async (changes: any) => {
         try {
             settings = await store.updateServerSettings(changes);
             settingsError = null;
@@ -119,7 +119,7 @@ export const mountMaintenance = (root, app) => {
     };
 
     /** a zip code is looked up by the server before it answers; null stops fetching weather */
-    const saveZip = async (zipCode) => {
+    const saveZip = async (zipCode: any) => {
         savingZip = true;
         locationError = null;
         redraw();
@@ -135,7 +135,7 @@ export const mountMaintenance = (root, app) => {
         }
     };
 
-    const runJob = async (job) => {
+    const runJob = async (job: any) => {
         runningJob = job.name;
         redraw();
         try {
@@ -174,11 +174,12 @@ export const mountMaintenance = (root, app) => {
     };
 
     const historyFooter = () => {
-        const zone = {
+        const zoneLabels: Record<string, string> = {
             configured: 'Days start at midnight in this time zone, which an admin chose.',
             system: 'Days start at midnight in this time zone, the server’s own.',
             default: 'The server couldn’t find its time zone, so days start at midnight UTC. Choose the pool’s time zone.'
-        }[settings.timeZoneSource];
+        };
+        const zone = zoneLabels[settings.timeZoneSource];
         return `${zone} Raw history older than this is removed; graphs keep showing it from hourly and daily summaries.`;
     };
 
@@ -205,7 +206,7 @@ export const mountMaintenance = (root, app) => {
                 })));
     };
 
-    const perHour = (rate) => `${rate}°F an hour`;
+    const perHour = (rate: any) => `${rate}°F an hour`;
 
     /**
      * how each body of water is timed: each source's rate as learned from history, or the rule
@@ -215,10 +216,10 @@ export const mountMaintenance = (root, app) => {
         if (!settings.heatingRules) {
             return [];
         }
-        const keeping = (choices, current) => [...new Set([...choices, current])].sort((a, b) => a - b);
-        const minutes = (count) => count === 0 ? 'No margin' : count % 60 === 0 ? `${count / 60} hr` : `${count} min`;
+        const keeping = (choices: any, current: any) => [...new Set([...choices, current])].sort((a, b) => a - b);
+        const minutes = (count: any) => count === 0 ? 'No margin' : count % 60 === 0 ? `${count / 60} hr` : `${count} min`;
         const footer = 'A rule stands in for what history hasn’t shown yet, and its estimates say “by rule”. A model that learns the rate takes over from it.';
-        const sourceRow = (body, source) => {
+        const sourceRow = (body: any, source: any) => {
             const basis = rateBasis(heatingModel, body.id, source.id);
             const caption = basis.why
                 ? h('small', { class: 'warning' }, `By rule · ${basis.why}`)
@@ -273,12 +274,12 @@ export const mountMaintenance = (root, app) => {
                     autocomplete: 'postal-code',
                     maxlength: 10,
                     disabled: savingZip,
-                    onInput: (event) => {
+                    onInput: (event: any) => {
                         zipDraft = event.target.value;
                         locationError = null;
                         redraw();
                     },
-                    onKeydown: (event) => {
+                    onKeydown: (event: any) => {
                         if (event.key === 'Enter' && canSave) {
                             event.preventDefault();
                             saveZip(draft.trim());
@@ -296,7 +297,7 @@ export const mountMaintenance = (root, app) => {
                 : null);
     };
 
-    const jobRow = (job) => {
+    const jobRow = (job: any) => {
         const failed = job.lastResult === 'failed';
         const lastRun = job.lastFinishedAt
             ? (failed ? `Failed ${relative(job.lastFinishedAt)}: ${job.lastError || ''}` : `Ran ${relative(job.lastFinishedAt)}`)

@@ -51,11 +51,11 @@ export const remove = (key: string) => {
 /**
  * calls changed(key) when another tab changes one of these settings
  **/
-export const watch = (changed) => {
+export const watch = (changed: any) => {
     if (typeof window === 'undefined') {
         return () => {};
     }
-    const listener = (event) => {
+    const listener = (event: any) => {
         if (event.key && event.key.startsWith(PREFIX)) {
             changed(event.key.slice(PREFIX.length));
         }

@@ -8,7 +8,7 @@ import { formatDurationSeconds } from '../format.js';
 import * as prefs from '../prefs.js';
 import { topbar, barButton, navigate, formSection, formRow, linkRow, actionRow, passwordInput, revealer, select, spinner, renderer } from '../ui.js';
 
-export const mountSettings = (root, app) => {
+export const mountSettings = (root: any, app: any) => {
     const { store, client } = app;
     let poolName = prefs.read('poolName', DEFAULT_POOL_NAME);
     // the sign-in services the server offers; null until it says
@@ -38,7 +38,7 @@ export const mountSettings = (root, app) => {
         }
     };
 
-    const link = async (provider) => {
+    const link = async (provider: any) => {
         linking = provider.id;
         methodsError = null;
         redraw();
@@ -52,7 +52,7 @@ export const mountSettings = (root, app) => {
         }
     };
 
-    const unlink = async (provider) => {
+    const unlink = async (provider: any) => {
         const confirmed = await confirmAction({
             title: `Stop signing in with ${provider.displayName}?`,
             message: 'You can link it again later.',
@@ -72,13 +72,13 @@ export const mountSettings = (root, app) => {
         redraw();
     };
 
-    const setPoolName = (value) => {
+    const setPoolName = (value: any) => {
         poolName = value;
         prefs.write('poolName', value.trim() || DEFAULT_POOL_NAME);
         app.settingsChanged();
     };
 
-    const setReconnect = (value) => {
+    const setReconnect = (value: any) => {
         prefs.write('reconnectSeconds', Number(value));
         // the new interval applies to the wait already under way
         store.startPolling();
@@ -96,7 +96,7 @@ export const mountSettings = (root, app) => {
             value: poolName,
             placeholder: DEFAULT_POOL_NAME,
             autocomplete: 'off',
-            onInput: (event) => setPoolName(event.target.value),
+            onInput: (event: any) => setPoolName(event.target.value),
             onBlur: () => {
                 if (!poolName.trim()) {
                     poolName = DEFAULT_POOL_NAME;
@@ -125,7 +125,7 @@ export const mountSettings = (root, app) => {
             footer: methodsError || 'Link a service to sign in with it instead of a password.',
             footerClass: methodsError ? 'error' : ''
         },
-        ...providers().map((provider) => methods.includes(provider.id)
+        ...providers().map((provider: any) => methods.includes(provider.id)
             ? formRow(h('span', { class: 'label' }, provider.displayName),
                 h('span', { class: 'value' }, 'Linked'),
                 h('button', { class: 'button small', type: 'button', onClick: () => unlink(provider) }, 'Unlink'))
@@ -172,7 +172,7 @@ export const mountSettings = (root, app) => {
 };
 
 /** any signed-in account changing its own password */
-export const mountChangePassword = (root, app) => {
+export const mountChangePassword = (root: any, app: any) => {
     const { store } = app;
     let current = '';
     let password = '';
@@ -203,7 +203,7 @@ export const mountChangePassword = (root, app) => {
 
     const render = () => {
         const problem = errorMessage || passwordProblem(password, confirmation);
-        const field = (label, value, set, autocomplete) => formRow(passwordInput({
+        const field = (label: any, value: any, set: any, autocomplete: any) => formRow(passwordInput({
             reveal,
             label,
             value,
@@ -220,15 +220,15 @@ export const mountChangePassword = (root, app) => {
             }),
             h('main', { class: 'page' },
                 store.credentials
-                    ? h('form', { class: 'form', onSubmit: (event) => { event.preventDefault(); save(); } },
+                    ? h('form', { class: 'form', onSubmit: (event: any) => { event.preventDefault(); save(); } },
                         h('input', { type: 'text', name: 'username', autocomplete: 'username', value: store.credentials.email, hidden: true, readonly: true }),
-                        formSection({}, field('Current Password', current, (v) => { current = v; }, 'current-password')),
+                        formSection({}, field('Current Password', current, (v: any) => { current = v; }, 'current-password')),
                         formSection({
                             footer: problem || 'Other devices signed in to this account will need to sign in again.',
                             footerClass: problem ? 'error' : ''
                         },
-                        field('New Password', password, (v) => { password = v; }, 'new-password'),
-                        field('Confirm Password', confirmation, (v) => { confirmation = v; }, 'new-password')))
+                        field('New Password', password, (v: any) => { password = v; }, 'new-password'),
+                        field('Confirm Password', confirmation, (v: any) => { confirmation = v; }, 'new-password')))
                     : h('div', { class: 'center-message' }, 'Sign in to change your password.', h('a', { href: '#/settings' }, 'Go to Settings')))
         ];
     };

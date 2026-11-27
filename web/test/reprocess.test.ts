@@ -20,7 +20,7 @@ const fakeStore = (runs: any[] = []) => {
             store.looks += 1;
             return runs.length > 1 ? runs.shift() : runs[0] ?? null;
         },
-        startReprocess: async (request) => {
+        startReprocess: async (request: any) => {
             store.requests.push(request);
             return runs.length > 1 ? runs.shift() : runs[0];
         }
@@ -95,7 +95,7 @@ describe('reprocess form', () => {
 });
 
 describe('describing a run', () => {
-    const time = (date) => date.toISOString().slice(0, 10);
+    const time = (date: any) => date.toISOString().slice(0, 10);
 
     it('says where it is', () => {
         assert.equal(runStateText(run({ state: 'waiting' }), time), 'Preview waits for a maintenance job to finish');

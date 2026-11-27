@@ -5,7 +5,7 @@ import { h, openDialog } from '../dom.js';
 import { DEFAULT_ADMIN, MINIMUM_PASSWORD_LENGTH } from '../model.js';
 import { formSection, formRow, sheetHeader, textInput, passwordInput, revealer, spinner } from '../ui.js';
 
-const openCommissioning = (store) => {
+const openCommissioning = (store: any) => {
     let name = '';
     let password = '';
     let confirmation = '';
@@ -46,7 +46,7 @@ const openCommissioning = (store) => {
     };
 
     const reveal = revealer(() => dialog.update());
-    const field = (label, value, set, type, autocomplete) => formRow((type === 'password' ? passwordInput : textInput)({
+    const field = (label: any, value: any, set: any, type: any, autocomplete: any) => formRow((type === 'password' ? passwordInput : textInput)({
         reveal,
         label,
         type,
@@ -64,13 +64,13 @@ const openCommissioning = (store) => {
                 leading: h('button', { class: 'bar-button', type: 'button', disabled: saving, onClick: () => store.cancelCommissioning() }, 'Cancel'),
                 trailing: saving ? spinner() : h('button', { class: 'bar-button strong', type: 'button', disabled: !canSave(), onClick: save }, 'Save')
             }),
-            h('form', { class: 'sheet-content form', onSubmit: (event) => { event.preventDefault(); save(); } },
+            h('form', { class: 'sheet-content form', onSubmit: (event: any) => { event.preventDefault(); save(); } },
                 formSection({}, h('p', { class: 'sheet-intro' },
                     `This server still has its default ${DEFAULT_ADMIN} account. Choose your own account name and password. Once you save, ${DEFAULT_ADMIN} / ${DEFAULT_ADMIN} no longer signs in.`)),
                 formSection({ header: 'Your Account', footer: message, footerClass: 'error' },
-                    field('Account Name', name, (v) => { name = v; }, 'text', 'username'),
-                    field('New Password', password, (v) => { password = v; }, 'password', 'new-password'),
-                    field('Confirm Password', confirmation, (v) => { confirmation = v; }, 'password', 'new-password')))
+                    field('Account Name', name, (v: any) => { name = v; }, 'text', 'username'),
+                    field('New Password', password, (v: any) => { password = v; }, 'password', 'new-password'),
+                    field('Confirm Password', confirmation, (v: any) => { confirmation = v; }, 'password', 'new-password')))
         ];
     };
 
@@ -79,7 +79,7 @@ const openCommissioning = (store) => {
 };
 
 /** opens the set-up sheet whenever the store is commissioning, wherever the page is */
-export const watchCommissioning = (app) => {
+export const watchCommissioning = (app: any) => {
     const { store } = app;
     let dialog: any = null;
     store.subscribe(() => {

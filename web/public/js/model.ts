@@ -2,7 +2,7 @@
 
 export const DEFAULT_POOL_NAME = 'Pool';
 
-const DISPLAY_NAMES = {
+const DISPLAY_NAMES: Record<string, any> = {
     'pool temp': 'Pool',
     'spa temp': 'Spa',
     ambient: 'Air',
@@ -19,7 +19,7 @@ export const displayName = (name: string) => DISPLAY_NAMES[name] || name.replace
 
 export const isOn = (reading: any) => Boolean(reading) && Number(reading.value) !== 0;
 
-export const formattedValue = (reading) => {
+export const formattedValue = (reading: any) => {
     switch (reading.name) {
     case 'pool temp':
     case 'spa temp':
@@ -67,15 +67,15 @@ export const EQUIPMENT = [
     }
 ].map((control) => ({ onText: 'On', offText: 'Off', ...control, title: displayName(control.name), stateName: control.stateReading || control.name }));
 
-export const controlsIn = (group) => EQUIPMENT.filter((control) => control.group === group);
+export const controlsIn = (group: any) => EQUIPMENT.filter((control) => control.group === group);
 
-export const stateText = (control, on) => on ? control.onText : control.offText;
+export const stateText = (control: any, on: any) => on ? control.onText : control.offText;
 
 /**
  * shown while the controller hasn't yet reported the requested state; short enough for a
  * half-width tile
  **/
-export const pendingText = (control, on) => control.onText === 'On' ? `Turning ${stateText(control, on)}…` : `To ${stateText(control, on)}…`;
+export const pendingText = (control: any, on: any) => control.onText === 'On' ? `Turning ${stateText(control, on)}…` : `To ${stateText(control, on)}…`;
 
 // MARK: heating
 
@@ -88,14 +88,14 @@ export const HEATING_DEVICES = [
     { id: 'heatpump', title: 'Heat Pump', controlName: 'valve4' }
 ];
 
-export const heatingDeviceFor = (controlName) => HEATING_DEVICES.find((device) => device.controlName === controlName) || null;
+export const heatingDeviceFor = (controlName: any) => HEATING_DEVICES.find((device) => device.controlName === controlName) || null;
 
 export const WATER_BODIES = [
     { id: 'pool', title: 'Pool', temperatureName: 'pool temp' },
     { id: 'spa', title: 'Spa', temperatureName: 'spa temp' }
 ];
 
-export const waterBody = (id) => WATER_BODIES.find((body) => body.id === id) || null;
+export const waterBody = (id: any) => WATER_BODIES.find((body) => body.id === id) || null;
 
 /**
  * what the heater and heat pump are doing for bodyId, as the temperature card shows it: the
@@ -103,7 +103,7 @@ export const waterBody = (id) => WATER_BODIES.find((body) => body.id === id) || 
  * setpoint among them, and when the estimate says the water gets there ("7:30 PM", in the
  * server's time zone); null unless one is on and a pump sends water to that body
  **/
-export const bodyHeating = (heating, bodyId, now = new Date()) => {
+export const bodyHeating = (heating: any, bodyId: any, now = new Date()) => {
     const devices = heating && heating.devices ? heating.devices : {};
     const sources = HEATING_DEVICES
         .filter((device) => devices[device.id] && devices[device.id].enabled === true && devices[device.id].body === bodyId)
@@ -124,14 +124,14 @@ export const bodyHeating = (heating, bodyId, now = new Date()) => {
     return { sources, setpoint: setpoints.length ? Math.max(...setpoints) : null, ready };
 };
 
-export const setpointOf = (heating, deviceId, bodyId) => heating && heating.setpoints && heating.setpoints[bodyId] ? heating.setpoints[bodyId][deviceId] : undefined;
+export const setpointOf = (heating: any, deviceId: any, bodyId: any) => heating && heating.setpoints && heating.setpoints[bodyId] ? heating.setpoints[bodyId][deviceId] : undefined;
 
 /**
  * What an equipment tile says. For the heater and heat pump, on is enabled and running is
  * producing heat; for everything else they're the same. heating is that device's entry from
  * GET /heating, or null.
  **/
-export const tileState = (control, on, pending, heating) => {
+export const tileState = (control: any, on: any, pending: any, heating: any) => {
     const running = heating ? on && heating.heating === true : on;
     const target = on && pending === undefined && heating ? heating.setpoint ?? null : null;
     let text;
@@ -188,17 +188,17 @@ export type TaskId = typeof TASKS[number]['id'];
 export const taskInfo = (id: string) => TASKS.find((task) => task.id === id) || null;
 
 /** whether `id` is on in GET /tasks's answer */
-export const taskOn = (tasks, id) => Boolean(tasks && tasks[id] && tasks[id].on);
+export const taskOn = (tasks: any, id: any) => Boolean(tasks && tasks[id] && tasks[id].on);
 
 /** a spa preheat waiting for its time, or null; not once it has started */
-export const scheduledPreheat = (tasks) => tasks && tasks.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
+export const scheduledPreheat = (tasks: any) => tasks && tasks.spaPreheat && !tasks.spaPreheat.on && tasks.spaPreheat.scheduled
     ? tasks.spaPreheat.scheduled
     : null;
 
 /** "7:30 PM", or "Sat 7:30 AM" when it isn't the same day as now; in timeZone if given */
-export const taskTime = (date, now = new Date(), timeZone = undefined) => {
+export const taskTime = (date: any, now = new Date(), timeZone = undefined) => {
     const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone });
-    const day = (d) => d.toLocaleDateString('en-CA', { timeZone });
+    const day = (d: any) => d.toLocaleDateString('en-CA', { timeZone });
     return day(date) === day(now)
         ? time
         : `${date.toLocaleDateString(undefined, { weekday: 'short', timeZone })} ${time}`;
@@ -208,7 +208,7 @@ export const taskTime = (date, now = new Date(), timeZone = undefined) => {
 export const NIGHT_LIGHTS = ['lights', 'aux3'];
 
 /** { ready: "Ready by 7:30 PM", start: "Starts about 6:00 PM" } for a scheduled preheat */
-export const scheduleText = (scheduled, now = new Date()) => {
+export const scheduleText = (scheduled: any, now = new Date()) => {
     const readyAt = new Date(scheduled.readyAt);
     const startAt = new Date(scheduled.startAt);
     return {
@@ -222,7 +222,7 @@ export const scheduleText = (scheduled, now = new Date()) => {
  * server has reported the pool switch
  **/
 export const waterModeOf = (readings: any[]) => {
-    const reading = (name) => readings.find((r) => r.name === name);
+    const reading = (name: any) => readings.find((r) => r.name === name);
     if (isOn(reading('spillover'))) {
         return 'spillover';
     }
@@ -240,14 +240,14 @@ const MEASUREMENT_ORDER = ['pool temp', 'spa temp', 'ambient', 'salt'];
  * Each sensor sits just downstream of its pump, so its reading is current only while that runs:
  * the pool's is the filter pump; the spa's is the spa filter (aux14 here), whatever the flow.
  **/
-export const PUMP_FOR_TEMPERATURE = { 'pool temp': 'filter', 'spa temp': 'aux14' };
+export const PUMP_FOR_TEMPERATURE: Record<string, any> = { 'pool temp': 'filter', 'spa temp': 'aux14' };
 
 /**
  * every measurement always has a slot, so the card keeps its shape while readings arrive; pool
  * and spa are dimmed, as stale readings, while their pumps are off
  **/
-export const measurement = (readings, name) => {
-    const find = (n) => readings.find((r) => r.name === n);
+export const measurement = (readings: any, name: any) => {
+    const find = (n: any) => readings.find((r: any) => r.name === n);
     const reading = find(name);
     const pump = PUMP_FOR_TEMPERATURE[name];
     return {
@@ -258,11 +258,11 @@ export const measurement = (readings, name) => {
     };
 };
 
-export const measurements = (readings) => MEASUREMENT_ORDER.map((name) => measurement(readings, name));
+export const measurements = (readings: any) => MEASUREMENT_ORDER.map((name) => measurement(readings, name));
 
 // MARK: weather
 
-export const WEATHER_CONDITIONS = {
+export const WEATHER_CONDITIONS: Record<string, any> = {
     sunny: { title: 'Sunny', icon: 'sun' },
     'partly-cloudy': { title: 'Partly Cloudy', icon: 'cloudSun' },
     cloudy: { title: 'Cloudy', icon: 'cloud' },
@@ -272,13 +272,13 @@ export const WEATHER_CONDITIONS = {
     storm: { title: 'Storms', icon: 'cloudLightning' }
 };
 
-const degrees = (value) => typeof value === 'number' ? `${Math.round(value)}°` : '--°';
+const degrees = (value: any) => typeof value === 'number' ? `${Math.round(value)}°` : '--°';
 
 /**
  * what the main page shows of today's forecast; null while there's nothing to show, as before
  * an admin sets a zip code
  **/
-export const weatherSummary = (weather) => {
+export const weatherSummary = (weather: any) => {
     if (!weather || !weather.configured || !weather.today) {
         return null;
     }
@@ -309,7 +309,7 @@ export const ROLES = [
     { id: 'admin', title: 'Admin', withArticle: 'an admin', summary: 'Admins can also manage accounts, restart the server and factory reset.' }
 ];
 
-export const roleInfo = (id) => ROLES.find((role) => role.id === id) || null;
+export const roleInfo = (id: any) => ROLES.find((role) => role.id === id) || null;
 export const canControl = (role: string | null | undefined) => role === 'user' || role === 'admin';
 export const isAdmin = (role: string | null | undefined) => role === 'admin';
 
@@ -320,15 +320,15 @@ export const MINIMUM_PASSWORD_LENGTH = 6;
  * the builds in use: this page's web service, the pool server, and the API version it serves;
  * a dash for any not known, as from a server that is down or too old to say
  **/
-export const aboutLine = (webCommit, serverInfo) => {
-    const known = (value) => value || '—';
+export const aboutLine = (webCommit: any, serverInfo: any) => {
+    const known = (value: any) => value || '—';
     return `Web ${known(webCommit)} · Server ${known(serverInfo && serverInfo.commit)} · API ${known(serverInfo && serverInfo.apiVersion)}`;
 };
 
 /**
  * why a new password and its confirmation can't be used yet, once something has been typed
  **/
-export const passwordProblem = (password, confirmation) => {
+export const passwordProblem = (password: any, confirmation: any) => {
     if (password && password.length < MINIMUM_PASSWORD_LENGTH) {
         return `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
     }
@@ -338,7 +338,7 @@ export const passwordProblem = (password, confirmation) => {
     return null;
 };
 
-export const passwordAcceptable = (password, confirmation) => password.length >= MINIMUM_PASSWORD_LENGTH && password === confirmation;
+export const passwordAcceptable = (password: any, confirmation: any) => password.length >= MINIMUM_PASSWORD_LENGTH && password === confirmation;
 
 // MARK: sign-in services
 
@@ -346,7 +346,7 @@ export const passwordAcceptable = (password, confirmation) => password.length >=
  * what the server's answer at #/signin/complete means: a ticket to trade for a token, or a title
  * and message to show
  **/
-export const signInOutcome = (params) => {
+export const signInOutcome = (params: any) => {
     const provider = params.get('provider') || 'the service';
     if (params.get('ticket')) {
         return { ticket: params.get('ticket') };
@@ -402,7 +402,7 @@ export const EVENT_KINDS = [
     { id: 'protocolErrors', title: 'Communication Errors', icon: 'warning', tint: 'orange', serverTypes: ['failed', 'unrecognized'] }
 ];
 
-export const eventKindOf = (serverType) => EVENT_KINDS.find((kind) => kind.serverTypes.includes(serverType)) || EVENT_KINDS[EVENT_KINDS.length - 1];
+export const eventKindOf = (serverType: any) => EVENT_KINDS.find((kind) => kind.serverTypes.includes(serverType)) || EVENT_KINDS[EVENT_KINDS.length - 1];
 
 /**
  * starts on what people did and what the equipment did; readings change often enough to bury
@@ -412,7 +412,7 @@ export const DEFAULT_EVENT_KINDS = ['equipment', 'actions'];
 
 // MARK: panel
 
-export const PANEL_KEYS = {
+export const PANEL_KEYS: Record<string, { title: string; label: string }> = {
     menu: { title: 'Menu', label: 'Menu' },
     left: { title: 'Left', label: '<' },
     right: { title: 'Right', label: '>' },
@@ -430,7 +430,7 @@ export const HEATING_SOURCES = [
  * whether the heating model in use learned how fast `source` ('heater' or 'heatPump') warms
  * `body`: { learned: °F per hour }, or { why } its rule stands in
  **/
-export const rateBasis = (model, body, source) => {
+export const rateBasis = (model: any, body: any, source: any) => {
     if (!model) {
         return { why: 'No model has been saved yet.' };
     }

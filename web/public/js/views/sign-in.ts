@@ -5,7 +5,7 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { topbar, formSection, formRow, textInput, passwordInput, revealer, spinner, renderer } from '../ui.js';
 
-export const mountSignIn = (root, app) => {
+export const mountSignIn = (root: any, app: any) => {
     const { store, client } = app;
     let email = store.lastAccountName || '';
     let password = '';
@@ -56,7 +56,7 @@ export const mountSignIn = (root, app) => {
 
     // a form, so the browser offers to save and fill the password
     const form = () => h('form', {
-        onSubmit: (event) => {
+        onSubmit: (event: any) => {
             event.preventDefault();
             signIn();
         }
@@ -70,7 +70,7 @@ export const mountSignIn = (root, app) => {
     passwordSignIn() ? h('button', { class: 'form-row action', type: 'submit', disabled: !email.trim() || !password || signingIn },
         h('span', null, 'Sign In'),
         signingIn ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null) : null,
-    ...providers().map((provider) => h('a', { class: 'form-row', href: client.signInUrl(provider.id) },
+    ...providers().map((provider: any) => h('a', { class: 'form-row', href: client.signInUrl(provider.id) },
         h('span', { class: 'action-text' }, `Continue with ${provider.displayName}`),
         icon('chevronRight')))));
 

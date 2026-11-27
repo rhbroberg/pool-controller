@@ -41,7 +41,7 @@ const HEAT_PUMP_OPACITY = 0.24;
 const RANGE_OPACITY = 0.16;
 
 const timeLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-const tickLabel = (t, step) => {
+const tickLabel = (t: any, step: any) => {
     if (step < HOUR) {
         return timeLabel.format(t);
     }
@@ -51,7 +51,7 @@ const tickLabel = (t, step) => {
     return step < 30 * DAY ? formatMonthDay(t) : formatMonthYear(t);
 };
 
-export const mountTemperatureHistory = (root, app, water) => {
+export const mountTemperatureHistory = (root: any, app: any, water: any) => {
     const body = waterBody(water)!;
     const model = new TemperatureHistory(water, app.client, () => redraw());
     const viewportKey = water === 'pool' ? 'poolTemperatureHistoryViewport' : 'spaTemperatureHistoryViewport';
@@ -63,7 +63,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     // the time under the pointer while reading values off the graph
     let selected: any = null;
     // what the legend's switches show on the graph, kept between visits
-    const shown = {
+    const shown: Record<string, boolean> = {
         air: prefs.read('showAirTemperature', true),
         heater: prefs.read('showHeater', true),
         heatPump: prefs.read('showHeatPump', true)
@@ -85,7 +85,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     // MARK: the window
 
     const domainStart = () => Math.min(model.earliest ?? now, start, now - length);
-    const clampStart = (value) => Math.min(now - length, Math.max(domainStart(), value));
+    const clampStart = (value: any) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
     /** the bucket length that gives about one point per pixel at this zoom */
     const level = () => levelFor(length, chart ? chart.devicePixels : 1000);
@@ -102,7 +102,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         saveTimer = setTimeout(saveViewport, 200);
     };
 
-    const show = (newLength, endingAt) => {
+    const show = (newLength: any, endingAt: any) => {
         length = newLength;
         start = clampStart(endingAt - newLength);
         windowChanged();
@@ -110,7 +110,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     };
 
     /** changes the zoom, keeping the right edge on now if it was there, or the center otherwise */
-    const setLength = (requested) => {
+    const setLength = (requested: any) => {
         const newLength = Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, requested));
         if (atNow()) {
             show(newLength, now);
@@ -123,12 +123,12 @@ export const mountTemperatureHistory = (root, app, water) => {
         }
     };
 
-    const zoom = (factor) => {
+    const zoom = (factor: any) => {
         preset = null;
         setLength(length * factor);
     };
 
-    const pan = (ms) => {
+    const pan = (ms: any) => {
         start = clampStart(start + ms);
         windowChanged();
         scheduleViewportSave();
@@ -146,7 +146,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         show(Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, end - picked[0])), end);
     };
 
-    const choosePreset = (choice) => {
+    const choosePreset = (choice: any) => {
         preset = choice.id;
         now = Date.now();
         show(choice.length, now);
@@ -176,7 +176,7 @@ export const mountTemperatureHistory = (root, app, water) => {
 
     // MARK: pointer and keyboard
 
-    const onPointerDown = (event) => {
+    const onPointerDown = (event: any) => {
         const host = event.currentTarget;
         host.setPointerCapture(event.pointerId);
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -202,7 +202,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         }
     };
 
-    const onPointerMove = (event) => {
+    const onPointerMove = (event: any) => {
         if (pointers.has(event.pointerId)) {
             pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
         }
@@ -236,7 +236,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         }
     };
 
-    const onPointerUp = (event) => {
+    const onPointerUp = (event: any) => {
         pointers.delete(event.pointerId);
         if (gesture) {
             clearTimeout(gesture.pressTimer);
@@ -251,14 +251,14 @@ export const mountTemperatureHistory = (root, app, water) => {
         redraw();
     };
 
-    const onPointerLeave = (event) => {
+    const onPointerLeave = (event: any) => {
         if (event.pointerType === 'mouse' && !gesture) {
             selected = null;
             redraw();
         }
     };
 
-    const onWheel = (event) => {
+    const onWheel = (event: any) => {
         event.preventDefault();
         const scale = event.deltaMode === 1 ? 16 : 1;
         if (Math.abs(event.deltaX) > Math.abs(event.deltaY) && !event.ctrlKey) {
@@ -270,8 +270,8 @@ export const mountTemperatureHistory = (root, app, water) => {
         zoom(factor);
     };
 
-    const onKeydown = (event) => {
-        const actions = {
+    const onKeydown = (event: any) => {
+        const actions: Record<string, () => void> = {
             ArrowLeft: () => pan(-length / 10),
             ArrowRight: () => pan(length / 10),
             '+': () => zoom(1 / ZOOM_STEP),
@@ -285,7 +285,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         }
     };
 
-    const attachChart = (host) => {
+    const attachChart = (host: any) => {
         if (chart && chart.container === host) {
             return;
         }
@@ -299,9 +299,9 @@ export const mountTemperatureHistory = (root, app, water) => {
     // MARK: drawing
 
     /** the longest bucket overlapping the time in view, in seconds, or 0 for readings as recorded */
-    const bucketSeconds = (samples) => {
+    const bucketSeconds = (samples: any) => {
         const end = start + length;
-        return samples.reduce((span, sample) => {
+        return samples.reduce((span: any, sample: any) => {
             const stop = sample.span > 0 ? sample.t + sample.span : sample.t;
             return sample.span > 0 && sample.t < end && stop > start ? Math.max(span, sample.span) : span;
         }, 0) / 1000;
@@ -324,7 +324,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     };
 
     /** a label for the graph while a line is averages rather than the readings */
-    const summaryText = (waterSeconds, airSeconds) => {
+    const summaryText = (waterSeconds: any, airSeconds: any) => {
         if (waterSeconds > 0) {
             return `Summary · ${formatSpan(waterSeconds)} averages`;
         }
@@ -335,7 +335,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     };
 
     /** the water temperature at t, or null when the pump was off and the line has a gap */
-    const waterValue = (t, segments) => {
+    const waterValue = (t: any, segments: any) => {
         for (const segment of segments) {
             if (segment[0].t <= t && t <= segment[segment.length - 1].t) {
                 return valueAt(segment, t);
@@ -345,11 +345,11 @@ export const mountTemperatureHistory = (root, app, water) => {
     };
 
     /** fits the readings in view, with a little room above and below */
-    const yDomain = ({ segments, air }) => {
+    const yDomain = ({segments, air}: any) => {
         const end = start + length;
         const values: any[] = [];
         [...segments, air].forEach((line) => {
-            line.forEach((sample) => {
+            line.forEach((sample: any) => {
                 if (sample.t >= start && sample.t <= end) {
                     values.push(...[sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined));
                 }
@@ -394,7 +394,7 @@ export const mountTemperatureHistory = (root, app, water) => {
         return data;
     };
 
-    const readout = (data) => {
+    const readout = (data: any) => {
         if (selected === null) {
             return h('span', null, `${formatMonthDayTime(start)} – ${formatMonthDayTime(start + length)}`);
         }
@@ -410,7 +410,7 @@ export const mountTemperatureHistory = (root, app, water) => {
     };
 
     // the air, heater and heat pump entries double as their show/hide switches
-    const legendToggle = (key, pref, title, tooltip, swatch) => h('button', {
+    const legendToggle = (key: any, pref: any, title: any, tooltip: any, swatch: any) => h('button', {
         class: ['legend-toggle legend-item', shown[key] ? '' : 'off'],
         type: 'button',
         'aria-pressed': String(shown[key]),

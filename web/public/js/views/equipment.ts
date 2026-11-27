@@ -8,19 +8,19 @@ import { relative } from '../format.js';
 import { topbar, spinner, renderer } from '../ui.js';
 import { openSetpoints } from './setpoints.js';
 
-export const accessNote = (store) => store.canControl
+export const accessNote = (store: any) => store.canControl
     ? null
     : h('div', { class: 'access-note span-all' }, icon('eye'), 'View only. Your account can see equipment but not change it.');
 
-export const updateFooter = (store) => {
+export const updateFooter = (store: any) => {
     const last = store.lastSwitchChange;
     return last ? h('div', { class: 'update-footer' }, `Equipment last changed ${relative(last)}`) : null;
 };
 
-export const mountEquipment = (root, app) => {
+export const mountEquipment = (root: any, app: any) => {
     const { store } = app;
 
-    const request = (control) => {
+    const request = (control: any) => {
         if (!store.canControl) {
             return;
         }
@@ -37,7 +37,7 @@ export const mountEquipment = (root, app) => {
         });
     };
 
-    const requestWaterMode = (mode) => {
+    const requestWaterMode = (mode: any) => {
         if (mode.id === store.waterMode) {
             return;
         }
@@ -57,7 +57,7 @@ export const mountEquipment = (root, app) => {
      * filled while it's running. For the heater and heat pump those differ: on is enabled,
      * running is producing heat, and a thermometer opens their setpoints.
      **/
-    const tile = (control) => {
+    const tile = (control: any) => {
         const on = store.isOn(control);
         const pending = store.pendingState(control.name);
         const heating = store.heatingFor(control);
@@ -96,7 +96,7 @@ export const mountEquipment = (root, app) => {
             : null);
     };
 
-    const tileGrid = (group) => h('div', { class: 'tile-grid' }, controlsIn(group).map(tile));
+    const tileGrid = (group: any) => h('div', { class: 'tile-grid' }, controlsIn(group).map(tile));
 
     /** pool, spa or spillover: shows the controller's mode and asks for the one picked */
     const waterFlow = () => {
@@ -135,7 +135,7 @@ export const mountEquipment = (root, app) => {
         h('span', { class: 'value' }, measurement(store.readings, 'salt').value),
         icon('chevronRight'));
 
-    const controlSection = (group, ...content) => h('section', { class: 'control-section' },
+    const controlSection = (group: any, ...content: any[]) => h('section', { class: 'control-section' },
         h('h2', { class: 'section-title' }, GROUPS.find((g) => g.id === group)!.title),
         h('div', { class: 'section-body' }, ...content));
 

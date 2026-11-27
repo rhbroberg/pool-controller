@@ -3,8 +3,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis, bodyHeating } from '../public/js/model.js';
 
-const control = (name) => EQUIPMENT.find((c) => c.name === name);
-const reading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
+const control = (name: any) => EQUIPMENT.find((c) => c.name === name);
+const reading = (name: any, value: any) => ({ name, category: 'status', value, timestamp: new Date() });
 
 describe('equipment tiles', () => {
     it('shows on and off for plain switches, and running only while on', () => {
@@ -81,7 +81,7 @@ describe('measurements', () => {
 });
 
 describe('weather', () => {
-    const weather = (today, extra = {}) => ({ configured: true, location: { zipCode: '32801', placeName: 'Orlando, FL' }, today, fetchedAt: new Date(), stale: false, ...extra });
+    const weather = (today: any, extra = {}) => ({ configured: true, location: { zipCode: '32801', placeName: 'Orlando, FL' }, today, fetchedAt: new Date(), stale: false, ...extra });
 
     it('shows today’s condition and high and low', () => {
         assert.deepEqual(weatherSummary(weather({ high: 87.6, low: 71.2, condition: 'sunny', precipitationProbability: 10 })), {
@@ -129,7 +129,7 @@ describe('event kinds', () => {
 });
 
 describe('sign-in services', () => {
-    const outcome = (query) => signInOutcome(new URLSearchParams(query));
+    const outcome = (query: any) => signInOutcome(new URLSearchParams(query));
 
     it('reads a ticket to trade for a token', () => {
         assert.deepEqual(outcome('ticket=abc'), { ticket: 'abc' });
@@ -163,7 +163,7 @@ describe('about line', () => {
 });
 
 describe('tasks', () => {
-    const scheduled = (readyAt, startAt) => ({
+    const scheduled = (readyAt: any, startAt: any) => ({
         pool: { on: true },
         spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: startAt.toISOString(), leadMinutes: 90, leadFrom: 'rate' } },
         spaParty: { on: false },

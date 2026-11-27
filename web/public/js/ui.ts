@@ -105,8 +105,8 @@ export const textInput = ({ label, value, onInput, type = 'text', autocomplete, 
     class: trailing ? 'trailing' : '',
     disabled,
     name,
-    onInput: (event) => onInput && onInput(event.target.value),
-    onKeydown: onEnter ? (event) => {
+    onInput: (event: any) => onInput && onInput(event.target.value),
+    onKeydown: onEnter ? (event: any) => {
         if (event.key === 'Enter') {
             event.preventDefault();
             onEnter();
@@ -153,7 +153,7 @@ export const passwordInput = ({ reveal, ...options }: {
             'aria-label': shown ? 'Hide password' : 'Show password',
             'aria-pressed': String(shown),
             // keeps the focus, and the caret, in the field
-            onMousedown: (event) => event.preventDefault(),
+            onMousedown: (event: any) => event.preventDefault(),
             onClick: () => reveal.toggle(options.label || '')
         }, icon(shown ? 'eyeOff' : 'eye')));
 };
@@ -168,7 +168,7 @@ export const select = ({ label, value, options, onChange, disabled = false }: {
     'aria-label': label,
     value,
     disabled,
-    onChange: (event) => onChange(event.target.value)
+    onChange: (event: any) => onChange(event.target.value)
 }, options.map((option) => h('option', { value: option.value }, option.label)));
 
 /**

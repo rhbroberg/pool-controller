@@ -12,7 +12,7 @@ const EVERYONE = '';
 // events the controller produced on its own, with no account
 const CONTROLLER = 'controller';
 
-export const mountEventLog = (root, app) => {
+export const mountEventLog = (root: any, app: any) => {
     const { client } = app;
     let kinds = new Set(DEFAULT_EVENT_KINDS);
     let user = EVERYONE;
@@ -49,7 +49,7 @@ export const mountEventLog = (root, app) => {
                 return;
             }
             const known = new Set(events.map((event) => event.id));
-            events = [...events, ...page.events.filter((event) => !known.has(event.id))];
+            events = [...events, ...page.events.filter((event: any) => !known.has(event.id))];
             cursor = page.next;
             reachedEnd = !page.next;
             errorMessage = null;
@@ -96,7 +96,7 @@ export const mountEventLog = (root, app) => {
         }
     };
 
-    const toggle = (kind) => {
+    const toggle = (kind: any) => {
         kinds = new Set(kinds);
         if (kinds.has(kind.id)) {
             kinds.delete(kind.id);
@@ -108,7 +108,7 @@ export const mountEventLog = (root, app) => {
 
     // MARK: pieces
 
-    const chip = (kind) => {
+    const chip = (kind: any) => {
         const on = kinds.has(kind.id);
         return h('button', {
             class: 'chip',
@@ -121,8 +121,8 @@ export const mountEventLog = (root, app) => {
 
     const menu = ({ label, iconName, value, options, active = false, onChange }: any) => h('label', { class: ['menu-select', active ? 'active' : ''] },
         icon(iconName),
-        h('select', { 'aria-label': label, value, onChange: (event) => onChange(event.target.value) },
-            options.map((option) => h('option', { value: option.value }, option.label))),
+        h('select', { 'aria-label': label, value, onChange: (event: any) => onChange(event.target.value) },
+            options.map((option: any) => h('option', { value: option.value }, option.label))),
         icon('chevronDown', { className: 'chevron' }));
 
     const filterBar = () => h('div', { class: 'filter-bar' },
@@ -149,7 +149,7 @@ export const mountEventLog = (root, app) => {
                         { value: CONTROLLER, label: 'Controller' },
                         ...users.filter((name) => name !== CONTROLLER).map((name) => ({ value: name, label: name }))
                     ],
-                    onChange: (value) => {
+                    onChange: (value: any) => {
                         user = value;
                         reload();
                     }
@@ -159,13 +159,13 @@ export const mountEventLog = (root, app) => {
                     iconName: 'sort',
                     value: ascending ? 'asc' : 'desc',
                     options: [{ value: 'desc', label: 'Newest First' }, { value: 'asc', label: 'Oldest First' }],
-                    onChange: (value) => {
+                    onChange: (value: any) => {
                         ascending = value === 'asc';
                         reload();
                     }
                 }))));
 
-    const row = (event) => {
+    const row = (event: any) => {
         const kind = eventKindOf(event.type);
         return h('li', { class: 'event-row', 'data-key': event.id },
             h('div', { class: 'event-time' },
@@ -207,7 +207,7 @@ export const mountEventLog = (root, app) => {
     };
 
     // loads the next page as the end of the list scrolls into view
-    const watchEnd = (sentinel) => {
+    const watchEnd = (sentinel: any) => {
         if (observer && observer.target === sentinel) {
             return;
         }

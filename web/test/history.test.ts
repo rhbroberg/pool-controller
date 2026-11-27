@@ -6,19 +6,19 @@ import { TemperatureHistory, valueAt, extended, holds, levelFor, pointsFor, heat
 
 const LEVEL = 300;
 
-const series = (name, points, { before = null, resolution = 0 } = {}) => ({
+const series = (name: any, points: any, { before = null, resolution = 0 } = {}) => ({
     name,
     resolution,
     before,
-    points: points.map(([t, v, low = null, high = null]) => ({ t, v, low, high }))
+    points: points.map(([t, v, low = null, high = null]: any[]) => ({ t, v, low, high }))
 });
 
 /** a client that answers every history request with the given series, recording each request */
-const fakeClient = (seriesList) => {
+const fakeClient = (seriesList: any) => {
     const requests: any[] = [];
     return {
         requests,
-        fetchHistory: async (names, from, to, options) => {
+        fetchHistory: async (names: any, from: any, to: any, options: any) => {
             requests.push({ names, from, to, ...options });
             return { from, to, earliest: 0, series: typeof seriesList === 'function' ? seriesList({ names, from, to, ...options }) : seriesList };
         }
@@ -76,7 +76,7 @@ describe('temperature history loading', () => {
 
     it('asks again for a closer look at a summary, and replaces it with the readings', async () => {
         const hour = 3600 * 1000;
-        const client = fakeClient(({ from, to }) => (to - from <= 30 * hour
+        const client = fakeClient(({from, to}: any) => (to - from <= 30 * hour
             ? [series('pool temp', [[10 * hour, 80], [12 * hour, 82]])]
             : [series('pool temp', [[0, 70, 68, 72], [4.5 * hour, 75, 74, 76], [10 * hour, 79, 78, 80]], { resolution: 3600 })]));
         const history = new TemperatureHistory('pool', client);
@@ -85,12 +85,12 @@ describe('temperature history loading', () => {
         await history.ensureLoaded(5 * hour, 25 * hour, 3600);
         assert.equal(client.requests.length, 2, 'the closer window is fetched once');
         const samples = history.samples('pool temp', 3600);
-        assert.equal(samples.some((sample) => sample.t === 4.5 * hour), false, 'the bucket that ran into the closer window is gone');
-        assert.deepEqual(samples.filter((sample) => sample.t >= 5 * hour && sample.t < 25 * hour).map((sample) => [sample.t, sample.v, sample.span]), [
+        assert.equal(samples.some((sample: any) => sample.t === 4.5 * hour), false, 'the bucket that ran into the closer window is gone');
+        assert.deepEqual(samples.filter((sample: any) => sample.t >= 5 * hour && sample.t < 25 * hour).map((sample: any) => [sample.t, sample.v, sample.span]), [
             [10 * hour, 80, 0],
             [12 * hour, 82, 0]
         ]);
-        assert.equal(samples.some((sample) => sample.t === 0), true, 'a bucket outside the closer window stays for zooming back out');
+        assert.equal(samples.some((sample: any) => sample.t === 0), true, 'a bucket outside the closer window stays for zooming back out');
     });
 
     it('does not ask again when a closer look is still a summary', async () => {
@@ -128,7 +128,7 @@ describe('temperature history lines', () => {
             series('filter', [[150, 1], [300, 0], [550, 1]])
         ]));
         await history.ensureLoaded(0, 1000, LEVEL);
-        assert.deepEqual(history.waterSegments(1000, LEVEL).map((segment) => segment.map((s) => [s.t, s.v])), [
+        assert.deepEqual(history.waterSegments(1000, LEVEL).map((segment) => segment.map((s: any) => [s.t, s.v])), [
             [[200, 81], [300, 81]],
             [[600, 79], [1000, 79]]
         ]);
@@ -137,7 +137,7 @@ describe('temperature history lines', () => {
     it('draws one line when the pump history is unknown', async () => {
         const history = new TemperatureHistory('pool', fakeClient([series('pool temp', [[100, 80]])]));
         await history.ensureLoaded(0, 1000, LEVEL);
-        assert.deepEqual(history.waterSegments(400, LEVEL).map((segment) => segment.map((s) => [s.t, s.v])), [[[100, 80], [400, 80]]]);
+        assert.deepEqual(history.waterSegments(400, LEVEL).map((segment) => segment.map((s: any) => [s.t, s.v])), [[[100, 80], [400, 80]]]);
     });
 
     it('shades heating from the server’s derived series, fully for readings as recorded', async () => {
@@ -168,7 +168,7 @@ describe('temperature history lines', () => {
     it('carries the value in effect as the window opens, for readings as recorded', async () => {
         const history = new TemperatureHistory('pool', fakeClient([series('ambient', [[500, 60]], { before: { t: 10, v: 55 } as any })]));
         await history.ensureLoaded(100, 2000, LEVEL);
-        assert.deepEqual(history.airLine(1000, LEVEL).map((s) => [s.t, s.v]), [[10, 55], [500, 60], [1000, 60]]);
+        assert.deepEqual(history.airLine(1000, LEVEL).map((s: any) => [s.t, s.v]), [[10, 55], [500, 60], [1000, 60]]);
     });
 });
 

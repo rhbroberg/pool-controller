@@ -9,21 +9,21 @@ import { topbar, barButton, formSection, formRow, textInput, passwordInput, reve
 
 const roleOptions = ROLES.map((r) => ({ value: r.id, label: r.title }));
 
-const byName = (a, b) => a.email.localeCompare(b.email, undefined, { sensitivity: 'base' });
+const byName = (a: any, b: any) => a.email.localeCompare(b.email, undefined, { sensitivity: 'base' });
 
-const notAdmin = (store) => h('div', { class: 'center-message' },
+const notAdmin = (store: any) => h('div', { class: 'center-message' },
     icon('lock'),
     store.credentials ? 'Only admins can manage accounts.' : 'Sign in as an admin to manage accounts.',
     h('a', { href: '#/settings' }, 'Go to Settings'));
 
-export const mountAccounts = (root, app) => {
+export const mountAccounts = (root: any, app: any) => {
     const { store, client } = app;
     let accounts: any[] = [];
     let requests: any[] = [];
     let invitations: any[] = [];
     let services: any[] = [];
     // the role chosen for each request before it's approved
-    const approvalRoles = {};
+    const approvalRoles: Record<string, string> = {};
     let isLoading = false;
     let errorMessage: any = null;
 
@@ -56,7 +56,7 @@ export const mountAccounts = (root, app) => {
         }
     };
 
-    const act = async (work) => {
+    const act = async (work: any) => {
         try {
             await work();
             errorMessage = null;
@@ -66,13 +66,13 @@ export const mountAccounts = (root, app) => {
         redraw();
     };
 
-    const approve = (request) => act(async () => {
+    const approve = (request: any) => act(async () => {
         const created = await client.approveRequest(request.id, approvalRoles[request.id] || 'viewer', token());
         requests = requests.filter((r) => r.id !== request.id);
         accounts = [...accounts, created].sort(byName);
     });
 
-    const deny = async (request) => {
+    const deny = async (request: any) => {
         const confirmed = await confirmAction({
             title: `Deny ${request.name || request.email || 'this request'}?`,
             message: `They won’t be able to sign in with ${request.providerName}, and won’t be asked about again unless you forget the request.`,
@@ -87,17 +87,17 @@ export const mountAccounts = (root, app) => {
         }
     };
 
-    const forget = (request) => act(async () => {
+    const forget = (request: any) => act(async () => {
         await client.forgetRequest(request.id, token());
         requests = requests.filter((r) => r.id !== request.id);
     });
 
-    const withdraw = (invitation) => act(async () => {
+    const withdraw = (invitation: any) => act(async () => {
         await client.deleteInvitation(invitation.id, token());
         invitations = invitations.filter((i) => i.id !== invitation.id);
     });
 
-    const remove = async (account) => {
+    const remove = async (account: any) => {
         const confirmed = await confirmAction({
             title: `Remove ${account.email}?`,
             message: 'The account is deleted and signed out everywhere.',
@@ -128,7 +128,7 @@ export const mountAccounts = (root, app) => {
         }
     };
 
-    const requestRow = (request) => formRow(h('div', { class: 'request-row' },
+    const requestRow = (request: any) => formRow(h('div', { class: 'request-row' },
         h('div', { class: 'row-text' },
             h('span', null, request.name || request.email || 'Someone'),
             h('small', null, [
@@ -147,14 +147,14 @@ export const mountAccounts = (root, app) => {
             h('button', { class: 'button small prominent', type: 'button', onClick: () => approve(request) }, 'Approve'),
             h('button', { class: 'button small', type: 'button', onClick: () => deny(request) }, 'Deny'))));
 
-    const deniedRow = (request) => formRow(h('div', { class: 'request-row' },
+    const deniedRow = (request: any) => formRow(h('div', { class: 'request-row' },
         h('div', { class: 'row-text' },
             h('span', null, request.name || request.email || 'Someone'),
             h('small', null, [request.name && request.email ? request.email : null, request.providerName].filter(Boolean).join(' · '))),
         h('div', { class: 'request-actions' },
             h('button', { class: 'button small', type: 'button', onClick: () => forget(request) }, 'Forget'))));
 
-    const invitationRow = (invitation) => formRow(h('div', { class: 'account-row', style: { flex: 1, minWidth: 0 } },
+    const invitationRow = (invitation: any) => formRow(h('div', { class: 'account-row', style: { flex: 1, minWidth: 0 } },
         h('div', { class: 'row-text' },
             h('span', null, invitation.email),
             h('small', null, `${invitation.providerName || 'Any trusted service'} · invited by ${invitation.createdBy}`)),
@@ -170,7 +170,7 @@ export const mountAccounts = (root, app) => {
     const pending = () => requests.filter((request) => request.status === 'pending');
     const denied = () => requests.filter((request) => request.status === 'denied');
 
-    const row = (account) => {
+    const row = (account: any) => {
         const isYou = store.credentials && account.email === store.credentials!.email;
         const notes = [isYou ? 'You' : null, services.length ? methodNames(account.methods, services).join(', ') : null].filter(Boolean).join(' · ');
         return formRow(h('div', { class: 'account-row', style: { flex: 1, minWidth: 0 } },
@@ -234,9 +234,9 @@ export const mountAccounts = (root, app) => {
  * admin: add an account with a password, or invite an email address to sign in with a service;
  * resolves with the new account, { invitation }, or nothing if cancelled
  **/
-const openNewAccount = (app, services) => {
+const openNewAccount = (app: any, services: any) => {
     const { store, client } = app;
-    const trusted = services.filter((service) => service.trustEmail);
+    const trusted = services.filter((service: any) => service.trustEmail);
     let method = 'password';
     let name = '';
     let password = '';
@@ -253,7 +253,7 @@ const openNewAccount = (app, services) => {
         ? /^[^@\s]+@[^@\s]+$/.test(email.trim())
         : name.trim() && passwordAcceptable(password, confirmation));
 
-    const add = async (close) => {
+    const add = async (close: any) => {
         if (!canAdd()) {
             return;
         }
@@ -273,9 +273,9 @@ const openNewAccount = (app, services) => {
         }
     };
 
-    const render = (close) => {
+    const render = (close: any) => {
         const message = errorMessage || (inviting() ? null : passwordProblem(password, confirmation));
-        const field = (label, value, set, type, autocomplete) => formRow((type === 'password' ? passwordInput : textInput)({
+        const field = (label: any, value: any, set: any, type: any, autocomplete: any) => formRow((type === 'password' ? passwordInput : textInput)({
             reveal,
             label,
             type,
@@ -304,17 +304,17 @@ const openNewAccount = (app, services) => {
                 }))) : null,
                 inviting()
                     ? formSection({ footer: message, footerClass: 'error' },
-                        field('Email Address', email, (v) => { email = v; }, 'text', 'email'),
+                        field('Email Address', email, (v: any) => { email = v; }, 'text', 'email'),
                         formRow(h('span', { class: 'label' }, 'Service'), select({
                             label: 'Service',
                             value: service,
-                            options: [{ value: '', label: 'Any of Them' }, ...trusted.map((s) => ({ value: s.id, label: s.displayName }))],
+                            options: [{ value: '', label: 'Any of Them' }, ...trusted.map((s: any) => ({ value: s.id, label: s.displayName }))],
                             onChange: (v) => { service = v; dialog.update(); }
                         })))
                     : formSection({ footer: message, footerClass: 'error' },
-                        field('Account Name', name, (v) => { name = v; }, 'text', 'off'),
-                        field('Password', password, (v) => { password = v; }, 'password', 'new-password'),
-                        field('Confirm Password', confirmation, (v) => { confirmation = v; }, 'password', 'new-password')),
+                        field('Account Name', name, (v: any) => { name = v; }, 'text', 'off'),
+                        field('Password', password, (v: any) => { password = v; }, 'password', 'new-password'),
+                        field('Confirm Password', confirmation, (v: any) => { confirmation = v; }, 'password', 'new-password')),
                 formSection({ footer: roleInfo(role)!.summary },
                     formRow(h('span', { class: 'label' }, 'Role'), select({
                         label: 'Role',
@@ -330,7 +330,7 @@ const openNewAccount = (app, services) => {
 };
 
 /** admin: change one account's role or reset its password */
-export const mountAccountDetail = (root, app, name) => {
+export const mountAccountDetail = (root: any, app: any, name: any) => {
     const { store, client } = app;
     let account: any = null;
     let role: any = null;
@@ -353,7 +353,7 @@ export const mountAccountDetail = (root, app, name) => {
         try {
             const [list, signIn] = await Promise.all([client.listAccounts(token()), client.fetchSignInSettings(token()).catch(() => null)]);
             services = signIn ? signIn.providers : [];
-            account = list.find((a) => a.email === name) || null;
+            account = list.find((a: any) => a.email === name) || null;
             role = account ? account.role : null;
             if (!account) {
                 failed = true;
@@ -368,7 +368,7 @@ export const mountAccountDetail = (root, app, name) => {
         }
     };
 
-    const save = async (changes) => {
+    const save = async (changes: any) => {
         saving = true;
         message = null;
         redraw();
@@ -405,7 +405,7 @@ export const mountAccountDetail = (root, app, name) => {
     };
 
     const reveal = revealer(() => redraw());
-    const field = (label, value, set) => formRow(passwordInput({
+    const field = (label: any, value: any, set: any) => formRow(passwordInput({
         reveal,
         label,
         value,
@@ -435,8 +435,8 @@ export const mountAccountDetail = (root, app, name) => {
                     : `${account.email} signs in with a service. A password lets them sign in without it too.`),
                 footerClass: problem ? 'error' : ''
             },
-            field('New Password', password, (v) => { password = v; }),
-            field('Confirm Password', confirmation, (v) => { confirmation = v; }),
+            field('New Password', password, (v: any) => { password = v; }),
+            field('Confirm Password', confirmation, (v: any) => { confirmation = v; }),
             h('button', { class: 'form-row action', type: 'button', disabled: !passwordAcceptable(password, confirmation) || saving, onClick: resetPassword }, 'Reset Password')),
             message ? formSection({}, h('div', { class: ['message-box', failed ? 'error-text' : 'secondary'] }, message)) : null);
     };

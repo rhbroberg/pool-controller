@@ -142,7 +142,7 @@ export class StatusStore {
             live.onStateChange = (isLive) => this.liveChanged(isLive);
         }
 
-        prefs.watch((key) => {
+        prefs.watch((key: any) => {
             if (key === 'credentials') {
                 this.credentials = prefs.read('credentials', null);
                 this.accountChecked = false;
@@ -151,7 +151,7 @@ export class StatusStore {
         });
     }
 
-    subscribe(listener) {
+    subscribe(listener: any) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }
@@ -214,21 +214,21 @@ export class StatusStore {
         return prefs.read('lastAccount', null);
     }
 
-    reading(name) {
+    reading(name: any) {
         return this.readings.find((reading) => reading.name === name);
     }
 
     /** the state the controller last reported; a requested change shows only once it's confirmed */
-    isOn(control) {
+    isOn(control: any) {
         return isOn(this.reading(control.stateName));
     }
 
-    pendingState(name) {
+    pendingState(name: any) {
         return this.pending[name];
     }
 
     /** what the heater or heat pump behind control is doing; null for other equipment */
-    heatingFor(control) {
+    heatingFor(control: any) {
         const device = heatingDeviceFor(control.name);
         return device && this.heating && this.heating.devices ? this.heating.devices[device.id] || null : null;
     }
@@ -280,7 +280,7 @@ export class StatusStore {
 
     // MARK: live updates
 
-    liveChanged(isLive) {
+    liveChanged(isLive: any) {
         this.isLive = isLive;
         // refresh at once: joining may have missed a change, and losing the live updates means
         // polling more often again, or finding the server is gone
@@ -290,7 +290,7 @@ export class StatusStore {
         this.changed();
     }
 
-    receivePush(name, data) {
+    receivePush(name: any, data: any) {
         if (name === 'readings' && data && Array.isArray(data.readings)) {
             this.applyReadings(data.readings.map(toReading));
         } else if (name === 'heating' && data && typeof data === 'object') {
@@ -323,9 +323,9 @@ export class StatusStore {
     }
 
     /** true when a push arrives within ms, false otherwise */
-    nextPush(ms) {
+    nextPush(ms: any) {
         return new Promise((resolve) => {
-            const wake = (pushed) => {
+            const wake = (pushed: any) => {
                 clearTimeout(timer);
                 this.pushWaiters.delete(wake);
                 resolve(pushed);
@@ -335,7 +335,7 @@ export class StatusStore {
         });
     }
 
-    waitForNextPoll(ms) {
+    waitForNextPoll(ms: any) {
         if (this.pollSleep) {
             return this.pollSleep(ms);
         }
@@ -396,7 +396,7 @@ export class StatusStore {
 
     // MARK: accounts
 
-    async signIn(email, password) {
+    async signIn(email: any, password: any) {
         const result = await this.client.signIn(email, password);
         const signedIn = signedInAs(result);
         this.markConnected();
@@ -409,7 +409,7 @@ export class StatusStore {
     }
 
     /** finishes a sign-in through a service with the ticket it came back with */
-    async signInWithTicket(ticket) {
+    async signInWithTicket(ticket: any) {
         const result = await this.client.signInWithTicket(ticket);
         this.markConnected();
         this.save(signedInAs(result));
@@ -422,7 +422,7 @@ export class StatusStore {
     }
 
     /** renames the default admin account and sets its password, then signs in as the new account */
-    async commission(name, password) {
+    async commission(name: any, password: any) {
         if (!this.commissioning) {
             return;
         }
@@ -440,7 +440,7 @@ export class StatusStore {
      * sets a new password once current proves who is asking; the server signs the account out
      * everywhere else, so this keeps the new token it returns
      **/
-    async changePassword(current, password) {
+    async changePassword(current: any, password: any) {
         const credentials = this.requireCredentials();
         let verified;
         try {
@@ -498,7 +498,7 @@ export class StatusStore {
         this.accountChecked = false;
     }
 
-    save(credentials) {
+    save(credentials: any) {
         prefs.write('credentials', credentials);
         prefs.write('lastAccount', credentials.email);
         this.credentials = credentials;
@@ -533,11 +533,11 @@ export class StatusStore {
     }
 
     serverSettings() {
-        return this.adminRequest((token) => this.client.fetchSettings(token));
+        return this.adminRequest((token: any) => this.client.fetchSettings(token));
     }
 
-    async updateServerSettings(changes) {
-        const settings = await this.adminRequest((token) => this.client.updateSettings(changes, token));
+    async updateServerSettings(changes: any) {
+        const settings = await this.adminRequest((token: any) => this.client.updateSettings(changes, token));
         if ('zipCode' in changes || 'timeZone' in changes) {
             // the server fetches the new forecast straight away; the next refresh picks it up
             this.weatherCheckedAt = 0;
@@ -549,26 +549,26 @@ export class StatusStore {
     }
 
     maintenanceJobs() {
-        return this.adminRequest((token) => this.client.fetchJobs(token));
+        return this.adminRequest((token: any) => this.client.fetchJobs(token));
     }
 
     /** runs a maintenance job now; resolves with how the run went */
-    runMaintenanceJob(name) {
-        return this.adminRequest((token) => this.client.runJob(name, token));
+    runMaintenanceJob(name: any) {
+        return this.adminRequest((token: any) => this.client.runJob(name, token));
     }
 
     /** starts reading stored frames again; resolves with the run, which goes on in the server */
-    startReprocess(request) {
-        return this.adminRequest((token) => this.client.startReprocess(request, token));
+    startReprocess(request: any) {
+        return this.adminRequest((token: any) => this.client.startReprocess(request, token));
     }
 
     /** the reprocessing run under way or the last one, or null */
     reprocessRun() {
-        return this.adminRequest((token) => this.client.fetchReprocess(token));
+        return this.adminRequest((token: any) => this.client.fetchReprocess(token));
     }
 
     /** a request needing the admin role; a rejected token signs out */
-    async adminRequest(request) {
+    async adminRequest(request: any) {
         try {
             return await request(this.requireCredentials().token);
         } catch (error) {
@@ -585,7 +585,7 @@ export class StatusStore {
      * requests the change, then polls status until the controller reports it or the
      * confirmation timeout passes
      **/
-    async setControl(control, on) {
+    async setControl(control: any, on: any) {
         if (!this.credentials) {
             this.errorMessage = new ApiError('unauthorized').message;
             this.changed();
@@ -640,7 +640,7 @@ export class StatusStore {
     }
 
     /** asks the server for a water flow mode, then polls until the controller reports it */
-    async setWaterMode(mode) {
+    async setWaterMode(mode: any) {
         if (!this.credentials || mode === this.waterMode) {
             return;
         }
@@ -664,7 +664,7 @@ export class StatusStore {
      * true once reached() holds, false at the timeout, null if the server is lost meanwhile.
      * While live, the controller's report arrives as a push; otherwise it's polled for.
      **/
-    async awaitConfirmation(reached, timeoutMs) {
+    async awaitConfirmation(reached: any, timeoutMs: any) {
         const deadline = Date.now() + timeoutMs;
         while (Date.now() < deadline) {
             if (this.isLive) {
@@ -692,7 +692,7 @@ export class StatusStore {
         return false;
     }
 
-    async handleControlError(error, signInAgain, notAllowed) {
+    async handleControlError(error: any, signInAgain: any, notAllowed: any) {
         if (error instanceof ApiError && error.kind === 'unauthorized') {
             this.expire();
             this.errorMessage = `Your sign-in is no longer valid. ${signInAgain}`;
@@ -710,7 +710,7 @@ export class StatusStore {
      * saves each changed setpoint for the device, then refreshes so the tiles show the new
      * targets; setpoints is { pool, spa } in °F
      **/
-    async setSetpoints(setpoints, deviceId) {
+    async setSetpoints(setpoints: any, deviceId: any) {
         const credentials = this.requireCredentials();
         try {
             for (const [body, degrees] of Object.entries(setpoints as Record<string, number>)) {
@@ -740,7 +740,7 @@ export class StatusStore {
         this.connectionFailure = null;
     }
 
-    handle(error) {
+    handle(error: any) {
         if (isAbort(error)) {
             return;
         }

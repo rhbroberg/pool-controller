@@ -7,11 +7,11 @@ import { formatMonthDayYearTime } from '../format.js';
 import { ReprocessForm, REPROCESS_KINDS, isActive, runStateText, runRows, runFooter } from '../reprocess.js';
 import { topbar, formSection, formRow, actionRow, spinner, renderer } from '../ui.js';
 
-export const mountReprocess = (root, app) => {
+export const mountReprocess = (root: any, app: any) => {
     const { store } = app;
     const form = new ReprocessForm(store, { changed: () => redraw() });
 
-    const start = async (dryRun) => {
+    const start = async (dryRun: any) => {
         if (!dryRun) {
             const [from, to] = form.range;
             const confirmed = await confirmAction({
@@ -27,7 +27,7 @@ export const mountReprocess = (root, app) => {
         form.start(dryRun);
     };
 
-    const chip = (kind) => {
+    const chip = (kind: any) => {
         const on = form.kinds.has(kind.id);
         return h('button', {
             class: 'chip',
@@ -38,22 +38,22 @@ export const mountReprocess = (root, app) => {
         }, icon(on ? 'check' : kind.icon), kind.title);
     };
 
-    const dateRow = (id, label, value, change) => formRow(
+    const dateRow = (id: any, label: any, value: any, change: any) => formRow(
         h('label', { for: id, class: 'label' }, label),
         h('input', {
             id,
             type: 'datetime-local',
             value,
             disabled: isActive(form.run),
-            onChange: (event) => {
+            onChange: (event: any) => {
                 change(event.target.value);
                 redraw();
             }
         }));
 
-    const valueRow = (label, value) => formRow(h('span', { class: 'label' }, label), h('span', { class: 'value' }, value));
+    const valueRow = (label: any, value: any) => formRow(h('span', { class: 'label' }, label), h('span', { class: 'value' }, value));
 
-    const runSection = (run) => formSection({ header: run.dryRun ? 'Preview' : 'Last Run', footer: runFooter(run) },
+    const runSection = (run: any) => formSection({ header: run.dryRun ? 'Preview' : 'Last Run', footer: runFooter(run) },
         formRow(
             h('span', { class: ['label', run.state === 'failed' ? 'warning' : ''] }, runStateText(run, formatMonthDayYearTime)),
             isActive(run) ? h('span', { style: { marginLeft: 'auto' } }, spinner('small')) : null),
@@ -68,8 +68,8 @@ export const mountReprocess = (root, app) => {
             h('main', { class: 'page' },
                 h('div', { class: 'form' },
                     formSection({ header: 'Range', footer: rangeProblem || 'Times are in this browser’s time zone. Reprocessing stops just before the end.', footerClass: rangeProblem ? 'error' : '' },
-                        dateRow('reprocess-from', 'From', form.from, (value) => { form.from = value; }),
-                        dateRow('reprocess-to', 'To', form.to, (value) => { form.to = value; })),
+                        dateRow('reprocess-from', 'From', form.from, (value: any) => { form.from = value; }),
+                        dateRow('reprocess-to', 'To', form.to, (value: any) => { form.to = value; })),
                     formSection({ header: 'Events', footer: 'The kinds of event read again from their stored frames; the others stay as they are. Communication errors hold the frames the server couldn’t read. Readings and equipment also lose repeats of a value the server once stored again.' },
                         formRow(h('div', { class: 'chips' }, REPROCESS_KINDS.map(chip)))),
                     formSection({ footer: 'The server reads each stored frame again with its current decoding and keeps what changed, as if it had read them that way at the time. Frames that now change nothing are removed. Preview counts the changes without making them.' },

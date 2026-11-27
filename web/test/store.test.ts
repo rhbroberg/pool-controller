@@ -7,7 +7,7 @@ import { EQUIPMENT } from '../public/js/model.js';
 import * as prefs from '../public/js/prefs.js';
 
 const filter = EQUIPMENT.find((control) => control.name === 'filter');
-const switchReading = (name, value) => ({ name, category: 'status', value, timestamp: new Date() });
+const switchReading = (name: any, value: any) => ({ name, category: 'status', value, timestamp: new Date() });
 
 /** a client whose status the test controls; requests are recorded */
 const fakeClient = (overrides = {}) => {
@@ -23,14 +23,14 @@ const fakeClient = (overrides = {}) => {
             client.weatherRequests += 1;
             return { configured: true, location: { zipCode: '32801', placeName: 'Orlando, FL' }, today: { high: 88, low: 71, condition: 'sunny' }, stale: false };
         },
-        setDevice: async (name, on, token) => {
+        setDevice: async (name: any, on: any, token: any) => {
             client.calls.push(['setDevice', name, on, token]);
         },
-        setWaterMode: async (mode, token) => {
+        setWaterMode: async (mode: any, token: any) => {
             client.calls.push(['setWaterMode', mode, token]);
         },
-        signIn: async (email) => ({ email, token: `token-for-${email}`, role: 'user' }),
-        changeCredentials: async (email) => ({ email, token: `renamed-${email}`, role: 'admin' }),
+        signIn: async (email: any) => ({ email, token: `token-for-${email}`, role: 'user' }),
+        changeCredentials: async (email: any) => ({ email, token: `renamed-${email}`, role: 'admin' }),
         fetchAccount: async () => ({ email: 'rick', role: 'viewer' }),
         signOut: async () => {},
         ...overrides
@@ -38,7 +38,7 @@ const fakeClient = (overrides = {}) => {
     return client;
 };
 
-const newStore = (client) => new StatusStore(client, { confirmationPollMs: 5 });
+const newStore = (client: any) => new StatusStore(client, { confirmationPollMs: 5 });
 
 describe('status store', () => {
     beforeEach(() => {
@@ -96,7 +96,7 @@ describe('status store', () => {
 
     it('asks for the weather again once the zip code changes', async () => {
         prefs.write('credentials', { email: 'owner', token: 't', role: 'admin' });
-        const client = fakeClient({ updateSettings: async (changes) => ({ location: { zipCode: changes.zipCode } }) });
+        const client = fakeClient({ updateSettings: async (changes: any) => ({ location: { zipCode: changes.zipCode } }) });
         const store = newStore(client);
         await store.refresh();
         await store.updateServerSettings({ zipCode: '80202' });
@@ -123,7 +123,7 @@ describe('status store', () => {
 
     it('signs in with the ticket a service sent back, and knows the account has no password', async () => {
         const client = fakeClient({
-            signInWithTicket: async (ticket) => {
+            signInWithTicket: async (ticket: any) => {
                 client.calls.push(['signInWithTicket', ticket]);
                 return { email: 'alice@example.com', token: 'from-google', role: 'viewer', methods: ['google'] };
             }
@@ -182,9 +182,9 @@ describe('status store', () => {
     });
 
     it('turns a task on and waits for the controller to report its switches', async () => {
-        const tasks = (pool) => ({ pool: { on: pool }, spaPreheat: { on: false, scheduled: null }, spaParty: { on: false }, dark: false });
+        const tasks = (pool: any) => ({ pool: { on: pool }, spaPreheat: { on: false, scheduled: null }, spaParty: { on: false }, dark: false });
         const client = fakeClient({
-            setTask: async (task, on, readyAt, token) => {
+            setTask: async (task: any, on: any, readyAt: any, token: any) => {
                 client.calls.push(['setTask', task, on, readyAt, token]);
                 return tasks(false);
             }
@@ -212,7 +212,7 @@ describe('status store', () => {
         const scheduled = { pool: { on: false }, spaParty: { on: false }, dark: true,
             spaPreheat: { on: false, scheduled: { readyAt: readyAt.toISOString(), startAt: new Date(readyAt.getTime() - 3600000).toISOString(), leadMinutes: 60, leadFrom: 'rate' } } };
         const client = fakeClient({
-            setTask: async (task, on, when, token) => {
+            setTask: async (task: any, on: any, when: any, token: any) => {
                 client.calls.push(['setTask', task, on, when, token]);
                 return scheduled;
             }
@@ -266,7 +266,7 @@ describe('status store', () => {
     it('keeps the sign-in until signing out, which isn’t the server refusing it', async () => {
         prefs.write('credentials', { email: 'rick', token: 't', role: 'user' });
         const client = fakeClient({
-            signOut: async (token) => {
+            signOut: async (token: any) => {
                 client.calls.push(['signOut', token]);
             }
         });
@@ -328,17 +328,17 @@ describe('status store', () => {
     it('lets an admin read and change the server’s settings and run its jobs', async () => {
         const settings = { timeZone: 'America/New_York', timeZoneSource: 'system', rawRetentionDays: 365 };
         const client = fakeClient({
-            signIn: async (email) => ({ email, token: 'admin-token', role: 'admin' }),
-            fetchSettings: async (token) => {
+            signIn: async (email: any) => ({ email, token: 'admin-token', role: 'admin' }),
+            fetchSettings: async (token: any) => {
                 client.calls.push(['fetchSettings', token]);
                 return settings;
             },
-            updateSettings: async (changes, token) => {
+            updateSettings: async (changes: any, token: any) => {
                 client.calls.push(['updateSettings', changes, token]);
                 return { ...settings, ...changes, timeZoneSource: 'configured' };
             },
             fetchJobs: async () => [{ name: 'rollups', lastResult: 'ok' }],
-            runJob: async (name, token) => {
+            runJob: async (name: any, token: any) => {
                 client.calls.push(['runJob', name, token]);
                 return { name, lastResult: 'ok', more: false };
             }
@@ -348,7 +348,7 @@ describe('status store', () => {
         assert.equal((await store.serverSettings()).timeZone, 'America/New_York');
         const changed = await store.updateServerSettings({ timeZone: 'Europe/London' });
         assert.equal(changed.timeZoneSource, 'configured');
-        assert.deepEqual((await store.maintenanceJobs()).map((job) => job.name), ['rollups']);
+        assert.deepEqual((await store.maintenanceJobs()).map((job: any) => job.name), ['rollups']);
         assert.equal((await store.runMaintenanceJob('rollups')).more, false);
         assert.deepEqual(client.calls.map((call) => call[0]), ['fetchSettings', 'updateSettings', 'runJob']);
         assert.ok(client.calls.every((call) => call.at(-1) === 'admin-token'));
@@ -370,7 +370,7 @@ describe('status store', () => {
         const requests: any[] = [];
         let answer: any = { status: 404, body: { code: 404, message: 'not yet' } };
         const client = new Client('http://pool', async (url, init) => {
-            requests.push({ url, method: init.method, body: init.body && JSON.parse(init.body), token: init.headers['x-auth'] });
+            const opts = init || {}; const headers = (opts.headers || {}) as Record<string, string>; requests.push({ url, method: opts.method, body: opts.body && JSON.parse(String(opts.body)), token: headers['x-auth'] });
             return new Response(JSON.stringify(answer.body), { status: answer.status });
         });
         const store = newStore(client);

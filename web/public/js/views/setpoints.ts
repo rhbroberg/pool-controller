@@ -8,9 +8,9 @@ import { formSection, formRow, sheetHeader, spinner } from '../ui.js';
 const DEFAULT_RANGE = [65, 104];
 const DEFAULT_SETPOINT = 80;
 
-export const openSetpoints = (app, device) => {
+export const openSetpoints = (app: any, device: any) => {
     const { store } = app;
-    const drafts = {};
+    const drafts: Record<string, number> = {};
     WATER_BODIES.forEach((body) => {
         drafts[body.id] = setpointOf(store.heating, device.id, body.id) ?? DEFAULT_SETPOINT;
     });
@@ -37,13 +37,13 @@ export const openSetpoints = (app, device) => {
         sheet.update();
     };
 
-    const save = (close) => {
+    const save = (close: any) => {
         saving = true;
         errorMessage = null;
         sheet.update();
         store.setSetpoints({ ...drafts }, device.id)
             .then(() => close(true))
-            .catch((error) => {
+            .catch((error: any) => {
                 errorMessage = error.message;
             })
             .finally(() => {
@@ -52,11 +52,11 @@ export const openSetpoints = (app, device) => {
             });
     };
 
-    const render = (close) => {
+    const render = (close: any) => {
         const heating = store.heating;
         const range = heating ? [heating.minimum, heating.maximum] : DEFAULT_RANGE;
         const disabled = !store.canControl || saving;
-        const row = (body) => {
+        const row = (body: any) => {
             const value = drafts[body.id];
             return formRow(
                 h('div', { class: 'row-text' },

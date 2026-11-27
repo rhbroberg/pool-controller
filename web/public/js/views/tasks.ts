@@ -8,17 +8,17 @@ import { EQUIPMENT, NIGHT_LIGHTS, TASKS, taskOn, scheduledPreheat, scheduleText 
 import { formSection, formRow, sheetHeader, spinner } from '../ui.js';
 
 /** "2026-11-12T19:30" in local time, as a datetime-local input takes it */
-const localInputValue = (date) => {
+const localInputValue = (date: any) => {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 16);
 };
 
 /** asks when the spa should be ready, starting from `current` or now */
-const openPreheatSchedule = (app, current) => {
+const openPreheatSchedule = (app: any, current: any) => {
     const { store } = app;
     let value = localInputValue(current || new Date());
 
-    const render = (close) => [
+    const render = (close: any) => [
         sheetHeader({
             title: 'Spa Preheat',
             leading: h('button', { class: 'bar-button', type: 'button', onClick: () => close() }, 'Cancel'),
@@ -39,7 +39,7 @@ const openPreheatSchedule = (app, current) => {
                         value,
                         min: localInputValue(new Date()),
                         style: { marginLeft: 'auto' },
-                        onInput: (event) => { value = event.target.value; }
+                        onInput: (event: any) => { value = event.target.value; }
                     }))))
     ];
 
@@ -51,7 +51,7 @@ const openPreheatSchedule = (app, current) => {
 };
 
 /** what the line under a task says, and how it's coloured */
-const status = (task, tasks, pending) => {
+const status = (task: any, tasks: any, pending: any) => {
     if (pending !== undefined) {
         return { text: pending ? 'Turning on…' : 'Turning off…', kind: 'pending' };
     }
@@ -66,14 +66,14 @@ const status = (task, tasks, pending) => {
     return { text: task.summary, kind: 'off' };
 };
 
-export const taskSection = (app) => {
+export const taskSection = (app: any) => {
     const { store } = app;
     const tasks = store.tasks;
     if (!tasks) {
         return h('div', { class: 'card task-note' }, 'This server doesn’t offer tasks yet. Use Equipment below.');
     }
     const locked = !store.canControl || !store.isConnected;
-    const row = (task) => {
+    const row = (task: any) => {
         const on = taskOn(tasks, task.id);
         const pending = store.pendingTasks[task.id];
         const scheduled = task.id === 'spaPreheat' && !on ? scheduledPreheat(tasks) : null;
@@ -109,7 +109,7 @@ export const taskSection = (app) => {
                 onClick: () => store.setTask(task.id, !shownOn)
             }, h('span', { class: 'knob' })));
     };
-    const lightRow = (control) => {
+    const lightRow = (control: any) => {
         const on = store.isOn(control);
         const pending = store.pendingState(control.name);
         const shownOn = pending !== undefined ? pending : on;

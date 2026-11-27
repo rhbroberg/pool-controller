@@ -8,12 +8,12 @@ import { topbar, barButton, formSection, formRow, actionRow, textInput, password
 
 const ON_OFF = [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }];
 
-const notAdmin = (store) => h('div', { class: 'center-message' },
+const notAdmin = (store: any) => h('div', { class: 'center-message' },
     icon('lock'),
     store.credentials ? 'Only admins can change how people sign in.' : 'Sign in as an admin to change how people sign in.',
     h('a', { href: '#/settings' }, 'Go to Settings'));
 
-export const mountSignInSettings = (root, app) => {
+export const mountSignInSettings = (root: any, app: any) => {
     const { store, client } = app;
     let settings: any = null;
     let isLoading = false;
@@ -41,7 +41,7 @@ export const mountSignInSettings = (root, app) => {
         }
     };
 
-    const change = async (changes) => {
+    const change = async (changes: any) => {
         saving = true;
         errorMessage = null;
         redraw();
@@ -55,13 +55,13 @@ export const mountSignInSettings = (root, app) => {
         }
     };
 
-    const editService = async (service) => {
+    const editService = async (service: any) => {
         if (await openService(app, settings, service)) {
             await load();
         }
     };
 
-    const serviceRow = (service) => h('button', { class: 'form-row', type: 'button', onClick: () => editService(service) },
+    const serviceRow = (service: any) => h('button', { class: 'form-row', type: 'button', onClick: () => editService(service) },
         h('div', { class: 'row-text' },
             h('span', null, service.displayName),
             h('small', null, service.kind === 'apple' ? 'Sign in with Apple' : service.issuer)),
@@ -130,7 +130,7 @@ export const mountSignInSettings = (root, app) => {
 /**
  * adds a service (service null) or changes one; resolves true once something was saved
  **/
-const openService = (app, settings, service) => {
+const openService = (app: any, settings: any, service: any) => {
     const { store, client } = app;
     const adding = !service;
     let preset = SERVICE_PRESETS[0];
@@ -142,7 +142,7 @@ const openService = (app, settings, service) => {
     const reveal = revealer(() => dialog.update());
     const token = () => store.credentials ? store.credentials.token : '';
 
-    const choosePreset = (index) => {
+    const choosePreset = (index: any) => {
         preset = SERVICE_PRESETS[Number(index)];
         Object.assign(draft, { id: preset.id, displayName: preset.displayName, kind: preset.kind, issuer: preset.issuer, trustEmail: preset.trustEmail });
         dialog.update();
@@ -174,7 +174,7 @@ const openService = (app, settings, service) => {
         return adding ? { id: draft.id.trim().toLowerCase(), kind: draft.kind, ...changes } : changes;
     };
 
-    const save = async (close) => {
+    const save = async (close: any) => {
         if (!canSave()) {
             return;
         }
@@ -196,7 +196,7 @@ const openService = (app, settings, service) => {
         }
     };
 
-    const remove = async (close) => {
+    const remove = async (close: any) => {
         const confirmed = await confirmAction({
             title: `Remove ${service.displayName}?`,
             message: 'Its button leaves the sign-in form. Accounts that only sign in with it can’t sign in until it’s added back with the same id.',
@@ -221,7 +221,7 @@ const openService = (app, settings, service) => {
             reveal, label, value: target[key], type, placeholder, trailing: true, autocomplete: 'off', onInput: (v) => { target[key] = v; dialog.update(); }
         }));
 
-    const render = (close) => {
+    const render = (close: any) => {
         const redirect = draft.id ? settings.redirectUriTemplate.replace('{id}', draft.id.trim().toLowerCase()) : null;
         return [
             sheetHeader({
@@ -261,7 +261,7 @@ const openService = (app, settings, service) => {
                     placeholder: service && service.apple && service.apple.hasPrivateKey ? 'Saved; paste a new key to replace it' : '-----BEGIN PRIVATE KEY-----',
                     'aria-label': 'Private Key',
                     spellcheck: 'false',
-                    onInput: (event) => { draft.apple.privateKey = event.target.value; dialog.update(); }
+                    onInput: (event: any) => { draft.apple.privateKey = event.target.value; dialog.update(); }
                 })) : null),
                 formSection({
                     footer: draft.trustEmail

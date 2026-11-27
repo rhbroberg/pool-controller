@@ -20,7 +20,7 @@ export const parsePacket = (text: string | null | undefined): any => {
     if (typeof text !== 'string' || text.length === 0) {
         return null;
     }
-    const json = (body) => {
+    const json = (body: any) => {
         try {
             return body ? JSON.parse(body) : null;
         } catch {
@@ -130,7 +130,7 @@ export class LiveConnection {
         }
         this.socket = socket;
         this.expectWithin(OPEN_TIMEOUT_MS);
-        socket.onmessage = (message) => {
+        socket.onmessage = (message: any) => {
             if (socket === this.socket) {
                 this.receive(String(message.data));
             }
@@ -173,7 +173,7 @@ export class LiveConnection {
         }
     }
 
-    send(text) {
+    send(text: any) {
         try {
             this.socket!.send(text);
         } catch {
@@ -182,7 +182,7 @@ export class LiveConnection {
     }
 
     /** hangs up unless the server is heard from within ms */
-    expectWithin(ms) {
+    expectWithin(ms: any) {
         this.clearTimer(this.watchdog);
         this.watchdog = this.setTimer(() => this.lost(), ms);
     }
@@ -217,7 +217,7 @@ export class LiveConnection {
         this.setLive(false);
     }
 
-    setLive(isLive) {
+    setLive(isLive: any) {
         if (this.isLive !== isLive) {
             this.isLive = isLive;
             this.onStateChange(isLive);

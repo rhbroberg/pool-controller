@@ -9,11 +9,11 @@ import { topbar, barButton, navigate, spinner, renderer } from '../ui.js';
 import { accessNote, updateFooter } from './equipment.js';
 import { taskSection } from './tasks.js';
 
-const CONNECTION_TITLES = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Offline' };
+const CONNECTION_TITLES: Record<string, string> = { connecting: 'Connecting', connected: 'Connected', disconnected: 'Offline' };
 // redraws this often so "Updated just now" and the retry countdown stay current
 const TICK_MS = 1000;
 
-export const mountDashboard = (root, app) => {
+export const mountDashboard = (root: any, app: any) => {
     const { store } = app;
 
     // MARK: pieces
@@ -77,7 +77,7 @@ export const mountDashboard = (root, app) => {
     };
 
     /** where a body of water is headed and by when, or that its pump is off */
-    const waterDetail = (water, heating) => {
+    const waterDetail = (water: any, heating: any) => {
         if (heating && heating.setpoint !== null) {
             return h('span', { class: 'water-detail', style: { '--tint': `var(--${heating.sources[0].control.tint})` } },
                 h('span', { class: 'target' }, icon('target'), `${heating.setpoint}°`),
@@ -86,7 +86,7 @@ export const mountDashboard = (root, app) => {
         return h('span', { class: ['water-detail', 'pump-off', water.isDimmed ? '' : 'placeholder'] }, icon('pause'), 'Pump off');
     };
 
-    const waterColumn = (body) => {
+    const waterColumn = (body: any) => {
         const water = measurement(store.readings, body.temperatureName);
         const heating = bodyHeating(store.heating, body.id);
         const sources = heating ? heating.sources : [];
@@ -117,7 +117,7 @@ export const mountDashboard = (root, app) => {
 
     /** the pages the main page opens, as a row of icons along the bottom */
     const bottomBar = () => {
-        const item = (href, iconName, title) => h('a', { class: 'bottom-bar-item', href }, icon(iconName), h('span', null, title));
+        const item = (href: any, iconName: any, title: any) => h('a', { class: 'bottom-bar-item', href }, icon(iconName), h('span', null, title));
         return h('nav', { class: 'bottom-bar', 'aria-label': 'Pages' },
             h('div', { class: 'bottom-bar-items' },
                 item('#/equipment', 'toggle', 'Equipment'),

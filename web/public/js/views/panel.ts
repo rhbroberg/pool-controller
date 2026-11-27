@@ -15,7 +15,7 @@ const RECENT_PRESS_LIMIT = 8;
 const REPEAT_DELAY_MS = 500;
 const REPEAT_INTERVAL_MS = 300;
 
-const KEYBOARD = {
+const KEYBOARD: Record<string, any> = {
     ArrowUp: 'plus', '+': 'plus', '=': 'plus',
     ArrowDown: 'minus', '-': 'minus', _: 'minus',
     ArrowLeft: 'left', '<': 'left', ',': 'left',
@@ -23,7 +23,7 @@ const KEYBOARD = {
     Enter: 'menu', m: 'menu', M: 'menu'
 };
 
-export const mountPanel = (root, app) => {
+export const mountPanel = (root: any, app: any) => {
     const { store, client } = app;
     let display: any = null;
     let errorMessage: any = null;
@@ -38,7 +38,7 @@ export const mountPanel = (root, app) => {
     let repeat: any = null;
     let wakeLock: any = null;
 
-    const handle = (error) => {
+    const handle = (error: any) => {
         if (isAbort(error)) {
             return;
         }
@@ -77,11 +77,11 @@ export const mountPanel = (root, app) => {
         }
     };
 
-    const mark = (id, delivery) => {
+    const mark = (id: any, delivery: any) => {
         presses = presses.map((press) => press.id === id && press.delivery === 'sending' ? { ...press, delivery } : press);
     };
 
-    const press = async (key) => {
+    const press = async (key: any) => {
         const credentials = store.credentials;
         if (!credentials || !store.canControl) {
             return;
@@ -111,7 +111,7 @@ export const mountPanel = (root, app) => {
     };
 
     // + and − press once on touch, then repeat while held, as when stepping a value
-    const startRepeat = (key) => {
+    const startRepeat = (key: any) => {
         stopRepeat();
         press(key);
         const timer = setTimeout(function again() {
@@ -140,7 +140,7 @@ export const mountPanel = (root, app) => {
         return reachable ? 'ready' : 'unreachable';
     };
 
-    const onKeydown = (event) => {
+    const onKeydown = (event: any) => {
         if (event.metaKey || event.ctrlKey || event.altKey || access() !== 'ready') {
             return;
         }
@@ -168,7 +168,7 @@ export const mountPanel = (root, app) => {
             return h('div', { class: 'lcd', role: 'status', 'aria-label': errorMessage || 'Waiting for the panel' },
                 h('div', { class: 'lcd-message' }, errorMessage || 'Waiting for the panel…'));
         }
-        const lines = display.lines.map((line, index) => {
+        const lines = display.lines.map((line: any, index: any) => {
             const blinking = new Set(display.blinking[index] || []);
             const characters = [...line].map((character, position) => blinking.has(position)
                 ? h('span', { class: 'blink' }, character)
@@ -178,7 +178,7 @@ export const mountPanel = (root, app) => {
         return h('div', {
             class: 'lcd',
             role: 'status',
-            'aria-label': display.lines.map((line) => line.trim()).join(', ')
+            'aria-label': display.lines.map((line: any) => line.trim()).join(', ')
         }, lines);
     };
 
@@ -186,7 +186,7 @@ export const mountPanel = (root, app) => {
         if (!presses.length) {
             return h('div', { class: 'key-trail' });
         }
-        const chip = (p) => h('span', { class: ['key-chip', p.delivery], 'data-key': String(p.id) },
+        const chip = (p: any) => h('span', { class: ['key-chip', p.delivery], 'data-key': String(p.id) },
             PANEL_KEYS[p.key].label,
             p.delivery === 'sending' ? icon('clock') : p.delivery === 'failed' ? icon('x') : null);
         const spoken = presses.map((p) => `${PANEL_KEYS[p.key].title}${p.delivery === 'queued' ? '' : `, ${p.delivery}`}`).join(', ');
@@ -200,13 +200,13 @@ export const mountPanel = (root, app) => {
         type: 'button',
         'aria-label': PANEL_KEYS[key].title,
         title: repeating ? `${PANEL_KEYS[key].title} (hold to repeat)` : PANEL_KEYS[key].title,
-        onClick: repeating ? (event) => {
+        onClick: repeating ? (event: any) => {
             // a pointer press already sent it; this is the keyboard's Enter or Space
             if (event.detail === 0) {
                 press(key);
             }
         } : () => press(key),
-        onPointerdown: repeating ? (event) => {
+        onPointerdown: repeating ? (event: any) => {
             if (event.button !== 0) {
                 return;
             }
@@ -221,7 +221,7 @@ export const mountPanel = (root, app) => {
         onPointerup: repeating ? stopRepeat : null,
         onPointercancel: repeating ? stopRepeat : null,
         onLostpointercapture: repeating ? stopRepeat : null,
-        onContextmenu: repeating ? (event) => event.preventDefault() : null
+        onContextmenu: repeating ? (event: any) => event.preventDefault() : null
     }, content);
 
     const controls = () => {

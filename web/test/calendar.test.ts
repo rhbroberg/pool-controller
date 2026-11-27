@@ -14,7 +14,7 @@ const fakeClient = (answer = availability) => {
     const requests: any[] = [];
     return {
         requests,
-        fetchAvailability: async (from, to) => {
+        fetchAvailability: async (from: any, to: any) => {
             requests.push([from, to]);
             return answer;
         }
@@ -49,7 +49,7 @@ describe('history calendar', () => {
     it('asks for only the spa temperature when the calendar is the spa’s', async () => {
         const names: any[] = [];
         const client = {
-            fetchAvailability: async (from, to, requested) => {
+            fetchAvailability: async (from: any, to: any, requested: any) => {
                 names.push(requested);
                 return availability;
             }

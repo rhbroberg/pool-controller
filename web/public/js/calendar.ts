@@ -6,10 +6,10 @@
 import { isAbort } from './api.js';
 import { localTimeZone, isValidTimeZone, keyOf, partsOf, midnightOf, midnightOfKey, addDaysToKey, dayKey } from './timezone.js';
 
-const monthKey = (year, month) => `${year}-${String(month).padStart(2, '0')}`;
+const monthKey = (year: any, month: any) => `${year}-${String(month).padStart(2, '0')}`;
 
 /** the year and month `offset` months from year-month */
-export const shiftMonth = ({ year, month }, offset) => {
+export const shiftMonth = ({year, month}: any, offset: any) => {
     const index = year * 12 + (month - 1) + offset;
     return { year: Math.floor(index / 12), month: (index % 12) + 1 };
 };
@@ -30,11 +30,11 @@ export class HistoryCalendar {
         this.fetchedMonths = new Set();
     }
 
-    readingsOn(key) {
+    readingsOn(key: any) {
         return this.readings.get(key) || 0;
     }
 
-    hasReadings(key) {
+    hasReadings(key: any) {
         return this.readingsOn(key) > 0;
     }
 
@@ -42,7 +42,7 @@ export class HistoryCalendar {
      * fetches the month and the ones either side, which a month page also shows a few days of,
      * unless they've been fetched
      **/
-    async load({ year, month }, now = Date.now()) {
+    async load({year, month}: any, now = Date.now()) {
         const first = shiftMonth({ year, month }, -1);
         const months = [first, { year, month }, shiftMonth({ year, month }, 1)];
         if (months.every((m) => this.fetchedMonths.has(monthKey(m.year, m.month)))) {
@@ -61,7 +61,7 @@ export class HistoryCalendar {
                 this.readings.clear();
                 this.fetchedMonths.clear();
             }
-            (availability.days || []).forEach((day) => this.readings.set(day.date, day.readings));
+            (availability.days || []).forEach((day: any) => this.readings.set(day.date, day.readings));
             months.forEach((m) => this.fetchedMonths.add(monthKey(m.year, m.month)));
             this.earliest = availability.earliest || null;
             this.errorMessage = null;
@@ -85,7 +85,7 @@ export class HistoryCalendar {
      * the month, and whether it can be picked (from the first day with readings through today).
      * Every month gets six weeks, the most one spans, so paging doesn't move the paging buttons.
      **/
-    monthGrid({ year, month }, now = Date.now()) {
+    monthGrid({year, month}: any, now = Date.now()) {
         const firstKey = keyOf(year, month, 1);
         const weekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
         const today = this.today(now);
@@ -109,13 +109,13 @@ export class HistoryCalendar {
     }
 
     /** the time from the start of one day to the end of the other, in whichever order they're given */
-    range(firstKey, lastKey) {
+    range(firstKey: any, lastKey: any) {
         const [start, end] = [firstKey, lastKey].sort();
         return [midnightOfKey(start, this.timeZone), midnightOfKey(addDaysToKey(end, 1), this.timeZone)];
     }
 
     /** the day keys from..to covers, for showing a window as a selection */
-    keysIn(from, to) {
+    keysIn(from: any, to: any) {
         return { first: dayKey(from, this.timeZone), last: dayKey(Math.max(from, to - 1), this.timeZone) };
     }
 }

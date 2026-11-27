@@ -20,7 +20,7 @@ const startUpstream = async () => {
         req.on('data', (chunk) => { body += chunk; });
         req.on('end', () => {
             seen.push({ method: req.method, url: req.url, headers: req.headers, body });
-            const reply = (status, payload) => {
+            const reply = (status: any, payload: any) => {
                 res.writeHead(status, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(payload));
             };
@@ -42,9 +42,9 @@ const startUpstream = async () => {
 };
 
 describe('web service', () => {
-    let upstream;
-    let web;
-    let base;
+    let upstream: any;
+    let web: any;
+    let base: any;
 
     before(async () => {
         upstream = await startUpstream();
@@ -211,23 +211,23 @@ describe('web service', () => {
 });
 
 describe('web service live updates', () => {
-    let upstream;
-    let upstreamPort;
-    let web;
-    let webPort;
+    let upstream: any;
+    let upstreamPort: any;
+    let web: any;
+    let webPort: any;
     const upgrades: any[] = [];
 
     // stands in for the pool server's socket.io: it greets each WebSocket, then echoes what it hears
     before(async () => {
         upstream = http.createServer((req, res) => res.end());
-        upstream.on('upgrade', (req, socket) => {
+        upstream.on('upgrade', (req: any, socket: any) => {
             upgrades.push({ url: req.url, headers: req.headers });
             if (req.url.includes('refuse')) {
                 socket.end('HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: 20\r\n\r\n{"code":0,"bad":"x"}');
                 return;
             }
             socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: test\r\n\r\nhello');
-            socket.on('data', (chunk) => {
+            socket.on('data', (chunk: any) => {
                 if (String(chunk) === 'bye') {
                     socket.destroy();
                 } else {
@@ -272,7 +272,7 @@ describe('web service live updates', () => {
                 resolve(text);
             }
         };
-        const onData = (chunk) => {
+        const onData = (chunk: any) => {
             text += chunk;
             check();
         };
@@ -302,7 +302,7 @@ describe('web service live updates', () => {
     it('closes the pool server’s side when the browser goes away', async () => {
         const { socket, head } = await upgrade(webPort, '/socket.io/?EIO=4&transport=websocket');
         await read(socket, head, 5);
-        const connections = (): Promise<number> => new Promise((resolve) => upstream.getConnections((_, count) => resolve(count ?? 0)));
+        const connections = (): Promise<number> => new Promise((resolve) => upstream.getConnections((_: any, count: any) => resolve(count ?? 0)));
         const open = await connections();
         socket.destroy();
         for (let i = 0; i < 50 && (await connections()) >= open; i++) {

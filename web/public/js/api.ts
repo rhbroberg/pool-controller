@@ -221,13 +221,13 @@ export class Client {
             timeout: 30000,
             signal
         });
-        const point = (p) => p ? { t: Date.parse(p.t), v: p.v, low: p.min ?? null, high: p.max ?? null } : null;
+        const point = (p: any) => p ? { t: Date.parse(p.t), v: p.v, low: p.min ?? null, high: p.max ?? null } : null;
         return {
             from: Date.parse(response.from),
             to: Date.parse(response.to),
             timeZone: response.timeZone || null,
             earliest: response.earliest ? Date.parse(response.earliest) : null,
-            series: (response.series || []).map((series) => ({
+            series: (response.series || []).map((series: any) => ({
                 name: series.name,
                 resolution: series.resolution || 0,
                 before: point(series.before),
@@ -251,7 +251,7 @@ export class Client {
         const page = await this.send('GET', 'events', {
             query: { types: types.join(','), order: ascending ? 'asc' : 'desc', limit, user, cursor }
         });
-        return { ...page, events: page.events.map((event) => ({ ...event, timestamp: toDate(event.timestamp) })) };
+        return { ...page, events: page.events.map((event: any) => ({ ...event, timestamp: toDate(event.timestamp) })) };
     }
 
     fetchEventUsers() {
@@ -331,7 +331,7 @@ export class Client {
 
     async listRequests(token: string) {
         const requests = await this.send('GET', 'users/requests', { token });
-        return requests.map((request) => ({ ...request, firstSeen: toDate(request.firstSeen), lastSeen: toDate(request.lastSeen) }));
+        return requests.map((request: any) => ({ ...request, firstSeen: toDate(request.firstSeen), lastSeen: toDate(request.lastSeen) }));
     }
 
     approveRequest(id: string, role: string, token: string) {

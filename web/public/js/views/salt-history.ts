@@ -30,7 +30,7 @@ const RANGE_OPACITY = 0.16;
 const VIEWPORT_KEY = 'saltHistoryViewport';
 
 const timeLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-const tickLabel = (t, step) => {
+const tickLabel = (t: any, step: any) => {
     if (step < HOUR) {
         return timeLabel.format(t);
     }
@@ -40,7 +40,7 @@ const tickLabel = (t, step) => {
     return step < 30 * DAY ? formatMonthDay(t) : formatMonthYear(t);
 };
 
-export const mountSaltHistory = (root, app, query) => {
+export const mountSaltHistory = (root: any, app: any, query: any) => {
     let now = Date.now();
     let length = PRESETS[1].length;
     let start = now - length;
@@ -70,7 +70,7 @@ export const mountSaltHistory = (root, app, query) => {
     // MARK: the window
 
     const domainStart = () => Math.min(earliest ?? now, start, now - length);
-    const clampStart = (value) => Math.min(now - length, Math.max(domainStart(), value));
+    const clampStart = (value: any) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
     // about one point per pixel, so a long range comes back as daily buckets
     const maxPoints = () => Math.min(MAX_POINTS, Math.max(50, Math.round(chart ? chart.devicePixels : 1000)));
@@ -86,7 +86,7 @@ export const mountSaltHistory = (root, app, query) => {
         saveTimer = setTimeout(saveViewport, 200);
     };
 
-    const show = (newLength, endingAt) => {
+    const show = (newLength: any, endingAt: any) => {
         length = newLength;
         start = clampStart(endingAt - newLength);
         windowChanged();
@@ -94,7 +94,7 @@ export const mountSaltHistory = (root, app, query) => {
     };
 
     /** changes the zoom, keeping the right edge on now if it was there, or the center otherwise */
-    const setLength = (requested) => {
+    const setLength = (requested: any) => {
         const newLength = Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, requested));
         if (atNow()) {
             show(newLength, now);
@@ -107,12 +107,12 @@ export const mountSaltHistory = (root, app, query) => {
         }
     };
 
-    const zoom = (factor) => {
+    const zoom = (factor: any) => {
         preset = null;
         setLength(length * factor);
     };
 
-    const pan = (ms) => {
+    const pan = (ms: any) => {
         start = clampStart(start + ms);
         windowChanged();
         scheduleViewportSave();
@@ -130,7 +130,7 @@ export const mountSaltHistory = (root, app, query) => {
         show(Math.min(MAXIMUM_LENGTH, Math.max(MINIMUM_LENGTH, end - picked[0])), end);
     };
 
-    const choosePreset = (choice) => {
+    const choosePreset = (choice: any) => {
         preset = choice.id;
         now = Date.now();
         show(choice.length, now);
@@ -154,7 +154,7 @@ export const mountSaltHistory = (root, app, query) => {
             if (response.earliest !== null && response.earliest !== undefined) {
                 earliest = earliest === null ? response.earliest : Math.min(earliest, response.earliest);
             }
-            const series = response.series.find((s) => s.name === READING);
+            const series = response.series.find((s: any) => s.name === READING);
             const bucketed = series && series.resolution > 0;
             resolution = bucketed ? series.resolution : 0;
             const points = [...(series && series.before && !bucketed ? [series.before] : []), ...(series ? series.points : [])];
@@ -194,7 +194,7 @@ export const mountSaltHistory = (root, app, query) => {
 
     // MARK: pointer and keyboard
 
-    const onPointerDown = (event) => {
+    const onPointerDown = (event: any) => {
         const host = event.currentTarget;
         host.setPointerCapture(event.pointerId);
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -220,7 +220,7 @@ export const mountSaltHistory = (root, app, query) => {
         }
     };
 
-    const onPointerMove = (event) => {
+    const onPointerMove = (event: any) => {
         if (pointers.has(event.pointerId)) {
             pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
         }
@@ -254,7 +254,7 @@ export const mountSaltHistory = (root, app, query) => {
         }
     };
 
-    const onPointerUp = (event) => {
+    const onPointerUp = (event: any) => {
         pointers.delete(event.pointerId);
         if (gesture) {
             clearTimeout(gesture.pressTimer);
@@ -269,14 +269,14 @@ export const mountSaltHistory = (root, app, query) => {
         redraw();
     };
 
-    const onPointerLeave = (event) => {
+    const onPointerLeave = (event: any) => {
         if (event.pointerType === 'mouse' && !gesture) {
             selected = null;
             redraw();
         }
     };
 
-    const onWheel = (event) => {
+    const onWheel = (event: any) => {
         event.preventDefault();
         const scale = event.deltaMode === 1 ? 16 : 1;
         if (Math.abs(event.deltaX) > Math.abs(event.deltaY) && !event.ctrlKey) {
@@ -288,8 +288,8 @@ export const mountSaltHistory = (root, app, query) => {
         zoom(factor);
     };
 
-    const onKeydown = (event) => {
-        const actions = {
+    const onKeydown = (event: any) => {
+        const actions: Record<string, () => void> = {
             ArrowLeft: () => pan(-length / 10),
             ArrowRight: () => pan(length / 10),
             '+': () => zoom(1 / ZOOM_STEP),
@@ -303,7 +303,7 @@ export const mountSaltHistory = (root, app, query) => {
         }
     };
 
-    const attachChart = (host) => {
+    const attachChart = (host: any) => {
         if (chart && chart.container === host) {
             return;
         }

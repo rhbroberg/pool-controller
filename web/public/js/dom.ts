@@ -10,7 +10,7 @@ const listen = (element: any, type: string, handler: any) => {
         element.__handlers = {};
     }
     if (!(type in element.__handlers)) {
-        element.addEventListener(type, (event) => {
+        element.addEventListener(type, (event: any) => {
             const current = element.__handlers[type];
             if (current) {
                 current.call(element, event);
@@ -149,7 +149,7 @@ const patchChildren = (parent: any, next: any) => {
  **/
 export const patch = (parent: any, next: any) => {
     patchChildren(parent, next);
-    parent.querySelectorAll('*').forEach((element) => {
+    parent.querySelectorAll('*').forEach((element: any) => {
         if (element.__ref) {
             element.__ref(element);
         }
@@ -181,13 +181,13 @@ export const openDialog = (render: (close: (value?: any) => void) => any, { clas
             patch(dialog, render(close));
         }
     };
-    dialog.addEventListener('cancel', (event) => {
+    dialog.addEventListener('cancel', (event: any) => {
         event.preventDefault();
         if (dismissable) {
             close(undefined);
         }
     });
-    dialog.addEventListener('click', (event) => {
+    dialog.addEventListener('click', (event: any) => {
         // a click on the backdrop lands on the dialog itself
         if (dismissable && event.target === dialog) {
             close(undefined);

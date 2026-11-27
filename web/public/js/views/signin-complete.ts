@@ -6,7 +6,7 @@ import { icon } from '../icons.js';
 import { signInOutcome } from '../model.js';
 import { topbar, spinner, renderer } from '../ui.js';
 
-export const mountSignInComplete = (root, app, query) => {
+export const mountSignInComplete = (root: any, app: any, query: any) => {
     const { store } = app;
     const outcome = signInOutcome(query);
     let working = Boolean(outcome.ticket);
@@ -39,7 +39,7 @@ export const mountSignInComplete = (root, app, query) => {
     if (outcome.ticket) {
         // once signed in, the page opens the dashboard
         store.signInWithTicket(outcome.ticket)
-            .catch((error) => {
+            .catch((error: any) => {
                 failure = error.message;
                 working = false;
                 redraw();

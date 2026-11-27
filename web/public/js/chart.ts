@@ -14,7 +14,7 @@ let nextId = 0;
 const escapeText = (text: any) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c]);
 
 /** about count round values from low to high */
-export const niceTicks = (low, high, count = 5) => {
+export const niceTicks = (low: any, high: any, count = 5) => {
     const span = high - low;
     if (!(span > 0)) {
         return [low];
@@ -30,7 +30,7 @@ export const niceTicks = (low, high, count = 5) => {
 };
 
 /** times for the x axis between from and to, on local hour, day or month boundaries */
-export const timeTicks = (from, to, maxCount) => {
+export const timeTicks = (from: any, to: any, maxCount: any) => {
     const span = to - from;
     const step = TIME_STEPS.find((s) => span / s <= maxCount) || TIME_STEPS[TIME_STEPS.length - 1];
     const ticks: number[] = [];
@@ -63,7 +63,7 @@ export const timeTicks = (from, to, maxCount) => {
 };
 
 /** a stepped band from each point's low to its high, holding to the next point */
-const rangePath = (points, x, y) => {
+const rangePath = (points: any, x: any, y: any) => {
     if (points.length < 2) {
         return '';
     }
@@ -78,7 +78,7 @@ const rangePath = (points, x, y) => {
     return `M${[...top, ...bottom].join('L')}Z`;
 };
 
-const stepPath = (points, x, y) => {
+const stepPath = (points: any, x: any, y: any) => {
     if (!points.length) {
         return '';
     }
@@ -90,7 +90,7 @@ const stepPath = (points, x, y) => {
 };
 
 /** the points from..to and one either side, so the line runs to the edges */
-const visible = (points, from, to) => {
+const visible = (points: any, from: any, to: any) => {
     let first = 0;
     while (first < points.length - 1 && points[first + 1].t < from) {
         first++;
@@ -135,7 +135,7 @@ export class TimeChart {
     }
 
     /** the time under a pointer at clientX */
-    timeAt(clientX) {
+    timeAt(clientX: any) {
         if (!this.spec) {
             return null;
         }
@@ -160,7 +160,7 @@ export class TimeChart {
      * ranges: [{ points: [{ t, low, high }], color, opacity }],
      * lines: [{ points: [{ t, v }], color, width, dash }], dots: [{ t, v, color }], rule }
      **/
-    set(spec) {
+    set(spec: any) {
         this.spec = spec;
         this.render();
     }
@@ -173,8 +173,8 @@ export class TimeChart {
         }
         const plot = this.plot;
         const { from, to, yMin, yMax } = spec;
-        const x = (t) => plot.left + ((t - from) / (to - from)) * plot.width;
-        const y = (v) => plot.top + (1 - (v - yMin) / (yMax - yMin)) * plot.height;
+        const x = (t: any) => plot.left + ((t - from) / (to - from)) * plot.width;
+        const y = (v: any) => plot.top + (1 - (v - yMin) / (yMax - yMin)) * plot.height;
         const clip = `${this.id}-clip`;
         const parts: string[] = [];
 
@@ -191,7 +191,7 @@ export class TimeChart {
         parts.push('</g>');
 
         parts.push(`<g clip-path="url(#${clip})">`);
-        (spec.bands || []).forEach((band) => {
+        (spec.bands || []).forEach((band: any) => {
             if (band.end < from || band.start > to) {
                 return;
             }
@@ -199,14 +199,14 @@ export class TimeChart {
             const right = Math.min(plot.left + plot.width + 1, x(band.end));
             parts.push(`<rect x="${left.toFixed(1)}" y="${plot.top}" width="${Math.max(1, right - left).toFixed(1)}" height="${plot.height}" style="fill:${band.color};fill-opacity:${band.opacity}"/>`);
         });
-        (spec.ranges || []).forEach((range) => {
-            const points = visible(range.points, from, to).filter((p) => p.low !== null && p.high !== null);
+        (spec.ranges || []).forEach((range: any) => {
+            const points = visible(range.points, from, to).filter((p: any) => p.low !== null && p.high !== null);
             if (points.length < 2) {
                 return;
             }
             parts.push(`<path d="${rangePath(points, x, y)}" style="fill:${range.color};fill-opacity:${range.opacity};stroke:none"/>`);
         });
-        (spec.lines || []).forEach((line) => {
+        (spec.lines || []).forEach((line: any) => {
             const points = visible(line.points, from, to);
             if (!points.length) {
                 return;
@@ -214,7 +214,7 @@ export class TimeChart {
             const dash = line.dash ? `;stroke-dasharray:${line.dash}` : '';
             parts.push(`<path d="${stepPath(points, x, y)}" style="fill:none;stroke:${line.color};stroke-width:${line.width || 2};stroke-linejoin:round${dash}"/>`);
         });
-        (spec.dots || []).forEach((dot) => {
+        (spec.dots || []).forEach((dot: any) => {
             if (dot.t >= from && dot.t <= to) {
                 parts.push(`<circle cx="${x(dot.t).toFixed(1)}" cy="${y(dot.v).toFixed(1)}" r="${dot.r || 3.5}" style="fill:${dot.color}"/>`);
             }
