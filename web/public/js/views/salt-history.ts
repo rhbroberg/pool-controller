@@ -5,7 +5,7 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { isAbort } from '../api.js';
 import { TimeChart } from '../chart.js';
-import { extended, valueAt, MAX_POINTS } from '../history.js';
+import { extended, valueAt, MAX_POINTS, historyWindow, clipped } from '../history.js';
 import { openHistoryCalendar } from './history-calendar.js';
 import * as prefs from '../prefs.js';
 import { formatMonthDayTime, formatMonthDay, formatMonthYear, formatHour, formatSpan } from '../format.js';
@@ -57,9 +57,15 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
     let loadTimer: any = null;
     let saveTimer: any = null;
     let generation = 0;
+    let dataEpoch = 0;
     let gesture: any = null;
+    /** fetched windows already held, so a pan merges instead of wiping the line */
+    let loaded: { from: number; to: number; summarized: boolean }[] = [];
+    /** the strip last drawn into the chart; a pan only slides it when this is unchanged */
+    let drawnStrip: { from: number; to: number; epoch: number } | null = null;
     const pointers = new Map();
     const helpSeen = prefs.read('historyHelpSeen', false);
+    const SUMMARY_ZOOM = 1.5;
 
     const saved = prefs.read(VIEWPORT_KEY, null);
     if (saved && typeof saved.length === 'number' && typeof saved.start === 'number' && saved.length > 0) {
@@ -70,11 +76,76 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
 
     // MARK: the window
 
-    const domainStart = () => Math.min(earliest ?? now, start, now - length);
+    /** Left edge may not go earlier than the first reading the server has. */
+    const domainStart = () => {
+        const latest = now - length;
+        return earliest != null ? Math.min(earliest, latest) : latest;
+    };
     const clampStart = (value: any) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
     // about one point per pixel, so a long range comes back as daily buckets
     const maxPoints = () => Math.min(MAX_POINTS, Math.max(50, Math.round(chart ? chart.devicePixels : 1000)));
+    /** the strip of history drawn around the view; scales stay put while scrolling inside it */
+    const stripBounds = () => {
+        const window = historyWindow(start, length);
+        const from = earliest != null ? Math.max(window.from, earliest) : window.from;
+        return { from: Math.min(from, now), to: Math.min(window.to, now) };
+    };
+
+    const covers = (fetch: any, from: number, to: number) => {
+        if (fetch.to <= from || fetch.from >= to) {
+            return false;
+        }
+        return !fetch.summarized || fetch.to - fetch.from <= (to - from) * SUMMARY_ZOOM;
+    };
+
+    const missing = (from: number, to: number) => {
+        const covering = loaded.filter((fetch) => covers(fetch, from, to)).sort((a, b) => a.from - b.from);
+        const gaps: [number, number][] = [];
+        let cursor = from;
+        for (const fetch of covering) {
+            if (fetch.to <= cursor || fetch.from >= to) {
+                continue;
+            }
+            if (fetch.from > cursor) {
+                gaps.push([cursor, fetch.from]);
+            }
+            cursor = Math.max(cursor, fetch.to);
+        }
+        if (cursor < to) {
+            gaps.push([cursor, to]);
+        }
+        return gaps.filter(([a, b]) => b - a >= 1000);
+    };
+
+    const recordLoaded = (from: number, to: number, summarized: boolean) => {
+        const next = [...loaded, { from, to, summarized }].sort((a, b) => a.from - b.from);
+        const merged: typeof loaded = [];
+        for (const fetch of next) {
+            const last = merged[merged.length - 1];
+            if (last && !last.summarized && !fetch.summarized && fetch.from <= last.to) {
+                last.to = Math.max(last.to, fetch.to);
+            } else {
+                merged.push({ ...fetch });
+            }
+        }
+        loaded = merged;
+    };
+
+    const mergeSamples = (incoming: any[], from: number, to: number, span: number) => {
+        const known = new Map(samples.map((sample) => [sample.t, sample]));
+        for (const [t, sample] of known) {
+            const stop = sample.span > 0 ? t + sample.span : t;
+            if (t < to && stop > from && sample.span > span) {
+                known.delete(t);
+            }
+        }
+        for (const sample of incoming) {
+            known.set(sample.t, sample);
+        }
+        samples = [...known.values()].sort((a, b) => a.t - b.t);
+        dataEpoch += 1;
+    };
 
     const saveViewport = () => {
         clearTimeout(saveTimer);
@@ -139,30 +210,40 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
 
     const load = async () => {
         const loading = ++generation;
-        const margin = length / 2;
-        const from = start - margin;
-        const to = Math.min(now, start + length + margin);
+        const strip = stripBounds();
+        const from = strip.from;
+        const to = strip.to;
         if (!(from < to)) {
+            return;
+        }
+        const gaps = missing(from, to);
+        if (!gaps.length) {
             return;
         }
         isLoading = true;
         redraw();
         try {
-            const response = await app.client.fetchHistory([READING], from, to, { maxPoints: maxPoints() });
-            if (loading !== generation) {
-                return;
+            for (const [gapFrom, gapTo] of gaps) {
+                if (loading !== generation) {
+                    return;
+                }
+                const response = await app.client.fetchHistory([READING], gapFrom, gapTo, { maxPoints: maxPoints() });
+                if (loading !== generation) {
+                    return;
+                }
+                if (response.earliest !== null && response.earliest !== undefined) {
+                    earliest = earliest === null ? response.earliest : Math.min(earliest, response.earliest);
+                }
+                const series = response.series.find((s: any) => s.name === READING);
+                const bucketed = series && series.resolution > 0;
+                resolution = bucketed ? Math.max(resolution, series.resolution) : resolution;
+                const span = (series?.resolution || 0) * 1000;
+                const points = [...(series && series.before && !bucketed ? [series.before] : []), ...(series ? series.points : [])];
+                const incoming = points.filter((p: any) => p.v !== null && p.v !== undefined)
+                    .map((p: any) => ({ t: Math.max(p.t, gapFrom), v: p.v, low: p.low, high: p.high, span }));
+                mergeSamples(incoming, gapFrom, gapTo, span);
+                recordLoaded(gapFrom, gapTo, bucketed);
             }
-            if (response.earliest !== null && response.earliest !== undefined) {
-                earliest = earliest === null ? response.earliest : Math.min(earliest, response.earliest);
-            }
-            const series = response.series.find((s: any) => s.name === READING);
-            const bucketed = series && series.resolution > 0;
-            resolution = bucketed ? series.resolution : 0;
-            const points = [...(series && series.before && !bucketed ? [series.before] : []), ...(series ? series.points : [])];
-            const loaded = points.filter((p) => p.v !== null && p.v !== undefined)
-                .map((p) => ({ t: Math.max(p.t, from), v: p.v, low: p.low, high: p.high, span: resolution * 1000 }));
-            // readings are stored when they change, so the last one holds until now
-            samples = extended(loaded, to);
             errorMessage = null;
             // domain may have widened with earliest; keep the restored pan in range
             start = clampStart(start);
@@ -312,33 +393,31 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
             chart.destroy();
         }
         chart = new TimeChart(host, { yLabel: (v) => String(Math.round(v)), tickLabel });
+        drawnStrip = null;
         drawChart();
     };
 
     // MARK: drawing
 
+    /** samples in the drawn strip, with the last value held to the strip's end */
+    const stripSamples = () => {
+        const strip = stripBounds();
+        return { strip, points: extended(clipped(samples, strip.from, strip.to), strip.to) };
+    };
+
     /** the longest bucket overlapping the time in view, in seconds */
-    const bucketSeconds = () => {
+    const bucketSeconds = (points = samples) => {
         const end = start + length;
-        return samples.reduce((span, sample) => {
+        return points.reduce((span, sample) => {
             const stop = sample.span > 0 ? sample.t + sample.span : sample.t;
             return sample.span > 0 && sample.t < end && stop > start ? Math.max(span, sample.span) : span;
         }, 0) / 1000 || resolution;
     };
 
-    /** fits the readings in view, with room above and below */
-    const yDomain = () => {
-        const end = start + length;
-        const values = samples.flatMap((sample) => {
-            if (sample.t < start || sample.t > end) {
-                return [];
-            }
-            return [sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined);
-        });
-        const opening = valueAt(samples, start);
-        if (opening !== null) {
-            values.push(opening);
-        }
+    /** fits the readings in the drawn strip, so a small pan doesn't rescale the graph */
+    const yDomain = (points: any[]) => {
+        const values = points.flatMap((sample) =>
+            [sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined));
         if (!values.length) {
             return [2000, 4000];
         }
@@ -349,24 +428,39 @@ export const mountSaltHistory = (root: any, app: any, query: any) => {
         if (!chart) {
             return;
         }
-        const [yMin, yMax] = yDomain();
-        const value = selected !== null ? valueAt(samples, selected) : null;
+        const { strip, points } = stripSamples();
+        const [yMin, yMax] = yDomain(points);
+        const value = selected !== null ? valueAt(points, selected) : null;
         // a reading or two make too short a line to see
-        const dots = samples.length < 3 ? samples.map((sample) => ({ ...sample, color: COLOR })) : [];
+        const dots = points.length < 3 ? points.map((sample) => ({ ...sample, color: COLOR })) : [];
         if (value !== null) {
             dots.push({ t: selected, v: value, color: COLOR, r: 5 });
         }
-        chart.set({
-            from: start,
-            to: start + length,
-            yMin,
-            yMax,
+        const overlay = {
             label: `Salt level from ${formatMonthDayTime(start)} to ${formatMonthDayTime(start + length)}`,
-            ranges: [{ points: samples, color: COLOR, opacity: RANGE_OPACITY }],
-            lines: [{ points: samples, color: COLOR, width: 2.5 }],
             dots,
             rule: selected
-        });
+        };
+        const sameStrip = drawnStrip
+            && drawnStrip.from === strip.from
+            && drawnStrip.to === strip.to
+            && drawnStrip.epoch === dataEpoch;
+        if (sameStrip) {
+            chart.show({ from: start, to: start + length, ...overlay });
+        } else {
+            chart.set({
+                from: start,
+                to: start + length,
+                stripFrom: strip.from,
+                stripTo: strip.to,
+                yMin,
+                yMax,
+                ranges: [{ points, color: COLOR, opacity: RANGE_OPACITY }],
+                lines: [{ points, color: COLOR, width: 2.5 }],
+                ...overlay
+            });
+            drawnStrip = { from: strip.from, to: strip.to, epoch: dataEpoch };
+        }
     };
 
     const readout = () => {

@@ -3,7 +3,7 @@
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
-import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt, levelFor, coloredWaterLines, heatingAt } from '../history.js';
+import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt, levelFor, coloredWaterLines, heatingAt, historyWindow, clipped } from '../history.js';
 import { openHistoryCalendar } from './history-calendar.js';
 import { TimeChart } from '../chart.js';
 import { waterBody } from '../model.js';
@@ -50,7 +50,11 @@ const tickLabel = (t: any, step: any) => {
 
 export const mountTemperatureHistory = (root: any, app: any, water: any) => {
     const body = waterBody(water)!;
-    const model = new TemperatureHistory(water, app.client, () => redraw());
+    let dataEpoch = 0;
+    const model = new TemperatureHistory(water, app.client, () => {
+        dataEpoch += 1;
+        redraw();
+    });
     const viewportKey = water === 'pool' ? 'poolTemperatureHistoryViewport' : 'spaTemperatureHistoryViewport';
     let now = Date.now();
     let length = PRESETS[0].length;
@@ -70,6 +74,8 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
     let loadTimer: any = null;
     let saveTimer: any = null;
     let gesture: any = null;
+    /** the strip last drawn into the chart; a pan only slides it when this is unchanged */
+    let drawnStrip: { from: number; to: number; level: number; epoch: number; flags: string } | null = null;
     const pointers = new Map();
 
     const saved = prefs.read(viewportKey, null);
@@ -81,12 +87,22 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
 
     // MARK: the window
 
-    const domainStart = () => Math.min(model.earliest ?? now, start, now - length);
+    /** Left edge may not go earlier than the first reading the server has. */
+    const domainStart = () => {
+        const latest = now - length;
+        return model.earliest != null ? Math.min(model.earliest, latest) : latest;
+    };
     const clampStart = (value: any) => Math.min(now - length, Math.max(domainStart(), value));
     const atNow = () => start + length >= now - length / 20;
     /** the bucket length that gives about one point per pixel at this zoom */
     const level = () => levelFor(length, chart ? chart.devicePixels : 1000);
     const drawnLevel = () => model.displayLevel(level(), start, start + length, now);
+    /** the strip of history drawn around the view; scales stay put while scrolling inside it */
+    const stripBounds = () => {
+        const window = historyWindow(start, length);
+        const from = model.earliest != null ? Math.max(window.from, model.earliest) : window.from;
+        return { from: Math.min(from, now), to: Math.min(window.to, now) };
+    };
 
     const saveViewport = () => {
         clearTimeout(saveTimer);
@@ -153,8 +169,11 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         redraw();
         clearTimeout(loadTimer);
         loadTimer = setTimeout(() => {
-            const margin = length / 2;
-            model.ensureLoaded(start - margin, Math.min(now, start + length + margin), level());
+            // fetch the drawn strip, not every scroll tick
+            const strip = stripBounds();
+            if (strip.from < strip.to) {
+                model.ensureLoaded(strip.from, strip.to, level());
+            }
         }, LOAD_DELAY_MS);
     };
 
@@ -290,6 +309,7 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
             chart.destroy();
         }
         chart = new TimeChart(host, { yLabel: (v) => `${Math.round(v)}°F`, tickLabel });
+        drawnStrip = null;
         drawChart();
     };
 
@@ -308,15 +328,25 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         const drawn = drawnLevel();
         const through = model.loadedThrough(drawn);
         const end = through !== null ? Math.min(through, now) : now;
-        const segments = model.waterSegments(end, drawn);
-        const air = shown.air ? model.airLine(end, drawn) : [];
+        const strip = stripBounds();
+        const segments = model.waterSegments(end, drawn)
+            .map((segment: any) => clipped(segment, strip.from, strip.to))
+            .filter((segment: any) => segment.length);
+        const air = shown.air ? clipped(model.airLine(end, drawn), strip.from, strip.to) : [];
+        const heater = shown.heater
+            ? model.heatingSpans(HEATER, end, drawn).filter((span: any) => span.end >= strip.from && span.start <= strip.to)
+            : [];
+        const heatPump = shown.heatPump
+            ? model.heatingSpans(HEAT_PUMP, end, drawn).filter((span: any) => span.end >= strip.from && span.start <= strip.to)
+            : [];
         return {
             waterResolution: bucketSeconds(segments.flat()),
             airResolution: bucketSeconds(air),
             segments,
             air,
-            heater: shown.heater ? model.heatingSpans(HEATER, end, drawn) : [],
-            heatPump: shown.heatPump ? model.heatingSpans(HEAT_PUMP, end, drawn) : []
+            heater,
+            heatPump,
+            strip
         };
     };
 
@@ -341,25 +371,29 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         return null;
     };
 
-    /** fits the readings in view, with a little room above and below */
+    /** fits the readings in the drawn strip, so a small pan doesn't rescale the graph */
     const yDomain = ({segments, air}: any) => {
-        const end = start + length;
         const values: any[] = [];
         [...segments, air].forEach((line) => {
             line.forEach((sample: any) => {
-                if (sample.t >= start && sample.t <= end) {
-                    values.push(...[sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined));
-                }
+                values.push(...[sample.v, sample.low, sample.high].filter((v) => v !== null && v !== undefined));
             });
-            const opening = valueAt(line, start);
-            if (opening !== null) {
-                values.push(opening);
-            }
         });
         if (!values.length) {
             return [40, 100];
         }
         return [Math.floor(Math.min(...values) - 3), Math.ceil(Math.max(...values) + 3)];
+    };
+
+    const selectionOverlay = (data: any) => {
+        const value = selected !== null ? waterValue(selected, data.segments) : null;
+        const heatedAt = selected !== null ? heatingAt(selected, data.heater, data.heatPump) : null;
+        const stroke = (source: string) => COLORS[source as keyof typeof COLORS] || COLORS.water;
+        return {
+            label: `${body.title} temperature from ${formatMonthDayTime(start)} to ${formatMonthDayTime(start + length)}`,
+            dots: value !== null ? [{ t: selected, v: value, color: stroke(heatedAt || 'water'), r: 5 }] : [],
+            rule: selected
+        };
     };
 
     const drawChart = () => {
@@ -368,25 +402,37 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         }
         const data = lines();
         const [yMin, yMax] = yDomain(data);
-        const value = selected !== null ? waterValue(selected, data.segments) : null;
         const waterLines = coloredWaterLines(data.segments, data.heater, data.heatPump);
         const stroke = (source: string) => COLORS[source as keyof typeof COLORS] || COLORS.water;
-        const heatedAt = selected !== null ? heatingAt(selected, data.heater, data.heatPump) : null;
-        chart.set({
-            from: start,
-            to: start + length,
-            yMin,
-            yMax,
-            label: `${body.title} temperature from ${formatMonthDayTime(start)} to ${formatMonthDayTime(start + length)}`,
-            bands: [],
-            ranges: waterLines.map((line) => ({ points: line.points, color: stroke(line.source), opacity: RANGE_OPACITY })),
-            lines: [
-                { points: data.air, color: COLORS.air, width: 1.5, dash: '4 3' },
-                ...waterLines.map((line) => ({ points: line.points, color: stroke(line.source), width: 2.5 }))
-            ],
-            dots: value !== null ? [{ t: selected, v: value, color: stroke(heatedAt || 'water'), r: 5 }] : [],
-            rule: selected
-        });
+        const overlay = selectionOverlay(data);
+        const flags = `${shown.air}|${shown.heater}|${shown.heatPump}`;
+        const drawn = drawnLevel();
+        const sameStrip = drawnStrip
+            && drawnStrip.from === data.strip.from
+            && drawnStrip.to === data.strip.to
+            && drawnStrip.level === drawn
+            && drawnStrip.epoch === dataEpoch
+            && drawnStrip.flags === flags;
+        if (sameStrip) {
+            chart.show({ from: start, to: start + length, ...overlay });
+        } else {
+            chart.set({
+                from: start,
+                to: start + length,
+                stripFrom: data.strip.from,
+                stripTo: data.strip.to,
+                yMin,
+                yMax,
+                bands: [],
+                ranges: waterLines.map((line) => ({ points: line.points, color: stroke(line.source), opacity: RANGE_OPACITY })),
+                lines: [
+                    { points: data.air, color: COLORS.air, width: 1.5, dash: '4 3' },
+                    ...waterLines.map((line) => ({ points: line.points, color: stroke(line.source), width: 2.5 }))
+                ],
+                ...overlay
+            });
+            drawnStrip = { from: data.strip.from, to: data.strip.to, level: drawn, epoch: dataEpoch, flags };
+        }
         return data;
     };
 

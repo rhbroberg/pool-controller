@@ -1,5 +1,6 @@
 // A time chart drawn as SVG: stepped lines, shaded bands and a selection rule. Lines step,
-// because the server stores a reading only when it changes.
+// because the server stores a reading only when it changes. A wider strip is drawn once and
+// slid under the view while panning, so a small drag doesn't wipe and rebuild the paths.
 
 const MARGIN = { top: 8, right: 10, bottom: 24, left: 46 };
 const MINUTE = 60 * 1000;
@@ -113,10 +114,14 @@ export class TimeChart {
         this.tickLabel = tickLabel;
         this.id = `chart-${nextId++}`;
         this.spec = null;
+        this.stripBuilt = false;
         this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         this.svg.setAttribute('role', 'img');
         container.appendChild(this.svg);
-        this.observer = new ResizeObserver(() => this.render());
+        this.observer = new ResizeObserver(() => {
+            this.stripBuilt = false;
+            this.render();
+        });
         this.observer.observe(container);
     }
 
@@ -156,12 +161,28 @@ export class TimeChart {
     }
 
     /**
-     * spec: { from, to, yMin, yMax, label, bands: [{ start, end, color, opacity }],
-     * ranges: [{ points: [{ t, low, high }], color, opacity }],
-     * lines: [{ points: [{ t, v }], color, width, dash }], dots: [{ t, v, color }], rule }
+     * Rebuilds the strip. spec: { from, to, stripFrom?, stripTo?, yMin, yMax, label,
+     * bands, ranges, lines, dots, rule }. stripFrom..stripTo is the drawn strip; from..to is
+     * the part in view. Prefer show() while panning so the paths stay put.
      **/
     set(spec: any) {
-        this.spec = spec;
+        this.spec = {
+            ...spec,
+            stripFrom: spec.stripFrom ?? spec.from,
+            stripTo: spec.stripTo ?? spec.to
+        };
+        this.stripBuilt = false;
+        this.render();
+    }
+
+    /**
+     * Slides the existing strip to a new view and updates the selection overlay. No path rebuild.
+     **/
+    show({ from, to, label, dots, rule }: { from: number; to: number; label?: string; dots?: any[]; rule?: number | null }) {
+        if (!this.spec) {
+            return;
+        }
+        this.spec = { ...this.spec, from, to, label: label ?? this.spec.label, dots: dots ?? [], rule: rule ?? null };
         this.render();
     }
 
@@ -171,9 +192,24 @@ export class TimeChart {
         if (!spec || !width || !height) {
             return;
         }
+        if (!this.stripBuilt) {
+            this.drawStrip();
+            this.stripBuilt = true;
+        }
+        this.updateView();
+        this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        this.svg.setAttribute('aria-label', spec.label || '');
+    }
+
+    /** builds the y axis and the strip's paths; kept while the view slides across them */
+    drawStrip() {
+        const spec = this.spec;
         const plot = this.plot;
-        const { from, to, yMin, yMax } = spec;
-        const x = (t: any) => plot.left + ((t - from) / (to - from)) * plot.width;
+        const { stripFrom, stripTo, yMin, yMax, from, to } = spec;
+        const viewSpan = Math.max(1, to - from);
+        const stripSpan = Math.max(viewSpan, stripTo - stripFrom);
+        const stripWidth = plot.width * (stripSpan / viewSpan);
+        const x = (t: any) => plot.left + ((t - stripFrom) / stripSpan) * stripWidth;
         const y = (v: any) => plot.top + (1 - (v - yMin) / (yMax - yMin)) * plot.height;
         const clip = `${this.id}-clip`;
         const parts: string[] = [];
@@ -181,39 +217,72 @@ export class TimeChart {
         parts.push(`<defs><clipPath id="${clip}"><rect x="${plot.left}" y="${plot.top - 2}" width="${plot.width}" height="${plot.height + 4}"/></clipPath></defs>`);
 
         const yTicks = niceTicks(yMin, yMax, Math.max(2, Math.floor(plot.height / 45)));
-        const { ticks: xTicks, step } = timeTicks(from, to, Math.max(2, Math.floor(plot.width / MINIMUM_TICK_SPACING)));
-        parts.push('<g class="grid">');
+        parts.push('<g class="y-grid">');
         yTicks.forEach((v) => parts.push(`<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>`));
-        xTicks.forEach((t) => parts.push(`<line x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="${plot.top}" y2="${plot.top + plot.height}"/>`));
-        parts.push('</g><g class="axis">');
+        parts.push('</g><g class="y-axis">');
         yTicks.forEach((v) => parts.push(`<text x="${plot.left - 6}" y="${y(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle">${escapeText(this.yLabel(v))}</text>`));
-        xTicks.forEach((t) => parts.push(`<text x="${x(t).toFixed(1)}" y="${plot.top + plot.height + 16}" text-anchor="middle">${escapeText(this.tickLabel(t, step))}</text>`));
         parts.push('</g>');
+        parts.push('<g class="x-grid"></g><g class="x-axis"></g>');
 
-        parts.push(`<g clip-path="url(#${clip})">`);
+        parts.push(`<g clip-path="url(#${clip})"><g class="strip">`);
         (spec.bands || []).forEach((band: any) => {
-            if (band.end < from || band.start > to) {
+            if (band.end < stripFrom || band.start > stripTo) {
                 return;
             }
             const left = Math.max(plot.left - 1, x(band.start));
-            const right = Math.min(plot.left + plot.width + 1, x(band.end));
+            const right = Math.min(plot.left + stripWidth + 1, x(band.end));
             parts.push(`<rect x="${left.toFixed(1)}" y="${plot.top}" width="${Math.max(1, right - left).toFixed(1)}" height="${plot.height}" style="fill:${band.color};fill-opacity:${band.opacity}"/>`);
         });
         (spec.ranges || []).forEach((range: any) => {
-            const points = visible(range.points, from, to).filter((p: any) => p.low !== null && p.high !== null);
+            const points = visible(range.points, stripFrom, stripTo).filter((p: any) => p.low !== null && p.high !== null);
             if (points.length < 2) {
                 return;
             }
             parts.push(`<path d="${rangePath(points, x, y)}" style="fill:${range.color};fill-opacity:${range.opacity};stroke:none"/>`);
         });
         (spec.lines || []).forEach((line: any) => {
-            const points = visible(line.points, from, to);
+            const points = visible(line.points, stripFrom, stripTo);
             if (!points.length) {
                 return;
             }
             const dash = line.dash ? `;stroke-dasharray:${line.dash}` : '';
             parts.push(`<path d="${stepPath(points, x, y)}" style="fill:none;stroke:${line.color};stroke-width:${line.width || 2};stroke-linejoin:round${dash}"/>`);
         });
+        parts.push('</g><g class="overlay"></g></g>');
+
+        this.svg.innerHTML = parts.join('');
+        this.stripWidth = stripWidth;
+        this.stripSpan = stripSpan;
+    }
+
+    /** slides the strip and redraws only the x axis, selection rule and dots */
+    updateView() {
+        const spec = this.spec;
+        const plot = this.plot;
+        const { from, to, stripFrom, yMin, yMax } = spec;
+        const viewSpan = Math.max(1, to - from);
+        const strip = this.svg.querySelector('.strip');
+        const overlay = this.svg.querySelector('.overlay');
+        const xGrid = this.svg.querySelector('.x-grid');
+        const xAxis = this.svg.querySelector('.x-axis');
+        if (!strip || !overlay || !xGrid || !xAxis) {
+            return;
+        }
+
+        const shift = -((from - stripFrom) / this.stripSpan) * this.stripWidth;
+        strip.setAttribute('transform', `translate(${shift.toFixed(2)} 0)`);
+
+        const x = (t: any) => plot.left + ((t - from) / viewSpan) * plot.width;
+        const y = (v: any) => plot.top + (1 - (v - yMin) / (yMax - yMin)) * plot.height;
+        const { ticks: xTicks, step } = timeTicks(from, to, Math.max(2, Math.floor(plot.width / MINIMUM_TICK_SPACING)));
+        xGrid.innerHTML = xTicks.map((t) =>
+            `<line x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="${plot.top}" y2="${plot.top + plot.height}"/>`
+        ).join('');
+        xAxis.innerHTML = xTicks.map((t) =>
+            `<text x="${x(t).toFixed(1)}" y="${plot.top + plot.height + 16}" text-anchor="middle">${escapeText(this.tickLabel(t, step))}</text>`
+        ).join('');
+
+        const parts: string[] = [];
         (spec.dots || []).forEach((dot: any) => {
             if (dot.t >= from && dot.t <= to) {
                 parts.push(`<circle cx="${x(dot.t).toFixed(1)}" cy="${y(dot.v).toFixed(1)}" r="${dot.r || 3.5}" style="fill:${dot.color}"/>`);
@@ -222,11 +291,7 @@ export class TimeChart {
         if (spec.rule !== null && spec.rule !== undefined) {
             parts.push(`<line class="rule" x1="${x(spec.rule).toFixed(1)}" x2="${x(spec.rule).toFixed(1)}" y1="${plot.top}" y2="${plot.top + plot.height}"/>`);
         }
-        parts.push('</g>');
-
-        this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        this.svg.setAttribute('aria-label', spec.label || '');
-        this.svg.innerHTML = parts.join('');
+        overlay.innerHTML = parts.join('');
     }
 
     destroy() {

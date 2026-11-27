@@ -32,6 +32,33 @@ export const levelFor = (lengthMs: any, pixels: any) => {
 };
 
 /**
+ * the strip drawn around start for a view visibleLength long. Moves a view's length at a time,
+ * so scrolling within it leaves the drawn data as it was.
+ **/
+export const historyWindow = (start: number, visibleLength: number) => {
+    const index = Math.floor(start / visibleLength);
+    return { from: (index - 1) * visibleLength, to: (index + 3) * visibleLength };
+};
+
+/** samples that cross from..to, with one either side so a stepped line reaches the edges */
+export const clipped = (samples: any[], from: number, to: number) => {
+    if (!samples.length || samples[samples.length - 1].t < from || samples[0].t > to) {
+        return [];
+    }
+    let first = 0;
+    while (first < samples.length && samples[first].t < from) {
+        first++;
+    }
+    first = Math.max(0, first - 1);
+    let last = samples.length - 1;
+    while (last > 0 && samples[last].t > to) {
+        last--;
+    }
+    last = Math.min(samples.length - 1, last + 1);
+    return samples.slice(first, last + 1);
+};
+
+/**
  * as many points as the server will send, so a window comes back as the readings themselves
  * whenever they are still stored and fit. The bucket length sent with the request is what the
  * server uses when a window has more readings than that

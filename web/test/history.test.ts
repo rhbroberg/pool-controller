@@ -2,7 +2,7 @@
 // buckets and heating bands are drawn.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { TemperatureHistory, valueAt, extended, holds, levelFor, pointsFor, heatingName, MAX_POINTS, coloredWaterLines, heatingAt } from '../public/js/history.js';
+import { TemperatureHistory, valueAt, extended, holds, levelFor, pointsFor, heatingName, MAX_POINTS, coloredWaterLines, heatingAt, historyWindow, clipped } from '../public/js/history.js';
 
 const LEVEL = 300;
 
@@ -223,5 +223,23 @@ describe('reading a stepped line', () => {
             { start: 0, end: 10, v: 1 },
             { start: 30, end: 50, v: 2 }
         ]);
+    });
+});
+
+describe('history window', () => {
+    const hour = 3600 * 1000;
+    const day = 24 * hour;
+
+    it('keeps the strip still while scrolling within it', () => {
+        const window = historyWindow(30 * hour, day);
+        assert.ok(window.from <= 30 * hour - day);
+        assert.ok(window.to >= 30 * hour + 2 * day);
+        assert.deepEqual(historyWindow(31 * hour, day), window);
+    });
+
+    it('clips a line to the strip with one sample either side', () => {
+        const line = [{ t: 0, v: 1 }, { t: 10, v: 2 }, { t: 20, v: 3 }, { t: 30, v: 4 }];
+        assert.deepEqual(clipped(line, 12, 22).map((sample) => sample.t), [10, 20, 30]);
+        assert.deepEqual(clipped(line, 40, 50), []);
     });
 });

@@ -1730,7 +1730,8 @@ button.form-row:disabled {
     overflow: visible;
 }
 
-.chart .grid line {
+.chart .y-grid line,
+.chart .x-grid line {
     stroke: var(--separator);
     stroke-width: 1;
 }
