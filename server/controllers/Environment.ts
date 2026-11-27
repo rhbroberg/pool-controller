@@ -4,10 +4,10 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
 import { swaggerValue } from '../types/domain';
 
-var utils = require('../utils/writer');
-var Environment = require('../service/EnvironmentService');
+import * as utils from '../utils/writer';
+import * as Environment from '../service/EnvironmentService';
 
-module.exports.getHeaterState = function getHeaterState (req: AuthedRequest, res: Response) {
+export function getHeaterState(req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   Environment.getHeaterState(poolId)
     .then(function (response: unknown) {
@@ -18,7 +18,7 @@ module.exports.getHeaterState = function getHeaterState (req: AuthedRequest, res
     });
 };
 
-module.exports.getPoolTemperature = function getPoolTemperature (req: AuthedRequest, res: Response) {
+export function getPoolTemperature(req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   var date = swaggerValue(req, 'date');
   var limit = swaggerValue<number>(req, 'limit');
@@ -31,7 +31,7 @@ module.exports.getPoolTemperature = function getPoolTemperature (req: AuthedRequ
     });
 };
 
-module.exports.setHeaterState = function setHeaterState (req: AuthedRequest, res: Response) {
+export function setHeaterState(req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   var state = swaggerValue<string>(req, 'state');
   Environment.setHeaterState(poolId,state)
@@ -43,7 +43,7 @@ module.exports.setHeaterState = function setHeaterState (req: AuthedRequest, res
     });
 };
 
-module.exports.temperatureSummary = function temperatureSummary (req: AuthedRequest, res: Response) {
+export function temperatureSummary(req: AuthedRequest, res: Response) {
   Environment.temperatureSummary()
     .then(function (response: unknown) {
       utils.writeJson(res, response);

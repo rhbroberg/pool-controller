@@ -2,11 +2,12 @@
 
 import type { AuthUser, UserRole } from '../types/domain';
 
-const { User, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } = require('./../models/user');
-var utils = require('../utils/writer');
-const activity = require('./ActivityService');
-const externalAuth = require('./ExternalAuthService');
-const log4js = require('log4js');
+import { User as UserModel, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_PASSWORD, ROLES } from '../models/user';
+const User: any = UserModel;
+import * as utils from '../utils/writer';
+import * as activity from './ActivityService';
+import * as externalAuth from './ExternalAuthService';
+import log4js from 'log4js';
 var logger = log4js.getLogger();
 
 const MINIMUM_PASSWORD_LENGTH = 6;
@@ -64,7 +65,7 @@ var findAccount = async (name: any) => {
  *
  * returns User
  **/
-exports.createUser = async function(admin: any, credentials: any) {
+export async function createUser(admin: any, credentials: any) {
     const name = (credentials.email || '').trim();
     const role = credentials.role || 'user';
     checkName(name);
@@ -86,7 +87,7 @@ exports.createUser = async function(admin: any, credentials: any) {
  *
  * returns List
  **/
-exports.listUsers = async function() {
+export async function listUsers() {
     const accounts = await User.find({}).sort({ email: 1 });
     return accounts.map(describe);
 };
@@ -97,7 +98,7 @@ exports.listUsers = async function() {
  *
  * returns User
  **/
-exports.updateUser = async function(admin: any, name: any, changes: any) {
+export async function updateUser(admin: any, name: any, changes: any) {
     const account = await findAccount(name);
     const updated = [] as any[];
     const described = [] as any[];
@@ -134,7 +135,7 @@ exports.updateUser = async function(admin: any, name: any, changes: any) {
  *
  * returns ApiResponse
  **/
-exports.deleteUser = async function(admin: any, name: any) {
+export async function deleteUser(admin: any, name: any) {
     const account = await findAccount(name);
     await requireAnotherAdmin(account);
     await account.deleteOne();
@@ -149,7 +150,7 @@ exports.deleteUser = async function(admin: any, name: any) {
  *
  * returns User
  **/
-exports.getUser = async function(user: any) {
+export async function getUser(user: any) {
     return describe(user);
 };
 
@@ -158,7 +159,7 @@ exports.getUser = async function(user: any) {
  * returns User with a token to send as the x-auth header; mustChangeCredentials means the
  * token is only good for changeCredentials until the account is renamed
  **/
-exports.loginUser = async function(credentials: any) {
+export async function loginUser(credentials: any) {
     requireJwtSecret();
     if (!externalAuth.passwordSignInAllowed()) {
         throw fail(403, 'password sign-in is turned off here; sign in with one of the services instead');
@@ -185,7 +186,7 @@ exports.loginUser = async function(credentials: any) {
  *
  * returns User
  **/
-exports.changeCredentials = async function(user: any, credentials: any) {
+export async function changeCredentials(user: any, credentials: any) {
     requireJwtSecret();
 
     const name = (credentials.email || '').trim();
@@ -219,7 +220,7 @@ exports.changeCredentials = async function(user: any, credentials: any) {
  *
  * returns ApiResponse
  **/
-exports.logoutUser = async function(user: any, token: any) {
+export async function logoutUser(user: any, token: any) {
     await user.removeToken(token);
     logger.info(`REST ${user.email}: signed out`);
     activity.record(user, 'Signed out');

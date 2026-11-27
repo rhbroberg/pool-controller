@@ -7,10 +7,10 @@ import { WATER_BODIES } from '../types/domain';
 // which stores hourly and daily buckets, and history requests, which bucket recent raw events
 // on the fly. Everything here works on MongoDB 4.4.
 
-var { Event } = require('../models/event');
-var { Rollup } = require('../models/rollup');
-var { JobState } = require('../models/jobState');
-const tz = require('../utils/timezone');
+import { Event } from '../models/event';
+import { Rollup } from '../models/rollup';
+import { JobState } from '../models/jobState';
+import * as tz from '../utils/timezone';
 
 const HOUR = 3600;
 const DAY = 86400;
@@ -214,7 +214,9 @@ var rawValueBefore = async (name: any, ms: any) => {
         return { t: doc.timestamp.getTime(), v: entry && typeof entry.value === 'number' ? entry.value : null };
     }
     const rollup = await Rollup.findOne({ name, res: HOUR, start: { $lt: new Date(ms) } }).sort({ start: -1 }).lean();
-    return rollup && typeof rollup.last === 'number' ? { t: Math.min(rollup.end.getTime(), ms), v: rollup.last } : undefined;
+    return rollup && typeof rollup.last === 'number' && rollup.end
+        ? { t: Math.min(new Date(rollup.end).getTime(), ms), v: rollup.last }
+        : undefined;
 };
 
 /**
@@ -229,8 +231,9 @@ var rawEvents = async (names: any, from: any, to: any) => {
         .lean();
     for (const doc of docs) {
         for (const entry of doc.status || []) {
-            if (byName[entry.name]) {
-                byName[entry.name].push({ t: doc.timestamp.getTime(), v: typeof entry.value === 'number' ? entry.value : null });
+            const name = entry.name;
+            if (name && byName[name]) {
+                byName[name].push({ t: doc.timestamp.getTime(), v: typeof entry.value === 'number' ? entry.value : null });
             }
         }
     }
@@ -359,7 +362,7 @@ var invalidateFrom = async (date: any) => {
     }
 };
 
-module.exports = {
+export {
     HOUR,
     DAY,
     INFO_NAMES,

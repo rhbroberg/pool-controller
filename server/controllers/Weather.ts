@@ -4,10 +4,10 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
 import { ApiError } from '../utils/writer';
 
-var utils = require('../utils/writer');
-var Weather = require('../service/WeatherService');
+import * as utils from '../utils/writer';
+import * as Weather from '../service/WeatherService';
 
-module.exports.getWeather = function getWeather (req: AuthedRequest, res: Response) {
+export function getWeather(req: AuthedRequest, res: Response) {
   Weather.getWeather()
     .then(function (response: unknown) {
       utils.writeJson(res, response);

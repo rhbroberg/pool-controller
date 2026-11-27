@@ -16,18 +16,20 @@ import { WATER_BODIES } from '../types/domain';
 // Raw events are removed after the retention period, so a scan can only see what is still held;
 // a saved model stays whatever happens to the history it came from.
 
-var { Event } = require('../models/event');
-var { HeatingModel } = require('../models/heatingModel');
-const { WindowExtractor, SWITCHES, SERIES, AIR, SOURCES } = require('../heating/windows');
-const { fitBody } = require('../heating/fit');
-const { timeToReach } = require('../heating/estimate');
-const sun = require('../heating/sun');
-const settings = require('./SettingsService');
-const scheduler = require('../jobs/scheduler');
-const activity = require('./ActivityService');
-var utils = require('../utils/writer');
-const crypto = require('crypto');
-const log4js = require('log4js');
+import { Event as EventModel } from '../models/event';
+const Event: any = EventModel;
+import { HeatingModel as HeatingModelModel } from '../models/heatingModel';
+const HeatingModel: any = HeatingModelModel;
+import { WindowExtractor, SWITCHES, SERIES, AIR, SOURCES } from '../heating/windows';
+import { fitBody } from '../heating/fit';
+import { timeToReach } from '../heating/estimate';
+import * as sun from '../heating/sun';
+import * as settings from './SettingsService';
+import * as scheduler from '../jobs/scheduler';
+import * as activity from './ActivityService';
+import * as utils from '../utils/writer';
+import crypto from 'crypto';
+import log4js from 'log4js';
 var logger = log4js.getLogger();
 
 
@@ -88,7 +90,7 @@ type Preview = {
 };
 
 // history from this time on was produced by the simulator, not a pool
-const SIMULATED_FROM = new Date('2026-01-01T00:00:00Z');
+export const SIMULATED_FROM = new Date('2026-01-01T00:00:00Z');
 const BODIES = [...WATER_BODIES];
 const PROGRESS_EVERY = 5000;
 const KEEP_PREVIEWS = 5;
@@ -117,7 +119,7 @@ var parseDate = (text: string, label: string) => {
 };
 
 /** listener() runs after a model is saved or removed */
-exports.onChange = function(listener: () => void) {
+export function onChange(listener: () => void) {
     listeners.push(listener);
 };
 
@@ -133,7 +135,7 @@ var publicModel = (doc: HeatingModelDoc | null) => doc && {
 /**
  * reads the model in use; run at startup and after a factory reset
  **/
-exports.load = async function() {
+export async function load() {
     previews.clear();
     latestScan = null;
     const doc = await HeatingModel.findOne({ active: true }).sort({ createdAt: -1 }).select({ windowsUsed: 0 }).lean();
@@ -148,7 +150,7 @@ exports.load = async function() {
 /**
  * the model in use (as stored: { createdAt, timeZone, bodies: { pool, spa } }), or null
  **/
-exports.model = function() {
+export function model() {
     return activeModel;
 };
 
@@ -167,7 +169,7 @@ var defaultRange = async () => {
  *
  * returns HeatingModelState
  **/
-exports.getModel = async function() {
+export async function getModel() {
     return { model: publicModel(activeModel), defaultRange: await defaultRange() };
 };
 
@@ -226,10 +228,10 @@ var scanHistory = async (run: ScanRun) => {
         }
     }
     await Promise.all(cursors.map((cursor) => cursor.close()));
-    run.windows = extractor.finish(run.to.getTime()).map((window: ScanWindow & { start: Date; end: Date }) => Object.assign(window, {
+    run.windows = extractor.finish(run.to.getTime()).map((window: any) => Object.assign(window, {
         start: window.start.toISOString(),
         end: window.end.toISOString()
-    }));
+    })) as ScanWindow[];
     run.gaps = extractor.gaps.length;
 };
 
@@ -300,7 +302,7 @@ var executeScan = async (run: ScanRun) => {
  *
  * returns HeatingScan
  **/
-exports.startScan = async function({ from, to }: { from?: string | null; to?: string | null } = {}, user?: { email?: string } | null) {
+export async function startScan({ from, to }: { from?: string | null; to?: string | null } = {}, user?: { email?: string } | null) {
     if (latestScan && (latestScan.state === 'waiting' || latestScan.state === 'running')) {
         throw utils.respondWithCode(409, { code: 409, message: 'history is already being scanned; wait for it to finish' });
     }
@@ -331,7 +333,7 @@ exports.startScan = async function({ from, to }: { from?: string | null; to?: st
  *
  * returns HeatingScan
  **/
-exports.getScan = async function() {
+export async function getScan() {
     return describeScan(latestScan);
 };
 
@@ -340,7 +342,7 @@ exports.getScan = async function() {
  *
  * returns [HeatingWindow]
  **/
-exports.getWindows = async function() {
+export async function getWindows() {
     if (!latestScan || latestScan.state !== 'finished') {
         throw utils.respondWithCode(409, { code: 409, message: 'there is no finished scan; find windows first' });
     }
@@ -352,7 +354,7 @@ var chosenSources = (includeSources: string | string[] | null | undefined) => {
         return SOURCES;
     }
     const list = Array.isArray(includeSources) ? includeSources : String(includeSources).split(',').map((item) => item.trim());
-    const unknown = list.filter((item) => !SOURCES.includes(item));
+    const unknown = list.filter((item) => !(SOURCES as string[]).includes(item));
     if (unknown.length > 0) {
         throw badRequest(`sources are ${SOURCES.join(', ')}`);
     }
@@ -415,7 +417,7 @@ var compact = (window: ScanWindow) => ({
  *
  * returns HeatingModelPreview
  **/
-exports.preview = async function({ scanId, excludeWindowIds, includeSources }: { scanId?: string; excludeWindowIds?: string[]; includeSources?: string | string[] | null } = {}) {
+export async function preview({ scanId, excludeWindowIds, includeSources }: { scanId?: string; excludeWindowIds?: string[]; includeSources?: string | string[] | null } = {}) {
     if (!latestScan || latestScan.state !== 'finished') {
         throw utils.respondWithCode(409, { code: 409, message: 'there is no finished scan; find windows first' });
     }
@@ -464,7 +466,7 @@ exports.preview = async function({ scanId, excludeWindowIds, includeSources }: {
  *
  * returns HeatingModelState
  **/
-exports.save = async function({ previewId }: { previewId?: string } = {}, user?: { email?: string } | null) {
+export async function save({ previewId }: { previewId?: string } = {}, user?: { email?: string } | null) {
     if (!previewId) {
         throw badRequest('previewId is required');
     }
@@ -491,9 +493,8 @@ exports.save = async function({ previewId }: { previewId?: string } = {}, user?:
     previews.delete(previewId);
     const available = BODIES.filter((body) => preview.bodies[body].available);
     logger.info(`heating model saved for ${available.join(', ')} from ${preview.windowsUsed} windows`);
-    activity.record(user, `Saved a heating estimate model for ${available.join(' and ')} from ${preview.windowsUsed} windows of history`);
+    activity.record(user as any, `Saved a heating estimate model for ${available.join(' and ')} from ${preview.windowsUsed} windows of history`);
     listeners.forEach((listener) => listener());
-    return exports.getModel();
+    return getModel();
 };
 
-exports.SIMULATED_FROM = SIMULATED_FROM;

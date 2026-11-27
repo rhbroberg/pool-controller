@@ -1,6 +1,7 @@
+'use strict';
+
 import { errorMessageOf } from '../types/domain';
 import type { ReprocessRunState } from '../types/domain';
-'use strict';
 // Reads stored frames again with the server's current protocol code and stores what it makes of
 // them now, as when a parser fix recovers frames that were stored as failures. Readings and
 // switches are stored only when they change, so events are replayed in time order from the state
@@ -9,20 +10,21 @@ import type { ReprocessRunState } from '../types/domain';
 // nothing is removed, as the server would never have stored it; one the server can't identify is
 // kept as unrecognized, so its bytes stay for working out what it is.
 
-var { Event } = require('../models/event');
-const { EventFactory } = require('../protocol/eventfactory');
-const { FrameInterpreter, HEATER_MODE } = require('../protocol/interpreter');
-const { framesIn } = require('../protocol/parse');
-const { statusMap } = require('../protocol/events');
-const rollups = require('./RollupService');
-const scheduler = require('../jobs/scheduler');
-const activity = require('./ActivityService');
-var utils = require('../utils/writer');
-const log4js = require('log4js');
+import { Event as EventModel } from '../models/event';
+const Event: any = EventModel;
+import { EventFactory } from '../protocol/eventfactory';
+import { FrameInterpreter, HEATER_MODE } from '../protocol/interpreter';
+import { framesIn } from '../protocol/parse';
+import { statusMap } from '../protocol/events';
+import * as rollups from './RollupService';
+import * as scheduler from '../jobs/scheduler';
+import * as activity from './ActivityService';
+import * as utils from '../utils/writer';
+import log4js from 'log4js';
 var logger = log4js.getLogger();
 
 // the kinds of event made from controller frames; actions come from accounts and have none
-const EVENT_TYPES = ['info', 'status', 'control', 'failed', 'unrecognized'];
+export const EVENT_TYPES = ['info', 'status', 'control', 'failed', 'unrecognized'];
 const READINGS = ['pool temp', 'spa temp', 'salt', 'ambient'];
 const WRITE_BATCH = 1000;
 const PROGRESS_EVERY = 2000;
@@ -74,7 +76,7 @@ var asBuffer = (raw: any) => {
  * gave a new reason to check the system, or null when it changes nothing; undefined when the bytes
  * hold no whole frame, which leaves the event alone
  **/
-var reinterpret = (raw: any, factory: any, interpreter: any) => {
+export const reinterpret = (raw: any, factory: any, interpreter: any) => {
     const bytes = asBuffer(raw);
     const frames = bytes ? framesIn(bytes) : [] as any[];
     if (frames.length === 0) {
@@ -291,7 +293,7 @@ var execute = async (run: any, user: any) => {
  * them by default; with dryRun, only counts what would change. Answers at once with the run, which
  * goes on in the job queue
  **/
-exports.start = async function({ from, to, eventTypes, dryRun }: { from?: any; to?: any; eventTypes?: string[]; dryRun?: boolean } = {}, user?: any) {
+export async function start({ from, to, eventTypes, dryRun }: { from?: any; to?: any; eventTypes?: string[]; dryRun?: boolean } = {}, user?: any) {
     if (latest && (latest.state === 'waiting' || latest.state === 'running')) {
         throw utils.respondWithCode(409, { code: 409, message: 'history is already being reprocessed; wait for it to finish' });
     }
@@ -324,9 +326,7 @@ exports.start = async function({ from, to, eventTypes, dryRun }: { from?: any; t
 /**
  * the run under way, or the last one; null before any
  **/
-exports.status = async function() {
+export async function status() {
     return describe(latest);
 };
 
-exports.EVENT_TYPES = EVENT_TYPES;
-exports.reinterpret = reinterpret;

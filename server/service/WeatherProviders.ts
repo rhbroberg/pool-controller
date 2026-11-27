@@ -5,7 +5,7 @@ import { errorMessageOf, errorCauseCode } from '../types/domain';
 // Open-Meteo forecasts for it. Neither needs a key. GEOCODE_URL and FORECAST_URL point them
 // elsewhere, as the tests do.
 
-const tz = require('../utils/timezone');
+import * as tz from '../utils/timezone';
 
 const GEOCODE_URL = process.env.GEOCODE_URL || 'https://api.zippopotam.us';
 const FORECAST_URL = process.env.FORECAST_URL || 'https://api.open-meteo.com/v1/forecast';
@@ -49,7 +49,7 @@ var numberOrNull = (value: any) => typeof value === 'number' && Number.isFinite(
 /**
  * the place a five-digit US zip code belongs to, or undefined when there's none
  **/
-exports.geocode = async function(zipCode: any) {
+export async function geocode(zipCode: any) {
     const { status, body }: { status: number; body: any } = await getJson(`${GEOCODE_URL}/us/${encodeURIComponent(zipCode)}`, 'the zip code service');
     if (status === 404) {
         return undefined;
@@ -77,7 +77,7 @@ exports.geocode = async function(zipCode: any) {
  *
  * returns { hours: [{ time, airTemp, … }], days: [{ date, high, low, … }] }
  **/
-exports.forecast = async function({latitude, longitude}: any, timeZone: any) {
+export async function forecast({latitude, longitude}: any, timeZone: any) {
     const query = new URLSearchParams({
         latitude: String(latitude),
         longitude: String(longitude),

@@ -1,11 +1,9 @@
 'use strict';
-require('../config/config');
 
-var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
-var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
-var { Event } = require('../models/event');
-const heatingService = require('./HeatingService');
-const log4js = require('log4js');
+import '../config/config';
+import { Event } from '../models/event';
+import * as heatingService from './HeatingService';
+import log4js from 'log4js';
 var logger = log4js.getLogger();
 
 // lines up with strings in db storage
@@ -20,7 +18,7 @@ const tempNames: Record<string, string> = {
  * poolId String 
  * returns HeaterState
  **/
-exports.getHeaterState = async function(poolId: any) {
+export async function getHeaterState(poolId: any) {
     const heater = (await heatingService.getHeating()).devices.heater1;
     return {
         'id': 'heater1',
@@ -37,7 +35,7 @@ exports.getHeaterState = async function(poolId: any) {
  * poolId String 
  * returns TemperatueZoneStatus
  **/
-exports.getPoolTemperature = async function(poolId: any, date: any, limit: any) {
+export async function getPoolTemperature(poolId: any, date: any, limit: any) {
     var statuses = [] as any[];
     var examples: any = {};
 
@@ -91,7 +89,7 @@ exports.getPoolTemperature = async function(poolId: any, date: any, limit: any) 
  * state String 
  * returns ApiResponse
  **/
-exports.setHeaterState = function(poolId: any, state: any) { // eslint-disable-line no-unused-vars
+export function setHeaterState(poolId: any, state: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -122,7 +120,7 @@ async function getMostRecentInfo(name: any, statuses: any) {
 
 var controlCB; // eslint-disable-line no-unused-vars
 
-exports.registerControlListener = function(cb: any) {
+export function registerControlListener(cb: any) {
     controlCB = cb;
 };
 
@@ -130,7 +128,7 @@ exports.registerControlListener = function(cb: any) {
  *
  * returns TemperatureSummary
  **/
-exports.temperatureSummary = async function() {
+export async function temperatureSummary() {
     var examples: any = {};
     var statuses = [] as any[];
 

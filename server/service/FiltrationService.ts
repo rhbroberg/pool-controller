@@ -1,10 +1,7 @@
 'use strict';
-require('../config/config');
 
-var { mongoose } = require('../mongoose'); // eslint-disable-line no-unused-vars
-var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
-var { Event } = require('../models/event'); // eslint-disable-line no-unused-vars
-const log4js = require('log4js');
+import '../config/config';
+import log4js from 'log4js';
 var logger = log4js.getLogger(); // eslint-disable-line no-unused-vars
 
 
@@ -13,7 +10,7 @@ var logger = log4js.getLogger(); // eslint-disable-line no-unused-vars
  *
  * returns List
  **/
-exports.getFiltrationDevices = function() {
+export function getFiltrationDevices() {
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = ['pool', 'spa'];
@@ -31,7 +28,7 @@ exports.getFiltrationDevices = function() {
  * pumpId String 
  * returns ApiResponse
  **/
-exports.getFiltrationState = function(pumpId: any) { // eslint-disable-line no-unused-vars
+export function getFiltrationState(pumpId: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {
@@ -53,7 +50,7 @@ exports.getFiltrationState = function(pumpId: any) { // eslint-disable-line no-u
  * state String 
  * returns ApiResponse
  **/
-exports.setFiltrationState = function(pumpId: any, state: any) { // eslint-disable-line no-unused-vars
+export function setFiltrationState(pumpId: any, state: any) { // eslint-disable-line no-unused-vars
     return new Promise<any>(function(resolve, reject) { // eslint-disable-line no-unused-vars
         var examples: any = {};
         examples['application/json'] = {

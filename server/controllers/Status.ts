@@ -3,10 +3,10 @@
 import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
 
-var utils = require('../utils/writer');
-var Status = require('../service/StatusService');
+import * as utils from '../utils/writer';
+import * as Status from '../service/StatusService';
 
-module.exports.getCurrentStatus = function getCurrentStatus (req: AuthedRequest, res: Response) {
+export function getCurrentStatus(req: AuthedRequest, res: Response) {
   Status.getCurrentStatus()
     .then(function (response: unknown) {
       utils.writeJson(res, response);

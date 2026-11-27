@@ -8,14 +8,19 @@ import type { AuthedRequest, UserRole } from '../types/domain';
 // or records a request for an admin to approve. Accounts then use the same x-auth tokens as
 // password sign-in.
 
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const log4js = require('log4js');
-const { User, ROLES, DEFAULT_ADMIN_NAME } = require('../models/user');
-const { Provider, AccessRequest, Invitation } = require('../models/signIn');
-const { Setting } = require('../models/setting');
-const utils = require('../utils/writer');
-const activity = require('./ActivityService');
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import log4js from 'log4js';
+import { User as UserModel, ROLES, DEFAULT_ADMIN_NAME } from '../models/user';
+const User: any = UserModel;
+import { Provider as ProviderModel, AccessRequest as AccessRequestModel, Invitation as InvitationModel } from '../models/signIn';
+const Provider: any = ProviderModel;
+const AccessRequest: any = AccessRequestModel;
+const Invitation: any = InvitationModel;
+import { Setting as SettingModel } from '../models/setting';
+const Setting: any = SettingModel;
+import * as utils from '../utils/writer';
+import * as activity from './ActivityService';
 
 var logger = log4js.getLogger();
 
@@ -38,7 +43,7 @@ type Discovered = { stamp: string; metadata: import('openid-client').ServerMetad
 
 type AppleKey = { teamId?: string; keyId?: string; privateKey?: string };
 type ProviderLike = {
-    _id: string;
+    _id: string | null;
     displayName: string;
     kind: 'oidc' | 'apple';
     issuer: string;
@@ -51,7 +56,7 @@ type ProviderLike = {
     save(): Promise<unknown>;
     deleteOne(): Promise<unknown>;
 };
-type Identity = { provider: string; subject: string; email?: string; linkedAt?: Date };
+type Identity = { provider: string; subject: string; email?: string | null; linkedAt?: Date };
 type ExternalProfile = { subject: string; email?: string; emailVerified?: boolean; name?: string };
 type AuthUserDoc = {
     _id: { toString(): string; equals(other: unknown): boolean };
@@ -163,7 +168,7 @@ var insecureAllowed = (issuer: string) => process.env.OIDC_ALLOW_INSECURE === '1
  * reads the sign-in settings and forgets cached services and sign-ins under way; run at startup
  * and after a factory reset
  **/
-exports.load = async function() {
+export async function load() {
     const doc = await Setting.findById(SETTINGS_ID).lean();
     settings = {
         passwordSignIn: !doc || doc.passwordSignIn !== false,
@@ -178,7 +183,7 @@ exports.load = async function() {
     }
 };
 
-exports.passwordSignInAllowed = function() {
+export function passwordSignInAllowed() {
     return settings.passwordSignIn || passwordSignInForced();
 };
 
@@ -204,7 +209,7 @@ var clientSecretFor = (provider: ProviderLike) => {
         return provider.clientSecret || undefined;
     }
     const { teamId, keyId, privateKey } = provider.apple || {};
-    return jwt.sign({}, privateKey, {
+    return jwt.sign({}, privateKey as string, {
         algorithm: 'ES256',
         keyid: keyId,
         issuer: teamId,
@@ -218,12 +223,13 @@ var configurationFor = async (provider: ProviderLike) => {
     const client = await oidc();
     const insecure = insecureAllowed(provider.issuer);
     const stamp = `${provider.issuer} ${provider.updatedAt ? provider.updatedAt.getTime() : ''}`;
-    let cached = discovered.get(provider._id);
+    const providerId = String(provider._id);
+    let cached = discovered.get(providerId);
     if (!cached || cached.stamp !== stamp) {
         const found = await client.discovery(new URL(provider.issuer), provider.clientId, undefined, undefined,
             insecure ? { execute: [client.allowInsecureRequests] } : undefined);
         cached = { stamp, metadata: found.serverMetadata() };
-        discovered.set(provider._id, cached);
+        discovered.set(providerId, cached);
     }
     const config = new client.Configuration(cached.metadata, provider.clientId, clientSecretFor(provider));
     if (insecure) {
@@ -256,7 +262,7 @@ var destination = (flow: Pick<AuthFlow, 'client' | 'origin'>, query: Record<stri
  * where to send the browser to sign in with a service; client is web or ios, link a code from
  * linkIdentity when an account is adding the service
  **/
-exports.start = async function(req: AuthedRequest, providerId: string, { client, link }: { client?: string; link?: string } = {}) {
+export async function start(req: AuthedRequest, providerId: string, { client, link }: { client?: string; link?: string } = {}) {
     const flow: AuthFlow = { provider: providerId, client: client === 'ios' ? 'ios' : 'web', origin: publicOrigin(req) };
     try {
         const provider = await enabledProvider(providerId);
@@ -404,7 +410,7 @@ var admit = async (provider: ProviderLike, profile: ExternalProfile, flow: AuthF
 /**
  * the service has sent the browser back; answers where to send it next
  **/
-exports.callback = async function(req: AuthedRequest & { method?: string; body?: Record<string, unknown>; query?: Record<string, unknown> }, providerId: string) {
+export async function callback(req: AuthedRequest & { method?: string; body?: Record<string, unknown>; query?: Record<string, unknown> }, providerId: string) {
     const params = req.method === 'POST' ? req.body || {} : req.query || {};
     const flow = params.state ? take(flows, String(params.state)) : undefined;
     if (!flow || flow.provider !== providerId) {
@@ -460,7 +466,7 @@ exports.callback = async function(req: AuthedRequest & { method?: string; body?:
  * trades the ticket a completed sign-in sent back for a token, as POST /users/login does for a
  * password
  **/
-exports.exchangeTicket = async function(ticket: string | undefined) {
+export async function exchangeTicket(ticket: string | undefined) {
     const entry = ticket ? take(tickets, String(ticket)) : undefined;
     const account = entry ? await User.findById(entry.userId) : null;
     if (!entry || !account) {
@@ -476,10 +482,10 @@ exports.exchangeTicket = async function(ticket: string | undefined) {
 /**
  * the services shown on the sign-in page, and whether it offers a name and password
  **/
-exports.listProviders = async function() {
+export async function listProviders() {
     const providers = await Provider.find({ enabled: true }).sort({ displayName: 1 });
     return {
-        passwordSignIn: exports.passwordSignInAllowed(),
+        passwordSignIn: passwordSignInAllowed(),
         providers: providers.map((provider: ProviderLike) => ({ id: provider._id, displayName: provider.displayName }))
     };
 };
@@ -489,7 +495,7 @@ exports.listProviders = async function() {
 /**
  * where to send the signed-in account's browser to add a service to it
  **/
-exports.linkStart = async function(req: AuthedRequest, user: AuthUserDoc, providerId: string, client: string | undefined) {
+export async function linkStart(req: AuthedRequest, user: any, providerId: string, client: string | undefined) {
     const provider = await enabledProvider(providerId);
     const code = randomToken();
     put(links, code, { userId: user._id.toString(), provider: provider._id }, LINK_MS);
@@ -497,7 +503,7 @@ exports.linkStart = async function(req: AuthedRequest, user: AuthUserDoc, provid
     return { url: `${publicOrigin(req)}${API_BASE}/auth/${provider._id}/start?${query}` };
 };
 
-exports.unlink = async function(user: AuthUserDoc, providerId: string) {
+export async function unlink(user: any, providerId: string) {
     const remaining = user.identities.filter((identity: Identity) => identity.provider !== providerId);
     if (remaining.length === user.identities.length) {
         throw fail(404, `this account doesn't sign in with ${providerId}`);
@@ -528,10 +534,10 @@ var providerView = (provider: ProviderLike, origin: string) => ({
     } : undefined,
     enabled: provider.enabled,
     trustEmail: provider.trustEmail,
-    redirectUri: redirectUri(origin, provider._id)
+    redirectUri: redirectUri(origin, String(provider._id))
 });
 
-exports.getSignInSettings = async function(req: AuthedRequest) {
+export async function getSignInSettings(req: AuthedRequest) {
     const providers = await Provider.find({}).sort({ displayName: 1 });
     return {
         passwordSignIn: settings.passwordSignIn,
@@ -554,7 +560,7 @@ var requireAdminSignIn = async (excluding?: string) => {
     }
 };
 
-exports.updateSignInSettings = async function(req: AuthedRequest, admin: AuthUserDoc, changes: { passwordSignIn?: boolean; signInRequests?: string }) {
+export async function updateSignInSettings(req: AuthedRequest, admin: any, changes: { passwordSignIn?: boolean; signInRequests?: string }) {
     const update: Partial<SignInSettings> = {};
     if (typeof changes.passwordSignIn === 'boolean') {
         if (!changes.passwordSignIn && !await externalAdminRemains()) {
@@ -582,7 +588,7 @@ exports.updateSignInSettings = async function(req: AuthedRequest, admin: AuthUse
     }
     logger.info(`REST ${admin.email}: ${notes.join('; ')}`);
     activity.record(admin, `Changed sign-in settings: ${notes.join('; ')}`);
-    return exports.getSignInSettings(req);
+    return getSignInSettings(req);
 };
 
 var checkIssuer = (issuer: string) => {
@@ -599,7 +605,7 @@ var checkIssuer = (issuer: string) => {
 
 // fetches the service's discovery document, so a typo shows when it's saved rather than at sign-in
 var checkDiscovery = async (provider: ProviderLike) => {
-    discovered.delete(provider._id);
+    discovered.delete(String(provider._id));
     try {
         await configurationFor(provider);
     } catch (e) {
@@ -650,7 +656,7 @@ var checkAppleKey = (provider: ProviderLike) => {
     }
 };
 
-exports.createProvider = async function(req: AuthedRequest, admin: AuthUserDoc, body: ProviderChanges) {
+export async function createProvider(req: AuthedRequest, admin: any, body: ProviderChanges) {
     const id = String(body.id || '').trim().toLowerCase();
     if (!PROVIDER_ID.test(id) || RESERVED_PROVIDER_IDS.includes(id)) {
         throw fail(400, 'the id must be lowercase letters, digits and dashes, such as google');
@@ -683,7 +689,7 @@ exports.createProvider = async function(req: AuthedRequest, admin: AuthUserDoc, 
     return providerView(provider, publicOrigin(req));
 };
 
-exports.updateProvider = async function(req: AuthedRequest, admin: AuthUserDoc, id: string, changes: ProviderChanges) {
+export async function updateProvider(req: AuthedRequest, admin: any, id: string, changes: ProviderChanges) {
     const provider = await Provider.findById(id);
     if (!provider) {
         throw fail(404, `there is no service with the id ${id}`);
@@ -707,7 +713,7 @@ exports.updateProvider = async function(req: AuthedRequest, admin: AuthUserDoc, 
     return providerView(provider, publicOrigin(req));
 };
 
-exports.deleteProvider = async function(admin: AuthUserDoc, id: string) {
+export async function deleteProvider(admin: any, id: string) {
     const provider = await Provider.findById(id);
     if (!provider) {
         throw fail(404, `there is no service with the id ${id}`);
@@ -746,7 +752,7 @@ var requestView = (request: AccessRequestDoc, names: Record<string, string>) => 
     attempts: request.attempts
 });
 
-exports.listRequests = async function() {
+export async function listRequests() {
     const [requests, names] = await Promise.all([AccessRequest.find({}).sort({ lastSeen: -1 }), providerNames()]);
     return requests.map((request: AccessRequestDoc) => requestView(request, names));
 };
@@ -759,7 +765,7 @@ var findRequest = async (id: string) => {
     return request;
 };
 
-exports.approveRequest = async function(admin: AuthUserDoc, id: string, role: string) {
+export async function approveRequest(admin: any, id: string, role: string) {
     checkRole(role);
     const request = await findRequest(id);
     const provider = await Provider.findById(request.provider);
@@ -776,7 +782,7 @@ exports.approveRequest = async function(admin: AuthUserDoc, id: string, role: st
     return account.describe();
 };
 
-exports.denyRequest = async function(admin: AuthUserDoc, id: string) {
+export async function denyRequest(admin: any, id: string) {
     const request = await findRequest(id);
     request.status = 'denied';
     await request.save();
@@ -786,7 +792,7 @@ exports.denyRequest = async function(admin: AuthUserDoc, id: string) {
     return requestView(request, await providerNames());
 };
 
-exports.forgetRequest = async function(admin: AuthUserDoc, id: string) {
+export async function forgetRequest(admin: any, id: string) {
     const request = await findRequest(id);
     await request.deleteOne();
     logger.info(`REST ${admin.email}: forgot the request from ${request.email || request.subject}`);
@@ -803,12 +809,12 @@ var invitationView = (invitation: InvitationDoc, names: Record<string, string>) 
     createdAt: invitation.createdAt
 });
 
-exports.listInvitations = async function() {
+export async function listInvitations() {
     const [invitations, names] = await Promise.all([Invitation.find({}).sort({ email: 1 }), providerNames()]);
     return invitations.map((invitation: InvitationDoc) => invitationView(invitation, names));
 };
 
-exports.createInvitation = async function(admin: AuthUserDoc, body: { email?: string; role?: string; provider?: string | null }) {
+export async function createInvitation(admin: any, body: { email?: string; role?: string; provider?: string | null }) {
     const email = String(body.email || '').trim().toLowerCase();
     const role = body.role || 'user';
     if (!/^[^@\s]+@[^@\s]+$/.test(email)) {
@@ -828,7 +834,7 @@ exports.createInvitation = async function(admin: AuthUserDoc, body: { email?: st
     return invitationView(invitation, await providerNames());
 };
 
-exports.deleteInvitation = async function(admin: AuthUserDoc, id: string) {
+export async function deleteInvitation(admin: any, id: string) {
     const invitation = /^[0-9a-f]{24}$/.test(id) ? await Invitation.findById(id) : null;
     if (!invitation) {
         throw fail(404, 'there is no such invitation');

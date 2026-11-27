@@ -4,10 +4,10 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
 import { swaggerValue } from '../types/domain';
 
-var utils = require('../utils/writer');
-var Water = require('../service/WaterService');
+import * as utils from '../utils/writer';
+import * as Water from '../service/WaterService';
 
-module.exports.setWaterMode = function setWaterMode (req: AuthedRequest, res: Response) {
+export function setWaterMode(req: AuthedRequest, res: Response) {
   Water.setWaterMode(swaggerValue<string>(req, 'mode'), req.user)
     .then(function (response: unknown) {
       utils.writeJson(res, response);

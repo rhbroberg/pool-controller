@@ -4,10 +4,10 @@ import type { Response } from 'express';
 import type { AuthedRequest } from '../types/domain';
 import { swaggerValue } from '../types/domain';
 
-var utils = require('../utils/writer');
-var Device = require('../service/DeviceService');
+import * as utils from '../utils/writer';
+import * as Device from '../service/DeviceService';
 
-module.exports.getDeviceState = function getDeviceState (req: AuthedRequest, res: Response) {
+export function getDeviceState(req: AuthedRequest, res: Response) {
   var deviceId = swaggerValue<string>(req, 'deviceId');
   Device.getDeviceState(deviceId)
     .then(function (response: unknown) {
@@ -18,7 +18,7 @@ module.exports.getDeviceState = function getDeviceState (req: AuthedRequest, res
     });
 };
 
-module.exports.getDevices = function getDevices (req: AuthedRequest, res: Response) {
+export function getDevices(req: AuthedRequest, res: Response) {
   var skip = swaggerValue<number>(req, 'skip');
   var limit = swaggerValue<number>(req, 'limit');
   Device.getDevices(skip,limit)
@@ -30,7 +30,7 @@ module.exports.getDevices = function getDevices (req: AuthedRequest, res: Respon
     });
 };
 
-module.exports.registerDevice = function registerDevice (req: AuthedRequest, res: Response) {
+export function registerDevice(req: AuthedRequest, res: Response) {
   var deviceId = swaggerValue<string>(req, 'deviceId');
   Device.registerDevice(deviceId)
     .then(function (response: unknown) {
@@ -41,7 +41,7 @@ module.exports.registerDevice = function registerDevice (req: AuthedRequest, res
     });
 };
 
-module.exports.setDeviceState = function setDeviceState (req: AuthedRequest, res: Response) {
+export function setDeviceState(req: AuthedRequest, res: Response) {
   var deviceId = swaggerValue<string>(req, 'deviceId');
   var state = swaggerValue<string>(req, 'state');
   Device.setDeviceState(deviceId, state, req.user)
