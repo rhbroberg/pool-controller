@@ -1,9 +1,9 @@
-// Temperature against time for the pool or spa, with air temperature and the times the heater
-// and heat pump were warming it.
+// Temperature against time for the pool or spa, with air temperature. The heater and heat pump
+// color the water line itself while they were warming it.
 
 import { h } from '../dom.js';
 import { icon } from '../icons.js';
-import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt, levelFor } from '../history.js';
+import { TemperatureHistory, HEATER, HEAT_PUMP, valueAt, levelFor, coloredWaterLines, heatingAt } from '../history.js';
 import { openHistoryCalendar } from './history-calendar.js';
 import { TimeChart } from '../chart.js';
 import { waterBody } from '../model.js';
@@ -34,9 +34,6 @@ const COLORS = {
     heater: 'var(--orange)',
     heatPump: 'var(--pink)'
 };
-// the heating bands and their legend swatches share these, so the legend matches the plot
-const HEATER_OPACITY = 0.28;
-const HEAT_PUMP_OPACITY = 0.24;
 // a bucket's range, behind its average
 const RANGE_OPACITY = 0.16;
 
@@ -372,23 +369,22 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         const data = lines();
         const [yMin, yMax] = yDomain(data);
         const value = selected !== null ? waterValue(selected, data.segments) : null;
+        const waterLines = coloredWaterLines(data.segments, data.heater, data.heatPump);
+        const stroke = (source: string) => COLORS[source as keyof typeof COLORS] || COLORS.water;
+        const heatedAt = selected !== null ? heatingAt(selected, data.heater, data.heatPump) : null;
         chart.set({
             from: start,
             to: start + length,
             yMin,
             yMax,
             label: `${body.title} temperature from ${formatMonthDayTime(start)} to ${formatMonthDayTime(start + length)}`,
-            // a bucket is shaded by how much of it the heat was on
-            bands: [
-                ...data.heater.map((band) => ({ ...band, color: COLORS.heater, opacity: HEATER_OPACITY * band.intensity })),
-                ...data.heatPump.map((band) => ({ ...band, color: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY * band.intensity }))
-            ],
-            ranges: data.segments.map((points) => ({ points, color: COLORS.water, opacity: RANGE_OPACITY })),
+            bands: [],
+            ranges: waterLines.map((line) => ({ points: line.points, color: stroke(line.source), opacity: RANGE_OPACITY })),
             lines: [
                 { points: data.air, color: COLORS.air, width: 1.5, dash: '4 3' },
-                ...data.segments.map((points) => ({ points, color: COLORS.water, width: 2.5 }))
+                ...waterLines.map((line) => ({ points: line.points, color: stroke(line.source), width: 2.5 }))
             ],
-            dots: value !== null ? [{ t: selected, v: value, color: COLORS.water, r: 5 }] : [],
+            dots: value !== null ? [{ t: selected, v: value, color: stroke(heatedAt || 'water'), r: 5 }] : [],
             rule: selected
         });
         return data;
@@ -400,12 +396,12 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
         }
         const water = waterValue(selected, data.segments);
         const air = valueAt(data.air, selected);
-        const heated = [...data.heater, ...data.heatPump].some((band) => band.start <= selected && selected <= band.end);
+        const heated = heatingAt(selected, data.heater, data.heatPump);
         return [
             h('span', { class: 'when' }, formatMonthDayTime(selected)),
-            h('span', { style: { color: COLORS.water } }, water !== null ? `${body.title} ${Math.trunc(water)}°F` : `${body.title} pump off`),
+            h('span', { style: { color: COLORS[heated || 'water'] } }, water !== null ? `${body.title} ${Math.trunc(water)}°F` : `${body.title} pump off`),
             air !== null ? h('span', { class: 'secondary' }, `Air ${Math.trunc(air)}°F`) : null,
-            heated ? h('span', { style: { color: COLORS.heater } }, icon('flame', { filled: true, label: 'Heating' })) : null
+            heated ? h('span', { style: { color: COLORS[heated] } }, icon('flame', { filled: true, label: heated === 'heater' ? 'Heater' : 'Heat pump' })) : null
         ];
     };
 
@@ -425,10 +421,10 @@ export const mountTemperatureHistory = (root: any, app: any, water: any) => {
     const legend = () => h('div', { class: 'legend' },
         h('span', { class: 'legend-item', style: { color: COLORS.water } }, h('span', { class: 'legend-line' }), h('span', { style: { color: 'var(--text)' } }, body.title)),
         legendToggle('air', 'showAirTemperature', 'Air', 'Shows or hides air temperature on the graph', h('span', { class: 'legend-line' })),
-        legendToggle('heater', 'showHeater', 'Heater', 'Shows or hides when the heater was on',
-            h('span', { class: 'legend-band', style: { background: COLORS.heater, opacity: HEATER_OPACITY } })),
-        legendToggle('heatPump', 'showHeatPump', 'Heat Pump', 'Shows or hides when the heat pump was on',
-            h('span', { class: 'legend-band', style: { background: COLORS.heatPump, opacity: HEAT_PUMP_OPACITY } })));
+        legendToggle('heater', 'showHeater', 'Heater', 'Shows or hides heater stretches on the temperature line',
+            h('span', { class: 'legend-line', style: { background: COLORS.heater } })),
+        legendToggle('heatPump', 'showHeatPump', 'Heat Pump', 'Shows or hides heat-pump stretches on the temperature line',
+            h('span', { class: 'legend-line', style: { background: COLORS.heatPump } })));
 
     const render = () => {
         const data = drawChart() || lines();

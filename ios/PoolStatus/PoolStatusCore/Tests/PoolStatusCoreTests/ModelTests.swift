@@ -198,6 +198,35 @@ struct HistoryTests {
         #expect(model.airSegment(through: at(6), level: level).last?.date == at(6), "air is carried to the end")
     }
 
+    @Test("colors the water line by heater and heat pump stretches, preferring the heater when both are on")
+    func coloredLine() {
+        let segment = TemperatureHistoryModel.Segment(id: 0, samples: [
+            HistorySample(date: at(0), value: 80),
+            HistorySample(date: at(1), value: 81),
+            HistorySample(date: at(2), value: 82),
+            HistorySample(date: at(3), value: 83),
+            HistorySample(date: at(4), value: 83)
+        ])
+        let heater = [TemperatureHistoryModel.HeatingSpan(start: at(1), end: at(2), intensity: 1)]
+        let heatPump = [TemperatureHistoryModel.HeatingSpan(start: at(1.5), end: at(3), intensity: 1)]
+        #expect(TemperatureHistoryModel.heating(at: at(1.2), heater: heater, heatPump: heatPump) == .heater)
+        #expect(TemperatureHistoryModel.heating(at: at(2.5), heater: heater, heatPump: heatPump) == .heatPump)
+        #expect(TemperatureHistoryModel.heating(at: at(0.5), heater: heater, heatPump: heatPump) == nil)
+
+        let lines = TemperatureHistoryModel.coloredWaterLines(segments: [segment], heater: heater, heatPump: heatPump)
+        #expect(lines.map(\.source) == [.water, .heater, .heatPump, .water])
+        // vertical jumps stay with the holding color, so entering heat doesn't paint a drop orange
+        #expect(lines[0].samples.map(\.date) == [at(0), at(1), at(1)])
+        #expect(lines[0].samples.map(\.value) == [80, 80, 81])
+        #expect(lines[1].samples.first?.date == at(1))
+        #expect(lines[1].samples.first?.value == 81)
+        #expect(lines[1].samples.last?.date == at(2))
+        #expect(lines[2].samples.first?.date == at(2))
+        #expect(lines[2].samples.last?.date == at(3))
+        #expect(lines[3].samples.first?.date == at(3))
+        #expect(lines[3].samples.last?.date == at(4))
+    }
+
     @Test("asks for the graph's resolution, the points it needs and the heating series")
     func request() async {
         let query = Shared([String: String]())

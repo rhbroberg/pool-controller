@@ -2,8 +2,8 @@ import Charts
 import PoolStatusCore
 import SwiftUI
 
-/// Temperature against time for the pool or spa, with air temperature and the times the
-/// heater was warming it.
+/// Temperature against time for the pool or spa, with air temperature. The heater and heat
+/// pump color the water line itself while they were warming it.
 struct TemperatureHistoryView: View {
     enum Preset: String, CaseIterable, Identifiable {
         case day = "Day", week = "Week", month = "Month"
@@ -37,11 +37,16 @@ struct TemperatureHistoryView: View {
     static let airColor = Color.gray
     static let heaterColor = Color.orange
     static let heatPumpColor = Color.pink
-    /// The heating bands and their legend swatches share these, so the legend matches the plot.
-    static let heaterOpacity = 0.28
-    static let heatPumpOpacity = 0.24
     /// A bucket's range, behind its average.
     static let bandOpacity = 0.16
+
+    private static func stroke(_ source: TemperatureHistoryModel.HeatingSource) -> Color {
+        switch source {
+        case .water: waterColor
+        case .heater: heaterColor
+        case .heatPump: heatPumpColor
+        }
+    }
 
     let water: WaterBody
 
@@ -144,7 +149,7 @@ struct TemperatureHistoryView: View {
             HStack(alignment: .firstTextBaseline) {
                 if let selectedDate {
                     selectionReadout(at: selectedDate, segments: segments, air: air,
-                                     heating: heater + heatPump)
+                                     heater: heater, heatPump: heatPump)
                 } else {
                     Text(rangeDescription)
                         .font(.headline.monospacedDigit())
@@ -305,25 +310,17 @@ struct TemperatureHistoryView: View {
     private func chart(segments: [TemperatureHistoryModel.Segment], air: [HistorySample],
                        heater: [TemperatureHistoryModel.HeatingSpan],
                        heatPump: [TemperatureHistoryModel.HeatingSpan], ticks: [Date]) -> some View {
-        Chart {
-            // a bucket is shaded by how much of it the heat was on
-            ForEach(heater) { span in
-                RectangleMark(xStart: .value("Heater starts", span.start),
-                              xEnd: .value("Heater stops", span.end))
-                    .foregroundStyle(Self.heaterColor.opacity(Self.heaterOpacity * span.intensity))
-            }
-            ForEach(heatPump) { span in
-                RectangleMark(xStart: .value("Heat pump starts", span.start),
-                              xEnd: .value("Heat pump stops", span.end))
-                    .foregroundStyle(Self.heatPumpColor.opacity(Self.heatPumpOpacity * span.intensity))
-            }
-            ForEach(segments) { segment in
+        let waterLines = TemperatureHistoryModel.coloredWaterLines(segments: segments, heater: heater,
+                                                                   heatPump: heatPump)
+        let heated = selectedDate.flatMap { TemperatureHistoryModel.heating(at: $0, heater: heater, heatPump: heatPump) }
+        return Chart {
+            ForEach(waterLines) { segment in
                 ForEach(segment.samples.filter { $0.low != nil }) { sample in
                     AreaMark(x: .value("Time", sample.date),
                              yStart: .value("Lowest", sample.low ?? sample.value),
                              yEnd: .value("Highest", sample.high ?? sample.value),
                              series: .value("Range", "water range \(segment.id)"))
-                        .foregroundStyle(Self.waterColor.opacity(Self.bandOpacity))
+                        .foregroundStyle(Self.stroke(segment.source).opacity(Self.bandOpacity))
                         .interpolationMethod(.stepEnd)
                 }
             }
@@ -334,11 +331,11 @@ struct TemperatureHistoryView: View {
                     .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
                     .interpolationMethod(.stepEnd)
             }
-            ForEach(segments) { segment in
+            ForEach(waterLines) { segment in
                 ForEach(segment.samples) { sample in
                     LineMark(x: .value("Time", sample.date), y: .value("Temperature", sample.value),
                              series: .value("Line", "water \(segment.id)"))
-                        .foregroundStyle(Self.waterColor)
+                        .foregroundStyle(Self.stroke(segment.source))
                         .lineStyle(StrokeStyle(lineWidth: 2.5))
                         .interpolationMethod(.stepEnd)
                 }
@@ -349,7 +346,7 @@ struct TemperatureHistoryView: View {
                     .lineStyle(StrokeStyle(lineWidth: 1))
                 if let value = waterValue(at: selectedDate, segments: segments) {
                     PointMark(x: .value("Selected", selectedDate), y: .value("Temperature", value))
-                        .foregroundStyle(Self.waterColor)
+                        .foregroundStyle(Self.stroke(heated ?? .water))
                         .symbolSize(70)
                 }
             }
@@ -439,17 +436,15 @@ struct TemperatureHistoryView: View {
 
     private var heaterLegend: some View {
         legendToggle("Heater", isOn: $showHeater, accessibilityLabel: "Heater",
-                     hint: "Shows or hides when the heater was on") {
-            RoundedRectangle(cornerRadius: 2).fill(Self.heaterColor.opacity(Self.heaterOpacity * (showHeater ? 1 : 0.35)))
-                .frame(width: 14, height: 12)
+                     hint: "Shows or hides heater stretches on the temperature line") {
+            Capsule().fill(Self.heaterColor.opacity(showHeater ? 1 : 0.35)).frame(width: 18, height: 3)
         }
     }
 
     private var heatPumpLegend: some View {
         legendToggle("Heat Pump", isOn: $showHeatPump, accessibilityLabel: "Heat pump",
-                     hint: "Shows or hides when the heat pump was on") {
-            RoundedRectangle(cornerRadius: 2).fill(Self.heatPumpColor.opacity(Self.heatPumpOpacity * (showHeatPump ? 1 : 0.35)))
-                .frame(width: 14, height: 12)
+                     hint: "Shows or hides heat-pump stretches on the temperature line") {
+            Capsule().fill(Self.heatPumpColor.opacity(showHeatPump ? 1 : 0.35)).frame(width: 18, height: 3)
         }
     }
 
@@ -489,24 +484,25 @@ struct TemperatureHistoryView: View {
     /// The values under the finger, in place of the date range while reading the graph.
     private func selectionReadout(at date: Date, segments: [TemperatureHistoryModel.Segment],
                                   air: [HistorySample],
-                                  heating: [TemperatureHistoryModel.HeatingSpan]) -> some View {
+                                  heater: [TemperatureHistoryModel.HeatingSpan],
+                                  heatPump: [TemperatureHistoryModel.HeatingSpan]) -> some View {
         let water = waterValue(at: date, segments: segments)
         let airValue = air.last { $0.date <= date }?.value
-        let heated = heating.contains { $0.start <= date && date <= $0.end }
+        let heated = TemperatureHistoryModel.heating(at: date, heater: heater, heatPump: heatPump)
         let when = Text(date, format: .dateTime.month(.abbreviated).day().hour().minute())
             .foregroundStyle(.secondary)
         let values = HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(water.map { String(localized: "\(self.water.title) \(Int($0))°F") }
                  ?? String(localized: "\(self.water.title) pump off"))
-                .foregroundStyle(Self.waterColor)
+                .foregroundStyle(Self.stroke(heated ?? .water))
             if let airValue {
                 Text("Air \(Int(airValue))°F")
                     .foregroundStyle(.secondary)
             }
-            if heated {
+            if let heated {
                 Image(systemName: "flame.fill")
-                    .foregroundStyle(Self.heaterColor)
-                    .accessibilityLabel("Heating")
+                    .foregroundStyle(Self.stroke(heated))
+                    .accessibilityLabel(heated == .heater ? "Heater" : "Heat pump")
             }
         }
         // the time beside the values where they fit, above them where they don't

@@ -251,6 +251,18 @@ public final class TemperatureHistoryModel {
         public let samples: [HistorySample]
     }
 
+    /// What was heating the water along a stretch of the temperature line.
+    public enum HeatingSource: String, Sendable {
+        case water, heater, heatPump
+    }
+
+    /// A stroked piece of the water temperature line, colored by `source`.
+    public struct ColoredSegment: Identifiable {
+        public let id: Int
+        public let source: HeatingSource
+        public let samples: [HistorySample]
+    }
+
     /// Everything the graph draws, up to one time.
     public struct ChartData {
         public let water: [Segment]
@@ -597,6 +609,92 @@ public final class TemperatureHistoryModel {
             line.append(HistorySample(date: end, value: last.value, low: last.low, high: last.high, span: last.span))
         }
         return line
+    }
+
+    /// Which heat was on at `date`: the gas heater when both were, else the heat pump, else none.
+    /// Spans are half-open `[start, end)` so adjacent stretches don't overlap.
+    public static func heating(at date: Date, heater: [HeatingSpan], heatPump: [HeatingSpan]) -> HeatingSource? {
+        if heater.contains(where: { $0.start <= date && date < $0.end }) {
+            return .heater
+        }
+        if heatPump.contains(where: { $0.start <= date && date < $0.end }) {
+            return .heatPump
+        }
+        return nil
+    }
+
+    /**
+     Splits each water temperature segment into stroked pieces colored by what was heating, so
+     the line itself shows the heater or heat pump instead of a vertical band.
+     */
+    public static func coloredWaterLines(segments: [Segment], heater: [HeatingSpan],
+                                         heatPump: [HeatingSpan]) -> [ColoredSegment] {
+        let cuts = (heater + heatPump).flatMap { [$0.start, $0.end] }
+        var lines: [ColoredSegment] = []
+        var nextID = 0
+        for segment in segments {
+            guard let first = segment.samples.first, let last = segment.samples.last else {
+                continue
+            }
+            var times = Set(segment.samples.map(\.date))
+            for cut in cuts where cut > first.date && cut < last.date {
+                times.insert(cut)
+            }
+            let points: [HistorySample] = times.sorted().compactMap { date in
+                guard let held = sample(at: date, in: segment.samples) else {
+                    return nil
+                }
+                return HistorySample(date: date, value: held.value, low: held.low, high: held.high, span: held.span)
+            }
+            guard !points.isEmpty else {
+                continue
+            }
+            var source: HeatingSource?
+            var samples: [HistorySample] = []
+            for index in points.indices {
+                let point = points[index]
+                let next = index + 1 < points.count ? points[index + 1] : nil
+                let at = next.map {
+                    Date(timeIntervalSince1970: (point.date.timeIntervalSince1970 + $0.date.timeIntervalSince1970) / 2)
+                } ?? point.date
+                let nextSource = heating(at: at, heater: heater, heatPump: heatPump) ?? .water
+                if source != nextSource {
+                    if let source, index > 0 {
+                        let prior = points[index - 1]
+                        // horizontal to this time, then the vertical jump — vertical keeps the old color
+                        samples.append(HistorySample(date: point.date, value: prior.value,
+                                                     low: prior.low, high: prior.high, span: prior.span))
+                        samples.append(point)
+                        lines.append(ColoredSegment(id: nextID, source: source, samples: samples))
+                        nextID += 1
+                    }
+                    samples = [point]
+                    source = nextSource
+                } else {
+                    samples.append(point)
+                }
+            }
+            if let source {
+                lines.append(ColoredSegment(id: nextID, source: source, samples: samples))
+                nextID += 1
+            }
+        }
+        return lines
+    }
+
+    /// The sample whose value is in effect at `date`, or nil outside the line.
+    public static func sample(at date: Date, in line: [HistorySample]) -> HistorySample? {
+        guard let first = line.first, let last = line.last, date >= first.date, date <= last.date else {
+            return nil
+        }
+        var held: HistorySample?
+        for sample in line {
+            if sample.date > date {
+                break
+            }
+            held = sample
+        }
+        return held
     }
 }
 

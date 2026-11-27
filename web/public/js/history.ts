@@ -336,3 +336,87 @@ export const valueAt = (line: any, t: any) => {
     }
     return value;
 };
+
+/** the sample whose value is in effect at t, or null outside the line */
+export const sampleAt = (line: any, t: any) => {
+    if (!line.length || t < line[0].t || t > line[line.length - 1].t) {
+        return null;
+    }
+    let sample: any = null;
+    for (const point of line) {
+        if (point.t > t) {
+            break;
+        }
+        sample = point;
+    }
+    return sample;
+};
+
+/**
+ * which heat was on at t: the gas heater when both were, else the heat pump, else none.
+ * Spans are half-open [start, end) so adjacent stretches don't overlap.
+ **/
+export const heatingAt = (t: number, heaterSpans: { start: number; end: number }[], heatPumpSpans: { start: number; end: number }[]) => {
+    if (heaterSpans.some((span) => span.start <= t && t < span.end)) {
+        return 'heater';
+    }
+    if (heatPumpSpans.some((span) => span.start <= t && t < span.end)) {
+        return 'heatPump';
+    }
+    return null;
+};
+
+/**
+ * splits each water temperature segment into stroked pieces colored by what was heating, so the
+ * line itself shows the heater or heat pump instead of a vertical band. Each piece is
+ * { source: 'water' | 'heater' | 'heatPump', points }.
+ **/
+export const coloredWaterLines = (segments: any[], heaterSpans: any[], heatPumpSpans: any[]) => {
+    const cuts: number[] = [];
+    for (const span of [...heaterSpans, ...heatPumpSpans]) {
+        cuts.push(span.start, span.end);
+    }
+    const lines: { source: 'water' | 'heater' | 'heatPump'; points: any[] }[] = [];
+    for (const segment of segments) {
+        if (!segment.length) {
+            continue;
+        }
+        const first = segment[0].t;
+        const last = segment[segment.length - 1].t;
+        const times = new Set<number>(segment.map((sample: any) => sample.t as number));
+        for (const t of cuts) {
+            if (t > first && t < last) {
+                times.add(t);
+            }
+        }
+        const points = [...times].sort((a, b) => a - b).map((t) => {
+            const held = sampleAt(segment, t);
+            return held ? { ...held, t } : null;
+        }).filter(Boolean);
+        if (!points.length) {
+            continue;
+        }
+        let piece: { source: 'water' | 'heater' | 'heatPump'; points: any[] } | null = null;
+        for (let i = 0; i < points.length; i++) {
+            const point = points[i];
+            const next = points[i + 1];
+            // color of the horizontal hold that starts here, until the next point
+            const at = next ? (point.t + next.t) / 2 : point.t;
+            const source = heatingAt(at, heaterSpans, heatPumpSpans) || 'water';
+            if (!piece || piece.source !== source) {
+                if (piece && i > 0) {
+                    // finish the previous color with the horizontal to this time, then the
+                    // vertical jump into the new reading — the vertical keeps the old color so
+                    // a heater stretch doesn't paint a drop that happened as heating began
+                    piece.points.push({ ...points[i - 1], t: point.t });
+                    piece.points.push(point);
+                }
+                piece = { source, points: [point] };
+                lines.push(piece);
+            } else {
+                piece.points.push(point);
+            }
+        }
+    }
+    return lines;
+};

@@ -2,7 +2,7 @@
 // buckets and heating bands are drawn.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { TemperatureHistory, valueAt, extended, holds, levelFor, pointsFor, heatingName, MAX_POINTS } from '../public/js/history.js';
+import { TemperatureHistory, valueAt, extended, holds, levelFor, pointsFor, heatingName, MAX_POINTS, coloredWaterLines, heatingAt } from '../public/js/history.js';
 
 const LEVEL = 300;
 
@@ -148,6 +148,24 @@ describe('temperature history lines', () => {
             { start: 500, end: 900, intensity: 1 }
         ]);
     });
+
+    it('colors the water line by heater and heat pump stretches, preferring the heater when both are on', () => {
+        const segment = [{ t: 0, v: 80 }, { t: 100, v: 81 }, { t: 200, v: 82 }, { t: 300, v: 83 }, { t: 400, v: 83 }];
+        const heater = [{ start: 100, end: 200, intensity: 1 }];
+        const heatPump = [{ start: 150, end: 300, intensity: 1 }];
+        assert.equal(heatingAt(120, heater, heatPump), 'heater');
+        assert.equal(heatingAt(250, heater, heatPump), 'heatPump');
+        assert.equal(heatingAt(50, heater, heatPump), null);
+        const lines = coloredWaterLines([segment], heater, heatPump);
+        // vertical jumps stay with the color that was holding, so entering heat doesn't paint a drop orange
+        assert.deepEqual(lines.map((line) => [line.source, line.points.map((p) => [p.t, p.v])]), [
+            ['water', [[0, 80], [100, 80], [100, 81]]],
+            ['heater', [[100, 81], [150, 81], [200, 81], [200, 82]]],
+            ['heatPump', [[200, 82], [300, 82], [300, 83]]],
+            ['water', [[300, 83], [400, 83]]]
+        ]);
+    });
+
 
     it('shades a bucket by how much of it the heat was on, and keeps each bucket’s range', async () => {
         const hour = 3600 * 1000;
