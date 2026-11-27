@@ -698,41 +698,164 @@ public final class TemperatureHistoryModel {
     }
 }
 
-/// Salt level for one time window, from `GET /history`.
+/// Salt level against time, from `GET /history`. Fetched windows are kept and merged, so panning
+/// doesn't wipe the line while a neighbor range is on the way.
 @Observable
 public final class SaltHistoryModel {
-    public private(set) var samples: [HistorySample] = []
-    /// Oldest salt reading the server has reported, for the scrollable domain.
+    /// One fetch: the window it covered, and whether it came back as a summary.
+    private struct Fetch: Equatable {
+        var range: ClosedRange<Date>
+        var summarized: Bool
+    }
+
+    /// A summary fetched for a window this many times wider is fetched again for the closer one.
+    private static let summaryZoom = 1.5
+
     public private(set) var earliest: Date?
     public private(set) var isLoading = false
     public private(set) var errorMessage: String?
+    /// Counts merged responses, so the graph is redrawn from new data.
+    public private(set) var revision = 0
+
+    private var values: [Date: HistorySample] = [:]
+    private var sorted: [HistorySample] = []
+    private var loaded: [Fetch] = []
+    @ObservationIgnored private var fetching: Task<Void, Never>?
 
     public init() {}
 
+    /// Every salt sample currently held, sorted by time.
+    public var samples: [HistorySample] { sorted }
+
+    /// Samples that cross `window`, with one either side so a stepped line reaches the edges, and
+    /// the last value held to the window's end.
+    public func samples(within window: ClosedRange<Date>) -> [HistorySample] {
+        var line = TemperatureHistoryModel.clipped(sorted, to: window)
+        if let last = line.last, last.date < window.upperBound {
+            line.append(HistorySample(date: window.upperBound, value: last.value, low: last.low,
+                                      high: last.high, span: last.span))
+        }
+        return line
+    }
+
+    /// Fetches whatever part of `range` hasn't been fetched yet, after any fetch already under way.
     /// `maxPoints` is the graph's width in pixels, so a long window comes back as buckets.
-    public func load(from start: Date, to end: Date, maxPoints: Int = HistoryResolution.maxPoints, client: StatusClient) async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let response = try await client.fetchHistory(names: [.salt], from: start, to: end, maxPoints: maxPoints)
-            if let oldest = response.earliest {
-                earliest = min(earliest ?? oldest, oldest)
-            }
-            let series = response.series.first { $0.name == .salt }
-            let resolution = series?.resolution ?? 0
-            var loaded = (series?.before.flatMap { HistorySample($0, resolution: 0) }.map { [$0] } ?? [])
-                .map { HistorySample(date: max($0.date, start), value: $0.value) }
-            loaded += (series?.points ?? []).compactMap { HistorySample($0, resolution: resolution) }
-            // readings are stored when they change, so the last one holds until now
-            if let last = loaded.last, last.date < end {
-                loaded.append(HistorySample(date: end, value: last.value, low: last.low, high: last.high, span: last.span))
-            }
-            samples = loaded
-            errorMessage = nil
-        } catch {
-            if !error.isCancellation {
-                errorMessage = error.localizedDescription
+    public func ensureLoaded(_ range: ClosedRange<Date>, maxPoints: Int = HistoryResolution.maxPoints,
+                             client: StatusClient) async {
+        while let running = fetching {
+            await running.value
+            if Task.isCancelled {
+                return
             }
         }
+        let gaps = missing(from: range)
+        guard !gaps.isEmpty else {
+            return
+        }
+        let fetch = Task {
+            await self.fetch(gaps, maxPoints: maxPoints, client: client)
+            self.fetching = nil
+            self.isLoading = false
+        }
+        fetching = fetch
+        isLoading = true
+        await withTaskCancellationHandler {
+            await fetch.value
+        } onCancel: {
+            fetch.cancel()
+        }
+    }
+
+    /// Kept for callers that still ask for one window at a time; merges into what's already held.
+    public func load(from start: Date, to end: Date, maxPoints: Int = HistoryResolution.maxPoints,
+                     client: StatusClient) async {
+        await ensureLoaded(start...end, maxPoints: maxPoints, client: client)
+    }
+
+    private func fetch(_ gaps: [ClosedRange<Date>], maxPoints: Int, client: StatusClient) async {
+        for gap in gaps {
+            do {
+                let response = try await client.fetchHistory(names: [.salt], from: gap.lowerBound, to: gap.upperBound,
+                                                             maxPoints: maxPoints)
+                merge(response)
+                let summarized = response.series.contains { $0.resolution > 0 }
+                record(gap, summarized: summarized)
+                errorMessage = nil
+            } catch {
+                if !error.isCancellation {
+                    errorMessage = error.localizedDescription
+                }
+                return
+            }
+        }
+    }
+
+    private func covers(_ fetch: Fetch, request: ClosedRange<Date>) -> Bool {
+        guard fetch.range.upperBound > request.lowerBound, fetch.range.lowerBound < request.upperBound else {
+            return false
+        }
+        guard fetch.summarized else {
+            return true
+        }
+        let requestSpan = request.upperBound.timeIntervalSince(request.lowerBound)
+        let fetchedSpan = fetch.range.upperBound.timeIntervalSince(fetch.range.lowerBound)
+        return fetchedSpan <= requestSpan * Self.summaryZoom
+    }
+
+    private func missing(from range: ClosedRange<Date>) -> [ClosedRange<Date>] {
+        let covering = loaded.filter { covers($0, request: range) }
+            .sorted { $0.range.lowerBound < $1.range.lowerBound }
+        var gaps: [ClosedRange<Date>] = []
+        var cursor = range.lowerBound
+        for fetch in covering where fetch.range.upperBound > cursor && fetch.range.lowerBound < range.upperBound {
+            if fetch.range.lowerBound > cursor {
+                gaps.append(cursor...fetch.range.lowerBound)
+            }
+            cursor = max(cursor, fetch.range.upperBound)
+        }
+        if cursor < range.upperBound {
+            gaps.append(cursor...range.upperBound)
+        }
+        return gaps.filter { $0.upperBound.timeIntervalSince($0.lowerBound) >= 1 }
+    }
+
+    private func record(_ range: ClosedRange<Date>, summarized: Bool) {
+        var merged: [Fetch] = []
+        for next in (loaded + [Fetch(range: range, summarized: summarized)])
+            .sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+            if let last = merged.last, !last.summarized, !next.summarized, next.range.lowerBound <= last.range.upperBound {
+                merged[merged.count - 1].range = last.range.lowerBound...max(last.range.upperBound, next.range.upperBound)
+            } else {
+                merged.append(next)
+            }
+        }
+        loaded = merged
+    }
+
+    private func merge(_ response: HistoryResponse) {
+        if let oldest = response.earliest {
+            earliest = min(earliest ?? oldest, oldest)
+        }
+        let series = response.series.first { $0.name == .salt }
+        let resolution = series?.resolution ?? 0
+        let span = TimeInterval(resolution)
+        values = values.filter { date, sample in
+            let stop = sample.span > 0 ? date.addingTimeInterval(sample.span) : date
+            let overlaps = date < response.to && stop > response.from
+            return !(overlaps && sample.span > span)
+        }
+        if resolution == 0, let before = series?.before, let sample = HistorySample(before, resolution: 0) {
+            let clipped = HistorySample(date: max(sample.date, response.from), value: sample.value)
+            if values[clipped.date] == nil {
+                values[clipped.date] = clipped
+            }
+        }
+        for point in series?.points ?? [] {
+            if let sample = HistorySample(point, resolution: resolution) {
+                values[sample.date] = sample
+            }
+        }
+        sorted = values.values.sorted { $0.date < $1.date }
+        revision += 1
     }
 }

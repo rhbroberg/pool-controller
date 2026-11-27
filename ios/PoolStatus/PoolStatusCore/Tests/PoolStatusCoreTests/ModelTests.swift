@@ -456,7 +456,26 @@ struct SaltHistoryTests {
         #expect(query.value["maxPoints"] == "390")
         #expect(model.samples.first?.low == 3100)
         #expect(model.samples.first?.high == 3200)
-        #expect(model.samples.last?.date == end, "the last level holds until the end")
+        #expect(model.samples(within: start...end).last?.date == end, "the last level holds until the end")
+    }
+
+    @Test("keeps earlier salt readings when a later window arrives")
+    func mergesWindows() async {
+        let first = #"{"from":"2026-01-01T00:00:00Z","to":"2026-02-01T00:00:00Z","earliest":"2026-01-01T00:00:00Z","series":[{"name":"salt","resolution":0,"before":null,"points":[{"t":"2026-01-15T00:00:00Z","v":3000}]}]}"#
+        let second = #"{"from":"2026-02-01T00:00:00Z","to":"2026-03-01T00:00:00Z","earliest":"2026-01-01T00:00:00Z","series":[{"name":"salt","resolution":0,"before":null,"points":[{"t":"2026-02-15T00:00:00Z","v":3100}]}]}"#
+        let server = StubServer { _, _, query in
+            let from = query["from"] ?? ""
+            return .ok(from.hasPrefix("2026-01") ? first : second)
+        }
+        let model = SaltHistoryModel()
+        let january = try! Date.ISO8601FormatStyle().parse("2026-01-01T00:00:00Z")
+        let february = try! Date.ISO8601FormatStyle().parse("2026-02-01T00:00:00Z")
+        let march = try! Date.ISO8601FormatStyle().parse("2026-03-01T00:00:00Z")
+        await model.ensureLoaded(january...february, maxPoints: 100, client: server.client)
+        await model.ensureLoaded(february...march, maxPoints: 100, client: server.client)
+        #expect(model.samples.map(\.value) == [3000, 3100])
+        await model.ensureLoaded(january...february, maxPoints: 100, client: server.client)
+        #expect(server.requests.count == 2, "january is already held")
     }
 }
 
