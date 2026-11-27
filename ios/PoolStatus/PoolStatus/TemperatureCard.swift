@@ -26,11 +26,11 @@ struct TemperatureCard: View {
                     if water.body != waters.first?.body {
                         Divider()
                     }
-                    NavigationLink(value: DashboardRoute.temperatureHistory(water.body)) {
+                    NavigationLink(value: DashboardRoute.thermostat(water.body)) {
                         WaterColumn(water: water)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityHint("Shows the temperature history")
+                    .accessibilityHint("Sets the temperature")
                 }
             }
             .fixedSize(horizontal: false, vertical: true)

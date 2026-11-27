@@ -116,6 +116,7 @@ struct StatusView: View {
             }
             .navigationDestination(for: DashboardRoute.self) { route in
                 switch route {
+                case .thermostat(let water): ThermostatView(water: water)
                 case .temperatureHistory(let water): TemperatureHistoryView(water: water)
                 case .saltHistory: SaltHistoryView()
                 case .equipment: EquipmentView()

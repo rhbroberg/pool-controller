@@ -16,6 +16,8 @@ public enum SettingsKey {
     public static let showAirTemperature = "showAirTemperature"
     public static let showHeater = "showHeater"
     public static let showHeatPump = "showHeatPump"
+    /// Thermostat keeps the heater and heat-pump setpoints for a body the same when true.
+    public static let thermostatLinkedSetpoints = "thermostatLinkedSetpoints"
     public static let historyHelpSeen = "historyHelpSeen"
     /// Last zoom and pan of each history graph, so coming back opens where you left it.
     public static let poolTemperatureHistory = "poolTemperatureHistoryViewport"

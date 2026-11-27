@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The pages the dashboard links to.
 enum DashboardRoute: Hashable {
+    case thermostat(WaterBody)
     case temperatureHistory(WaterBody)
     case saltHistory
     case equipment
