@@ -9,10 +9,10 @@ var utils = require('../utils/writer');
 var Tasks = require('../service/TaskService');
 
 var answer = (res: any, promise: any) => promise
-  .then(function (response: any) {
+  .then(function (response: unknown) {
     utils.writeJson(res, response);
   })
-  .catch(function (response: any) {
+  .catch(function (response: unknown) {
     if (response instanceof ApiError) {
       utils.writeJson(res, response.body, response.code);
       return;
@@ -29,16 +29,16 @@ module.exports.getTasks = function getTasks (req: AuthedRequest, res: Response) 
 };
 
 module.exports.setPoolTask = function setPoolTask (req: AuthedRequest, res: Response) {
-  const change = swaggerValue(req, 'change') as { on: boolean };
+  const change = swaggerValue<{ on: boolean; readyAt?: string }>(req, 'change') as { on: boolean };
   answer(res, Tasks.setPool(change.on, req.user));
 };
 
 module.exports.setSpaPreheatTask = function setSpaPreheatTask (req: AuthedRequest, res: Response) {
-  const change = swaggerValue(req, 'change') as { on: boolean; readyAt?: string };
+  const change = swaggerValue<{ on: boolean; readyAt?: string }>(req, 'change') as { on: boolean; readyAt?: string };
   answer(res, Tasks.setSpaPreheat(change.on, change.readyAt, req.user));
 };
 
 module.exports.setSpaPartyTask = function setSpaPartyTask (req: AuthedRequest, res: Response) {
-  const change = swaggerValue(req, 'change') as { on: boolean };
+  const change = swaggerValue<{ on: boolean; readyAt?: string }>(req, 'change') as { on: boolean };
   answer(res, Tasks.setSpaParty(change.on, req.user));
 };

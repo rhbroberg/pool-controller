@@ -8,21 +8,21 @@ var utils = require('../utils/writer');
 var EventLog = require('../service/EventLogService');
 
 module.exports.getEvents = function getEvents (req: AuthedRequest, res: Response) {
-  EventLog.getEvents(swaggerValue(req, 'types'), swaggerValue(req, 'user'), swaggerValue(req, 'cursor'), swaggerValue(req, 'order'), swaggerValue(req, 'limit'))
-    .then(function (response: any) {
+  EventLog.getEvents(swaggerValue<string | string[]>(req, 'types'), swaggerValue<string | undefined>(req, 'user'), swaggerValue<string | undefined>(req, 'cursor'), swaggerValue<string | undefined>(req, 'order'), swaggerValue<number>(req, 'limit'))
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.getEventUsers = function getEventUsers (req: AuthedRequest, res: Response) {
   EventLog.getEventUsers()
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };

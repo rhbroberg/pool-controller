@@ -69,6 +69,27 @@ export type WaterMode = typeof WATER_MODES[number];
 export const HEATING_SOURCES = ['heater', 'heatpump', 'both', 'cooling'] as const;
 export type HeatingSource = typeof HEATING_SOURCES[number];
 
+/** GET /heating estimate.status after atSetpoint is mapped to ready */
+export type HeatingEstimateStatus = 'noReading' | 'ready' | 'unreachable' | 'insufficientData';
+
+/** reprocess job lifecycle */
+export type ReprocessRunState = 'waiting' | 'running' | 'finished' | 'failed';
+
+/** one history point as stored/returned before the web client converts times */
+export interface HistoryPoint {
+    t: string | Date;
+    v: number | null;
+    min?: number | null;
+    max?: number | null;
+}
+
+export interface HistorySeries {
+    name: string;
+    resolution?: number;
+    before?: HistoryPoint | null;
+    points: HistoryPoint[];
+}
+
 /** minimal user shape handlers attach to the request after authenticate */
 export interface AuthUser {
     email: string;
@@ -104,10 +125,21 @@ export interface ApiErrorBody {
 }
 
 /** typed swagger param lookup used by controllers */
-export function swaggerValue<T>(req: AuthedRequest, name: string): T {
+export function swaggerValue<T = unknown>(req: AuthedRequest, name: string): T {
     const params = req.swagger?.params;
     if (!params || !(name in params)) {
         throw new Error(`missing swagger param ${name}`);
     }
     return params[name].value as T;
+}
+
+/** message from an unknown catch / rejection value */
+export function errorMessageOf(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    if (error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+        return (error as { message: string }).message;
+    }
+    return String(error);
 }

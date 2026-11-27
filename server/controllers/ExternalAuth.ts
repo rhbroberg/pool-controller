@@ -8,10 +8,10 @@ var utils = require('../utils/writer');
 var ExternalAuth = require('../service/ExternalAuthService');
 
 var respond = (res: any, promise: any) => promise
-    .then(function(response: any) {
+    .then(function (response: unknown) {
         utils.writeJson(res, response);
     })
-    .catch(function(response: any) {
+    .catch(function (response: unknown) {
         utils.writeJson(res, response);
     });
 

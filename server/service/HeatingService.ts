@@ -1,3 +1,4 @@
+import type { HeatingEstimateStatus } from '../types/domain';
 'use strict';
 
 var utils = require('../utils/writer');
@@ -93,7 +94,7 @@ var estimateFor = (state: any, target: any, devices: any) => {
     const temperature = state.temperatures[target];
     const air = state.ambient;
     const sources = calling.map((device: any) => ({ name: device, setpoint: devices[device].setpoint }));
-    const estimate: any = {
+    const estimate: { status: HeatingEstimateStatus; [key: string]: unknown } = {
         status: 'noReading',
         body: target,
         temperature: typeof temperature === 'number' ? temperature : null,
@@ -162,7 +163,7 @@ var estimateFor = (state: any, target: any, devices: any) => {
     estimate.status = outcome.status === 'atSetpoint' ? 'ready' : outcome.status;
     if (outcome.status === 'ready' || outcome.status === 'atSetpoint') {
         estimate.minutes = outcome.status === 'ready' ? Math.max(1, Math.ceil(outcome.hours * 60)) : 0;
-        estimate.readyAt = new Date(now + estimate.minutes * MINUTE_MS).toISOString();
+        estimate.readyAt = new Date(now + (estimate.minutes as number) * MINUTE_MS).toISOString();
     } else if (outcome.status === 'unreachable') {
         estimate.reachesAtMost = round(outcome.reachesAtMost, 1);
     }

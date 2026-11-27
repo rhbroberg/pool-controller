@@ -8,10 +8,10 @@ var Status = require('../service/StatusService');
 
 module.exports.getCurrentStatus = function getCurrentStatus (req: AuthedRequest, res: Response) {
   Status.getCurrentStatus()
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, { code: 500, message: String(response) }, 500);
     });
 };

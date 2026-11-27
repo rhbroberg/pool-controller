@@ -1,3 +1,4 @@
+import type { ReprocessRunState } from '../types/domain';
 'use strict';
 // Reads stored frames again with the server's current protocol code and stores what it makes of
 // them now, as when a parser fix recovers frames that were stored as failures. Readings and
@@ -28,7 +29,7 @@ const PROGRESS_EVERY = 2000;
 var badRequest = (message: any) => utils.respondWithCode(400, { code: 400, message });
 
 // the latest run, kept until the next one starts
-var latest = null as any;
+var latest: { state: ReprocessRunState; [key: string]: any } | null = null;
 
 var parseDate = (text: any, label: any) => {
     const date = new Date(text);

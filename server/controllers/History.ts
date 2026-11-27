@@ -8,26 +8,26 @@ var utils = require('../utils/writer');
 var History = require('../service/HistoryService');
 
 module.exports.getHistory = function getHistory (req: AuthedRequest, res: Response) {
-  var names = swaggerValue(req, 'names');
-  var from = swaggerValue(req, 'from');
-  var to = swaggerValue(req, 'to');
-  var maxPoints = swaggerValue(req, 'maxPoints');
-  var resolution = swaggerValue(req, 'resolution');
+  var names = swaggerValue<string | string[]>(req, 'names');
+  var from = swaggerValue<string>(req, 'from');
+  var to = swaggerValue<string>(req, 'to');
+  var maxPoints = swaggerValue<number | undefined>(req, 'maxPoints');
+  var resolution = swaggerValue<number | undefined>(req, 'resolution');
   History.getHistory(names, from, to, maxPoints, resolution)
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.getHistoryAvailability = function getHistoryAvailability (req: AuthedRequest, res: Response) {
-  History.getAvailability(swaggerValue(req, 'from'), swaggerValue(req, 'to'), swaggerValue(req, 'names'))
-    .then(function (response: any) {
+  History.getAvailability(swaggerValue<string>(req, 'from'), swaggerValue<string>(req, 'to'), swaggerValue<string | string[]>(req, 'names'))
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };

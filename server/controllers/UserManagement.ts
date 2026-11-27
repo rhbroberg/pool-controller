@@ -8,10 +8,10 @@ var utils = require('../utils/writer');
 var UserManagement = require('../service/UserManagementService');
 
 var respond = (res: any, promise: any) => promise
-    .then(function(response: any) {
+    .then(function (response: unknown) {
         utils.writeJson(res, response);
     })
-    .catch(function(response: any) {
+    .catch(function (response: unknown) {
         utils.writeJson(res, response);
     });
 
@@ -24,11 +24,11 @@ module.exports.listUsers = function listUsers (req: AuthedRequest, res: Response
 };
 
 module.exports.updateUser = function updateUser (req: AuthedRequest, res: Response) {
-    respond(res, UserManagement.updateUser(req.user, swaggerValue(req, 'name'), swaggerValue(req, 'changes')));
+    respond(res, UserManagement.updateUser(req.user, swaggerValue<string>(req, 'name'), swaggerValue<Record<string, unknown>>(req, 'changes')));
 };
 
 module.exports.deleteUser = function deleteUser (req: AuthedRequest, res: Response) {
-    respond(res, UserManagement.deleteUser(req.user, swaggerValue(req, 'name')));
+    respond(res, UserManagement.deleteUser(req.user, swaggerValue<string>(req, 'name')));
 };
 
 module.exports.getUser = function getUser (req: AuthedRequest, res: Response) {

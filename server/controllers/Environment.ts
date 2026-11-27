@@ -10,10 +10,10 @@ var Environment = require('../service/EnvironmentService');
 module.exports.getHeaterState = function getHeaterState (req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   Environment.getHeaterState(poolId)
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
@@ -21,34 +21,34 @@ module.exports.getHeaterState = function getHeaterState (req: AuthedRequest, res
 module.exports.getPoolTemperature = function getPoolTemperature (req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
   var date = swaggerValue(req, 'date');
-  var limit = swaggerValue(req, 'limit');
+  var limit = swaggerValue<number>(req, 'limit');
   Environment.getPoolTemperature(poolId,date,limit)
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.setHeaterState = function setHeaterState (req: AuthedRequest, res: Response) {
   var poolId = swaggerValue(req, 'poolId');
-  var state = swaggerValue(req, 'state');
+  var state = swaggerValue<string>(req, 'state');
   Environment.setHeaterState(poolId,state)
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
 
 module.exports.temperatureSummary = function temperatureSummary (req: AuthedRequest, res: Response) {
   Environment.temperatureSummary()
-    .then(function (response: any) {
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };

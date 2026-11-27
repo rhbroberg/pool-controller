@@ -8,11 +8,11 @@ var utils = require('../utils/writer');
 var Water = require('../service/WaterService');
 
 module.exports.setWaterMode = function setWaterMode (req: AuthedRequest, res: Response) {
-  Water.setWaterMode(swaggerValue(req, 'mode'), req.user)
-    .then(function (response: any) {
+  Water.setWaterMode(swaggerValue<string>(req, 'mode'), req.user)
+    .then(function (response: unknown) {
       utils.writeJson(res, response);
     })
-    .catch(function (response: any) {
+    .catch(function (response: unknown) {
       utils.writeJson(res, response);
     });
 };
