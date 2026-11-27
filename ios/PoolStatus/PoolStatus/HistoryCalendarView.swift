@@ -23,8 +23,12 @@ struct HistoryCalendarSheet: View {
         self.choose = choose
         _model = State(initialValue: HistoryCalendarModel(names: reading.map { [$0] } ?? []))
         let calendar = Calendar.current
-        let lastMoment = max(initialRange.lowerBound, initialRange.upperBound.addingTimeInterval(-1))
-        _first = State(initialValue: calendar.dateComponents([.year, .month, .day], from: initialRange.lowerBound))
+        // Keep the open month inside what UICalendarView will allow before earliest is known.
+        let latest = Date.now
+        let earliest = latest.addingTimeInterval(-10 * 365 * 24 * 60 * 60)
+        let lastMoment = min(max(initialRange.lowerBound, initialRange.upperBound.addingTimeInterval(-1)), latest)
+        let firstMoment = min(max(initialRange.lowerBound, earliest), lastMoment)
+        _first = State(initialValue: calendar.dateComponents([.year, .month, .day], from: firstMoment))
         _last = State(initialValue: calendar.dateComponents([.year, .month, .day], from: lastMoment))
         _visibleMonth = State(initialValue: calendar.dateComponents([.year, .month], from: lastMoment))
     }
@@ -125,8 +129,16 @@ private struct HistoryCalendar: UIViewRepresentable {
         let selection = UICalendarSelectionMultiDate(delegate: context.coordinator)
         view.selectionBehavior = selection
         context.coordinator.selection = selection
-        view.availableDateRange = availableRange
-        view.visibleDateComponents = visibleMonth
+        let range = availableRange
+        view.availableDateRange = range
+        // UICalendarView aborts if the visible month is outside the available range.
+        let month = Self.clampedMonth(visibleMonth, to: range, calendar: model.calendar)
+        view.visibleDateComponents = month
+        if Self.monthIndex(month) != Self.monthIndex(visibleMonth) {
+            DispatchQueue.main.async {
+                self.visibleMonth = month
+            }
+        }
         view.tintColor = .systemTeal
         view.setContentCompressionResistancePriority(.required, for: .vertical)
         context.coordinator.calendarView = view
@@ -146,6 +158,13 @@ private struct HistoryCalendar: UIViewRepresentable {
         if abs(view.availableDateRange.start.timeIntervalSince(range.start)) > 1
             || !model.calendar.isDate(view.availableDateRange.end, inSameDayAs: range.end) {
             view.availableDateRange = range
+            // Earliest can move in after the first fetch and leave the open month out of range.
+            let shown = view.visibleDateComponents
+            let month = Self.clampedMonth(shown, to: range, calendar: model.calendar)
+            if Self.monthIndex(month) != Self.monthIndex(shown) {
+                view.visibleDateComponents = month
+                visibleMonth = month
+            }
         }
         context.coordinator.showSelection()
         if context.coordinator.markedRevision != model.revision {
@@ -160,9 +179,45 @@ private struct HistoryCalendar: UIViewRepresentable {
         }
     }
 
+    /// Half-open `[start, end)`. Start is the first of the earliest month so the calendar can
+    /// lay out that whole month; a mid-month earliest left it without a lower bound and it aborted.
     private var availableRange: DateInterval {
-        let start = model.earliest ?? Date.now.addingTimeInterval(-10 * 365 * 24 * 60 * 60)
-        return DateInterval(start: start, end: max(start, Date.now))
+        let calendar = model.calendar
+        let today = calendar.startOfDay(for: .now)
+        let end = calendar.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86400)
+        let raw = model.earliest ?? today.addingTimeInterval(-10 * 365 * 24 * 60 * 60)
+        let start = calendar.date(from: calendar.dateComponents([.year, .month], from: raw))
+            ?? calendar.startOfDay(for: raw)
+        return DateInterval(start: min(start, end.addingTimeInterval(-86400)), end: end)
+    }
+
+    /// A year/month that intersects `range`. UICalendarView crashes if the visible month is outside it.
+    fileprivate static func clampedMonth(_ month: DateComponents, to range: DateInterval,
+                                         calendar: Calendar) -> DateComponents {
+        // range is half-open, so the last included instant is just before end
+        let last = range.end.addingTimeInterval(-1)
+        let startMonth = calendar.dateComponents([.year, .month], from: range.start)
+        let endMonth = calendar.dateComponents([.year, .month], from: last)
+        guard let year = month.year, let number = month.month,
+              let date = calendar.date(from: DateComponents(year: year, month: number, day: 1)),
+              let firstAllowed = calendar.date(from: DateComponents(year: startMonth.year, month: startMonth.month, day: 1)),
+              let lastAllowed = calendar.date(from: DateComponents(year: endMonth.year, month: endMonth.month, day: 1)) else {
+            return endMonth
+        }
+        if date < firstAllowed {
+            return startMonth
+        }
+        if date > lastAllowed {
+            return endMonth
+        }
+        return DateComponents(year: year, month: number)
+    }
+
+    fileprivate static func monthIndex(_ components: DateComponents) -> Int? {
+        guard let year = components.year, let month = components.month else {
+            return nil
+        }
+        return year * 12 + (month - 1)
     }
 
     /// Every day of the visible month and the ones either side, whose marks may have changed.
@@ -240,13 +295,23 @@ private struct HistoryCalendar: UIViewRepresentable {
                 // Putting the behavior back makes the visible month read the selection. Setting
                 // the dates alone leaves the month that is already on screen unchanged.
                 calendarView.selectionBehavior = selection
-                if Self.monthIndex(calendarView.visibleDateComponents) != Self.monthIndex(visible) {
+                if HistoryCalendar.monthIndex(calendarView.visibleDateComponents) != HistoryCalendar.monthIndex(visible) {
                     correctingMonth = true
-                    calendarView.setVisibleDateComponents(DateComponents(year: visible.year, month: visible.month), animated: false)
+                    show(visible, on: calendarView)
                     correctingMonth = false
                 }
             }
             applyingSelection = false
+        }
+
+        /// Sets the visible month only when it still falls inside the available range.
+        private func show(_ month: DateComponents, on calendarView: UICalendarView) {
+            let clamped = HistoryCalendar.clampedMonth(month, to: calendarView.availableDateRange,
+                                                       calendar: calendarView.calendar)
+            guard HistoryCalendar.monthIndex(clamped) != HistoryCalendar.monthIndex(calendarView.visibleDateComponents) else {
+                return
+            }
+            calendarView.setVisibleDateComponents(clamped, animated: false)
         }
 
         private func tapped(_ day: DateComponents) {
@@ -272,25 +337,21 @@ private struct HistoryCalendar: UIViewRepresentable {
             // A forward chevron moves one month. With a range selected, the one that returns to
             // the month holding that range is reported as two months, so the page in between is skipped.
             if !correctingMonth, let landed = Self.oneMonthForward(from: previousDateComponents, shown: shown) {
+                let clamped = HistoryCalendar.clampedMonth(landed, to: calendarView.availableDateRange,
+                                                           calendar: calendarView.calendar)
                 correctingMonth = true
-                calendarView.setVisibleDateComponents(landed, animated: false)
+                calendarView.setVisibleDateComponents(clamped, animated: false)
                 correctingMonth = false
-                parent.visibleMonth = landed
+                parent.visibleMonth = clamped
                 return
             }
             parent.visibleMonth = DateComponents(year: shown.year, month: shown.month)
         }
 
-        private static func monthIndex(_ components: DateComponents) -> Int? {
-            guard let year = components.year, let month = components.month else {
-                return nil
-            }
-            return year * 12 + (month - 1)
-        }
-
         /// The month one step forward of `previous`, when `shown` is two steps forward.
         private static func oneMonthForward(from previous: DateComponents, shown: DateComponents) -> DateComponents? {
-            guard let from = monthIndex(previous), let to = monthIndex(shown), to - from == 2 else {
+            guard let from = HistoryCalendar.monthIndex(previous), let to = HistoryCalendar.monthIndex(shown),
+                  to - from == 2 else {
                 return nil
             }
             let intended = from + 1
