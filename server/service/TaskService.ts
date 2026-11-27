@@ -1,6 +1,6 @@
 'use strict';
 
-import { errorMessageOf, apiFailureMessage, errorCauseCode } from '../types/domain';
+import { errorMessageOf, apiFailureMessage } from '../types/domain';
 
 import { TASKS } from '../types/domain';
 // The everyday jobs the apps offer in place of single switches. Each is a set of switches the

@@ -1,7 +1,5 @@
 'use strict';
 
-import { errorMessageOf } from '../types/domain';
-
 import log4js from 'log4js';
 import { mongoose } from '../mongoose';
 import { Event } from '../models/event';
