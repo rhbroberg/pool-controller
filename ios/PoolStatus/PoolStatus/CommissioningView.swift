@@ -1,8 +1,9 @@
 import PoolStatusCore
 import SwiftUI
 
-/// Shown after signing in with the default admin / admin account: the account must be
-/// renamed and given a new password before it can change anything.
+/// Shown after signing in with the default admin / admin account, which must be renamed and
+/// given a new password before it can change anything, and after a guest signs in with the code
+/// in its link or QR code, which must choose a password.
 struct CommissioningView: View {
     static let defaultAdmin = "admin"
 
@@ -13,13 +14,18 @@ struct CommissioningView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+    /// The guest's name, which it keeps; nil for the default admin, which chooses one.
+    private var guest: String? {
+        store.auth.commissioningGuest ? store.auth.commissioning?.name : nil
+    }
+
     private var trimmedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
+        (guest ?? name).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Why the entries can't be saved yet, once the user has started typing.
     private var problem: String? {
-        if trimmedName.lowercased() == Self.defaultAdmin {
+        if guest == nil && trimmedName.lowercased() == Self.defaultAdmin {
             return String(localized: "Choose an account name other than \(Self.defaultAdmin).")
         }
         return PasswordRules.problem(password, confirmation: confirmation)
@@ -34,15 +40,24 @@ struct CommissioningView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("This server still has its default \(Self.defaultAdmin) account. Choose your own account name and password. Once you save, \(Self.defaultAdmin) / \(Self.defaultAdmin) no longer signs in.")
-                        .font(.subheadline)
+                    if let guest {
+                        Text("Welcome, \(guest). Choose a password for this account. From now on you sign in with it, and the QR code you used no longer does.")
+                            .font(.subheadline)
+                    } else {
+                        Text("This server still has its default \(Self.defaultAdmin) account. Choose your own account name and password. Once you save, \(Self.defaultAdmin) / \(Self.defaultAdmin) no longer signs in.")
+                            .font(.subheadline)
+                    }
                 }
 
                 Section {
-                    TextField("Account Name", text: $name)
-                        .textContentType(.username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    if let guest {
+                        LabeledContent("Account Name", value: guest)
+                    } else {
+                        TextField("Account Name", text: $name)
+                            .textContentType(.username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
                     PasswordField("New Password", text: $password)
                     PasswordField("Confirm Password", text: $confirmation)
                         .submitLabel(.done)
@@ -60,7 +75,7 @@ struct CommissioningView: View {
                     }
                 }
             }
-            .navigationTitle("Set Up Account")
+            .navigationTitle(guest == nil ? "Set Up Account" : "Choose a Password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

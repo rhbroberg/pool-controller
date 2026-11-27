@@ -6,9 +6,13 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { topbar, formSection, formRow, textInput, passwordInput, revealer, spinner, renderer } from '../ui.js';
 
-export const mountSignIn = (root: any, app: any) => {
+/**
+ * name fills in the account name, as for a guest's link; notice(), if given, says what the
+ * link is doing above the form
+ **/
+export const mountSignIn = (root: any, app: any, { name, notice }: { name?: string; notice?: () => string | null } = {}) => {
     const { store, client } = app;
-    let email = store.lastAccountName || '';
+    let email = name || store.lastAccountName || '';
     let password = '';
     let signingIn = false;
     let signInError: any = null;
@@ -55,6 +59,11 @@ export const mountSignIn = (root: any, app: any) => {
         ? h('div', { class: 'card notice expired-notice', role: 'status' }, icon('warning'), 'Your sign-in is no longer valid. Sign in again.')
         : null;
 
+    const linkNotice = () => {
+        const text = notice ? notice() : null;
+        return text ? h('div', { class: 'card notice', role: 'status' }, icon('qr'), text) : null;
+    };
+
     // a form, so the browser offers to save and fill the password
     const form = () => h('form', {
         onSubmit: (event: any) => {
@@ -78,7 +87,7 @@ export const mountSignIn = (root: any, app: any) => {
     const render = () => [
         topbar({ title: app.poolName() }),
         h('main', { class: 'page' },
-            h('div', { class: 'form' }, intro(), expiredNotice(), form()))
+            h('div', { class: 'form' }, intro(), linkNotice(), expiredNotice(), form()))
     ];
 
     const redraw = renderer(root, render);

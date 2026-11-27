@@ -153,9 +153,11 @@ describe('external sign-in', () => {
             assert.equal((await api('POST', `/users/requests/${request.id}/approve`, { token: adminToken, body: { role: 'owner' } })).status, 400);
             const approved = await api('POST', `/users/requests/${request.id}/approve`, { token: adminToken, body: { role: 'user' } });
             assert.equal(approved.status, 200, approved.text);
-            assert.deepEqual(approved.body, {
+            const { email, role, mustChangeCredentials, methods, displayName } = approved.body;
+            assert.deepEqual({ email, role, mustChangeCredentials, methods, displayName }, {
                 email: 'alice@example.com', role: 'user', mustChangeCredentials: false, methods: ['test'], displayName: 'Alice Example'
             });
+            assert.equal(approved.body.firstSignInAt, null, 'approved, but not signed in yet');
             assert.deepEqual(await requests(), []);
 
             const { params } = await signIn(alice);

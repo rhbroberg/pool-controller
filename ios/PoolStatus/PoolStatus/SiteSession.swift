@@ -16,6 +16,9 @@ final class SiteSession {
     /// Whether the page for adding a site is up, over whatever is on screen, so adding works the
     /// same from the list, a site's sign-in page or its dashboard.
     var isAddingSite = false
+    /// A guest's link scanned for the open site, which its sign-in page takes up: signing in with
+    /// its code, or filling in its name.
+    var pendingGuestLink: GuestLink?
 
     @ObservationIgnored private let makeStore: MakeStore
     /// What checks that a new site's server answers.
@@ -56,6 +59,27 @@ final class SiteSession {
         openID = site.id
     }
 
+    /// Opens the site for a guest's link, adding it once its server answers, and leaves the link
+    /// for its sign-in page. A site already signed in as someone else is left alone.
+    func open(_ link: GuestLink) async throws {
+        let site: Site
+        if let known = sites.sites.first(where: { link.isServer($0.address) }) {
+            if let signedIn = sites.signIns[known.id]?.name {
+                guard signedIn == link.name else {
+                    throw GuestLinkError.signedInAsSomeoneElse(site: known.name, name: signedIn)
+                }
+                // already signed in as the guest, so there's nothing for the link to do
+                open(known)
+                return
+            }
+            site = known
+        } else {
+            site = try await add(name: "", address: link.serverAddress)
+        }
+        pendingGuestLink = link
+        open(site)
+    }
+
     /// Back to the list; the site stays the one the app opens at the next launch.
     func showSites() {
         openID = nil
@@ -77,6 +101,17 @@ final class SiteSession {
             showSites()
         }
         sites.remove(site)
+    }
+
+    enum GuestLinkError: LocalizedError {
+        case signedInAsSomeoneElse(site: String, name: String)
+
+        var errorDescription: String? {
+            switch self {
+            case .signedInAsSomeoneElse(let site, let name):
+                String(localized: "This iPhone is signed in to \(site) as \(name). Sign out of it first, then scan the code again.")
+            }
+        }
     }
 
     /// The site open last goes to the watch, with its sign-in.

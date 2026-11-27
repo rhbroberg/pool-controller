@@ -296,27 +296,51 @@ export class Client {
         return this.send('DELETE', 'users/me/token', { token });
     }
 
+    /** every account, archived ones too, which an older server leaves out or doesn't have */
     listAccounts(token: string) {
-        return this.send('GET', 'users', { token });
+        return this.send('GET', 'users', { token, query: { archived: 'include' } });
     }
 
-    createAccount(name: string, password: string, role: string, token: string) {
-        return this.send('POST', 'users', { token, body: { email: name, password, role } });
+    /** expiresAt is a Date, or null for an account that doesn't expire */
+    createAccount(name: string, password: string, role: string, token: string, expiresAt: Date | null = null) {
+        const body: { email: string; password: string; role: string; expiresAt?: string } = { email: name, password, role };
+        if (expiresAt) {
+            body.expiresAt = expiresAt.toISOString();
+        }
+        return this.send('POST', 'users', { token, body });
     }
 
-    updateAccount(name: string, { role, password }: { role?: string; password?: string }, token: string) {
-        const changes: Record<string, string> = {};
+    /** an operator with a generated name and a one-time code for its link; expiresAt is a Date, or null for never */
+    createGuest(expiresAt: Date | null, token: string) {
+        return this.send('POST', 'users/guests', { token, body: { expiresAt: expiresAt ? expiresAt.toISOString() : null } });
+    }
+
+    /** expiresAt, if given, is a Date or null for none */
+    updateAccount(name: string, { role, password, expiresAt }: { role?: string; password?: string; expiresAt?: Date | null }, token: string) {
+        const changes: Record<string, string | null> = {};
         if (role) {
             changes.role = role;
         }
         if (password) {
             changes.password = password;
         }
+        if (expiresAt !== undefined) {
+            changes.expiresAt = expiresAt ? expiresAt.toISOString() : null;
+        }
         return this.send('PUT', `users/${encodeURIComponent(name)}`, { token, body: changes });
     }
 
     deleteAccount(name: string, token: string) {
         return this.send('DELETE', `users/${encodeURIComponent(name)}`, { token });
+    }
+
+    deleteArchivedAccounts(token: string) {
+        return this.send('DELETE', 'users/archived', { token });
+    }
+
+    /** signs a guest in with the code from its link; the token is only good for setting a password */
+    signInAsGuest(name: string, code: string): Promise<SignInResult> {
+        return this.send('POST', 'users/login/guest', { body: { email: name, code } });
     }
 
     // MARK: sign-in services

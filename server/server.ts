@@ -27,6 +27,7 @@ const scheduler = require('./jobs/scheduler');
 const rollupsJob = require('./jobs/rollups');
 const retentionJob = require('./jobs/retention');
 const weatherJob = require('./jobs/weather');
+const accountsJob = require('./jobs/accounts');
 
 var { mongoose } = require('./mongoose');
 var { ObjectID } = require('mongodb'); // eslint-disable-line no-unused-vars
@@ -95,6 +96,7 @@ taskService.onChange(() => liveService.tasksChanged());
 scheduler.register(rollupsJob);
 scheduler.register(retentionJob);
 scheduler.register(weatherJob);
+scheduler.register(accountsJob);
 startupChecked.then(() => scheduler.start({ enabled: argv.jobs }));
 // days begin at a different time in a new zone, so the daily rollups are redone right away, and
 // the weather's days with them; a new zip code needs its forecast straight away too

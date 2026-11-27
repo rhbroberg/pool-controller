@@ -15,7 +15,7 @@ const PREHEAT_MARGIN_CHOICES = [0, 10, 15, 30, 45, 60];
 // the server's own zone; the server takes null as "follow the host"
 const SERVER_ZONE = '';
 
-const JOB_TITLES: Record<string, string> = { rollups: 'History Summaries', retention: 'Old History Cleanup', weather: 'Weather Forecast' };
+const JOB_TITLES: Record<string, string> = { rollups: 'History Summaries', retention: 'Old History Cleanup', weather: 'Weather Forecast', accounts: 'Expired Accounts' };
 const ZIP_CODE = /^\d{5}(-\d{4})?$/;
 
 export const retentionTitle = (days: any) => {

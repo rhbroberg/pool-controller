@@ -2130,6 +2130,63 @@ button.form-row:disabled {
     background: color-mix(in srgb, var(--red) 12%, transparent);
 }
 
+.icon-button.accent {
+    color: var(--accent);
+}
+
+.icon-button.accent:hover {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.account-row .qr-link-button {
+    margin-top: 0;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.account-row.archived .row-text > span {
+    color: var(--secondary);
+}
+
+.card.notice {
+    padding: 12px 16px;
+}
+
+/* black on white whatever the theme, so it scans */
+.guest-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 16px 24px;
+    text-align: center;
+}
+
+.guest-qr .qr-image {
+    width: 240px;
+    height: 240px;
+    border-radius: 12px;
+    background: #fff;
+    image-rendering: pixelated;
+}
+
+.guest-qr .qr-help {
+    margin: 0;
+    font-size: 14px;
+    color: var(--secondary);
+}
+
+.guest-qr .qr-link {
+    max-width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--fill);
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
 .message-box {
     padding: 14px 16px;
     font-size: 15px;

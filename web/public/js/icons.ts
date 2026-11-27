@@ -77,6 +77,9 @@ const ICONS: Record<string, any> = {
     zoomIn: [circle(11, 11, 7), path('m20 20-4-4'), path('M11 8v6'), path('M8 11h6')],
     zoomOut: [circle(11, 11, 7), path('m20 20-4-4'), path('M8 11h6')],
     user: [circle(12, 7, 4), path('M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2')],
+    userPlus: [circle(9, 7, 4), path('M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'), path('M19 8v6'), path('M22 11h-6')],
+    qr: [rect(3, 3, 7, 7, 1), rect(14, 3, 7, 7, 1), rect(3, 14, 7, 7, 1), path('M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3')],
+    copy: [rect(8, 8, 13, 13, 2), path('M4 16V5a2 2 0 0 1 2-2h11')],
     userCircle: [circle(12, 12, 10), circle(12, 10, 3), path('M7 20.66V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.66')],
     users: [
         circle(9, 7, 4),

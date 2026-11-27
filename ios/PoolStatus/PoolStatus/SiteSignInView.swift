@@ -19,6 +19,9 @@ struct SiteSignInView: View {
     /// What signing in with a service ended with, when it didn't simply sign in.
     @State private var serviceMessage: String?
     @State private var serviceFailed = false
+    @State private var scanningCode = false
+    /// What a scanned guest code is doing, or why it couldn't.
+    @State private var codeMessage: String?
 
     private var auth: AuthSession { store.auth }
     private var choices: SignInChoices { serverChoices ?? .passwordOnly }
@@ -73,6 +76,13 @@ struct SiteSignInView: View {
                             }
                         }
                         .disabled(!canSignIn)
+                        Button {
+                            signInError = nil
+                            codeMessage = nil
+                            scanningCode = true
+                        } label: {
+                            Label("Sign In with QR Code", systemImage: "qrcode.viewfinder")
+                        }
                     }
                     ForEach(choices.providers) { provider in
                         Button {
@@ -95,6 +105,8 @@ struct SiteSignInView: View {
                 } footer: {
                     if let signInError {
                         Text(signInError).foregroundStyle(.red)
+                    } else if let codeMessage {
+                        Text(codeMessage)
                     } else if let serviceMessage {
                         Text(serviceMessage).foregroundStyle(serviceFailed ? .red : .secondary)
                     } else {
@@ -136,6 +148,18 @@ struct SiteSignInView: View {
             )) { _ in
                 CommissioningView()
             }
+            .sheet(isPresented: $scanningCode) {
+                ScanGuestCodeView { link in
+                    Task { await open(link) }
+                }
+            }
+            // a code scanned before this site opened, as from the list or Add Site
+            .task(id: session.pendingGuestLink) {
+                if let link = session.pendingGuestLink, link.isServer(store.serverAddress) {
+                    session.pendingGuestLink = nil
+                    await use(link)
+                }
+            }
             .onAppear {
                 accountName = site?.accountName ?? ""
                 passwordFocused = !accountName.isEmpty
@@ -161,6 +185,48 @@ struct SiteSignInView: View {
             }
         }
         isSigningIn = false
+    }
+
+    /// A code for this site signs in here; one for another pool opens that pool, adding it first
+    /// if it's new, and signs in there.
+    private func open(_ link: GuestLink) async {
+        guard !link.isServer(store.serverAddress) else {
+            await use(link)
+            return
+        }
+        do {
+            try await session.open(link)
+        } catch {
+            if !error.isCancellation {
+                signInError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Signs the guest in with its code to choose a password, which opens the set-up sheet; once
+    /// it has one, fills in its name to sign in with it.
+    private func use(_ link: GuestLink) async {
+        accountName = link.name
+        password = ""
+        signInError = nil
+        guard let code = link.code else {
+            codeMessage = String(localized: "Sign in as \(link.name) with the password you chose.")
+            passwordFocused = true
+            return
+        }
+        codeMessage = String(localized: "Signing in as \(link.name)…")
+        do {
+            try await auth.signInAsGuest(name: link.name, code: code)
+            codeMessage = nil
+        } catch StatusClientError.server(code: 409, message: _) {
+            codeMessage = String(localized: "\(link.name) has already chosen a password. Sign in with it.")
+            passwordFocused = true
+        } catch {
+            codeMessage = nil
+            if !error.isCancellation {
+                signInError = error.localizedDescription
+            }
+        }
     }
 
     private func signIn(with provider: SignInProvider) async {

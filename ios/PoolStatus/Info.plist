@@ -7,6 +7,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Pool Status reads the QR code an admin shares to sign you in as a guest.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Pool Status finds your pool controller’s server on your local network and reads its status from it.</string>
 </dict>

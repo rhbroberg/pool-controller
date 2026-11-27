@@ -1,10 +1,19 @@
 import PoolStatusCore
 import SwiftUI
 
-/// Admin: every account on the server, with ways to add, change and remove them.
+/// Admin: every account on the server, with ways to add, change and remove them, guests with
+/// their QR codes, and accounts that have expired and been archived.
 struct AccountsView: View {
     @Environment(StatusStore.self) private var store
     @State private var accounts: [AccountInfo] = []
+    @State private var showArchived = false
+    @State private var addingGuest = false
+    /// The guest whose QR code is showing.
+    @State private var showingCode: AccountInfo?
+    @State private var confirmingDeleteArchived = false
+    @State private var deletingArchived = false
+    /// What the last action did, such as copying a QR code.
+    @State private var notice: String?
     @State private var requests: [AccessRequest] = []
     @State private var invitations: [Invitation] = []
     @State private var services: [SignInService] = []
@@ -24,6 +33,8 @@ struct AccountsView: View {
     private var pending: [AccessRequest] { requests.filter { $0.status == .pending } }
     private var denied: [AccessRequest] { requests.filter { $0.status == .denied } }
     private var providers: [SignInProvider] { services.map { SignInProvider(id: $0.id, displayName: $0.displayName) } }
+    private var active: [AccountInfo] { accounts.filter { !$0.isArchived } }
+    private var archived: [AccountInfo] { accounts.filter(\.isArchived) }
 
     var body: some View {
         List {
@@ -31,6 +42,11 @@ struct AccountsView: View {
                 Section {
                     Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
+                }
+            } else if let notice {
+                Section {
+                    Label(notice, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.secondary)
                 }
             }
             if offersSignInServices {
@@ -56,25 +72,42 @@ struct AccountsView: View {
                 }
             }
             Section {
-                ForEach(accounts) { account in
-                    NavigationLink(value: account) {
-                        AccountRow(account: account, isYou: account.name == auth.credentials?.name,
-                                   methods: services.isEmpty ? nil : signInMethodNames(account.methods, services: providers))
-                    }
-                    .swipeActions {
-                        if account.name != auth.credentials?.name {
-                            Button("Remove", role: .destructive) {
-                                removing = account
-                            }
-                        }
-                    }
+                ForEach(active) { account in
+                    accountRow(account)
                 }
             } header: {
                 if !pending.isEmpty || !invitations.isEmpty {
                     Text("Accounts")
                 }
             } footer: {
-                Text("Swipe left on an account to remove it. Viewers can only look; operators can also change equipment, water flow and panel settings; admins can also manage accounts and the server.")
+                Text("Swipe left on an account to remove it. Viewers can only look; operators can also change equipment, water flow and panel settings; admins can also manage accounts and the server. Add a guest with \(Image(systemName: "person.badge.plus")) for an operator who lasts a week, with a QR code that lets them in to choose a password.")
+            }
+            if !accounts.isEmpty {
+                Section {
+                    Toggle(archived.isEmpty ? String(localized: "Show Archived") : String(localized: "Show Archived (\(archived.count))"),
+                           isOn: $showArchived)
+                } footer: {
+                    Text("Accounts are archived once they expire, and can’t sign in after that.")
+                }
+            }
+            if showArchived && !archived.isEmpty {
+                Section("Archived") {
+                    ForEach(archived) { account in
+                        accountRow(account)
+                    }
+                    Button(role: .destructive) {
+                        confirmingDeleteArchived = true
+                    } label: {
+                        HStack {
+                            Text("Delete Archived Accounts")
+                            if deletingArchived {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(deletingArchived)
+                }
             }
             if !invitations.isEmpty {
                 Section {
@@ -149,7 +182,10 @@ struct AccountsView: View {
             Text("They won’t be able to sign in with \(denying?.providerName ?? ""), and won’t be asked about again unless you forget the request.")
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Add Guest", systemImage: "person.badge.plus") {
+                    addingGuest = true
+                }
                 Button("Add Account", systemImage: "plus") {
                     addingAccount = true
                 }
@@ -157,6 +193,35 @@ struct AccountsView: View {
         }
         .refreshable { await load() }
         .task { await load() }
+        .sheet(isPresented: $addingGuest) {
+            NewGuestView { guest in
+                accounts.append(guest)
+                accounts.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                notice = nil
+                showingCode = guest
+            }
+        }
+        .sheet(item: $showingCode) { guest in
+            GuestQRView(account: guest, serverAddress: store.serverAddress)
+        }
+        .confirmationDialog("Delete \(archived.count) archived \(archived.count == 1 ? "account" : "accounts")?",
+                            isPresented: $confirmingDeleteArchived, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                deletingArchived = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("They’re removed for good. Archived accounts already can’t sign in.")
+        }
+        .task(id: deletingArchived) {
+            if deletingArchived {
+                await act {
+                    try await auth.deleteArchivedAccounts()
+                    accounts.removeAll(where: \.isArchived)
+                }
+                deletingArchived = false
+            }
+        }
         .sheet(isPresented: $addingAccount) {
             NewAccountView(trustedServices: services.filter(\.trustEmail)) { created in
                 accounts.append(created)
@@ -178,6 +243,46 @@ struct AccountsView: View {
         .task(id: deleting) {
             if let deleting {
                 await remove(deleting)
+            }
+        }
+    }
+
+    /// An account, opening its details; a guest that can still sign in also has its QR code and
+    /// a way to copy it.
+    private func accountRow(_ account: AccountInfo) -> some View {
+        HStack(spacing: 4) {
+            NavigationLink(value: account) {
+                AccountRow(account: account, isYou: account.name == auth.credentials?.name,
+                           methods: services.isEmpty || account.isArchived ? nil : signInMethodNames(account.methods, services: providers))
+            }
+            if account.isGuest && !account.isArchived {
+                Button {
+                    showingCode = account
+                } label: {
+                    Label("QR Code", systemImage: "qrcode")
+                        .labelStyle(.iconOnly)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Show \(account.name)’s QR Code")
+                Button {
+                    errorMessage = nil
+                    notice = GuestQRCode.copy(account, serverAddress: store.serverAddress)
+                        ? String(localized: "Copied \(account.name)’s QR code and link.") : nil
+                } label: {
+                    Label("Copy QR Code", systemImage: "doc.on.doc")
+                        .labelStyle(.iconOnly)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Copy \(account.name)’s QR Code")
+            }
+        }
+        .swipeActions {
+            if account.name != auth.credentials?.name {
+                Button("Remove", role: .destructive) {
+                    removing = account
+                }
             }
         }
     }
@@ -309,8 +414,23 @@ private struct AccountRow: View {
     /// How it signs in, when the server has sign-in services.
     var methods: [String]?
 
+    /// Archived, a guest yet to use its link, or when it expires.
+    private var status: [String] {
+        if let archivedAt = account.archivedAt {
+            return [String(localized: "Archived \(archivedAt, format: .dateTime.month().day().year())")]
+        }
+        var parts = [String]()
+        if account.isGuest {
+            parts.append(account.setupCode != nil ? String(localized: "Guest · hasn’t used the link yet") : String(localized: "Guest"))
+        }
+        if let expiresAt = account.expiresAt {
+            parts.append(String(localized: "expires \(expiresAt, format: .relative(presentation: .named))"))
+        }
+        return parts
+    }
+
     private var note: String? {
-        let parts = (isYou ? [String(localized: "You")] : []) + (methods ?? [])
+        let parts = (isYou ? [String(localized: "You")] : []) + status + (methods ?? [])
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -318,7 +438,8 @@ private struct AccountRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.name)
-                if account.mustChangeCredentials == true {
+                    .foregroundStyle(account.isArchived ? .secondary : .primary)
+                if account.mustChangeCredentials == true && !account.isGuest {
                     Text("Not set up yet")
                         .font(.caption)
                         .foregroundStyle(.orange)
@@ -335,11 +456,12 @@ private struct AccountRow: View {
     }
 }
 
-/// Admin: change one account's role or reset its password.
+/// Admin: one account's dates, and changing its role, expiry or password.
 private struct AccountDetailView: View {
     private enum Change: Equatable {
         case role(AccountRole)
         case password(String)
+        case expiry(AccountExpiry)
     }
 
     let account: AccountInfo
@@ -347,7 +469,11 @@ private struct AccountDetailView: View {
     let updated: (AccountInfo) -> Void
 
     @Environment(StatusStore.self) private var store
+    /// The account as last saved here, which the dates and expiry follow.
+    @State private var current: AccountInfo
     @State private var role: AccountRole
+    @State private var expires: Bool
+    @State private var expiresAt: Date
     @State private var password = ""
     @State private var confirmation = ""
     /// The change being saved; leaving the page cancels it.
@@ -355,16 +481,79 @@ private struct AccountDetailView: View {
     @State private var message: String?
     @State private var failed = false
     @State private var confirmingReset = false
+    @State private var showingCode = false
 
     init(account: AccountInfo, services: [SignInProvider], updated: @escaping (AccountInfo) -> Void) {
         self.account = account
         self.services = services
         self.updated = updated
+        _current = State(initialValue: account)
         _role = State(initialValue: account.role)
+        _expires = State(initialValue: account.expiresAt != nil)
+        _expiresAt = State(initialValue: account.expiresAt ?? Date.now.addingTimeInterval(7 * 24 * 3600))
+    }
+
+    /// The expiry the controls say, if it differs from the saved one.
+    private var expiryChange: AccountExpiry? {
+        switch (expires, current.expiresAt) {
+        case (false, nil): nil
+        case (false, _): .never
+        case (true, let saved): saved.map { abs($0.timeIntervalSince(expiresAt)) < 60 } == true ? nil : .at(expiresAt)
+        }
     }
 
     var body: some View {
+        if current.isArchived {
+            Form {
+                datesSection
+                Section {
+                    Text("\(account.name) expired and was archived, so it can’t sign in or be changed. Remove it from Accounts once it’s no longer needed.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle(account.name)
+            .navigationBarTitleDisplayMode(.inline)
+        } else {
+            details
+        }
+    }
+
+    @ViewBuilder
+    private var datesSection: some View {
+        Section("History") {
+            dateRow("Created", current.createdAt, never: "—")
+            dateRow("First Signed In", current.firstSignInAt)
+            dateRow("Last Signed In", current.lastSignInAt)
+            if let archivedAt = current.archivedAt {
+                dateRow("Archived", archivedAt)
+            }
+        }
+    }
+
+    private func dateRow(_ title: LocalizedStringKey, _ date: Date?, never: LocalizedStringKey = "Never") -> some View {
+        LabeledContent(title) {
+            if let date {
+                Text(date, format: .dateTime.month().day().year().hour().minute())
+            } else {
+                Text(never)
+            }
+        }
+    }
+
+    private var details: some View {
         Form {
+            if current.isGuest {
+                Section {
+                    Button("Show QR Code", systemImage: "qrcode") {
+                        showingCode = true
+                    }
+                } footer: {
+                    Text(current.setupCode != nil
+                         ? "\(account.name) hasn’t used its link yet. The QR code lets them in once to choose a password."
+                         : "\(account.name) has chosen a password. The QR code now opens the sign-in with the name filled in.")
+                }
+            }
+            datesSection
             if account.methods != nil && !services.isEmpty {
                 Section {
                     LabeledContent("Signs In With",
@@ -380,9 +569,32 @@ private struct AccountDetailView: View {
                 Button("Save Role") {
                     start(.role(role))
                 }
-                .disabled(role == account.role || saving != nil)
+                .disabled(role == current.role || saving != nil)
             } footer: {
                 Text(role.summary)
+            }
+
+            Section {
+                if current.role == .admin {
+                    LabeledContent("Expires", value: String(localized: "Never"))
+                } else {
+                    Toggle("Expires", isOn: $expires)
+                    if expires {
+                        DatePicker("Archived On", selection: $expiresAt, in: Date.now..., displayedComponents: [.date, .hourAndMinute])
+                    }
+                    Button(expires || current.expiresAt == nil ? "Save Expiry" : "Never Expire") {
+                        if let expiryChange {
+                            start(.expiry(expiryChange))
+                        }
+                    }
+                    .disabled(expiryChange == nil || saving != nil)
+                }
+            } header: {
+                Text("Expires")
+            } footer: {
+                Text(current.role == .admin
+                     ? "Admins don’t expire."
+                     : "Once it passes, the account is archived and can’t sign in.")
             }
 
             Section {
@@ -393,12 +605,14 @@ private struct AccountDetailView: View {
                 }
                 .disabled(!PasswordRules.acceptable(password, confirmation: confirmation) || saving != nil)
             } header: {
-                Text(account.hasPassword ? "Reset Password" : "Set a Password")
+                Text(current.hasPassword ? "Reset Password" : "Set a Password")
             } footer: {
                 if let problem = PasswordRules.problem(password, confirmation: confirmation) {
                     Text(problem).foregroundStyle(.red)
-                } else if account.hasPassword {
+                } else if current.hasPassword {
                     Text("\(account.name) is signed out everywhere and must sign in with the new password.")
+                } else if current.isGuest {
+                    Text("\(account.name) hasn’t chosen a password yet. Setting one here lets them sign in with it as well as the link.")
                 } else {
                     Text("\(account.name) signs in with a service. A password lets them sign in without it too.")
                 }
@@ -427,6 +641,9 @@ private struct AccountDetailView: View {
                 await save(saving)
             }
         }
+        .sheet(isPresented: $showingCode) {
+            GuestQRView(account: current, serverAddress: store.serverAddress)
+        }
     }
 
     private func start(_ change: Change) {
@@ -434,18 +651,32 @@ private struct AccountDetailView: View {
         saving = change
     }
 
+    private func keep(_ result: AccountInfo) {
+        current = result
+        updated(result)
+        expires = result.expiresAt != nil
+        if let saved = result.expiresAt {
+            expiresAt = saved
+        }
+    }
+
     private func save(_ change: Change) async {
         do {
             switch change {
             case .role(let role):
                 let result = try await store.auth.updateAccount(account.name, role: role)
-                updated(result)
+                keep(result)
                 message = result.role.nowDescription(for: account.name)
             case .password(let password):
-                updated(try await store.auth.updateAccount(account.name, password: password))
+                keep(try await store.auth.updateAccount(account.name, password: password))
                 message = String(localized: "Password reset.")
                 self.password = ""
                 confirmation = ""
+            case .expiry(let expiry):
+                let result = try await store.auth.updateAccount(account.name, expiry: expiry)
+                keep(result)
+                message = result.expiresAt.map { String(localized: "\(account.name) expires \($0, format: .dateTime.month().day().hour().minute()).") }
+                    ?? String(localized: "\(account.name) no longer expires.")
             }
             failed = false
         } catch {
@@ -479,6 +710,8 @@ private struct NewAccountView: View {
     /// nil for any trusted service.
     @State private var service: String?
     @State private var role = AccountRole.user
+    @State private var expires = false
+    @State private var expiresAt = Date.now.addingTimeInterval(30 * 24 * 3600)
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -547,6 +780,22 @@ private struct NewAccountView: View {
                 } footer: {
                     Text(role.summary)
                 }
+                if method == .password {
+                    Section {
+                        if role == .admin {
+                            LabeledContent("Expires", value: String(localized: "Never"))
+                        } else {
+                            Toggle("Expires", isOn: $expires)
+                            if expires {
+                                DatePicker("Archived On", selection: $expiresAt, in: Date.now..., displayedComponents: [.date, .hourAndMinute])
+                            }
+                        }
+                    } footer: {
+                        Text(role == .admin
+                             ? "Admins don’t expire."
+                             : "Optional. Once it passes, the account is archived and can’t sign in.")
+                    }
+                }
             }
             .navigationTitle(method == .invitation ? "Invite" : "Add Account")
             .navigationBarTitleDisplayMode(.inline)
@@ -578,7 +827,8 @@ private struct NewAccountView: View {
         do {
             switch method {
             case .password:
-                created(try await store.auth.createAccount(name: trimmedName, password: password, role: role))
+                created(try await store.auth.createAccount(name: trimmedName, password: password, role: role,
+                                                           expiresAt: expires && role != .admin ? expiresAt : nil))
             case .invitation:
                 invited(try await store.auth.invite(email: trimmedEmail, role: role, provider: service))
             }

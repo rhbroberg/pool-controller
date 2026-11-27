@@ -156,7 +156,7 @@ describe('long history', () => {
         it('lists the maintenance jobs, which only run when asked with --no-jobs', async () => {
             const jobs = await api('GET', '/system/jobs', { token: admin });
             assert.equal(jobs.status, 200);
-            assert.deepEqual(jobs.body.map((job: any) => job.name), ['rollups', 'retention', 'weather']);
+            assert.deepEqual(jobs.body.map((job: any) => job.name), ['rollups', 'retention', 'weather', 'accounts']);
             assert.ok(jobs.body.every((job: any) => job.scheduled === false && job.nextRunAt === null));
             assert.equal((await api('POST', '/system/jobs/vacuum/run', { token: admin })).status, 404);
         });

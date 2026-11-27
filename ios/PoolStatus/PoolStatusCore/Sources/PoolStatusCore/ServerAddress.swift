@@ -1,6 +1,6 @@
 import Foundation
 
-public enum ServerAddress {
+public nonisolated enum ServerAddress {
     /// The address as a person would say it: no scheme, no trailing slash.
     public static func display(_ address: String) -> String {
         var text = address.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -40,6 +40,14 @@ public nonisolated enum PreviewServer {
     /// The token signing in as `name` gets.
     public static func token(for name: String) -> String { "token-\(name)" }
 
+    /// The guest in the pretend account list, whose link lets it in with `guestCode`.
+    public static let guestName = "sunny-otter"
+    public static let guestCode = "preview-guest-code"
+    /// The link in that guest's QR code, at the pretend server `host`.
+    public static func guestLink(host: String = "home.test:3000") -> String {
+        "http://\(host)/#/join?name=\(guestName)&code=\(guestCode)"
+    }
+
     /// Sets a task as PUT /tasks/{task} would, so a test can start from it.
     public static func setTask(_ task: String, on: Bool, readyAt: Date? = nil) {
         PreviewTasks.set(task, on: on, readyAt: readyAt)
@@ -83,6 +91,45 @@ private nonisolated enum PreviewTasks {
                 #"{"readyAt":"\#(iso.format($0))","startAt":"\#(iso.format($0.addingTimeInterval(-lead)))","leadMinutes":60,"leadFrom":"rule","fromTemperature":82,"setpoint":102,"requestedBy":"preview"}"#
             } ?? "null"
             return #"{"pool":{"on":\#(on["pool"] ?? false)},"spaPreheat":{"on":\#(on["spaPreheat"] ?? false),"scheduled":\#(scheduled)},"spaParty":{"on":\#(on["spaParty"] ?? false)},"dark":true}"#
+        }
+    }
+}
+
+/// The pretend server's accounts: an admin, a guest yet to use its link, an operator, and an
+/// archived guest; adding a guest or deleting the archived ones changes them.
+private nonisolated enum PreviewAccounts {
+    private static let lock = NSLock()
+    private static let iso = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    nonisolated(unsafe) private static var accounts: [String] = initial()
+    nonisolated(unsafe) private static var guests = 0
+
+    private static func at(_ days: Double) -> String { #""\#(iso.format(.now.addingTimeInterval(days * 86400)))""# }
+
+    private static func initial() -> [String] {
+        [
+            #"{"email":"tester","role":"admin","methods":["password"],"guest":false,"createdAt":\#(at(-90)),"firstSignInAt":\#(at(-90)),"lastSignInAt":\#(at(0)),"expiresAt":null,"archivedAt":null}"#,
+            #"{"email":"\#(PreviewServer.guestName)","role":"user","mustChangeCredentials":true,"methods":[],"guest":true,"setupCode":"\#(PreviewServer.guestCode)","createdAt":\#(at(-1)),"firstSignInAt":null,"lastSignInAt":null,"expiresAt":\#(at(6)),"archivedAt":null}"#,
+            #"{"email":"neighbor","role":"viewer","methods":["password"],"guest":false,"createdAt":\#(at(-20)),"firstSignInAt":\#(at(-19)),"lastSignInAt":\#(at(-2)),"expiresAt":\#(at(30)),"archivedAt":null}"#,
+            #"{"email":"brave-heron","role":"user","methods":["password"],"guest":true,"createdAt":\#(at(-14)),"firstSignInAt":\#(at(-13)),"lastSignInAt":\#(at(-8)),"expiresAt":\#(at(-7)),"archivedAt":\#(at(-7))}"#
+        ]
+    }
+
+    static func list() -> String {
+        lock.withLock { "[\(accounts.joined(separator: ","))]" }
+    }
+
+    static func addGuest() -> String {
+        lock.withLock {
+            guests += 1
+            let guest = #"{"email":"cheerful-dolphin\#(guests == 1 ? "" : "-\(guests)")","role":"user","mustChangeCredentials":true,"methods":[],"guest":true,"setupCode":"new-guest-code","createdAt":\#(at(0)),"firstSignInAt":null,"lastSignInAt":null,"expiresAt":\#(at(7)),"archivedAt":null}"#
+            accounts.append(guest)
+            return guest
+        }
+    }
+
+    static func deleteArchived() {
+        lock.withLock {
+            accounts.removeAll { !$0.contains(#""archivedAt":null"#) }
         }
     }
 }
@@ -158,7 +205,25 @@ private nonisolated final class PreviewURLProtocol: URLProtocol, @unchecked Send
                 return (401, #"{"message":"sign in again"}"#)
             }
             let name = token.hasPrefix("token-") ? String(token.dropFirst("token-".count)) : "preview"
-            return (200, #"{"email":"\#(name)","role":"admin"}"#)
+            return (200, #"{"email":"\#(name)","role":"\#(name == PreviewServer.guestName ? "user" : "admin")"}"#)
+        case ("POST", "users/login/guest"):
+            let fields = sent.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: String] ?? [:]
+            guard fields["email"] == PreviewServer.guestName, fields["code"] == PreviewServer.guestCode else {
+                return (401, #"{"message":"that guest link isn’t valid"}"#)
+            }
+            return (200, #"{"email":"\#(PreviewServer.guestName)","token":"setup-\#(PreviewServer.guestName)","role":"user","mustChangeCredentials":true,"methods":[]}"#)
+        case ("PUT", "users/me/credentials"):
+            let fields = sent.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: String] ?? [:]
+            let name = fields["email"] ?? ""
+            let role = name == PreviewServer.guestName ? "user" : "admin"
+            return (200, #"{"email":"\#(name)","token":"\#(PreviewServer.token(for: name))","role":"\#(role)","methods":["password"]}"#)
+        case ("GET", "users"):
+            return (200, PreviewAccounts.list())
+        case ("POST", "users/guests"):
+            return (200, PreviewAccounts.addGuest())
+        case ("DELETE", "users/archived"):
+            PreviewAccounts.deleteArchived()
+            return (200, ok)
         case ("GET", "tasks"):
             return (200, PreviewTasks.json())
         case ("PUT", _) where path.hasPrefix("tasks/"):

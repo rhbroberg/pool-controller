@@ -2,19 +2,12 @@ import type { AuthedRequest, AuthUser, OAuthScope } from '../types/domain';
 
 import log4js from 'log4js';
 
-const { User } = require('./../models/user') as {
-    User: {
-        findByToken(token: string | undefined): Promise<{
-            email: string;
-            role: string;
-            mustChangeCredentials?: boolean;
-            hasScope(scope: string): boolean;
-        }>;
-    };
-};
+import { User as UserModel } from '../models/user';
+const User: any = UserModel;
 const logger = log4js.getLogger();
 
-// the only requests an uncommissioned admin account may make
+// the only requests an uncommissioned admin account, or a guest that hasn't set its password,
+// may make
 const allowedBeforeCommissioning = ['changeCredentials', 'logoutUser', 'getUser'];
 
 // the OpenAPI validator passes the OAuth2 scopes the operation lists; the signed-in account's role
@@ -29,9 +22,16 @@ const authenticate = async (req: AuthedRequest, scopes: OAuthScope[] | string[])
     if (!user) {
         throw { status: 401, message: 'sign in to do that' };
     }
+    if (!user.isActive()) {
+        if (!user.archivedAt) {
+            await User.archiveExpired();
+            logger.info(`archived ${user.email}, which expired ${user.expiresAt.toISOString()}`);
+        }
+        throw { status: 401, message: 'this account has expired' };
+    }
     if (user.mustChangeCredentials && !allowedBeforeCommissioning.includes(operation as string)) {
-        logger.warn(`REST ${user.email}: refused ${operation}; the account name and password must be changed first`);
-        throw { status: 403, message: 'change the admin account name and password first' };
+        logger.warn(`REST ${user.email}: refused ${operation}; the account must set a new password first`);
+        throw { status: 403, message: user.guest ? 'set a password first' : 'change the admin account name and password first' };
     }
     const missing = (scopes || []).filter((scope) => !user.hasScope(scope));
     if (missing.length > 0) {

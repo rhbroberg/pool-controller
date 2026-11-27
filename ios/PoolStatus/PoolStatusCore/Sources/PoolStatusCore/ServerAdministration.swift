@@ -192,6 +192,7 @@ public nonisolated struct MaintenanceJob: Decodable, Sendable, Identifiable, Equ
         case "rollups": String(localized: "History Summaries", bundle: .module)
         case "retention": String(localized: "Old History Cleanup", bundle: .module)
         case "weather": String(localized: "Weather Forecast", bundle: .module)
+        case "accounts": String(localized: "Expired Accounts", bundle: .module)
         default: name.capitalized
         }
     }

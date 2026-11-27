@@ -1,7 +1,7 @@
 // What the dashboard says about equipment, water flow and readings.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis, bodyHeating } from '../public/js/model.js';
+import { EQUIPMENT, tileState, waterModeOf, measurement, weatherSummary, passwordProblem, passwordAcceptable, displayName, eventKindOf, signInOutcome, methodNames, aboutLine, TASKS, taskOn, scheduledPreheat, scheduleText, HEATING_SOURCES, rateBasis, bodyHeating, guestLink, accountNote } from '../public/js/model.js';
 
 const control = (name: any) => EQUIPMENT.find((c) => c.name === name);
 const reading = (name: any, value: any) => ({ name, category: 'status', value, timestamp: new Date() });
@@ -227,6 +227,26 @@ describe('heating on the temperature card', () => {
     it('is nothing while no pump runs, or before the server has said', () => {
         assert.equal(bodyHeating(heating({ target: null, status: null }) as any, 'spa', now), null);
         assert.equal(bodyHeating(null, 'spa', now), null);
+    });
+});
+
+describe('guests and expiring accounts', () => {
+    const formats = { relative: () => 'in 6 days', formatDate: () => 'Nov 12, 2026' };
+
+    it('links a guest to this page with its name and one-time code, and only its name once used', () => {
+        assert.equal(guestLink('https://pool.example.com:8443', { email: 'sunny-otter', setupCode: 'a1-b2_c3' }),
+            'https://pool.example.com:8443/#/join?name=sunny-otter&code=a1-b2_c3');
+        assert.equal(guestLink('https://pool.example.com', { email: 'sunny-otter', setupCode: null }),
+            'https://pool.example.com/#/join?name=sunny-otter');
+    });
+
+    it('says an account is archived, a guest yet to use its link, or when it expires', () => {
+        assert.deepEqual(accountNote({ archivedAt: '2026-11-12T00:00:00Z', guest: true }, formats), { text: 'Archived Nov 12, 2026', warning: false });
+        assert.deepEqual(accountNote({ guest: true, setupCode: 'x', mustChangeCredentials: true, expiresAt: '2026-11-19T00:00:00Z' }, formats),
+            { text: 'Guest · hasn’t used the link yet · expires in 6 days', warning: false });
+        assert.deepEqual(accountNote({ guest: true, setupCode: null, expiresAt: null }, formats), { text: 'Guest', warning: false });
+        assert.deepEqual(accountNote({ mustChangeCredentials: true }, formats), { text: 'Not set up yet', warning: true });
+        assert.equal(accountNote({ expiresAt: null }, formats), null);
     });
 });
 

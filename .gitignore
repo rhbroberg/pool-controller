@@ -5,4 +5,7 @@ coverage/
 web/server.js
 web/public/js/**/*.js
 web/public/js/**/*.js.map
+# vendored browser libs kept as .js (not compiled from .ts)
+!web/public/js/libs/
+!web/public/js/libs/**/*.js
 server/dist/

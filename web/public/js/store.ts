@@ -53,6 +53,7 @@ export type StoreClient = {
     changeCredentials(name: string, password: string, token: string): Promise<SignInResult>;
     fetchAccount(token: string): Promise<{ email: string; role: string; methods?: string[] }>;
     signOut(token: string): Promise<unknown>;
+    signInAsGuest(name: string, code: string): Promise<SignInResult>;
     fetchHistory(names: string[], from: Date | string | number, to: Date | string | number, opts?: { signal?: AbortSignal; maxPoints?: number; resolution?: number }): Promise<HistoryResponse>;
     startReprocess(
         request: { from: Date | string | number; to: Date | string | number; eventTypes?: string[]; dryRun?: boolean },
@@ -111,7 +112,7 @@ export class StatusStore {
     nextAttempt: Date | null;
     credentials: Credentials | null;
     signInExpired: boolean;
-    commissioning: Credentials | null;
+    commissioning: (Credentials & { guest?: boolean }) | null;
     pending: Record<string, boolean>;
     pendingWaterMode: string | null;
     confirmedChanges: number;
@@ -467,7 +468,21 @@ export class StatusStore {
         return !methods || methods.includes('password');
     }
 
-    /** renames the default admin account and sets its password, then signs in as the new account */
+    /**
+     * signs a guest in with the code from its link; like the default admin, it must set a
+     * password before anything else, which commission does
+     **/
+    async signInAsGuest(name: string, code: string) {
+        const result = await this.client.signInAsGuest(name, code);
+        this.markConnected();
+        this.commissioning = { ...signedInAs(result), guest: true };
+        this.changed();
+    }
+
+    /**
+     * renames the default admin account and sets its password, or sets a guest's first password,
+     * then signs in as the account
+     **/
     async commission(name: string, password: string) {
         if (!this.commissioning) {
             return;

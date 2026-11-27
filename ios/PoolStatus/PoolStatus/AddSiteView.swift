@@ -15,6 +15,9 @@ struct AddSiteView: View {
     @State private var testing: String?
     @State private var errorMessage: String?
     @State private var isScanningNetwork = false
+    @State private var isScanningCode = false
+    /// A scanned guest code whose server is being tried; leaving the page cancels it.
+    @State private var openingLink: GuestLink?
 
     private var trimmedAddress: String {
         address.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -35,6 +38,24 @@ struct AddSiteView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 6)
+                }
+
+                Section {
+                    Button {
+                        errorMessage = nil
+                        isScanningCode = true
+                    } label: {
+                        HStack {
+                            Label("Scan a Guest QR Code", systemImage: "qrcode.viewfinder")
+                            if openingLink != nil {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(testing != nil || openingLink != nil)
+                } footer: {
+                    Text("An admin’s guest QR code adds the pool and signs you in, all at once.")
                 }
 
                 Section {
@@ -103,12 +124,35 @@ struct AddSiteView: View {
                     connect(to: found)
                 }
             }
+            .sheet(isPresented: $isScanningCode) {
+                ScanGuestCodeView { link in
+                    openingLink = link
+                }
+            }
         }
         .task(id: testing) {
             if let testing {
                 await test(testing)
             }
         }
+        .task(id: openingLink) {
+            if let openingLink {
+                await open(openingLink)
+            }
+        }
+    }
+
+    /// Adds the guest code's pool, or opens it if it's already here, and signs in there.
+    private func open(_ link: GuestLink) async {
+        do {
+            try await session.open(link)
+            dismiss()
+        } catch {
+            if !error.isCancellation {
+                errorMessage = String(localized: "Couldn’t reach \(ServerAddress.display(link.serverAddress)). \(error.localizedDescription)")
+            }
+        }
+        openingLink = nil
     }
 
     private func connect() {

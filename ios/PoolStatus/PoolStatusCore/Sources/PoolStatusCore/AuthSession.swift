@@ -65,9 +65,11 @@ public final class AuthSession {
     }
 
     public private(set) var credentials: Credentials?
-    /// The default admin account, signed in but not yet renamed. Its token only works for
-    /// commissioning, so it isn't saved.
+    /// The default admin account, signed in but not yet renamed, or a guest signed in with its
+    /// link but without a password yet. Its token only works for commissioning, so it isn't saved.
     public private(set) var commissioning: Credentials?
+    /// Whether `commissioning` is a guest, which keeps its name and only chooses a password.
+    public private(set) var commissioningGuest = false
     /// How the signed-in account signs in: password and/or services' ids; nil until the server
     /// has said since launch.
     public private(set) var methods: [String]?
@@ -120,9 +122,18 @@ public final class AuthSession {
         let signedIn = Credentials(name: result.name, token: result.token, role: result.role)
         if result.mustChangeCredentials == true {
             commissioning = signedIn
+            commissioningGuest = false
             return
         }
         save(signedIn, methods: result.methods)
+    }
+
+    /// Signs a guest in with the code from its link; it then chooses a password, which
+    /// `commission` sets, before it can do anything else.
+    public func signInAsGuest(name: String, code: String) async throws {
+        let result = try await client.signInAsGuest(name: name, code: code)
+        commissioning = Credentials(name: result.name, token: result.token, role: result.role)
+        commissioningGuest = true
     }
 
     /// What the sign-in form offers; nil from a server too old to have sign-in services, which
@@ -162,7 +173,8 @@ public final class AuthSession {
         methods = account.methods
     }
 
-    /// Renames the default admin account and sets its password, then signs in as the new account.
+    /// Renames the default admin account and sets its password, or sets a guest's first
+    /// password, then signs in as the account.
     public func commission(name: String, password: String) async throws {
         guard let commissioning else {
             return
@@ -170,10 +182,12 @@ public final class AuthSession {
         let result = try await client.changeCredentials(name: name, password: password, token: commissioning.token)
         save(Credentials(name: result.name, token: result.token, role: result.role), methods: result.methods)
         self.commissioning = nil
+        commissioningGuest = false
     }
 
     public func cancelCommissioning() {
         commissioning = nil
+        commissioningGuest = false
     }
 
     /// Takes the sign-in the paired iPhone made, or forgets this one once the iPhone has signed out.
@@ -259,17 +273,31 @@ public final class AuthSession {
         }
     }
 
-    public func createAccount(name: String, password: String, role: AccountRole) async throws -> AccountInfo {
+    public func createAccount(name: String, password: String, role: AccountRole, expiresAt: Date? = nil) async throws -> AccountInfo {
         try await authorized(.manageAccounts) { client, token in
-            try await client.createAccount(name: name, password: password, role: role, token: token)
+            try await client.createAccount(name: name, password: password, role: role, expiresAt: expiresAt, token: token)
         }
     }
 
-    /// Changes an account's role, resets its password, or both; picks up a change to this
-    /// account's own role.
-    public func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil) async throws -> AccountInfo {
+    /// An operator with a generated name and a QR code that lets it in once to choose a password.
+    public func createGuest(expiry: AccountExpiry) async throws -> AccountInfo {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.createGuest(expiry: expiry, token: token)
+        }
+    }
+
+    public func deleteArchivedAccounts() async throws {
+        try await authorized(.manageAccounts) { client, token in
+            try await client.deleteArchivedAccounts(token: token)
+        }
+    }
+
+    /// Changes an account's role or expiry, resets its password, or any of them; picks up a
+    /// change to this account's own role.
+    public func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil,
+                              expiry: AccountExpiry? = nil) async throws -> AccountInfo {
         let updated = try await authorized(.manageAccounts) { client, token in
-            try await client.updateAccount(name, role: role, password: password, token: token)
+            try await client.updateAccount(name, role: role, password: password, expiry: expiry, token: token)
         }
         if name == credentials?.name {
             await refreshAccount()

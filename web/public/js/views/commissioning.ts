@@ -1,13 +1,15 @@
 import { errorMessageOf } from '../types.js';
-// Shown after signing in with the default admin / admin account: the account must be renamed and
-// given a new password before it can change anything.
+// Shown after signing in with the default admin / admin account, which must be renamed and given a
+// new password before it can change anything, and after a guest signs in with the code in its
+// link, which must choose a password.
 
 import { h, openDialog } from '../dom.js';
 import { DEFAULT_ADMIN, MINIMUM_PASSWORD_LENGTH } from '../model.js';
 import { formSection, formRow, sheetHeader, textInput, passwordInput, revealer, spinner } from '../ui.js';
 
 const openCommissioning = (store: any) => {
-    let name = '';
+    const guest = store.commissioning.guest ? store.commissioning.email : null;
+    let name = guest || '';
     let password = '';
     let confirmation = '';
     let saving = false;
@@ -15,7 +17,7 @@ const openCommissioning = (store: any) => {
 
     /** why the entries can't be saved yet, once something has been typed */
     const problem = () => {
-        if (name.trim().toLowerCase() === DEFAULT_ADMIN) {
+        if (!guest && name.trim().toLowerCase() === DEFAULT_ADMIN) {
             return `Choose an account name other than ${DEFAULT_ADMIN}.`;
         }
         if (password && password.length < MINIMUM_PASSWORD_LENGTH) {
@@ -53,7 +55,7 @@ const openCommissioning = (store: any) => {
         type,
         value,
         autocomplete,
-        onInput: (v) => { set(v); dialog.update(); },
+        onInput: (v: any) => { set(v); dialog.update(); },
         onEnter: save
     }));
 
@@ -61,15 +63,20 @@ const openCommissioning = (store: any) => {
         const message = errorMessage || problem();
         return [
             sheetHeader({
-                title: 'Set Up Account',
+                title: guest ? 'Choose a Password' : 'Set Up Account',
                 leading: h('button', { class: 'bar-button', type: 'button', disabled: saving, onClick: () => store.cancelCommissioning() }, 'Cancel'),
                 trailing: saving ? spinner() : h('button', { class: 'bar-button strong', type: 'button', disabled: !canSave(), onClick: save }, 'Save')
             }),
             h('form', { class: 'sheet-content form', onSubmit: (event: any) => { event.preventDefault(); save(); } },
-                formSection({}, h('p', { class: 'sheet-intro' },
-                    `This server still has its default ${DEFAULT_ADMIN} account. Choose your own account name and password. Once you save, ${DEFAULT_ADMIN} / ${DEFAULT_ADMIN} no longer signs in.`)),
+                formSection({}, h('p', { class: 'sheet-intro' }, guest
+                    ? `Welcome, ${guest}. Choose a password for this account. From now on you sign in with it, and the link you used no longer does.`
+                    : `This server still has its default ${DEFAULT_ADMIN} account. Choose your own account name and password. Once you save, ${DEFAULT_ADMIN} / ${DEFAULT_ADMIN} no longer signs in.`)),
                 formSection({ header: 'Your Account', footer: message, footerClass: 'error' },
-                    field('Account Name', name, (v: any) => { name = v; }, 'text', 'username'),
+                    guest
+                        // a hidden name field lets the browser save the password under it
+                        ? formRow(h('span', { class: 'label' }, 'Account Name'), h('span', { class: 'value' }, guest),
+                            h('input', { type: 'text', name: 'username', autocomplete: 'username', value: guest, hidden: true, readonly: true }))
+                        : field('Account Name', name, (v: any) => { name = v; }, 'text', 'username'),
                     field('New Password', password, (v: any) => { password = v; }, 'password', 'new-password'),
                     field('Confirm Password', confirmation, (v: any) => { confirmation = v; }, 'password', 'new-password')))
         ];
@@ -81,12 +88,12 @@ const openCommissioning = (store: any) => {
 
 /** opens the set-up sheet whenever the store is commissioning, wherever the page is */
 export const watchCommissioning = (app: any) => {
-    const { store } = app;
     let dialog: any = null;
-    store.subscribe(() => {
-        if (store.commissioning && !dialog) {
-            dialog = openCommissioning(store);
-        } else if (!store.commissioning && dialog) {
+    return app.store.subscribe(() => {
+        if (app.store.commissioning && !dialog) {
+            dialog = openCommissioning(app.store);
+            dialog.closed.then(() => { dialog = null; });
+        } else if (!app.store.commissioning && dialog) {
             dialog.close();
             dialog = null;
         }

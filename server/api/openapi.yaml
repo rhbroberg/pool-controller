@@ -1069,8 +1069,20 @@ paths:
     get:
       tags:
         - User management
-      description: "admin: every account and its role"
+      description: "admin: every account, its role and its dates. Accounts past their
+        expiry are archived first. Archived accounts are left out unless asked for."
       operationId: listUsers
+      parameters:
+        - name: archived
+          in: query
+          description: exclude (the default) leaves archived accounts out, include lists
+            them with the rest, only lists nothing else
+          schema:
+            type: string
+            enum:
+              - exclude
+              - include
+              - only
       responses:
         "200":
           description: the accounts, by name
@@ -1087,7 +1099,8 @@ paths:
     post:
       tags:
         - User management
-      description: "admin: adds an account; role defaults to user"
+      description: "admin: adds an account; role defaults to user. With expiresAt, it is
+        archived once that passes; admins don't expire."
       operationId: createUser
       requestBody:
         content:
@@ -1119,6 +1132,101 @@ paths:
       security:
         - OAuth2:
             - admin
+      x-swagger-router-controller: UserManagement
+  /users/guests:
+    post:
+      tags:
+        - User management
+      description: "admin: adds a guest, an operator with a generated name such as
+        sunny-otter and no password. Its setupCode, with the server's address and the
+        name, makes the link and QR code that let the guest in to set a password (see
+        loginGuest). It expires in a week unless another expiresAt, or null for none,
+        is given."
+      operationId: createGuest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestOptions"
+        description: when the guest expires
+        required: false
+      x-codegen-request-body-name: options
+      responses:
+        "200":
+          description: the new guest, with its setupCode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: the expiry is not a date in the future
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: password sign-in is turned off, so a guest couldn't set one
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+  /users/archived:
+    delete:
+      tags:
+        - User management
+      description: "admin: removes every archived account"
+      operationId: deleteArchivedUsers
+      responses:
+        "200":
+          description: how many were removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+      security:
+        - OAuth2:
+            - admin
+      x-swagger-router-controller: UserManagement
+  /users/login/guest:
+    post:
+      tags:
+        - User management
+      description: signs a guest in with the one-time code from its link or QR code. The
+        token, as with mustChangeCredentials, is only good for setting a password with
+        changeCredentials; after that the code no longer works and the guest signs in
+        with its password.
+      operationId: loginGuest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestCredentials"
+        description: the guest's name (in email) and code
+        required: true
+      x-codegen-request-body-name: credentials
+      responses:
+        "200":
+          description: the guest, with mustChangeCredentials and a token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: the link isn't valid, or the guest has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "409":
+          description: the guest has already set a password, and signs in with it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
       x-swagger-router-controller: UserManagement
   /users/login:
     post:
@@ -1186,8 +1294,9 @@ paths:
     put:
       tags:
         - User management
-      description: "admin: changes an account's role, or resets its password and signs
-        it out everywhere. The last admin cannot be demoted."
+      description: "admin: changes an account's role or expiry, or resets its password
+        and signs it out everywhere. The last admin cannot be demoted, admins don't
+        expire, and archived accounts can't be changed."
       operationId: updateUser
       parameters:
         - name: name
@@ -2120,10 +2229,38 @@ components:
         mustChangeCredentials:
           type: boolean
           description: true for the default admin account, whose token only works for
-            changeCredentials until it is renamed
+            changeCredentials until it is renamed, and for a guest signed in with its
+            link, until it sets a password
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when an admin creates an account, when it is archived; none if
+            left out
       example:
         password: password
         email: email
+    GuestOptions:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when the guest is archived; a week from now if left out, never if
+            null
+    GuestCredentials:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          description: the guest's name
+        code:
+          type: string
+          description: the one-time code from its link or QR code
     Account:
       type: object
       properties:
@@ -2146,6 +2283,35 @@ components:
         displayName:
           type: string
           description: the name a sign-in service gave
+        guest:
+          type: boolean
+          description: made with POST /users/guests
+        setupCode:
+          type: string
+          nullable: true
+          description: "admin only: a guest's one-time code, for its link and QR code,
+            until it has set a password"
+        createdAt:
+          type: string
+          format: date-time
+        firstSignInAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastSignInAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when it is archived; none for an account that doesn't expire
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: when it expired and stopped signing in
       example:
         email: rick
         role: admin
@@ -2153,6 +2319,12 @@ components:
         methods:
           - password
           - google
+        guest: false
+        createdAt: 2026-11-01T12:00:00.000Z
+        firstSignInAt: 2026-11-01T12:05:00.000Z
+        lastSignInAt: 2026-11-12T08:30:00.000Z
+        expiresAt: null
+        archivedAt: null
     AccountUpdate:
       type: object
       properties:
@@ -2165,6 +2337,11 @@ components:
         password:
           type: string
           description: a new password; the account is signed out everywhere
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: a new expiry, or null for none
       example:
         role: viewer
     Ticket:

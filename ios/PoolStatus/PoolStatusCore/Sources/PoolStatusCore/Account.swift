@@ -84,21 +84,119 @@ public nonisolated struct AccountInfo: Decodable, Identifiable, Hashable, Sendab
     public let methods: [String]?
     /// The name a sign-in service gave.
     public let displayName: String?
+    /// Made with the guest shortcut; nil from older servers.
+    public let guest: Bool?
+    /// A guest's one-time code, for its link and QR code, until it has chosen a password; only
+    /// admins see it.
+    public let setupCode: String?
+    /// Nil from older servers, which don't keep these.
+    public let createdAt: Date?
+    public let firstSignInAt: Date?
+    public let lastSignInAt: Date?
+    /// When it's archived and stops signing in; nil for an account that doesn't expire.
+    public let expiresAt: Date?
+    public let archivedAt: Date?
 
     public var id: String { name }
     /// True until the server says otherwise.
     public var hasPassword: Bool { methods?.contains(SignInMethodID.password) ?? true }
+    public var isGuest: Bool { guest == true }
+    public var isArchived: Bool { archivedAt != nil }
 
-    public init(name: String, role: AccountRole, mustChangeCredentials: Bool? = nil, methods: [String]? = nil, displayName: String? = nil) {
+    public init(name: String, role: AccountRole, mustChangeCredentials: Bool? = nil, methods: [String]? = nil, displayName: String? = nil,
+                guest: Bool? = nil, setupCode: String? = nil, createdAt: Date? = nil, firstSignInAt: Date? = nil,
+                lastSignInAt: Date? = nil, expiresAt: Date? = nil, archivedAt: Date? = nil) {
         self.name = name
         self.role = role
         self.mustChangeCredentials = mustChangeCredentials
         self.methods = methods
         self.displayName = displayName
+        self.guest = guest
+        self.setupCode = setupCode
+        self.createdAt = createdAt
+        self.firstSignInAt = firstSignInAt
+        self.lastSignInAt = lastSignInAt
+        self.expiresAt = expiresAt
+        self.archivedAt = archivedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name = "email", role, mustChangeCredentials, methods, displayName
+        case name = "email", role, mustChangeCredentials, methods, displayName, guest, setupCode
+        case createdAt, firstSignInAt, lastSignInAt, expiresAt, archivedAt
+    }
+}
+
+/// A new expiry for an account.
+public nonisolated enum AccountExpiry: Sendable, Equatable {
+    case never
+    case at(Date)
+
+    /// What the server takes: an ISO 8601 time, or null.
+    var serverValue: String? {
+        switch self {
+        case .never: nil
+        case .at(let date): date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+        }
+    }
+}
+
+/// A guest's link, as its QR code holds it: the web page at the pool's server, which lets the
+/// guest in once with its code to choose a password, or once it has one, asks for it. The app
+/// reads the server, name and code from it to do the same.
+public nonisolated struct GuestLink: Equatable, Sendable {
+    /// With its scheme, as in `https://pool.example.com:8443`.
+    public let serverAddress: String
+    public let name: String
+    /// Nil once the guest has chosen a password.
+    public let code: String?
+
+    public init(serverAddress: String, name: String, code: String?) {
+        self.serverAddress = serverAddress
+        self.name = name
+        self.code = code
+    }
+
+    /// Reads `https://host[:port]/#/join?name=…&code=…`; nil for anything else.
+    public init?(_ text: String) {
+        guard let components = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme),
+              let host = components.host, !host.isEmpty,
+              let fragment = components.fragment else {
+            return nil
+        }
+        let parts = fragment.split(separator: "?", maxSplits: 1).map(String.init)
+        guard parts.first == "/join", parts.count == 2,
+              let items = URLComponents(string: "?\(parts[1])")?.queryItems,
+              let name = items.first(where: { $0.name == "name" })?.value?.trimmingCharacters(in: .whitespaces), !name.isEmpty else {
+            return nil
+        }
+        let port = components.port.map { ":\($0)" } ?? ""
+        serverAddress = "\(scheme)://\(host)\(port)"
+        self.name = name
+        code = items.first { $0.name == "code" }?.value.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The link for `account` on the server at `serverAddress`, as the web page makes it.
+    public static func url(serverAddress: String, account: AccountInfo) -> URL? {
+        var base = serverAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !base.contains("://") {
+            base = "\(StatusClient.defaultScheme(for: base))://\(base)"
+        }
+        while base.hasSuffix("/") {
+            base.removeLast()
+        }
+        var query = URLComponents()
+        query.queryItems = [URLQueryItem(name: "name", value: account.name)]
+            + (account.setupCode.map { [URLQueryItem(name: "code", value: $0)] } ?? [])
+        guard let encoded = query.percentEncodedQuery else {
+            return nil
+        }
+        return URL(string: "\(base)/#/join?\(encoded)")
+    }
+
+    /// Whether `address`, as a site keeps it, is this link's server.
+    public func isServer(_ address: String) -> Bool {
+        ServerAddress.display(address).lowercased() == ServerAddress.display(serverAddress).lowercased()
     }
 }
 

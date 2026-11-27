@@ -354,6 +354,50 @@ export const isAdmin = (role: string | null | undefined) => role === 'admin';
 
 export const DEFAULT_ADMIN = 'admin';
 export const MINIMUM_PASSWORD_LENGTH = 6;
+/** how long a guest lasts unless an admin picks otherwise, as the server has it */
+export const GUEST_DAYS = 7;
+
+/**
+ * the link in a guest's QR code: this page at origin, which signs the guest in with its one-time
+ * code to set a password, or, once it has one, asks for it. The iPhone app reads the server's
+ * address from it too.
+ **/
+export const guestLink = (origin: string, account: { email: string; setupCode?: string | null }) => {
+    const params = new URLSearchParams({ name: account.email });
+    if (account.setupCode) {
+        params.set('code', account.setupCode);
+    }
+    return `${origin}/#/join?${params}`;
+};
+
+const asDate = (value: unknown) => value ? new Date(value as string | number | Date) : null;
+
+/**
+ * the line under an account in the list, and whether it's a warning: archived, a guest that
+ * hasn't used its link yet, or when it expires
+ **/
+export const accountNote = (
+    account: { archivedAt?: unknown; mustChangeCredentials?: boolean; guest?: boolean; setupCode?: string | null; expiresAt?: unknown },
+    { relative, formatDate }: { relative: (date: Date | number, now?: number) => string; formatDate: (date: Date | number) => string },
+    now = new Date()
+) => {
+    const archivedAt = asDate(account.archivedAt);
+    if (archivedAt) {
+        return { text: `Archived ${formatDate(archivedAt)}`, warning: false };
+    }
+    if (account.mustChangeCredentials && !account.guest) {
+        return { text: 'Not set up yet', warning: true };
+    }
+    const parts = [];
+    if (account.guest) {
+        parts.push(account.setupCode ? 'Guest · hasn’t used the link yet' : 'Guest');
+    }
+    const expiresAt = asDate(account.expiresAt);
+    if (expiresAt) {
+        parts.push(`expires ${relative(expiresAt, now.getTime())}`);
+    }
+    return parts.length ? { text: parts.join(' · '), warning: false } : null;
+};
 
 /**
  * the builds in use: this page's web service, the pool server, and the API version it serves;

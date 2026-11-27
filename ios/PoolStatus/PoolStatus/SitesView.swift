@@ -10,6 +10,10 @@ struct SitesView: View {
     @AppStorage(SettingsKey.reconnectSeconds) private var reconnectSeconds = StatusStore.defaultReconnectSeconds
     @State private var editing: Site?
     @State private var removing: Site?
+    @State private var scanningCode = false
+    /// A scanned guest code whose server is being tried.
+    @State private var openingLink: GuestLink?
+    @State private var linkError: String?
 
     private var sites: [Site] { session.sites.sites }
 
@@ -58,12 +62,44 @@ struct SitesView: View {
                     ContentUnavailableView {
                         Label("No Pools Yet", systemImage: "figure.pool.swim")
                     } description: {
-                        Text("Add the server attached to your pool controller to get started.")
+                        Text("Add the server attached to your pool controller to get started, or scan the guest QR code an admin shared with you.")
                     } actions: {
                         Button("Add Site") { session.isAddingSite = true }
                             .buttonStyle(.borderedProminent)
+                        Button {
+                            scanningCode = true
+                        } label: {
+                            if openingLink != nil {
+                                ProgressView()
+                            } else {
+                                Label("Scan a Guest QR Code", systemImage: "qrcode.viewfinder")
+                            }
+                        }
+                        .disabled(openingLink != nil)
                     }
                 }
+            }
+            .sheet(isPresented: $scanningCode) {
+                ScanGuestCodeView { link in
+                    openingLink = link
+                }
+            }
+            .task(id: openingLink) {
+                if let link = openingLink {
+                    do {
+                        try await session.open(link)
+                    } catch {
+                        if !error.isCancellation {
+                            linkError = String(localized: "Couldn’t reach \(ServerAddress.display(link.serverAddress)). \(error.localizedDescription)")
+                        }
+                    }
+                    openingLink = nil
+                }
+            }
+            .alert("Couldn’t Add the Pool", isPresented: Binding(isPresent: $linkError)) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(linkError ?? "")
             }
             .navigationTitle("Sites")
             .toolbar {

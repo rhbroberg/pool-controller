@@ -210,22 +210,43 @@ public nonisolated struct StatusClient: Sendable {
 
     // MARK: Administration
 
+    /// Every account, archived ones too, which an older server leaves out or doesn't have.
     public func listAccounts(token: String) async throws -> [AccountInfo] {
-        try await send(.get, "users", token: token)
+        try await send(.get, "users", query: [URLQueryItem(name: "archived", value: "include")], token: token)
     }
 
-    public func createAccount(name: String, password: String, role: AccountRole, token: String) async throws -> AccountInfo {
-        try await send(.post, "users", token: token, body: NewAccountBody(email: name, password: password, role: role))
+    public func createAccount(name: String, password: String, role: AccountRole, expiresAt: Date? = nil,
+                              token: String) async throws -> AccountInfo {
+        try await send(.post, "users", token: token,
+                       body: NewAccountBody(email: name, password: password, role: role,
+                                            expiresAt: expiresAt.flatMap { AccountExpiry.at($0).serverValue }))
     }
 
-    /// Changes another account's role, resets its password, or both.
-    public func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil, token: String) async throws -> AccountInfo {
+    /// An operator with a generated name and a one-time code for its link and QR code.
+    public func createGuest(expiry: AccountExpiry, token: String) async throws -> AccountInfo {
+        try await send(.post, "users/guests", token: token, body: GuestBody(expiresAt: expiry.serverValue))
+    }
+
+    /// Changes another account's role or expiry, resets its password, or any of them.
+    public func updateAccount(_ name: String, role: AccountRole? = nil, password: String? = nil, expiry: AccountExpiry? = nil,
+                              token: String) async throws -> AccountInfo {
         try await send(.put, "users/\(Self.pathComponent(name))", token: token,
-                       body: AccountChanges(role: role, password: password))
+                       body: AccountChanges(role: role, password: password, expiry: expiry))
     }
 
     public func deleteAccount(_ name: String, token: String) async throws {
         try await perform(.delete, "users/\(Self.pathComponent(name))", token: token)
+    }
+
+    /// Removes every archived account.
+    public func deleteArchivedAccounts(token: String) async throws {
+        try await perform(.delete, "users/archived", token: token)
+    }
+
+    /// Signs a guest in with the code from its link; the token is only good for choosing a
+    /// password, which `changeCredentials` does.
+    public func signInAsGuest(name: String, code: String) async throws -> SignInResult {
+        try await send(.post, "users/login/guest", body: GuestCodeBody(email: name, code: code))
     }
 
     // MARK: Sign-in services
@@ -507,12 +528,46 @@ public nonisolated struct StatusClient: Sendable {
         let email: String
         let password: String
         let role: AccountRole
+        let expiresAt: String?
     }
 
-    /// Only the fields being changed are sent.
+    /// The server takes a null expiry as never, and a missing one as a week.
+    private struct GuestBody: Encodable {
+        let expiresAt: String?
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(expiresAt, forKey: .expiresAt)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case expiresAt
+        }
+    }
+
+    private struct GuestCodeBody: Encodable {
+        let email: String
+        let code: String
+    }
+
+    /// Only the fields being changed are sent; an expiry of never is sent as null.
     private struct AccountChanges: Encodable {
         let role: AccountRole?
         let password: String?
+        let expiry: AccountExpiry?
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(role, forKey: .role)
+            try container.encodeIfPresent(password, forKey: .password)
+            if let expiry {
+                try container.encode(expiry.serverValue, forKey: .expiresAt)
+            }
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case role, password, expiresAt
+        }
     }
 
     private struct TicketBody: Encodable {

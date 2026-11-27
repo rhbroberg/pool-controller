@@ -57,6 +57,12 @@ export const formatDurationSeconds = (seconds: number) => {
     return minutes === 1 ? '1 minute' : `${minutes} minutes`;
 };
 
+/** "2026-11-12T19:30" in local time, as a datetime-local input takes it */
+export const localInputValue = (date: Date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 /** "0:27", the time left until a date */
 export const countdown = (date: Date | number, now = Date.now()) => {
     const left = Math.max(0, Math.ceil(((date instanceof Date ? date.getTime() : date) - now) / 1000));

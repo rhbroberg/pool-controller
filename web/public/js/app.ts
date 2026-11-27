@@ -19,9 +19,13 @@ import { watchCommissioning } from './views/commissioning.js';
 import { mountSignIn } from './views/sign-in.js';
 import { mountSignInComplete } from './views/signin-complete.js';
 import { mountSignInSettings } from './views/sign-in-settings.js';
+import { mountJoin } from './views/join.js';
 
-// a sign-in through a service comes back here, so it shows whether or not anyone is signed in
-const SIGNED_OUT_ROUTE = /^signin\/complete$/;
+// a sign-in through a service comes back here, and a guest's link opens join, so they show
+// whether or not anyone is signed in
+const SIGNED_OUT_ROUTE = /^(signin\/complete|join)$/;
+// signing out from a guest's link carries on with it, signed out
+const JOIN_ROUTE = /^join$/;
 
 type RouteHandler = (root: HTMLElement, app: any, match: string[], query: URLSearchParams) => any;
 const ROUTES: [RegExp, RouteHandler][] = [
@@ -38,7 +42,8 @@ const ROUTES: [RegExp, RouteHandler][] = [
     [/^maintenance$/, (root, app) => mountMaintenance(root, app)],
     [/^maintenance\/reprocess$/, (root, app) => mountReprocess(root, app)],
     [/^sign-in$/, (root, app) => mountSignInSettings(root, app)],
-    [/^signin\/complete$/, (root, app, _, query) => mountSignInComplete(root, app, query)]
+    [/^signin\/complete$/, (root, app, _, query) => mountSignInComplete(root, app, query)],
+    [/^join$/, (root, app, _, query) => mountJoin(root, app, query)]
 ];
 
 const client = new Client();
@@ -97,13 +102,18 @@ const route = () => {
 window.addEventListener('hashchange', route);
 
 // signing in shows the page asked for; signing out, or a sign-in the server stops accepting,
-// starts over at the sign-in page, and a service's sign-in, once finished, opens the dashboard
+// starts over at the sign-in page, except on a guest's link, and a service's sign-in or a
+// guest's new password, once finished, opens the dashboard
 store.subscribe(() => {
     const signedIn = Boolean(store.credentials);
     if (signedIn === shownSignedIn) {
         return;
     }
     const path = location.hash.replace(/^#\/?/, '').split('?')[0];
+    if (!signedIn && JOIN_ROUTE.test(path)) {
+        route();
+        return;
+    }
     if ((!signedIn || SIGNED_OUT_ROUTE.test(path)) && path !== '') {
         // the hash change routes
         location.replace('#/');

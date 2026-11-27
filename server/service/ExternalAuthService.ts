@@ -460,7 +460,13 @@ export async function exchangeTicket(ticket: string | undefined) {
     if (!entry || !account) {
         throw fail(401, 'that sign-in has expired; sign in again');
     }
-    account.lastSignInAt = new Date();
+    if (!account.isActive()) {
+        if (!account.archivedAt) {
+            await User.archiveExpired();
+        }
+        throw fail(401, 'this account has expired');
+    }
+    account.recordSignIn();
     const token = await account.generateAuthToken();
     logger.info(`signed in ${account.email} (${account.role}) with ${entry.provider}`);
     activity.record(account, `Signed in with ${entry.provider}`);

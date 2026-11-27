@@ -20,7 +20,21 @@ export function createUser(req: AuthedRequest, res: Response) {
 };
 
 export function listUsers(req: AuthedRequest, res: Response) {
-    respond(res, UserManagement.listUsers());
+    const archived = swaggerValue<string | undefined>(req, 'archived');
+    respond(res, UserManagement.listUsers(archived));
+};
+
+export function createGuest(req: AuthedRequest, res: Response) {
+    const options = swaggerValue<Record<string, unknown>>(req, 'options') || {};
+    respond(res, UserManagement.createGuest(req.user, options));
+};
+
+export function deleteArchivedUsers(req: AuthedRequest, res: Response) {
+    respond(res, UserManagement.deleteArchivedUsers(req.user));
+};
+
+export function loginGuest(req: AuthedRequest, res: Response) {
+    respond(res, UserManagement.loginGuest(swaggerValue(req, 'credentials')));
 };
 
 export function updateUser(req: AuthedRequest, res: Response) {
