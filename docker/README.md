@@ -32,6 +32,11 @@ On the Pi:
     make logs
     make down
 
+Or pull images built elsewhere (below) instead of building on the Pi:
+
+    export POOL_JWT_SECRET=... POOL_HE_DDNS_KEY=...
+    make up-pull   # docker compose pull, then up -d
+
 The containers restart with the Pi, keeping the secrets they were created with; export them again
 only to recreate a container, after changing `.env` or pulling a new version.
 
@@ -39,6 +44,21 @@ only to recreate a container, after changing `.env` or pulling a new version.
 the images as `POOL_GIT_COMMIT`; the page's and the app's Settings show it, and so does
 `GET /system/info`. Running `docker compose` directly builds images that report `unknown` unless
 `POOL_GIT_COMMIT` is exported first.
+
+## Building for the Pi from macOS
+
+The Pi runs `linux/arm64`. From this repo's `docker/` directory on a Mac (Docker Desktop with
+buildx; Apple Silicon builds natively, Intel uses QEMU):
+
+    make build-rpi   # arm64 images in the local docker store
+    make push-rpi    # same build, pushed to Docker Hub (needs docker login)
+
+Then on the Pi, with the same image names already in `docker-compose.yml`:
+
+    make up-pull
+
+`IMAGE_TAG` defaults to `latest`; override if you tag something else
+(`IMAGE_TAG=abc123 make push-rpi`). `make up` on the Pi still builds locally if you prefer that.
 
 ## Checking the images for vulnerabilities
 

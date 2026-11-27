@@ -58,4 +58,8 @@ Encrypt's staging CA, then start it with the secrets in the environment:
     make up
     make logs    # caddy logs "certificate obtained successfully" within a minute or two
 
+To build the arm64 images on a Mac instead of on the Pi, run `make push-rpi` from `docker/`
+there (after `docker login`), then on the Pi use `make up-pull` instead of `make up`. See
+README.md, "Building for the Pi from macOS".
+
 Once it has, set POOL_ACME_CA back to production and run make up again (README.md, step 7).
