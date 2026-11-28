@@ -19,8 +19,8 @@ const MINUTE_MS = 60 * 1000;
 // the sensor is in the plumbing: after the pump starts it shows what sat there before for a while
 const DEFAULT_SETTLE_MINUTES = 15;
 
-// stands in until the server can read the controller's setpoints and send it new ones: every
-// setpoint starts at 80, and a change lasts until the server restarts without reaching the controller
+// used when there is no controller path (no serial Settings menu, no simulator): every setpoint
+// starts at 80, and a change lasts until the server restarts
 var memorySetpoints = () => {
     const values: any = {};
     heating.BODIES.forEach((body: any) => {
@@ -41,9 +41,11 @@ var memorySetpoints = () => {
 var setpoints = memorySetpoints();
 // { filter, spaFilter, waterMode, enabled: { heater1, heatpump }, heaterFiring, temperatures: { pool, spa }, ambient }
 var stateSource = () => ({ enabled: {} as Record<string, any>, temperatures: {} as Record<string, any>, heaterFiring: false as boolean });
+var changeListeners = [] as Array<() => void>;
 
 /**
- * replaces the stand-in setpoints with a driver's own, such as the simulator's
+ * replaces the stand-in setpoints with a driver's own, such as the simulator's or the
+ * Settings-menu store that talks to a live AquaLogic panel
  *
  * store  { reachesController, get(body, device), set(body, device, degrees) }
  **/
@@ -53,6 +55,21 @@ export function registerSetpoints(store: any) {
 
 export function registerStateSource(source: any) {
     stateSource = source;
+};
+
+/** told after a setpoint change so live updates can push GET /heating */
+export function onChange(listener: () => void) {
+    changeListeners.push(listener);
+};
+
+var notifyChanged = () => {
+    changeListeners.forEach((listener) => {
+        try {
+            listener();
+        } catch (e: any) {
+            logger.warn(`heating onChange listener: ${errorMessageOf(e)}`);
+        }
+    });
 };
 
 // the body the pumps have been driving toward and since when; unknown (null) until it changes
@@ -251,6 +268,10 @@ export async function getSetpoint(body: any, device: any) {
 };
 
 /**
+ * sets the temperature one heating device drives one body of water toward. With the
+ * Settings-menu store this opens the panel's Settings row (Spa/Pool × Heater1/Heat Pump)
+ * and taps +/−; otherwise the value is kept only in memory.
+ *
  * returns SetpointChange
  **/
 export async function setSetpoint(body: any, device: any, degrees: any, user: any) {
@@ -270,10 +291,21 @@ export async function setSetpoint(body: any, device: any, degrees: any, user: an
     if (previous === degrees) {
         logger.info(`REST ${who}: ${what} already ${degrees}°F`);
         activity.record(user, `Asked for a ${what} of ${degrees}°F; it already was`);
-    } else {
-        setpoints.set(body, device, degrees);
-        logger.info(`REST ${who}: ${what} ${previous} -> ${degrees}°F${setpoints.reachesController ? '' : ' (kept by the server; not sent to the controller)'}`);
-        activity.record(user, `Changed the ${what} from ${previous}°F to ${degrees}°F`);
+        return { body: body, device: device, setpoint: degrees, previousSetpoint: previous, units: 'fahrenheit' };
     }
+
+    try {
+        // the Settings-menu store returns a Promise; the in-memory and simulator stores do not
+        await Promise.resolve(setpoints.set(body, device, degrees));
+    } catch (e: any) {
+        logger.warn(`REST ${who}: could not set ${what} to ${degrees}°F: ${errorMessageOf(e)}`);
+        throw utils.respondWithCode(503, {
+            code: 503,
+            message: `couldn’t set the ${what} on the controller: ${errorMessageOf(e)}`
+        });
+    }
+    logger.info(`REST ${who}: ${what} ${previous} -> ${degrees}°F${setpoints.reachesController ? '' : ' (kept by the server; not sent to the controller)'}`);
+    activity.record(user, `Changed the ${what} from ${previous}°F to ${degrees}°F`);
+    notifyChanged();
     return { body: body, device: device, setpoint: degrees, previousSetpoint: previous, units: 'fahrenheit' };
 };

@@ -90,6 +90,8 @@ const startupChecked = mongoose.connection.asPromise()
 
 // a new model changes every estimate at once
 heatingModelService.onChange(() => liveService.heatingChanged());
+// a setpoint change (including one written through the Settings menu) refreshes every app
+heatingService.onChange(() => liveService.heatingChanged());
 // a preheat scheduled, cancelled or started shows on every app at once
 taskService.onChange(() => liveService.tasksChanged());
 
@@ -449,21 +451,20 @@ var waterModeListener = ((target: string, requestedBy: string) => {
 
 const panelKeys = ['menu', 'left', 'right', 'minus', 'plus'];
 
-// menu and arrow keys change what the panel displays, not a status bit, so they are
-// sent once and never verified
-var panelKeyListener = ((key: string, requestedBy: string) => {
+// menu/arrow/+/- change the display one step per press. Unlike equipment toggles, repeating the
+// same frame on later keep-alives is another press — so queue exactly one frame, never ×N.
+var queuePanelKey = (key: string, requestedBy: string) => {
     if (!panelKeys.includes(key)) {
         throw new Error(`'${key}' is not a panel navigation key`);
     }
-
     var press = new ControlEvent();
     press.toggleControls([key]);
-    // three keep-alive-timed presses: USB-RS485 drops frames often enough that one is unreliable
-    const wire = stuff(press.payload());
-    for (let n = 0; n < 3; n++) {
-        driver.writeEvent(wire);
-    }
-    logger.debug(`queued panel key ${key} ×3 for ${requestedBy}`);
+    driver.writeEvent(stuff(press.payload()));
+    logger.debug(`queued panel key ${key} ×1 for ${requestedBy}`);
+};
+
+var panelKeyListener = ((key: string, requestedBy: string) => {
+    queuePanelKey(key, requestedBy);
 });
 
 if (argv.d === 'file') {
@@ -506,8 +507,34 @@ heatingService.registerStateSource(() => ({
     temperatures: { pool: knownTemp('pool temp'), spa: knownTemp('spa temp') },
     ambient: knownTemp('ambient')
 }));
+var menuSetpoints: { refresh: () => Promise<unknown> } | undefined;
 if (driver && driver.setpoints) {
     heatingService.registerSetpoints(driver.setpoints);
+} else if (argv.d === 'serial') {
+    // real panel: PUT /heating/setpoints/{pool|spa}/{heater1|heatpump}/°F walks Settings
+    const { createSetpointStore } = require('./protocol/setpointMenu');
+    menuSetpoints = createSetpointStore({
+        press: (key: string) => queuePanelKey(key, 'setpoint menu'),
+        // drop any unsent frame once the LCD has moved, so a late keep-alive cannot double-step
+        clearPending: () => {
+            if (typeof driver.cancelPending === 'function') {
+                driver.cancelPending();
+            }
+        },
+        display: () => latestDisplay
+    });
+    heatingService.registerSetpoints(menuSetpoints);
+    const pullFromPanel = (why: string) => menuSetpoints!.refresh()
+        .then(() => liveService.heatingChanged())
+        .catch((e: any) => logger.warn(`could not read setpoints from Settings (${why}): ${e.message}`));
+    const refreshWhenShown = setInterval(() => {
+        if (!latestDisplay) {
+            return;
+        }
+        clearInterval(refreshWhenShown);
+        pullFromPanel('panel display up');
+    }, 5000);
+    refreshWhenShown.unref?.();
 }
 // heater1 counts as on in Auto, as isSwitchOn has it
 taskService.registerStateSource(() => ({
@@ -528,6 +555,19 @@ systemService.registerResetListener(() => {
     heatingModelService.load().then(() => liveService.heatingChanged()).catch((e: any) => logger.error(`could not reload the heating model: ${e.message}`));
     externalAuthService.load().catch((e: any) => logger.error(`could not reload sign-in settings: ${e.message}`));
     taskService.load().then(() => liveService.tasksChanged()).catch((e: any) => logger.error(`could not reload scheduled tasks: ${e.message}`));
+    // factory reset clears panel setpoints too; re-read Settings once the display returns
+    if (menuSetpoints) {
+        const wait = setInterval(() => {
+            if (!latestDisplay) {
+                return;
+            }
+            clearInterval(wait);
+            menuSetpoints!.refresh()
+                .then(() => liveService.heatingChanged())
+                .catch((e: any) => logger.warn(`could not re-read setpoints after reset: ${e.message}`));
+        }, 5000);
+        wait.unref?.();
+    }
 });
 
 // docker stop and Ctrl-C send these; exiting normally lets coverage and pending writes finish

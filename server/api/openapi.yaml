@@ -411,9 +411,10 @@ paths:
         A device that is enabled calls for heat only while that water is below
         its setpoint, and calls again once it cools. The heater's heating comes
         from the controller's firing signal; the heat pump has none, so it
-        counts as heating while it is enabled and calling for heat. Until the
-        server can read the controller's setpoints, setpointsReachController is
-        false: each starts at 80°F and a change is kept by the server only."
+        counts as heating while it is enabled and calling for heat. On a live
+        panel, setpointsReachController is true and PUT /heating/setpoints walks
+        the Settings menu (Spa/Pool × Heater1/Heat Pump). Without a controller
+        path it is false: each starts at 80°F and a change is kept in memory only."
       operationId: getHeating
       responses:
         "200":
@@ -622,7 +623,11 @@ paths:
     put:
       tags:
         - Heating
-      description: sets the temperature one heating device drives one body of water toward
+      description: "sets the temperature one heating device drives one body of water
+        toward. On a live AquaLogic this opens Settings, finds the Spa/Pool ×
+        Heater1/Heat Pump row, adjusts with +/−, and locks the value in; that can
+        take several seconds. Without a controller path the server only keeps the
+        value itself."
       operationId: setSetpoint
       parameters:
         - $ref: "#/components/parameters/heatedBody"
@@ -2745,8 +2750,9 @@ components:
           type: integer
         setpointsReachController:
           type: boolean
-          description: false while the server keeps the setpoints itself rather than
-            reading and setting the controller's
+          description: true when setpoints are read from and written to the controller
+            (Settings menu on a live panel, or the simulator); false while the server
+            keeps them only in memory
         setpoints:
           type: object
           description: each body's setpoint for each device
