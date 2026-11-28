@@ -433,14 +433,16 @@ class WirelessDisplayEvent extends TextDisplayEvent {
 
 // 10 02 00 83 01 [xx yy zz aa] [xx yy zz aa] 00 ckmsb cklsb
 // dox said  0x83, 0x01 but i find 0x00 0x8c
-// 0x8c wireless, 0x03 keypad, 0x02 panel
+// 0x8c wireless, 0x03 keypad, 0x02 panel. POOL_CONTROL_DEST overrides the LSB (hex).
 class ControlEvent extends ChecksummedEvent {
     constructor(frame?: Buffer) {
         super(frame, ControlEvent.header());
     }
 
     static header(): number[] {
-        return [0x00, 0x8c];
+        const raw = process.env.POOL_CONTROL_DEST;
+        const dest = raw ? Number.parseInt(raw, 16) : 0x8c;
+        return [0x00, Number.isFinite(dest) ? dest : 0x8c];
     }
 
     static isControl(name: any) {
@@ -543,9 +545,22 @@ class ControlEvent extends ChecksummedEvent {
     }
 
     payload() {
-        this.frame.writeUInt8(0x01, 4);
-        this.frame.writeUInt8(0x00, 13);
-        this.freeze(16);
+        // local/2byte: wired keypad frame (00 02 / 00 03) with a 2-byte key duplicated —
+        // required by older firmware for menu/lights; wireless keeps the 4-byte 00 8c form.
+        const style = (process.env.POOL_CONTROL_STYLE || 'wireless').toLowerCase();
+        if (style === 'local' || style === '2byte' || style === 'wired') {
+            const k0 = this.frame.readUInt8(5);
+            const k1 = this.frame.readUInt8(6);
+            this.frame.writeUInt8(k0, 4);
+            this.frame.writeUInt8(k1, 5);
+            this.frame.writeUInt8(k0, 6);
+            this.frame.writeUInt8(k1, 7);
+            this.freeze(10);
+        } else {
+            this.frame.writeUInt8(0x01, 4);
+            this.frame.writeUInt8(0x00, 13);
+            this.freeze(16);
+        }
 
         logger.debug('payload is ', this.myToHexString(this.frame));
         return this.frame;

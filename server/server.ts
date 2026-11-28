@@ -259,21 +259,6 @@ var dispatchEvent = (buf: Buffer, wire = stuff(buf)) => {
             if (logger.isTraceEnabled()) {
                 streamEvent('heartbeat', undefined);
             }
-            if (controlRequests.length > 0) {
-                const request = controlRequests.shift();
-                if (request.momentary) {
-                    logger.debug(`sending panel key ${request.requestedChange} for ${request.requestedBy}`);
-                    driver.writeEvent(stuff(request.payload));
-                } else if (isSwitchOn(request.requestedChange) === request.desiredOn) {
-                    logger.info(`${request.requestedChange} reached ${request.desiredOn ? 'on' : 'off'} before it was sent for ${request.requestedBy}; not sending`);
-                } else {
-                    request.statusFramesWaited = 0;
-                    controlVerification.push(request);
-
-                    logger.debug('ping calling queued callback');
-                    driver.writeEvent(stuff(request.payload));
-                }
-            }
             break;
         case 'MotorTelemetryEvent':
             logger.debug('motor: ', buf.toString('ascii', 4, buf.length - 2));
@@ -330,18 +315,33 @@ var labelled = (name: string) => panelLabels[name] ? `${name} (${panelLabels[nam
 var isSwitchOn = (name: string) => name === 'heater1' ? interpreter.heaterAuto === 1 : interpreter.enabledSwitches.includes(name);
 
 // a keypress only toggles, so a request is confirmed by watching status frames rather than
-// pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it
+// pressed again; pressing again while a slow change (filter shutdown) is underway would reverse it.
+// Re-send early when USB-RS485 misses the keep-alive window; waiting until frame 20 (~40s)
+// outran the app's confirmation timeout. A second try mid-window covers a flaky first resend.
+const CONTROL_RESEND_AT_STATUS_FRAMES = [5, 15];
 var verifyControlRequests = () => {
     controlVerification = controlVerification.filter((request) => {
-        if (isSwitchOn(request.requestedChange) === request.desiredOn) {
+        const on = isSwitchOn(request.requestedChange);
+        if (on === request.desiredOn) {
             logger.info(`controller confirmed ${labelled(request.requestedChange)} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
+            if (driver.cancelPending) {
+                driver.cancelPending();
+            }
             // half duplex means we won't actually receive this event we just sent, so fake it
             dispatchEvent(request.payload);
             return false;
         }
-        if (++request.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
+        request.statusFramesWaited = (request.statusFramesWaited || 0) + 1;
+        if (request.statusFramesWaited <= 3 || request.statusFramesWaited % 10 === 0) {
+            logger.debug(`waiting for ${request.requestedChange} ${request.desiredOn ? 'on' : 'off'}; now ${on ? 'on' : 'off'}; mask=0x${(interpreter.statusMask >>> 0).toString(16)}; frame ${request.statusFramesWaited}; switches=${interpreter.enabledSwitches.join(',')}`);
+        }
+        if (request.statusFramesWaited >= CONTROL_VERIFY_STATUS_FRAMES) {
             logger.warn(`controller did not confirm ${labelled(request.requestedChange)} ${request.desiredOn ? 'on' : 'off'} for ${request.requestedBy}`);
             return false;
+        }
+        if (CONTROL_RESEND_AT_STATUS_FRAMES.includes(request.statusFramesWaited)) {
+            logger.debug(`re-sending ${request.requestedChange} for ${request.requestedBy} (status frame ${request.statusFramesWaited})`);
+            driver.writeEvent(request.wire || stuff(request.payload));
         }
         return true;
     });
@@ -366,13 +366,26 @@ var controlListener = ((whatChange: string, desiredOn: boolean, requestedBy: str
     logger.debug(`scheduling ${whatChange} ${desiredOn ? 'on' : 'off'}`);
     var updateIt = new ControlEvent();
     updateIt.toggleControls([whatChange]);
-
-    controlRequests.push({
+    const payload = updateIt.payload();
+    const wire = stuff(payload);
+    // Queue immediately; the serial driver transmits on each keep-alive (~1ms window).
+    // Wireless remotes repeat a held key every poll; three copies covers a missed USB turnaround
+    // without looking like separate toggles once the panel sees the press.
+    controlVerification.push({
         requestedChange: whatChange,
         desiredOn: desiredOn,
         requestedBy: requestedBy,
-        payload: updateIt.payload()
+        payload: payload,
+        wire: wire,
+        statusFramesWaited: 0
     });
+    // USB delivers keep-alives in batches, so many polls miss the ~1ms reply window. Queue
+    // enough held-key repeats to cover ~1s of polls; cancelPending drops the rest on confirm.
+    const copies = Math.max(1, Number(process.env.POOL_CONTROL_TX_COPIES || 12) || 12);
+    for (let n = 0; n < copies; n++) {
+        driver.writeEvent(wire);
+    }
+    logger.debug(`queued ${whatChange} ×${copies} for ${requestedBy}`);
 
     return isOn;
 });
@@ -396,12 +409,7 @@ var currentWaterMode = (): string | undefined => {
 var pressSpillover = (requestedBy: string) => {
     var press = new ControlEvent();
     press.toggleControls(['spillover']);
-    controlRequests.push({
-        requestedChange: 'spillover',
-        requestedBy: requestedBy,
-        momentary: true,
-        payload: press.payload()
-    });
+    driver.writeEvent(stuff(press.payload()));
 };
 
 var advanceWaterMode = () => {
@@ -450,12 +458,12 @@ var panelKeyListener = ((key: string, requestedBy: string) => {
 
     var press = new ControlEvent();
     press.toggleControls([key]);
-    controlRequests.push({
-        requestedChange: key,
-        requestedBy: requestedBy,
-        momentary: true,
-        payload: press.payload()
-    });
+    // three keep-alive-timed presses: USB-RS485 drops frames often enough that one is unreliable
+    const wire = stuff(press.payload());
+    for (let n = 0; n < 3; n++) {
+        driver.writeEvent(wire);
+    }
+    logger.debug(`queued panel key ${key} ×3 for ${requestedBy}`);
 });
 
 if (argv.d === 'file') {
