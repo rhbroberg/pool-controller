@@ -1,0 +1,1391 @@
+{
+  "controller": "Hayward AquaLogic / Pro Logic (Main Software 4.40)",
+  "capturedAt": "2026-11-28",
+  "navigation": {
+    "keys": {
+      "menu": "Cycle top-level menus (Default \u2192 Settings \u2192 Timers \u2192 Diagnostic \u2192 Configuration \u2192 \u2026). Observed order below.",
+      "right": "Next item within the current menu (or next submenu item after +).",
+      "left": "Previous item within the current menu.",
+      "plus": "Increase / toggle the blinking field; or enter a '+ to view/change' / '+ to enter' / '+ to start' gate.",
+      "minus": "Decrease / toggle the blinking field.",
+      "unlock": "Hold left+right together on Configuration Menu-Locked \u2192 Menu-Unlocked (auto-relocks after ~2 min idle)."
+    },
+    "topLevelOrder": [
+      "Settings Menu",
+      "Timers Menu",
+      "Diagnostic Menu",
+      "Configuration Menu (Locked|Unlocked)",
+      "Default Menu"
+    ],
+    "notes": [
+      "Idle ~2 minutes returns to Default Menu and auto-scrolls its items.",
+      "Blinking characters mark the editable field for +/-.",
+      "Moving right/left after adjusting locks in the value.",
+      "No persistent value changes were made during this capture; Configuration was unlocked temporarily for read-only inspection.",
+      "Some unused Aux7\u201313 submenu trails may be incomplete due to occasional missed/doubled keypresses on RS-485; Name/Function were confirmed."
+    ]
+  },
+  "menus": {
+    "Default": {
+      "howToReach": "MENU until \"Default / Menu\" (also the idle home screen)",
+      "purpose": "Read-only status rotation; nothing to set",
+      "items": [
+        {
+          "lines": [
+            "Wednesday",
+            "9:48A"
+          ],
+          "editable": true,
+          "nav": "MENU to Default \u2192 RIGHT\u00d71"
+        },
+        {
+          "lines": [
+            "Air Temp   51\u00b0F",
+            ""
+          ],
+          "editable": false,
+          "nav": "MENU to Default \u2192 RIGHT\u00d72"
+        },
+        {
+          "lines": [
+            "Salt Level",
+            "0700 PPM"
+          ],
+          "editable": false,
+          "nav": "MENU to Default \u2192 RIGHT\u00d73"
+        },
+        {
+          "lines": [
+            "Heater1",
+            "Auto Control"
+          ],
+          "editable": false,
+          "nav": "MENU to Default \u2192 RIGHT\u00d74"
+        },
+        {
+          "lines": [
+            "Heat Pump",
+            "Manual Off"
+          ],
+          "editable": false,
+          "nav": "MENU to Default \u2192 RIGHT\u00d75"
+        },
+        {
+          "lines": [
+            "Check System",
+            "Very Low Salt"
+          ],
+          "editable": false,
+          "nav": "MENU to Default \u2192 RIGHT\u00d76"
+        }
+      ]
+    },
+    "Settings": {
+      "howToReach": "MENU until \"Settings / Menu\"",
+      "purpose": "Day-to-day setpoints (temps, chlorinator, clock, beeper, wireless teach)",
+      "items": [
+        {
+          "lines": [
+            "Spa Heater1",
+            "104\u00b0F"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d71"
+        },
+        {
+          "lines": [
+            "Pool Heater1",
+            "Off"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d72"
+        },
+        {
+          "lines": [
+            "Spa Heat Pump",
+            "Manual Off"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d73"
+        },
+        {
+          "lines": [
+            "Pool Heat Pump",
+            "Manual Off"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d74"
+        },
+        {
+          "lines": [
+            "Spa Heat Pump",
+            "Priority: Never"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d75"
+        },
+        {
+          "lines": [
+            "Pool Heat Pump",
+            "Priority: Never"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d76"
+        },
+        {
+          "lines": [
+            "Super Chlorinate",
+            "Off"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d77"
+        },
+        {
+          "lines": [
+            "Pool Chlorinator",
+            "100%"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d78"
+        },
+        {
+          "lines": [
+            "Set Day and Time",
+            "Wednesday  9:49A"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d79"
+        },
+        {
+          "lines": [
+            "Display Light",
+            ""
+          ],
+          "editable": false,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d710"
+        },
+        {
+          "lines": [
+            "Beeper",
+            "Enabled"
+          ],
+          "editable": false,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d711"
+        },
+        {
+          "lines": [
+            "Teach Wireless:",
+            "+ to start"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d712"
+        },
+        {
+          "lines": [
+            "Wireless",
+            "Channel: 2"
+          ],
+          "editable": true,
+          "nav": "MENU to Settings \u2192 RIGHT\u00d713"
+        }
+      ]
+    },
+    "Timers": {
+      "howToReach": "MENU until \"Timers / Menu\"",
+      "purpose": "Timeclocks and countdown durations",
+      "items": [
+        {
+          "lines": [
+            "Pool Filter H1-all",
+            "06:45A to 07:30P"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d71"
+        },
+        {
+          "lines": [
+            "Pool Filter L1-all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d72"
+        },
+        {
+          "lines": [
+            "Pool Filter H2-all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d73"
+        },
+        {
+          "lines": [
+            "Pool Filter L2-all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d74"
+        },
+        {
+          "lines": [
+            "Spa Filter T1-all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d75"
+        },
+        {
+          "lines": [
+            "Spa Filter T2-all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d76"
+        },
+        {
+          "lines": [
+            "Spa Party -all",
+            "--- Off ---"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d77"
+        },
+        {
+          "lines": [
+            "Super Chlorinate",
+            "24 hours"
+          ],
+          "editable": true,
+          "nav": "MENU to Timers \u2192 RIGHT\u00d78"
+        }
+      ]
+    },
+    "Diagnostic": {
+      "howToReach": "MENU until \"Diagnostic / Menu\"",
+      "purpose": "Service readouts (sensors, salt, firmware)",
+      "items": [
+        {
+          "lines": [
+            "Chlorinator Off",
+            "Filter Off"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d71"
+        },
+        {
+          "lines": [
+            "Instant Salt",
+            "Chlorinator Off"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d72"
+        },
+        {
+          "lines": [
+            "Flow Switch",
+            "No Flow"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d73"
+        },
+        {
+          "lines": [
+            "Cell Temp Sensor",
+            "62\u00b0F"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d74"
+        },
+        {
+          "lines": [
+            "Pool Sensor",
+            "61\u00b0F"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d75"
+        },
+        {
+          "lines": [
+            "Spa Sensor",
+            "60\u00b0F"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d76"
+        },
+        {
+          "lines": [
+            "Air Sensor",
+            "51\u00b0F"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d77"
+        },
+        {
+          "lines": [
+            "Main Software",
+            "Revision  4.40"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d78"
+        },
+        {
+          "lines": [
+            "Display Software",
+            "Revision"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d79"
+        },
+        {
+          "lines": [
+            "RF Base Software",
+            "r3.00  ID:4EB2"
+          ],
+          "editable": false,
+          "nav": "MENU to Diagnostic \u2192 RIGHT\u00d710"
+        }
+      ]
+    },
+    "Configuration": {
+      "howToReach": "MENU until \"Configuration / Menu-Locked\"; hold LEFT+RIGHT until \"Menu-Unlocked\"",
+      "purpose": "Equipment definition (normally locked)",
+      "topLevel": [
+        {
+          "lines": [
+            "Chlor. Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d71"
+        },
+        {
+          "lines": [
+            "Chemistry Config.",
+            "Wizard, + to enter"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d72"
+        },
+        {
+          "lines": [
+            "Pool/Spa Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d73"
+        },
+        {
+          "lines": [
+            "Pool Filter Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d74"
+        },
+        {
+          "lines": [
+            "Spa Filter Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d75"
+        },
+        {
+          "lines": [
+            "Heater1 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d76"
+        },
+        {
+          "lines": [
+            "Heater2 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d77"
+        },
+        {
+          "lines": [
+            "Solar Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d78"
+        },
+        {
+          "lines": [
+            "External Input",
+            "Active Closed"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d79"
+        },
+        {
+          "lines": [
+            "Lights Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d710"
+        },
+        {
+          "lines": [
+            "Aux2 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d711"
+        },
+        {
+          "lines": [
+            "Aux3 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d712"
+        },
+        {
+          "lines": [
+            "Aux4 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d713"
+        },
+        {
+          "lines": [
+            "Aux5 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d714"
+        },
+        {
+          "lines": [
+            "Aux6 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d715"
+        },
+        {
+          "lines": [
+            "Aux7 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d716"
+        },
+        {
+          "lines": [
+            "Aux8 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d717"
+        },
+        {
+          "lines": [
+            "Aux9 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d718"
+        },
+        {
+          "lines": [
+            "Aux10 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d719"
+        },
+        {
+          "lines": [
+            "Aux11 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d720"
+        },
+        {
+          "lines": [
+            "Aux12 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d721"
+        },
+        {
+          "lines": [
+            "Aux13 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d722"
+        },
+        {
+          "lines": [
+            "Aux14 Config.",
+            "+ to view/change"
+          ],
+          "gate": true,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d723"
+        },
+        {
+          "lines": [
+            "Remote Menus",
+            "Enabled"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d724"
+        },
+        {
+          "lines": [
+            "All Timeclocks",
+            "7-day"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d725"
+        },
+        {
+          "lines": [
+            "Time Format",
+            "12 hour (AM/PM)"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d726"
+        },
+        {
+          "lines": [
+            "Units",
+            "\u00b0F and PPM"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d727"
+        },
+        {
+          "lines": [
+            "Reset Config. to",
+            "Default  Press +"
+          ],
+          "gate": false,
+          "nav": "MENU to Configuration \u2192 unlock if Locked \u2192 RIGHT\u00d728"
+        }
+      ],
+      "submenus": {
+        "Chlor. Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Chlorinator",
+            "Enabled"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Display",
+                "Salt"
+              ]
+            },
+            {
+              "lines": [
+                "Cell Type",
+                "T-CELL-9"
+              ]
+            }
+          ]
+        },
+        "Chemistry Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Sensing System",
+            "Disabled"
+          ],
+          "items": [
+            {
+              "lines": [
+                "-End of Wizard-",
+                ""
+              ]
+            }
+          ]
+        },
+        "Pool/Spa Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Pool/Spa Setup",
+            "Pool and Spa - Dual"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Heaters",
+                "Shared"
+              ]
+            },
+            {
+              "lines": [
+                "Spa Spillover",
+                "Enabled"
+              ]
+            },
+            {
+              "lines": [
+                "Filter Operation",
+                "Spa Spillover"
+              ]
+            }
+          ]
+        },
+        "Pool Filter Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Pool Filter Pump",
+            "2 Speed"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Flow Monitor",
+                "Enabled"
+              ]
+            },
+            {
+              "lines": [
+                "Freeze Protect",
+                "Enabled"
+              ]
+            },
+            {
+              "lines": [
+                "Freeze Protect Speed",
+                "High"
+              ]
+            },
+            {
+              "lines": [
+                "Freeze Temp",
+                "38\u00b0F"
+              ]
+            },
+            {
+              "lines": [
+                "External Input",
+                "Disabled"
+              ]
+            }
+          ]
+        },
+        "Spa Filter Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Spa Filter Pump",
+            "1 Speed"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Freeze Protect",
+                "Enabled"
+              ]
+            },
+            {
+              "lines": [
+                "External Input",
+                "Enabled"
+              ]
+            }
+          ]
+        },
+        "Heater1 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Heater1",
+            "Enabled"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Heater1 Name",
+                "Heater1"
+              ]
+            },
+            {
+              "lines": [
+                "Heater1 Cooldown",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Heater1 Extend",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Allow Low Speed",
+                "Disabled"
+              ]
+            }
+          ]
+        },
+        "Heater2 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Heater2",
+            "Enabled"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Heater2 Name",
+                "Heat Pump"
+              ]
+            },
+            {
+              "lines": [
+                "Heater2 Cooldown",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Heater2 Extend",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Allow Low Speed",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Heater2 is Heatpump",
+                "Yes"
+              ]
+            }
+          ]
+        },
+        "Solar Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Solar",
+            "Disabled"
+          ],
+          "items": []
+        },
+        "Lights Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Lights Name",
+            "Lights"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Lights Function",
+                "Manual On/Off"
+              ]
+            },
+            {
+              "lines": [
+                "Lights Relay",
+                "Standard"
+              ]
+            },
+            {
+              "lines": [
+                "Lights Interlock",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Lights Ext Input",
+                "Enabled"
+              ]
+            },
+            {
+              "lines": [
+                "Lights Freeze",
+                "Disabled"
+              ]
+            }
+          ]
+        },
+        "Aux2 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux2 Name",
+            "Low Speed"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux2 Function",
+                "Pool Filter Low Spd"
+              ]
+            }
+          ]
+        },
+        "Aux3 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux3 Name",
+            "Yard Light"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux3 Function",
+                "Manual On/Off"
+              ]
+            },
+            {
+              "lines": [
+                "Aux3 Relay",
+                "Standard"
+              ]
+            },
+            {
+              "lines": [
+                "Aux3 Interlock",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux3 Ext Input",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux3 Freeze",
+                "Disabled"
+              ]
+            }
+          ]
+        },
+        "Aux4 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux4 Name",
+            "Spa Party"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux4 Function",
+                "Group"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Timer:Timeclock"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Pool/Spa:Pool Only"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Pool Fltr:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Lights:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Spa Fltr:On"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux2 :Low Speed"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux3 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux5 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux6 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux7 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux8 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux9 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux10 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux11 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux12 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux13 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Aux14 :Group"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Valve3:Not Avail"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Heater1:Auto Ctrl"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "Heater2:Auto Ctrl"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group   Spa",
+                "Htr1 Set:104\u00b0F"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group  Pool",
+                "Htr1 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group   Spa",
+                "Htr2 Set:104\u00b0F"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group  Pool",
+                "Htr2 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux4 Group",
+                "SuperChlr:Unaffected"
+              ]
+            }
+          ]
+        },
+        "Aux5 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux5 Name",
+            "Blower"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux5 Function",
+                "Manual On/Off"
+              ]
+            },
+            {
+              "lines": [
+                "Aux5 Relay",
+                "Standard"
+              ]
+            },
+            {
+              "lines": [
+                "Aux5 Interlock",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux5 Ext Input",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux5 Freeze",
+                "Disabled"
+              ]
+            }
+          ]
+        },
+        "Aux6 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux6 Name",
+            "Low Speed"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux6 Function",
+                "Manual On/Off"
+              ]
+            },
+            {
+              "lines": [
+                "Aux6 Relay",
+                "Standard"
+              ]
+            },
+            {
+              "lines": [
+                "Aux6 Interlock",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux6 Ext Input",
+                "Disabled"
+              ]
+            },
+            {
+              "lines": [
+                "Aux6 Freeze",
+                "Enabled"
+              ]
+            }
+          ]
+        },
+        "Aux7 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux7 Name",
+            "Aux7"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux7 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux8 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux8 Name",
+            "Aux8"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux8 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux9 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux9 Name",
+            "Aux9"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux9 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux10 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux10 Name",
+            "Aux10"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux10 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux11 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux11 Name",
+            "Aux11"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux11 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux12 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux12 Name",
+            "Aux12"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux12 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux13 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux13 Name",
+            "Aux13"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux13 Function",
+                "Manual On/Off"
+              ]
+            }
+          ]
+        },
+        "Aux14 Config.": {
+          "enterWith": "plus",
+          "current": [
+            "Aux14 Name",
+            "Spa Filter"
+          ],
+          "items": [
+            {
+              "lines": [
+                "Aux14 Function",
+                "Group"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Timer:None(Manual)"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Pool/Spa:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Pool Fltr:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Lights:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Spa Fltr:On"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux2 :Low Speed"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux3 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux4 :Group"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux5 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux6 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux7 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux8 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux9 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux10 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux11 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux12 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Aux13 :Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Valve3:Not Avail"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Heater1:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "Heater2:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group   Spa",
+                "Htr1 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group  Pool",
+                "Htr1 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group   Spa",
+                "Htr2 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group  Pool",
+                "Htr2 Set:Unaffected"
+              ]
+            },
+            {
+              "lines": [
+                "Aux14 Group",
+                "SuperChlr:Unaffected"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
