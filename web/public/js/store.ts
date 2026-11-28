@@ -79,7 +79,9 @@ export const WEATHER_REFRESH_SECONDS = 300;
 export const DEFAULT_RECONNECT_SECONDS = 30;
 export const RECONNECT_CHOICES = [10, 30, 60, 120, 300];
 // how long to keep polling for the controller to report a requested change
-const CONFIRMATION_TIMEOUT_MS = 15000;
+// Live USB-RS485 often needs a keep-alive retry before the panel accepts a key; 15s was too
+// short against the simulator's instant confirm.
+const CONFIRMATION_TIMEOUT_MS = 45000;
 // longer than for a switch, since stepping to a water flow mode may take two presses
 const WATER_MODE_TIMEOUT_MS = 45000;
 const CONFIRMATION_POLL_MS = 1000;

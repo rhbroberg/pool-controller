@@ -30,8 +30,9 @@ public final class StatusStore {
     public static let defaultReconnectSeconds = 30
     /// How often to ask for status while waiting for the controller to report a requested change.
     public static let confirmationInterval: Duration = .milliseconds(500)
-    /// How long to wait for the controller to report a switched control.
-    public static let confirmationTimeout: Duration = .seconds(15)
+    /// How long to wait for the controller to report a switched control. Live USB-RS485 often
+    /// needs a keep-alive retry; 15s was too short against the simulator's instant confirm.
+    public static let confirmationTimeout: Duration = .seconds(45)
     /// How long to wait for the controller to step through to a requested water flow mode;
     /// longer than for a switch, since it may take two presses.
     public static let waterModeTimeout: Duration = .seconds(45)
