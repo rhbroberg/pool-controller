@@ -1,0 +1,1201 @@
+{
+  "topLevel": [
+    "Settings|Menu",
+    "Timers|Menu",
+    "Diagnostic|Menu",
+    "Configuration|Menu-Unlocked",
+    "Default|Menu"
+  ],
+  "screens": [
+    {
+      "menu": "TOP",
+      "path": "TOP[0]",
+      "afterKey": "at",
+      "lines": [
+        "      Settings      ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Settings|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:42:53.209Z"
+    },
+    {
+      "menu": "TOP",
+      "path": "TOP[1]",
+      "afterKey": "menu",
+      "lines": [
+        "       Timers       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Timers|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:42:55.226Z"
+    },
+    {
+      "menu": "TOP",
+      "path": "TOP[2]",
+      "afterKey": "menu",
+      "lines": [
+        "     Diagnostic     ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Diagnostic|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:42:57.244Z"
+    },
+    {
+      "menu": "TOP",
+      "path": "TOP[3]",
+      "afterKey": "menu",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:43:01.229Z"
+    },
+    {
+      "menu": "TOP",
+      "path": "TOP[4]",
+      "afterKey": "menu",
+      "lines": [
+        "      Default       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Default|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:43:03.228Z"
+    },
+    {
+      "menu": "TOP",
+      "path": "TOP[5]",
+      "afterKey": "menu",
+      "lines": [
+        "      Settings      ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Settings|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:43:05.245Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/title",
+      "afterKey": "at",
+      "lines": [
+        "      Default       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Default|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:43:17.234Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[1]",
+      "afterKey": "right",
+      "lines": [
+        "     Wednesday      ",
+        "        9:48A       "
+      ],
+      "blinking": [
+        [],
+        [
+          9
+        ]
+      ],
+      "norm": "Wednesday|9:48A",
+      "note": "",
+      "ts": "2026-11-28T14:43:23.354Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[2]",
+      "afterKey": "right",
+      "lines": [
+        "  Air Temp   51\u00b0F   ",
+        "                    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Air Temp   51\u00b0F|",
+      "note": "",
+      "ts": "2026-11-28T14:43:25.236Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[3]",
+      "afterKey": "right",
+      "lines": [
+        "     Salt Level     ",
+        "      0700 PPM      "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Salt Level|0700 PPM",
+      "note": "",
+      "ts": "2026-11-28T14:43:32.324Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[4]",
+      "afterKey": "right",
+      "lines": [
+        "      Heater1       ",
+        "    Auto Control    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Heater1|Auto Control",
+      "note": "",
+      "ts": "2026-11-28T14:43:33.238Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[5]",
+      "afterKey": "right",
+      "lines": [
+        "     Heat Pump      ",
+        "     Manual Off     "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Heat Pump|Manual Off",
+      "note": "",
+      "ts": "2026-11-28T14:43:37.238Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[6]",
+      "afterKey": "right",
+      "lines": [
+        "    Check System    ",
+        "   Very Low Salt    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Check System|Very Low Salt",
+      "note": "",
+      "ts": "2026-11-28T14:43:39.239Z"
+    },
+    {
+      "menu": "Default",
+      "path": "Default/item[7]",
+      "afterKey": "right",
+      "lines": [
+        "     Wednesday      ",
+        "        9:48A       "
+      ],
+      "blinking": [
+        [],
+        [
+          9
+        ]
+      ],
+      "norm": "Wednesday|9:48A",
+      "note": "",
+      "ts": "2026-11-28T14:43:45.361Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/title",
+      "afterKey": "at",
+      "lines": [
+        "      Settings      ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Settings|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:43:47.239Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Spa Heater1      ",
+        "       104\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Spa Heater1|104\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:44:03.260Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[2]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool Heater1      ",
+        "        Off         "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10
+        ]
+      ],
+      "norm": "Pool Heater1|Off",
+      "note": "",
+      "ts": "2026-11-28T14:44:05.260Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[3]",
+      "afterKey": "right",
+      "lines": [
+        "   Spa Heat Pump    ",
+        "     Manual Off     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Spa Heat Pump|Manual Off",
+      "note": "",
+      "ts": "2026-11-28T14:44:07.261Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool Heat Pump    ",
+        "     Manual Off     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Pool Heat Pump|Manual Off",
+      "note": "",
+      "ts": "2026-11-28T14:44:09.264Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[5]",
+      "afterKey": "right",
+      "lines": [
+        "   Spa Heat Pump    ",
+        "  Priority: Never   "
+      ],
+      "blinking": [
+        [],
+        [
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      ],
+      "norm": "Spa Heat Pump|Priority: Never",
+      "note": "",
+      "ts": "2026-11-28T14:44:19.265Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[6]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool Heat Pump    ",
+        "  Priority: Never   "
+      ],
+      "blinking": [
+        [],
+        [
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      ],
+      "norm": "Pool Heat Pump|Priority: Never",
+      "note": "",
+      "ts": "2026-11-28T14:44:27.268Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[7]",
+      "afterKey": "right",
+      "lines": [
+        "  Super Chlorinate  ",
+        "        Off         "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10
+        ]
+      ],
+      "norm": "Super Chlorinate|Off",
+      "note": "",
+      "ts": "2026-11-28T14:44:29.267Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[8]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool Chlorinator  ",
+        "       100%         "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      "norm": "Pool Chlorinator|100%",
+      "note": "",
+      "ts": "2026-11-28T14:44:33.269Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[9]",
+      "afterKey": "right",
+      "lines": [
+        "  Set Day and Time  ",
+        "  Wednesday  9:49A  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      "norm": "Set Day and Time|Wednesday  9:49A",
+      "note": "",
+      "ts": "2026-11-28T14:44:35.271Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[10]",
+      "afterKey": "right",
+      "lines": [
+        "   Display Light    ",
+        "                    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Display Light|",
+      "note": "",
+      "ts": "2026-11-28T14:44:55.287Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[11]",
+      "afterKey": "right",
+      "lines": [
+        "       Beeper       ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Beeper|Enabled",
+      "note": "",
+      "ts": "2026-11-28T14:44:59.288Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[12]",
+      "afterKey": "right",
+      "lines": [
+        "  Teach Wireless:   ",
+        "     + to start     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Teach Wireless:|+ to start",
+      "note": "",
+      "ts": "2026-11-28T14:45:07.287Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[13]",
+      "afterKey": "right",
+      "lines": [
+        "      Wireless      ",
+        "     Channel: 2     "
+      ],
+      "blinking": [
+        [],
+        [
+          14
+        ]
+      ],
+      "norm": "Wireless|Channel: 2",
+      "note": "",
+      "ts": "2026-11-28T14:45:21.317Z"
+    },
+    {
+      "menu": "Settings",
+      "path": "Settings/item[14]",
+      "afterKey": "right",
+      "lines": [
+        "      Settings      ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Settings|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:45:31.295Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/title",
+      "afterKey": "at",
+      "lines": [
+        "       Timers       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Timers|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:45:33.295Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[1]",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter H1-all  ",
+        "  06:45A to 07:30P  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Pool Filter H1-all|06:45A to 07:30P",
+      "note": "",
+      "ts": "2026-11-28T14:45:35.316Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[2]",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter L1-all  ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Pool Filter L1-all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:45:45.306Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[3]",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter H2-all  ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Pool Filter H2-all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:45:53.302Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[4]",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter L2-all  ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Pool Filter L2-all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:46:01.317Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[5]",
+      "afterKey": "right",
+      "lines": [
+        " Spa Filter T1-all  ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Spa Filter T1-all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:46:11.313Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[6]",
+      "afterKey": "right",
+      "lines": [
+        " Spa Filter T2-all  ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Spa Filter T2-all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:46:19.327Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[7]",
+      "afterKey": "right",
+      "lines": [
+        "  Spa Party -all    ",
+        "     --- Off ---    "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7
+        ]
+      ],
+      "norm": "Spa Party -all|--- Off ---",
+      "note": "",
+      "ts": "2026-11-28T14:46:41.336Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[8]",
+      "afterKey": "right",
+      "lines": [
+        "  Super Chlorinate  ",
+        "      24 hours      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7
+        ]
+      ],
+      "norm": "Super Chlorinate|24 hours",
+      "note": "",
+      "ts": "2026-11-28T14:46:55.348Z"
+    },
+    {
+      "menu": "Timers",
+      "path": "Timers/item[9]",
+      "afterKey": "right",
+      "lines": [
+        "       Timers       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Timers|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:47:05.346Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/title",
+      "afterKey": "at",
+      "lines": [
+        "     Diagnostic     ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Diagnostic|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:47:07.344Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[1]",
+      "afterKey": "right",
+      "lines": [
+        "  Chlorinator Off   ",
+        "     Filter Off     "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Chlorinator Off|Filter Off",
+      "note": "",
+      "ts": "2026-11-28T14:47:15.359Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[2]",
+      "afterKey": "right",
+      "lines": [
+        "    Instant Salt    ",
+        "  Chlorinator Off   "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Instant Salt|Chlorinator Off",
+      "note": "",
+      "ts": "2026-11-28T14:47:17.358Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[3]",
+      "afterKey": "right",
+      "lines": [
+        "    Flow Switch     ",
+        "      No Flow       "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Flow Switch|No Flow",
+      "note": "",
+      "ts": "2026-11-28T14:47:21.358Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Cell Temp Sensor  ",
+        "        62\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Cell Temp Sensor|62\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:47:23.357Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[5]",
+      "afterKey": "right",
+      "lines": [
+        "    Pool Sensor     ",
+        "        61\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Pool Sensor|61\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:47:25.356Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[6]",
+      "afterKey": "right",
+      "lines": [
+        "     Spa Sensor     ",
+        "        60\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Spa Sensor|60\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:47:27.356Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[7]",
+      "afterKey": "right",
+      "lines": [
+        "     Spa Sensor     ",
+        "        60\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Spa Sensor|60\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:47:59.380Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[8]",
+      "afterKey": "right",
+      "lines": [
+        "     Air Sensor     ",
+        "        51\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Air Sensor|51\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T14:48:01.380Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[9]",
+      "afterKey": "right",
+      "lines": [
+        "   Main Software    ",
+        "   Revision  4.40   "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Main Software|Revision  4.40",
+      "note": "",
+      "ts": "2026-11-28T14:48:05.380Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[10]",
+      "afterKey": "right",
+      "lines": [
+        "  Display Software  ",
+        "   Revision         "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Display Software|Revision",
+      "note": "",
+      "ts": "2026-11-28T14:48:07.379Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[11]",
+      "afterKey": "right",
+      "lines": [
+        "  RF Base Software  ",
+        "   r3.00  ID:4EB2   "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "RF Base Software|r3.00  ID:4EB2",
+      "note": "",
+      "ts": "2026-11-28T14:48:21.383Z"
+    },
+    {
+      "menu": "Diagnostic",
+      "path": "Diagnostic/item[12]",
+      "afterKey": "right",
+      "lines": [
+        "     Diagnostic     ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Diagnostic|Menu",
+      "note": "",
+      "ts": "2026-11-28T14:48:23.510Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:48:35.387Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Chlor. Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Chlor. Config.|+ to view/change",
+      "note": "plus-to-enter",
+      "ts": "2026-11-28T14:48:37.389Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Chlorinator     ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Chlorinator|Enabled",
+      "note": "entered-submenu",
+      "ts": "2026-11-28T14:48:41.389Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "      Display       ",
+        "        Salt        "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Display|Salt",
+      "note": "",
+      "ts": "2026-11-28T14:48:55.394Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "     Cell Type      ",
+        "      T-CELL-9      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Cell Type|T-CELL-9",
+      "note": "",
+      "ts": "2026-11-28T14:48:57.395Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/sub[3]",
+      "afterKey": "right",
+      "lines": [
+        " Chemistry Config.  ",
+        " Wizard, + to enter "
+      ],
+      "blinking": [
+        [],
+        [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Chemistry Config.|Wizard, + to enter",
+      "note": "",
+      "ts": "2026-11-28T14:49:01.397Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool/Spa Config.  ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool/Spa Config.|+ to view/change",
+      "note": "",
+      "ts": "2026-11-28T14:49:15.405Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[1]/exit",
+      "afterKey": "menu",
+      "lines": [
+        "      Default       ",
+        "        Menu        "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Default|Menu",
+      "note": "left-submenu",
+      "ts": "2026-11-28T14:49:17.406Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/retitle",
+      "afterKey": "nav",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:49:49.432Z"
+    },
+    {
+      "menu": "Configuration",
+      "path": "Configuration/item[2]",
+      "afterKey": "right",
+      "lines": [
+        "   Chlor. Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Chlor. Config.|+ to view/change",
+      "note": "plus-to-enter",
+      "ts": "2026-11-28T14:49:51.430Z"
+    }
+  ]
+}

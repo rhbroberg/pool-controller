@@ -1,0 +1,6586 @@
+{
+  "tops": [
+    {
+      "norm": "Chlor. Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Chlor. Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Chemistry Config.|Wizard, + to enter",
+      "note": "gate",
+      "lines": [
+        " Chemistry Config.  ",
+        " Wizard, + to enter "
+      ],
+      "blinking": [
+        [],
+        [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ]
+    },
+    {
+      "norm": "Pool/Spa Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "  Pool/Spa Config.  ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Pool Filter Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "Pool Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Spa Filter Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        " Spa Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Heater1 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "  Heater1 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Heater2 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "  Heater2 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Solar Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Solar Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "External Input|Active Closed",
+      "note": "",
+      "lines": [
+        "   External Input   ",
+        "   Active Closed    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ]
+    },
+    {
+      "norm": "Lights Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "  Lights Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux2 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux2 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux3 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux3 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux4 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux4 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux5 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux5 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux6 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux6 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux7 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux7 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux8 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux8 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux9 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "    Aux9 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux10 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Aux10 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux11 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Aux11 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux12 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Aux12 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux13 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Aux13 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Aux14 Config.|+ to view/change",
+      "note": "gate",
+      "lines": [
+        "   Aux14 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Remote Menus|Enabled",
+      "note": "",
+      "lines": [
+        "    Remote Menus    ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ]
+    },
+    {
+      "norm": "All Timeclocks|7-day",
+      "note": "",
+      "lines": [
+        "   All Timeclocks   ",
+        "       7-day        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ]
+    },
+    {
+      "norm": "Time Format|12 hour (AM/PM)",
+      "note": "",
+      "lines": [
+        "    Time Format     ",
+        "  12 hour (AM/PM)   "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      ]
+    },
+    {
+      "norm": "Units|\u00b0F and PPM",
+      "note": "",
+      "lines": [
+        "       Units        ",
+        "     \u00b0F and PPM     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ]
+    },
+    {
+      "norm": "Reset Config. to|Default  Press +",
+      "note": "",
+      "lines": [
+        "  Reset Config. to  ",
+        "  Default  Press +  "
+      ],
+      "blinking": [
+        [],
+        [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ]
+    },
+    {
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ]
+    }
+  ],
+  "screens": [
+    {
+      "path": "title",
+      "afterKey": "unlock",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:51:27.487Z"
+    },
+    {
+      "path": "top[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Chlor. Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Chlor. Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:51:37.489Z"
+    },
+    {
+      "path": "top[2]",
+      "afterKey": "right",
+      "lines": [
+        " Chemistry Config.  ",
+        " Wizard, + to enter "
+      ],
+      "blinking": [
+        [],
+        [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Chemistry Config.|Wizard, + to enter",
+      "note": "gate",
+      "ts": "2026-11-28T14:51:39.489Z"
+    },
+    {
+      "path": "top[3]",
+      "afterKey": "right",
+      "lines": [
+        "  Pool/Spa Config.  ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool/Spa Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:51:55.492Z"
+    },
+    {
+      "path": "top[4]",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool Filter Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:51:57.493Z"
+    },
+    {
+      "path": "top[5]",
+      "afterKey": "right",
+      "lines": [
+        " Spa Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Spa Filter Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:51:59.493Z"
+    },
+    {
+      "path": "top[6]",
+      "afterKey": "right",
+      "lines": [
+        "  Heater1 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater1 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:17.510Z"
+    },
+    {
+      "path": "top[7]",
+      "afterKey": "right",
+      "lines": [
+        "  Heater2 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater2 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:19.510Z"
+    },
+    {
+      "path": "top[8]",
+      "afterKey": "right",
+      "lines": [
+        "   Solar Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Solar Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:29.513Z"
+    },
+    {
+      "path": "top[9]",
+      "afterKey": "right",
+      "lines": [
+        "   External Input   ",
+        "   Active Closed    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "External Input|Active Closed",
+      "note": "",
+      "ts": "2026-11-28T14:52:31.514Z"
+    },
+    {
+      "path": "top[10]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Lights Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:33.513Z"
+    },
+    {
+      "path": "top[11]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux2 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux2 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:35.514Z"
+    },
+    {
+      "path": "top[12]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux3 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:39.515Z"
+    },
+    {
+      "path": "top[13]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux4 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:52:41.516Z"
+    },
+    {
+      "path": "top[14]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux5 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:03.534Z"
+    },
+    {
+      "path": "top[15]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux6 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:13.535Z"
+    },
+    {
+      "path": "top[16]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux7 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux7 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:15.551Z"
+    },
+    {
+      "path": "top[17]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux8 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux8 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:19.534Z"
+    },
+    {
+      "path": "top[18]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux9 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux9 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:21.535Z"
+    },
+    {
+      "path": "top[19]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux10 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux10 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:31.550Z"
+    },
+    {
+      "path": "top[20]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux11 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux11 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:33.549Z"
+    },
+    {
+      "path": "top[21]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux12 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux12 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:49.548Z"
+    },
+    {
+      "path": "top[22]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux13 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux13 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:51.548Z"
+    },
+    {
+      "path": "top[23]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux14 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:53:55.564Z"
+    },
+    {
+      "path": "top[24]",
+      "afterKey": "right",
+      "lines": [
+        "    Remote Menus    ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Remote Menus|Enabled",
+      "note": "",
+      "ts": "2026-11-28T14:53:57.564Z"
+    },
+    {
+      "path": "top[25]",
+      "afterKey": "right",
+      "lines": [
+        "   All Timeclocks   ",
+        "       7-day        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "All Timeclocks|7-day",
+      "note": "",
+      "ts": "2026-11-28T14:53:59.628Z"
+    },
+    {
+      "path": "top[26]",
+      "afterKey": "right",
+      "lines": [
+        "    Time Format     ",
+        "  12 hour (AM/PM)   "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      ],
+      "norm": "Time Format|12 hour (AM/PM)",
+      "note": "",
+      "ts": "2026-11-28T14:54:06.984Z"
+    },
+    {
+      "path": "top[27]",
+      "afterKey": "right",
+      "lines": [
+        "       Units        ",
+        "     \u00b0F and PPM     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Units|\u00b0F and PPM",
+      "note": "",
+      "ts": "2026-11-28T14:54:19.566Z"
+    },
+    {
+      "path": "top[28]",
+      "afterKey": "right",
+      "lines": [
+        "  Reset Config. to  ",
+        "  Default  Press +  "
+      ],
+      "blinking": [
+        [],
+        [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Reset Config. to|Default  Press +",
+      "note": "",
+      "ts": "2026-11-28T14:54:21.565Z"
+    },
+    {
+      "path": "top[29]",
+      "afterKey": "right",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:54:23.565Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T14:54:23.565Z"
+    },
+    {
+      "path": "gate/Chlor. Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Chlor. Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Chlor. Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:54:33.580Z"
+    },
+    {
+      "path": "gate/Chlor. Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Chlorinator     ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Chlorinator|Enabled",
+      "note": "entered",
+      "ts": "2026-11-28T14:54:37.578Z"
+    },
+    {
+      "path": "gate/Chlor. Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "      Display       ",
+        "        Salt        "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Display|Salt",
+      "note": "",
+      "ts": "2026-11-28T14:54:53.591Z"
+    },
+    {
+      "path": "gate/Chlor. Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "     Cell Type      ",
+        "      T-CELL-9      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Cell Type|T-CELL-9",
+      "note": "",
+      "ts": "2026-11-28T14:54:55.593Z"
+    },
+    {
+      "path": "gate/Chlor. Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        " Chemistry Config.  ",
+        " Wizard, + to enter "
+      ],
+      "blinking": [
+        [],
+        [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Chemistry Config.|Wizard, + to enter",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T14:54:59.621Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "unlock",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T14:57:35.669Z"
+    },
+    {
+      "path": "gate/Chemistry Config.",
+      "afterKey": "at",
+      "lines": [
+        " Chemistry Config.  ",
+        " Wizard, + to enter "
+      ],
+      "blinking": [
+        [],
+        [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Chemistry Config.|Wizard, + to enter",
+      "note": "gate",
+      "ts": "2026-11-28T14:57:41.666Z"
+    },
+    {
+      "path": "gate/Chemistry Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Sensing System   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Sensing System|Disabled",
+      "note": "entered",
+      "ts": "2026-11-28T14:57:45.682Z"
+    },
+    {
+      "path": "gate/Chemistry Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "  -End of Wizard-   ",
+        "                    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "-End of Wizard-|",
+      "note": "",
+      "ts": "2026-11-28T14:58:01.679Z"
+    },
+    {
+      "path": "gate/Chemistry Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "  Pool/Spa Config.  ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool/Spa Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T14:58:09.712Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T14:58:23.695Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config.",
+      "afterKey": "at",
+      "lines": [
+        "  Pool/Spa Config.  ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool/Spa Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:58:31.695Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Pool/Spa Setup   ",
+        " Pool and Spa - Dual"
+      ],
+      "blinking": [
+        [],
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Pool/Spa Setup|Pool and Spa - Dual",
+      "note": "entered",
+      "ts": "2026-11-28T14:58:35.695Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "      Heaters       ",
+        "       Shared       "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Heaters|Shared",
+      "note": "",
+      "ts": "2026-11-28T14:58:37.696Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "   Spa Spillover    ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Spa Spillover|Enabled",
+      "note": "",
+      "ts": "2026-11-28T14:58:59.712Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "  Filter Operation  ",
+        "   Spa Spillover    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Filter Operation|Spa Spillover",
+      "note": "",
+      "ts": "2026-11-28T14:59:09.714Z"
+    },
+    {
+      "path": "gate/Pool/Spa Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "Pool Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool Filter Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T14:59:11.714Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T14:59:25.733Z"
+    },
+    {
+      "path": "gate/Pool Filter Config.",
+      "afterKey": "at",
+      "lines": [
+        "Pool Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Pool Filter Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T14:59:49.758Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "  Pool Filter Pump  ",
+        "      2 Speed       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Pool Filter Pump|2 Speed",
+      "note": "entered",
+      "ts": "2026-11-28T15:00:21.749Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Flow Monitor    ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Flow Monitor|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:00:23.748Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "   Freeze Protect   ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Freeze Protect|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:00:33.768Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "Freeze Protect Speed",
+        "        High        "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Freeze Protect Speed|High",
+      "note": "",
+      "ts": "2026-11-28T15:00:43.770Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "    Freeze Temp     ",
+        "        38\u00b0F        "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Freeze Temp|38\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T15:00:45.770Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "   External Input   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "External Input|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:00:47.770Z"
+    },
+    {
+      "path": "gate/Pool Filter Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        " Spa Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Spa Filter Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:00:49.787Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "unlock",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T15:01:25.782Z"
+    },
+    {
+      "path": "gate/Spa Filter Config.",
+      "afterKey": "at",
+      "lines": [
+        " Spa Filter Config. ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Spa Filter Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:01:45.797Z"
+    },
+    {
+      "path": "gate/Spa Filter Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "  Spa Filter Pump   ",
+        "      1 Speed       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Spa Filter Pump|1 Speed",
+      "note": "entered",
+      "ts": "2026-11-28T15:01:55.812Z"
+    },
+    {
+      "path": "gate/Spa Filter Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Freeze Protect   ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Freeze Protect|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:02:11.810Z"
+    },
+    {
+      "path": "gate/Spa Filter Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "   External Input   ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "External Input|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:02:13.810Z"
+    },
+    {
+      "path": "gate/Spa Filter Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "  Heater1 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater1 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:02:37.824Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:03:03.838Z"
+    },
+    {
+      "path": "gate/Heater1 Config.",
+      "afterKey": "at",
+      "lines": [
+        "  Heater1 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater1 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:03:25.870Z"
+    },
+    {
+      "path": "gate/Heater1 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "      Heater1       ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Heater1|Enabled",
+      "note": "entered",
+      "ts": "2026-11-28T15:03:29.853Z"
+    },
+    {
+      "path": "gate/Heater1 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Heater1 Name    ",
+        "      Heater1       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Heater1 Name|Heater1",
+      "note": "",
+      "ts": "2026-11-28T15:03:31.852Z"
+    },
+    {
+      "path": "gate/Heater1 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "  Heater1 Cooldown  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Heater1 Cooldown|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:03:41.854Z"
+    },
+    {
+      "path": "gate/Heater1 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "   Heater1 Extend   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Heater1 Extend|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:03:43.852Z"
+    },
+    {
+      "path": "gate/Heater1 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Allow Low Speed   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Allow Low Speed|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:03:45.870Z"
+    },
+    {
+      "path": "gate/Heater1 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "  Heater2 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater2 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:03:55.872Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:04:09.873Z"
+    },
+    {
+      "path": "gate/Heater2 Config.",
+      "afterKey": "at",
+      "lines": [
+        "  Heater2 Config.   ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Heater2 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:04:47.893Z"
+    },
+    {
+      "path": "gate/Heater2 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "      Heater2       ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Heater2|Enabled",
+      "note": "entered",
+      "ts": "2026-11-28T15:04:51.893Z"
+    },
+    {
+      "path": "gate/Heater2 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Heater2 Name    ",
+        "     Heat Pump      "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Heater2 Name|Heat Pump",
+      "note": "",
+      "ts": "2026-11-28T15:04:53.894Z"
+    },
+    {
+      "path": "gate/Heater2 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "  Heater2 Cooldown  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Heater2 Cooldown|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:04:57.896Z"
+    },
+    {
+      "path": "gate/Heater2 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "   Heater2 Extend   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Heater2 Extend|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:04:59.895Z"
+    },
+    {
+      "path": "gate/Heater2 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Allow Low Speed   ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Allow Low Speed|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:05:01.897Z"
+    },
+    {
+      "path": "gate/Heater2 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "Heater2 is Heatpump ",
+        "        Yes         "
+      ],
+      "blinking": [
+        [],
+        [
+          8,
+          9,
+          10
+        ]
+      ],
+      "norm": "Heater2 is Heatpump|Yes",
+      "note": "",
+      "ts": "2026-11-28T15:05:03.897Z"
+    },
+    {
+      "path": "gate/Heater2 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Solar Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Solar Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:05:07.899Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:05:21.907Z"
+    },
+    {
+      "path": "gate/Solar Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Solar Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Solar Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:06:01.931Z"
+    },
+    {
+      "path": "gate/Solar Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "       Solar        ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Solar|Disabled",
+      "note": "entered",
+      "ts": "2026-11-28T15:06:05.933Z"
+    },
+    {
+      "path": "gate/Solar Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   External Input   ",
+        "   Active Closed    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "External Input|Active Closed",
+      "note": "",
+      "ts": "2026-11-28T15:06:07.935Z"
+    },
+    {
+      "path": "gate/Solar Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Lights Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:06:09.936Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:06:29.945Z"
+    },
+    {
+      "path": "gate/Lights Config.",
+      "afterKey": "at",
+      "lines": [
+        "  Lights Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Lights Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:07:03.967Z"
+    },
+    {
+      "path": "gate/Lights Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "  Lights Name       ",
+        "       Lights       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Lights Name|Lights",
+      "note": "entered",
+      "ts": "2026-11-28T15:07:19.970Z"
+    },
+    {
+      "path": "gate/Lights Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Lights Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:07:21.987Z"
+    },
+    {
+      "path": "gate/Lights Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Relay      ",
+        "      Standard      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Lights Relay|Standard",
+      "note": "",
+      "ts": "2026-11-28T15:07:25.971Z"
+    },
+    {
+      "path": "gate/Lights Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Interlock  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Lights Interlock|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:07:33.989Z"
+    },
+    {
+      "path": "gate/Lights Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Ext Input  ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Lights Ext Input|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:07:37.990Z"
+    },
+    {
+      "path": "gate/Lights Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "  Lights Freeze     ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Lights Freeze|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:07:39.990Z"
+    },
+    {
+      "path": "gate/Lights Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux2 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux2 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:07:41.991Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:08:03.994Z"
+    },
+    {
+      "path": "gate/Aux2 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux2 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux2 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:09:20.029Z"
+    },
+    {
+      "path": "gate/Aux2 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux2 Name       ",
+        "     Low Speed      "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux2 Name|Low Speed",
+      "note": "entered",
+      "ts": "2026-11-28T15:09:22.029Z"
+    },
+    {
+      "path": "gate/Aux2 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux2 Function   ",
+        "Pool Filter Low Spd "
+      ],
+      "blinking": [
+        [],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Aux2 Function|Pool Filter Low Spd",
+      "note": "",
+      "ts": "2026-11-28T15:09:24.030Z"
+    },
+    {
+      "path": "gate/Aux2 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux3 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:09:28.047Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:09:40.049Z"
+    },
+    {
+      "path": "gate/Aux3 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux3 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux3 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:10:52.088Z"
+    },
+    {
+      "path": "gate/Aux3 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux3 Name       ",
+        "     Yard Light     "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux3 Name|Yard Light",
+      "note": "entered",
+      "ts": "2026-11-28T15:10:56.090Z"
+    },
+    {
+      "path": "gate/Aux3 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux3 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:10:58.091Z"
+    },
+    {
+      "path": "gate/Aux3 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Relay      ",
+        "      Standard      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux3 Relay|Standard",
+      "note": "",
+      "ts": "2026-11-28T15:11:00.209Z"
+    },
+    {
+      "path": "gate/Aux3 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Interlock  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux3 Interlock|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:11:04.094Z"
+    },
+    {
+      "path": "gate/Aux3 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Ext Input  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux3 Ext Input|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:11:06.096Z"
+    },
+    {
+      "path": "gate/Aux3 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux3 Freeze     ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux3 Freeze|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:11:08.096Z"
+    },
+    {
+      "path": "gate/Aux3 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux4 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:11:18.100Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:11:58.113Z"
+    },
+    {
+      "path": "gate/Aux4 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux4 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux4 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:12:52.143Z"
+    },
+    {
+      "path": "gate/Aux4 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux4 Name       ",
+        "     Spa Party      "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux4 Name|Spa Party",
+      "note": "entered",
+      "ts": "2026-11-28T15:13:10.160Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Function   ",
+        "       Group        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Aux4 Function|Group",
+      "note": "",
+      "ts": "2026-11-28T15:13:12.160Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        " Timer:Timeclock    "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux4 Group|Timer:Timeclock",
+      "note": "",
+      "ts": "2026-11-28T15:13:14.160Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        " Pool/Spa:Pool Only "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Aux4 Group|Pool/Spa:Pool Only",
+      "note": "",
+      "ts": "2026-11-28T15:13:18.161Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "Pool Fltr:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Pool Fltr:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:26.161Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Lights:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Lights:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:36.165Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[6]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        " Spa Fltr:On        "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11
+        ]
+      ],
+      "norm": "Aux4 Group|Spa Fltr:On",
+      "note": "",
+      "ts": "2026-11-28T15:13:38.165Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[7]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux2 :Low Speed "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux4 Group|Aux2 :Low Speed",
+      "note": "",
+      "ts": "2026-11-28T15:13:42.166Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[8]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux3 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux3 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:44.167Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[9]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux5 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux5 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:46.166Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[10]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux6 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux6 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:48.183Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[11]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux7 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux7 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:13:58.185Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[12]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux8 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux8 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:00.185Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[13]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "    Aux9 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux9 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:16.188Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[14]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Aux10 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux10 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:20.189Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[15]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Aux11 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux11 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:22.191Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[16]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Aux12 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux12 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:38.197Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[17]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Aux13 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|Aux13 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:14:40.195Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[18]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Aux14 :Group     "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux4 Group|Aux14 :Group",
+      "note": "",
+      "ts": "2026-11-28T15:14:50.216Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[19]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "   Valve3:Not Avail "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux4 Group|Valve3:Not Avail",
+      "note": "",
+      "ts": "2026-11-28T15:15:00.218Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[20]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "  Heater1:Auto Ctrl "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Aux4 Group|Heater1:Auto Ctrl",
+      "note": "",
+      "ts": "2026-11-28T15:15:02.218Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[21]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "  Heater2:Auto Ctrl "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Aux4 Group|Heater2:Auto Ctrl",
+      "note": "",
+      "ts": "2026-11-28T15:15:04.219Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[22]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group   Spa",
+        " Htr1 Set:104\u00b0F     "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux4 Group   Spa|Htr1 Set:104\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T15:15:14.222Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[23]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group  Pool",
+        " Htr1 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group  Pool|Htr1 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:15:30.221Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[24]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group   Spa",
+        " Htr2 Set:104\u00b0F     "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux4 Group   Spa|Htr2 Set:104\u00b0F",
+      "note": "",
+      "ts": "2026-11-28T15:15:32.221Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[25]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group  Pool",
+        " Htr2 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group  Pool|Htr2 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:15:36.238Z"
+    },
+    {
+      "path": "gate/Aux4 Config./sub[26]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux4 Group      ",
+        "SuperChlr:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux4 Group|SuperChlr:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:15:38.236Z"
+    },
+    {
+      "path": "gate/Aux4 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux5 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:15:40.235Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:16:08.247Z"
+    },
+    {
+      "path": "gate/Aux5 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux5 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux5 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:17:04.271Z"
+    },
+    {
+      "path": "gate/Aux5 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux5 Name       ",
+        "       Blower       "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux5 Name|Blower",
+      "note": "entered",
+      "ts": "2026-11-28T15:17:14.287Z"
+    },
+    {
+      "path": "gate/Aux5 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux5 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:17:16.302Z"
+    },
+    {
+      "path": "gate/Aux5 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Relay      ",
+        "      Standard      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux5 Relay|Standard",
+      "note": "",
+      "ts": "2026-11-28T15:17:26.286Z"
+    },
+    {
+      "path": "gate/Aux5 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Interlock  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux5 Interlock|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:17:28.301Z"
+    },
+    {
+      "path": "gate/Aux5 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Ext Input  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux5 Ext Input|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:17:32.300Z"
+    },
+    {
+      "path": "gate/Aux5 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux5 Freeze     ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux5 Freeze|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:17:40.298Z"
+    },
+    {
+      "path": "gate/Aux5 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux6 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:17:50.301Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:18:24.317Z"
+    },
+    {
+      "path": "gate/Aux6 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux6 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux6 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:19:24.354Z"
+    },
+    {
+      "path": "gate/Aux6 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux6 Name       ",
+        "     Low Speed      "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux6 Name|Low Speed",
+      "note": "entered",
+      "ts": "2026-11-28T15:19:34.350Z"
+    },
+    {
+      "path": "gate/Aux6 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux6 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:19:36.366Z"
+    },
+    {
+      "path": "gate/Aux6 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Relay      ",
+        "      Standard      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux6 Relay|Standard",
+      "note": "",
+      "ts": "2026-11-28T15:19:38.366Z"
+    },
+    {
+      "path": "gate/Aux6 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Interlock  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux6 Interlock|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:19:40.365Z"
+    },
+    {
+      "path": "gate/Aux6 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Ext Input  ",
+        "      Disabled      "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      ],
+      "norm": "Aux6 Ext Input|Disabled",
+      "note": "",
+      "ts": "2026-11-28T15:19:44.365Z"
+    },
+    {
+      "path": "gate/Aux6 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux6 Freeze     ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux6 Freeze|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:19:46.364Z"
+    },
+    {
+      "path": "gate/Aux6 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux7 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux7 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:19:48.364Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:20:10.373Z"
+    },
+    {
+      "path": "gate/Aux7 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux7 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux7 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:21:38.420Z"
+    },
+    {
+      "path": "gate/Aux7 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux7 Name       ",
+        "        Aux7        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux7 Name|Aux7",
+      "note": "entered",
+      "ts": "2026-11-28T15:21:40.420Z"
+    },
+    {
+      "path": "gate/Aux7 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux7 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux7 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:21:44.997Z"
+    },
+    {
+      "path": "gate/Aux7 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux8 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux8 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:22:08.449Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:22:48.465Z"
+    },
+    {
+      "path": "gate/Aux8 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux8 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux8 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:24:00.503Z"
+    },
+    {
+      "path": "gate/Aux8 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux8 Name       ",
+        "        Aux8        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux8 Name|Aux8",
+      "note": "entered",
+      "ts": "2026-11-28T15:24:02.503Z"
+    },
+    {
+      "path": "gate/Aux8 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux8 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux8 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:24:12.504Z"
+    },
+    {
+      "path": "gate/Aux8 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "    Aux9 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux9 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:24:14.505Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:24:34.526Z"
+    },
+    {
+      "path": "gate/Aux9 Config.",
+      "afterKey": "at",
+      "lines": [
+        "    Aux9 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux9 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:26:16.575Z"
+    },
+    {
+      "path": "gate/Aux9 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "    Aux9 Name       ",
+        "        Aux9        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux9 Name|Aux9",
+      "note": "entered",
+      "ts": "2026-11-28T15:26:32.581Z"
+    },
+    {
+      "path": "gate/Aux9 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "    Aux9 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux9 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:26:34.581Z"
+    },
+    {
+      "path": "gate/Aux9 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Aux10 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux10 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:26:38.583Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:27:18.610Z"
+    },
+    {
+      "path": "gate/Aux10 Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Aux10 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux10 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:29:02.661Z"
+    },
+    {
+      "path": "gate/Aux10 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Aux10 Name       ",
+        "       Aux10        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux10 Name|Aux10",
+      "note": "entered",
+      "ts": "2026-11-28T15:29:04.661Z"
+    },
+    {
+      "path": "gate/Aux10 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux10 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux10 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:29:06.660Z"
+    },
+    {
+      "path": "gate/Aux10 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Aux11 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux11 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:29:10.659Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:29:36.685Z"
+    },
+    {
+      "path": "gate/Aux11 Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Aux11 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux11 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:30:48.718Z"
+    },
+    {
+      "path": "gate/Aux11 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Aux11 Name       ",
+        "       Aux11        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux11 Name|Aux11",
+      "note": "entered",
+      "ts": "2026-11-28T15:31:06.727Z"
+    },
+    {
+      "path": "gate/Aux11 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux11 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux11 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:31:08.728Z"
+    },
+    {
+      "path": "gate/Aux11 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Aux12 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux12 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:31:10.728Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:31:32.739Z"
+    },
+    {
+      "path": "gate/Aux12 Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Aux12 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux12 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:33:00.789Z"
+    },
+    {
+      "path": "gate/Aux12 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Aux12 Name       ",
+        "       Aux12        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux12 Name|Aux12",
+      "note": "entered",
+      "ts": "2026-11-28T15:33:02.789Z"
+    },
+    {
+      "path": "gate/Aux12 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux12 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux12 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:33:04.792Z"
+    },
+    {
+      "path": "gate/Aux12 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Aux13 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux13 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:33:06.793Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "at",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "already-unlocked",
+      "ts": "2026-11-28T15:33:20.799Z"
+    },
+    {
+      "path": "gate/Aux13 Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Aux13 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux13 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:34:38.846Z"
+    },
+    {
+      "path": "gate/Aux13 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Aux13 Name       ",
+        "       Aux13        "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Aux13 Name|Aux13",
+      "note": "entered",
+      "ts": "2026-11-28T15:34:40.846Z"
+    },
+    {
+      "path": "gate/Aux13 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux13 Function   ",
+        "   Manual On/Off    "
+      ],
+      "blinking": [
+        [],
+        [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      ],
+      "norm": "Aux13 Function|Manual On/Off",
+      "note": "",
+      "ts": "2026-11-28T15:34:44.847Z"
+    },
+    {
+      "path": "gate/Aux13 Config./next-top",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux14 Config.|+ to view/change",
+      "note": "exited-to-next-top",
+      "ts": "2026-11-28T15:34:52.844Z"
+    },
+    {
+      "path": "title",
+      "afterKey": "unlock",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "",
+      "ts": "2026-11-28T15:35:34.871Z"
+    },
+    {
+      "path": "gate/Aux14 Config.",
+      "afterKey": "at",
+      "lines": [
+        "   Aux14 Config.    ",
+        "  + to view/change  "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Aux14 Config.|+ to view/change",
+      "note": "gate",
+      "ts": "2026-11-28T15:37:00.926Z"
+    },
+    {
+      "path": "gate/Aux14 Config./enter",
+      "afterKey": "plus",
+      "lines": [
+        "   Aux14 Name       ",
+        "     Spa Filter     "
+      ],
+      "blinking": [
+        [],
+        [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Aux14 Name|Spa Filter",
+      "note": "entered",
+      "ts": "2026-11-28T15:37:04.911Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[1]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Function   ",
+        "       Group        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "Aux14 Function|Group",
+      "note": "",
+      "ts": "2026-11-28T15:37:06.910Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[2]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        " Timer:None(Manual) "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      ],
+      "norm": "Aux14 Group|Timer:None(Manual)",
+      "note": "",
+      "ts": "2026-11-28T15:37:16.929Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[3]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        " Pool/Spa:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Pool/Spa:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:18.928Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[4]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "Pool Fltr:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Pool Fltr:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:20.929Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[5]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Lights:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Lights:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:24.928Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[6]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        " Spa Fltr:On        "
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11
+        ]
+      ],
+      "norm": "Aux14 Group|Spa Fltr:On",
+      "note": "",
+      "ts": "2026-11-28T15:37:26.927Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[7]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux2 :Low Speed "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux14 Group|Aux2 :Low Speed",
+      "note": "",
+      "ts": "2026-11-28T15:37:28.927Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[8]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux3 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux3 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:32.927Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[9]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux4 :Group     "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux14 Group|Aux4 :Group",
+      "note": "",
+      "ts": "2026-11-28T15:37:40.939Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[10]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux5 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux5 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:44.940Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[11]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux6 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux6 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:46.939Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[12]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux7 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux7 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:48.937Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[13]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux8 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux8 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:37:50.937Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[14]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "    Aux9 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux9 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:06.950Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[15]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Aux10 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux10 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:16.948Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[16]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Aux11 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux11 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:18.957Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[17]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Aux12 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux12 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:22.965Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[18]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Aux13 :Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Aux13 :Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:24.966Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[19]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "   Valve3:Not Avail "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Aux14 Group|Valve3:Not Avail",
+      "note": "",
+      "ts": "2026-11-28T15:38:26.965Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[20]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "  Heater1:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Heater1:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:28.983Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[21]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "  Heater2:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|Heater2:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:32.967Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[22]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group   Spa",
+        " Htr1 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group   Spa|Htr1 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:34.967Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[23]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group  Pool",
+        " Htr1 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group  Pool|Htr1 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:36.968Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[24]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group   Spa",
+        " Htr2 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group   Spa|Htr2 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:40.969Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[25]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group  Pool",
+        " Htr2 Set:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group  Pool|Htr2 Set:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:38:42.969Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[26]",
+      "afterKey": "right",
+      "lines": [
+        "   Aux14 Group      ",
+        "SuperChlr:Unaffected"
+      ],
+      "blinking": [
+        [],
+        [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      ],
+      "norm": "Aux14 Group|SuperChlr:Unaffected",
+      "note": "",
+      "ts": "2026-11-28T15:39:04.987Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[27]",
+      "afterKey": "right",
+      "lines": [
+        "    Remote Menus    ",
+        "      Enabled       "
+      ],
+      "blinking": [
+        [],
+        [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "norm": "Remote Menus|Enabled",
+      "note": "",
+      "ts": "2026-11-28T15:39:08.987Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[28]",
+      "afterKey": "right",
+      "lines": [
+        "   All Timeclocks   ",
+        "       7-day        "
+      ],
+      "blinking": [
+        [],
+        [
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "norm": "All Timeclocks|7-day",
+      "note": "",
+      "ts": "2026-11-28T15:39:10.983Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[29]",
+      "afterKey": "right",
+      "lines": [
+        "    Time Format     ",
+        "  12 hour (AM/PM)   "
+      ],
+      "blinking": [
+        [],
+        [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ]
+      ],
+      "norm": "Time Format|12 hour (AM/PM)",
+      "note": "",
+      "ts": "2026-11-28T15:39:12.986Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[30]",
+      "afterKey": "right",
+      "lines": [
+        "       Units        ",
+        "     \u00b0F and PPM     "
+      ],
+      "blinking": [
+        [],
+        [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      ],
+      "norm": "Units|\u00b0F and PPM",
+      "note": "",
+      "ts": "2026-11-28T15:39:22.984Z"
+    },
+    {
+      "path": "gate/Aux14 Config./sub[31]",
+      "afterKey": "right",
+      "lines": [
+        "  Reset Config. to  ",
+        "  Default  Press +  "
+      ],
+      "blinking": [
+        [],
+        [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ]
+      ],
+      "norm": "Reset Config. to|Default  Press +",
+      "note": "",
+      "ts": "2026-11-28T15:39:31.003Z"
+    },
+    {
+      "path": "gate/Aux14 Config./title",
+      "afterKey": "right",
+      "lines": [
+        "   Configuration    ",
+        "   Menu-Unlocked    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Configuration|Menu-Unlocked",
+      "note": "exited-to-title",
+      "ts": "2026-11-28T15:39:34.998Z"
+    },
+    {
+      "path": "fixup/DisplayLight",
+      "afterKey": "right",
+      "lines": [
+        "   Display Light    ",
+        "                    "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Display Light|",
+      "note": "",
+      "ts": "2026-11-28T15:40:49.026Z"
+    },
+    {
+      "path": "fixup/DisplaySoftware",
+      "afterKey": "right",
+      "lines": [
+        "  Display Software  ",
+        "   Revision         "
+      ],
+      "blinking": [
+        [],
+        []
+      ],
+      "norm": "Display Software|Revision",
+      "note": "",
+      "ts": "2026-11-28T15:41:57.077Z"
+    }
+  ]
+}
