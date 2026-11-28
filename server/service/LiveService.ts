@@ -10,6 +10,8 @@ import { errorMessageOf } from '../types/domain';
 //   heating   the same body as GET /heating, once the switches or temperatures behind it change
 //   tasks     the same body as GET /tasks, once the switches change or a preheat is scheduled,
 //             cancelled or started
+//   eventLog  one event-log entry as GET /events returns it, the moment it is saved (panel
+//             frames and user actions), so an open Event Log can tail new rows
 //
 // The apps keep polling, less often, in case a push is missed.
 
@@ -74,4 +76,14 @@ export function heatingChanged() {
 
 export function tasksChanged() {
     pushSoon('tasks');
+}
+
+/**
+ * one new event-log row, same shape as an item in GET /events
+ **/
+export function event(entry: unknown) {
+    if (!io || !entry) {
+        return;
+    }
+    io.emit('eventLog', entry);
 }

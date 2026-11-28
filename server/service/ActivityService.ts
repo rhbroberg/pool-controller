@@ -5,6 +5,7 @@ import { mongoose } from '../mongoose';
 import { Event } from '../models/event';
 import { panelLabels } from '../protocol/events';
 import type { AuthUser } from '../types/domain';
+import * as liveService from './LiveService';
 
 const logger = log4js.getLogger();
 
@@ -38,7 +39,7 @@ export function label(name: string): string {
 export async function record(user: AuthUser | string | null | undefined, message: string, details?: { name: string; value: unknown }[]) {
     const name = user && typeof user === 'object' && user.email ? user.email : user;
     try {
-        await Event.create({
+        const doc = await Event.create({
             _id: new mongoose.Types.ObjectId(),
             eventType: 'action',
             source: 'rest',
@@ -46,6 +47,14 @@ export async function record(user: AuthUser | string | null | undefined, message
             user: name || 'unknown user',
             message: message,
             status: details || []
+        });
+        liveService.event({
+            id: String(doc._id),
+            timestamp: (doc.timestamp instanceof Date ? doc.timestamp : new Date(doc.timestamp)).toISOString(),
+            type: 'action',
+            user: doc.user,
+            summary: message,
+            details: details || []
         });
     } catch (e) {
         logger.error(`could not record "${message}" for ${name}: ${e}`);

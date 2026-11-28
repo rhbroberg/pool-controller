@@ -73,6 +73,21 @@ describe('live service', () => {
         await sleep(300);
         assert.deepEqual(io.sent, []);
     });
+
+    it('pushes a saved event-log row at once', () => {
+        const io = fakeIo();
+        liveService.attach(io);
+        const entry = {
+            id: 'abc',
+            timestamp: new Date('2026-11-28T17:00:00Z'),
+            type: 'action',
+            user: 'rhb',
+            summary: 'Turned the filter on'
+        };
+        liveService.event(entry);
+        liveService.event(null);
+        assert.deepEqual(io.sent, [{ kind: 'eventLog', payload: entry }]);
+    });
 });
 
 describe('switches of a status frame', () => {

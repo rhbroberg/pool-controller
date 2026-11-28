@@ -22,6 +22,7 @@ const taskService = require('./service/TaskService');
 const settingsService = require('./service/SettingsService');
 const externalAuthService = require('./service/ExternalAuthService');
 const liveService = require('./service/LiveService');
+const eventLogService = require('./service/EventLogService');
 const statusService = require('./service/StatusService');
 const scheduler = require('./jobs/scheduler');
 const rollupsJob = require('./jobs/rollups');
@@ -170,6 +171,8 @@ var saveStatus = (switchesEnabled: any, buf: any, category: string, timestamp: a
 
     return dbStatusEvent.save().then((doc: any) => {
         logger.trace('saved ', doc);
+        // open Event Log views tail this the same way buttons follow readings
+        liveService.event(eventLogService.entryOf(doc));
     }, (e: any) => {
         logger.error(`failed saving ${category} Event: ${e}`);
     });

@@ -115,15 +115,24 @@ export async function getEvents(types: any, user: any, cursor: any, order: any, 
     const page = docs.slice(0, size);
 
     return {
-        events: page.map((doc: any) => ({
-            id: String(doc._id),
-            timestamp: doc.timestamp,
-            type: doc.eventType,
-            user: doc.user,
-            summary: summarize(doc),
-            details: (doc.status || []).map((entry: any) => ({ name: entry.name, value: entry.value }))
-        })),
+        events: page.map(entryOf),
         next: docs.length > size ? encodeCursor(page, previous) : null
+    };
+};
+
+/**
+ * one event as GET /events and the live `event` push carry it
+ **/
+export function entryOf(doc: any) {
+    const timestamp = doc.timestamp instanceof Date ? doc.timestamp : new Date(doc.timestamp);
+    return {
+        id: String(doc._id),
+        // ISO string so every client gets the same JSON as GET /events (not a host-specific Date)
+        timestamp: timestamp.toISOString(),
+        type: doc.eventType,
+        user: doc.user,
+        summary: summarize(doc),
+        details: (doc.status || []).map((entry: any) => ({ name: entry.name, value: entry.value }))
     };
 };
 
