@@ -267,6 +267,13 @@ MongoDB 5.0 and later need an ARMv8.2 CPU, which a Pi 4 lacks, and 4.4 releases 
 on it with an illegal instruction, so the compose file pins `mongo:4.4.18`. On a Pi 5, or any
 other ARMv8.2 or x86-64 host, a current release can be chosen with `POOL_MONGO_IMAGE` in `.env`.
 
+On a 1 GB Pi the default WiredTiger cache is already its 256 MB floor, and tcmalloc keeps another
+cache of about an eighth of RAM. The compose file sets the WiredTiger cache to 128 MB
+(`POOL_MONGO_CACHE_GB`), the tcmalloc thread cache to 64 MB, and asks tcmalloc to hand freed pages
+back to the kernel. Index builds, which are separate from that cache, are capped at 100 MB instead
+of 200 MB. `4.4.18` accepts a cache under 256 MB; 5.0 and later refuse anything under 0.25, so a
+newer `POOL_MONGO_IMAGE` needs `POOL_MONGO_CACHE_GB` raised to at least that.
+
 A database directory written by another major version can't be opened directly; move the data
 with `mongodump` and `mongorestore`, or start with an empty directory.
 

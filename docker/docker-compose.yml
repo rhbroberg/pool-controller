@@ -92,6 +92,20 @@ services:
     # 4.4.18 stop on it with an illegal instruction
     image: ${POOL_MONGO_IMAGE:-mongo:4.4.18}
     restart: always
+    # A 1 GB Pi already gets the 256 MB WiredTiger floor, plus a tcmalloc thread cache of about
+    # an eighth of RAM, and tcmalloc holds onto pages it has freed. 128 MB of cache and a 64 MB
+    # thread cache are enough for the history and accounts here. 4.4.18 applies a cache under
+    # 256 MB; 5.0 and later refuse anything under 0.25, so raise POOL_MONGO_CACHE_GB together
+    # with POOL_MONGO_IMAGE.
+    command:
+      - --wiredTigerCacheSizeGB
+      - "${POOL_MONGO_CACHE_GB:-0.125}"
+      - --setParameter
+      - tcmallocMaxTotalThreadCacheBytes=67108864
+      - --setParameter
+      - tcmallocAggressiveMemoryDecommit=1
+      - --setParameter
+      - maxIndexBuildMemoryUsageMegabytes=100
     volumes:
       - ${POOL_MONGO_DATA:-/data/db}:/data/db
     healthcheck:
