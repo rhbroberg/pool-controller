@@ -37,6 +37,19 @@ Or pull images built elsewhere (below) instead of building on the Pi:
     export POOL_JWT_SECRET=... POOL_HE_DDNS_KEY=...
     make up-pull   # docker compose pull, then up -d
 
+### Debugging the pool server on the Pi without rebuilding
+
+`make debug-pool` runs `pool` from the bind-mounted `server/` tree in a Node image with
+`--inspect=0.0.0.0:9229` and `-v` (every frame), so serial and protocol edits do not need a new
+image. `make debug-pool-off` puts the published image back.
+
+From a Mac, after editing `server/`:
+
+    make sync-debug
+    ssh -p 32746 -L 9229:127.0.0.1:9229 rhb@gw.mystic.onthegrid.net
+
+Then attach a debugger to `localhost:9229`. The web/caddy stack keeps serving as usual.
+
 The containers restart with the Pi, keeping the secrets they were created with; export them again
 only to recreate a container, after changing `.env` or pulling a new version.
 

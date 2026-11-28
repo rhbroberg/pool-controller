@@ -1,0 +1,34 @@
+# Run the pool server from the bind-mounted ../server tree with Node's inspector, so serial and
+# protocol changes can be tried on the Pi without rebuilding the distroless image.
+#
+#   export POOL_JWT_SECRET=... POOL_HE_DDNS_KEY=...
+#   make debug-pool          # pool on source + --inspect=0.0.0.0:9229
+#   make debug-pool-off      # back to the published image
+#
+# From a Mac, forward the inspector and attach the debugger:
+#   ssh -p 32746 -L 9229:127.0.0.1:9229 rhb@gw.mystic.onthegrid.net
+# After editing locally: make sync-debug  (rsyncs server/ to the Pi, recreates pool)
+name: pool-controller
+
+services:
+  pool:
+    image: node:22-trixie-slim
+    entrypoint: ["/bin/bash", "-c"]
+    # npm ci only when the named volume is empty; -v logs every frame while debugging the bus
+    command:
+      - |
+        set -euo pipefail
+        if [ ! -x node_modules/.bin/tsx ]; then
+          echo "debug-pool: installing dependencies into the node_modules volume"
+          npm ci --omit=dev
+        fi
+        exec node --inspect=0.0.0.0:9229 --import tsx server.ts -d serial -f /dev/ttyUSB0 -v
+    ports:
+      - "9229:9229"
+    volumes:
+      - ../server:/opt/pool-controller
+      - pool_debug_node_modules:/opt/pool-controller/node_modules
+    working_dir: /opt/pool-controller
+
+volumes:
+  pool_debug_node_modules:

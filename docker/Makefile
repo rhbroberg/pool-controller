@@ -26,9 +26,19 @@ IMAGE_TAG ?= latest
 RPI_PLATFORM ?= linux/arm64
 BUILDX_OUTPUT ?= --load
 
+# production host for bind-mount debugging (override if needed)
+DEBUG_HOST ?= rhb@gw.mystic.onthegrid.net
+DEBUG_SSH_PORT ?= 32746
+DEBUG_REMOTE ?= $(DEBUG_HOST):~/pool-controller
+# include the Pi's ports overlay when present so caddy keeps its 8443 publish
+COMPOSE_DEBUG = $(COMPOSE) -f docker-compose.yml \
+	$(shell test -f docker-compose.ports.yml && echo -f docker-compose.ports.yml) \
+	-f docker-compose.debug.yml
+
 .PHONY: up up-pull pull down logs scout \
 	build-rpi build-rpi-caddy build-rpi-web build-rpi-pool push-rpi \
-	sim sim-letsencrypt sim-down sim-logs sim-root-cert
+	sim sim-letsencrypt sim-down sim-logs sim-root-cert \
+	debug-pool debug-pool-off sync-debug
 
 # --pull on the build, not on up, which pulls only the images services run and not the Dockerfiles'
 # base images; fresh bases match what make scout checks
@@ -48,6 +58,19 @@ down:
 
 logs:
 	$(COMPOSE) logs -f
+
+# pool from ../server with Node inspector on 9229 (no image rebuild). Needs the secrets exported
+# the same way as make up. Pair with sync-debug from a Mac.
+debug-pool:
+	$(COMPOSE_DEBUG) up -d pool
+	@echo "inspector on :9229 — ssh -p $(DEBUG_SSH_PORT) -L 9229:127.0.0.1:9229 $(DEBUG_HOST)"
+
+debug-pool-off:
+	$(COMPOSE) up -d pool
+
+# rsync local server/ (and the debug compose file) to the Pi and recreate the debug pool container
+sync-debug:
+	DEBUG_HOST=$(DEBUG_HOST) DEBUG_SSH_PORT=$(DEBUG_SSH_PORT) ./sync-debug.sh
 
 # builds the images and fails on any critical or high CVE Docker Scout knows a fix for; the
 # pre-commit hook runs it when a commit changes what goes into an image
