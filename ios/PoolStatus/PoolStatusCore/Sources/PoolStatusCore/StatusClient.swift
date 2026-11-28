@@ -176,9 +176,11 @@ public nonisolated struct StatusClient: Sendable {
         try await send(.put, "tasks/\(task.rawValue)", token: token, body: TaskChange(on: on, readyAt: readyAt))
     }
 
-    /// Sets the temperature `device` drives `body` toward.
+    /// Sets the temperature `device` drives `body` toward. A live panel walks the Settings menu,
+    /// which often needs a minute; the default 10s timeout is too short for that.
     public func setSetpoint(_ degrees: Int, device: HeatingDevice, body: WaterBody, token: String) async throws {
-        try await perform(.put, "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)", token: token)
+        _ = try await fetchData(.put, "heating/setpoints/\(body.rawValue)/\(device.rawValue)/\(degrees)",
+                                token: token, timeout: 150)
     }
 
     /// Queues one press of a panel key; the server sends it on the next controller ping.

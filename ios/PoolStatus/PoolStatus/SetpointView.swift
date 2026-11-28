@@ -85,6 +85,8 @@ struct SetpointView: View {
             : String(localized: "The heat pump heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it.")]
         if heating?.setpointsReachController == false {
             parts.append(String(localized: "For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet."))
+        } else {
+            parts.append(String(localized: "Saving writes each value through the controller’s Settings menu and can take up to a minute per body."))
         }
         if !store.auth.canControl {
             parts.append(String(localized: "Your account can see the setpoints but not change them."))

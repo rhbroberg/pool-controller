@@ -175,6 +175,8 @@ struct ThermostatView: View {
         var parts: [String] = []
         if heating?.setpointsReachController == false {
             parts.append(String(localized: "The server keeps these setpoints itself for now; they aren’t sent to the controller yet."))
+        } else if isSaving {
+            parts.append(String(localized: "Writing to the controller’s Settings menu; this can take up to a minute per heat source."))
         }
         if !store.auth.canControl {
             parts.append(String(localized: "Your account can see the setpoint but not change it."))

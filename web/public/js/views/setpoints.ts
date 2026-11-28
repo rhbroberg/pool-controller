@@ -21,6 +21,8 @@ export const openSetpoints = (app: any, device: any) => {
         const parts = [`The ${device.title.toLowerCase()} heats the spa while the spa filter runs, and otherwise the pool while the filter runs in Pool or Spillover flow. Once that water reaches its setpoint it stops, and starts again when the water cools below it.`];
         if (store.heating && store.heating.setpointsReachController === false) {
             parts.push('For now the server keeps these setpoints itself; they aren’t read from or sent to the controller yet.');
+        } else {
+            parts.push('Saving writes each value through the controller’s Settings menu and can take up to a minute per body.');
         }
         if (!store.credentials) {
             parts.push('Sign in to change them.');

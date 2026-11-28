@@ -15,7 +15,8 @@ const PUBLIC_DIR = path.join(HERE, 'public');
 // the API, the pool server's Swagger UI and the spec it loads, and its live updates
 const PROXIED_PREFIXES = [`${API_BASE}/`, '/docs', '/api-docs', '/socket.io/'];
 // longer than the slowest API call (a history window), shorter than a browser gives up
-const PROXY_TIMEOUT_MS = 30000;
+// long enough for Settings-menu setpoint writes (MENU/arrows/+/- on the panel)
+const PROXY_TIMEOUT_MS = 180000;
 // tells the page the pool server, rather than this service, could not be reached
 export const UNREACHABLE_HEADER = 'x-pool-web-unreachable';
 

@@ -271,6 +271,8 @@ export const mountThermostat = (root: any, app: any, waterId: any) => {
         const parts = [] as string[];
         if (store.heating && store.heating.setpointsReachController === false) {
             parts.push('The server keeps these setpoints itself for now; they aren’t sent to the controller yet.');
+        } else if (saving) {
+            parts.push('Writing to the controller’s Settings menu; this can take up to a minute per heat source.');
         }
         if (!store.credentials) {
             parts.push('Sign in to change the setpoint.');

@@ -198,7 +198,8 @@ export class Client {
     }
 
     setSetpoint(degrees: number, device: string, body: string, token: string) {
-        return this.send('PUT', `heating/setpoints/${body}/${device}/${degrees}`, { token });
+        // Settings-menu navigation on a live panel often needs a minute; the default 10s is too short
+        return this.send('PUT', `heating/setpoints/${body}/${device}/${degrees}`, { token, timeout: 150000 });
     }
 
     // MARK: panel
