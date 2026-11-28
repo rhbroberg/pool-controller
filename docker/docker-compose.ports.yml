@@ -1,0 +1,9 @@
+# LAN publish: Caddy serves HTTPS on 8443; host 443 is aliased for routers that NAT WAN 8443 -> :443
+services:
+  caddy:
+    ports: !override
+      - "${POOL_HTTP_PORT:-80}:${POOL_HTTP_PORT:-80}"
+      - "${POOL_HTTPS_PORT:-8443}:${POOL_HTTPS_PORT:-8443}"
+      - "${POOL_HTTPS_PORT:-8443}:${POOL_HTTPS_PORT:-8443}/udp"
+      - "443:${POOL_HTTPS_PORT:-8443}"
+      - "443:${POOL_HTTPS_PORT:-8443}/udp"

@@ -1,0 +1,14 @@
+# CH341 USB-RS485 on the Pi: adapter auto-drives DE, so leave RTS alone. Keypresses must go
+# out in the ~1ms after the panel's keep-alive (serial.ts send-on-keep-alive). Wireless remote
+# frame type 00 8c matches this AquaLogic. Burst + copies cover USB turnaround jitter.
+services:
+  pool:
+    environment:
+      - POOL_SERIAL_RTS_TX=off
+      - POOL_SERIAL_RTS_BEFORE_MS=0
+      - POOL_SERIAL_RTS_AFTER_MS=0
+      - POOL_CONTROL_DEST=8c
+      - POOL_CONTROL_STYLE=wireless
+      - POOL_SERIAL_TX_BURST=1
+      - POOL_CONTROL_TX_COPIES=12
+      - POOL_SERIAL_STOP_BITS=2
