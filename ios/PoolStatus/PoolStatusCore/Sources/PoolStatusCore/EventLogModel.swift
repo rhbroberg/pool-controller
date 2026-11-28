@@ -178,4 +178,36 @@ public final class EventLogModel {
             users = fetched
         }
     }
+
+    /// Inserts a newly saved row like `tail -f`, when it matches the current filters.
+    public func ingest(_ entry: EventEntry) {
+        guard matchesFilters(entry) else {
+            NSLog("PoolStatus event-log ingest skipped (filters) id=%@ type=%@", entry.id, entry.type)
+            return
+        }
+        guard !events.contains(where: { $0.id == entry.id }) else {
+            NSLog("PoolStatus event-log ingest skipped (duplicate) id=%@", entry.id)
+            return
+        }
+        if ascending {
+            events.append(entry)
+        } else {
+            events.insert(entry, at: 0)
+        }
+        NSLog("PoolStatus event-log ingest ok id=%@ total=%d", entry.id, events.count)
+    }
+
+    private func matchesFilters(_ entry: EventEntry) -> Bool {
+        guard let kind = entry.kind, kinds.contains(kind) else {
+            return false
+        }
+        switch user {
+        case .everyone:
+            return true
+        case .controller:
+            return entry.user == nil
+        case .account(let name):
+            return entry.user == name
+        }
+    }
 }

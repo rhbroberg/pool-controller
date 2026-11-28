@@ -23,6 +23,8 @@ struct StatusView: View {
     }
 
     var body: some View {
+        // Poll and live updates hang off the stack, not the dashboard root: pushing Event Log
+        // (or any destination) can cancel `.task` on the covered root, which killed the socket.
         NavigationStack {
             ScrollView {
                 // sized so the whole dashboard fits on one iPhone screen without scrolling
@@ -98,15 +100,6 @@ struct StatusView: View {
             .refreshable {
                 await store.refresh()
             }
-            .task(id: PollKey(serverAddress: store.serverAddress, reconnectSeconds: reconnectSeconds,
-                              generation: pollGeneration)) {
-                await store.poll(reconnectSeconds: reconnectSeconds)
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    pollGeneration += 1
-                }
-            }
             .sensoryFeedback(.success, trigger: store.confirmedChanges)
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
@@ -124,6 +117,15 @@ struct StatusView: View {
                 case .eventLog: EventLogView()
                 case .serverMaintenance: ServerMaintenanceView()
                 }
+            }
+        }
+        .task(id: PollKey(serverAddress: store.serverAddress, reconnectSeconds: reconnectSeconds,
+                          generation: pollGeneration)) {
+            await store.poll(reconnectSeconds: reconnectSeconds)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                pollGeneration += 1
             }
         }
     }

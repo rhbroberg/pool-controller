@@ -52,15 +52,22 @@ public nonisolated struct StatusClient: Sendable {
     public static let apiPath = "rhbroberg/pool-api/1.0.0"
     public static let defaultTimeout: TimeInterval = 10
 
-    /// Reads the server's ISO 8601 dates, with or without fractional seconds.
+    /// Reads the server's ISO 8601 dates, with or without fractional seconds; also epoch
+    /// milliseconds/seconds, in case a live push serializes a Date as a number.
     public static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            if let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text) {
-                return date
+            let container = try decoder.singleValueContainer()
+            if let text = try? container.decode(String.self) {
+                if let date = try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text) {
+                    return date
+                }
+                return try Date.ISO8601FormatStyle().parse(text)
             }
-            return try Date.ISO8601FormatStyle().parse(text)
+            let value = try container.decode(Double.self)
+            // JS Date / Mongo often use milliseconds; values below that threshold are seconds
+            let seconds = value > 1_000_000_000_000 ? value / 1000 : value
+            return Date(timeIntervalSince1970: seconds)
         }
         return decoder
     }()
@@ -484,6 +491,9 @@ public nonisolated struct StatusClient: Sendable {
         var request = URLRequest(url: try url(for: path, query: query))
         request.httpMethod = method.rawValue
         request.timeoutInterval = timeout
+        // pool status and the event log change underfoot; URLSession.shared would otherwise
+        // serve a cached Event Log page after a live row had already been saved
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         // the server's validator rejects any request without a JSON content type, body or not
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

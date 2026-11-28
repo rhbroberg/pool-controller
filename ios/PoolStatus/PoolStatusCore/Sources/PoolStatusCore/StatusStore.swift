@@ -76,6 +76,10 @@ public final class StatusStore {
     private var refreshesInFlight = 0
     /// Whether the server's live updates are arriving, so changes show as the controller reports them.
     public private(set) var isLive = false
+    /// Newest event-log row from a live push; Event Log can also watch `liveEventsReceived`.
+    public private(set) var latestLiveEvent: EventEntry?
+    /// Bumped on each live event-log push so open views can ingest like `tail -f`.
+    public private(set) var liveEventsReceived = 0
 
     @ObservationIgnored private let defaults: UserDefaults
     /// False where a site list keeps the address, as on the iPhone.
@@ -83,6 +87,8 @@ public final class StatusStore {
     @ObservationIgnored private let session: URLSession
     @ObservationIgnored private let sleep: Sleep
     @ObservationIgnored private let live: (any LiveTransport)?
+    /// Event Log screens that want each new row as it is saved (same idea as the web store).
+    @ObservationIgnored private var liveEventListeners: [UUID: (EventEntry) -> Void] = [:]
     /// The wait before the next poll, which joining or losing the live updates cuts short.
     @ObservationIgnored private var pollNap: Task<Void, Never>?
     /// Changes waiting for the next push.
@@ -274,9 +280,17 @@ public final class StatusStore {
                 case .connect:
                     joined = true
                     setLive(true)
+                    NSLog("PoolStatus live joined")
                 case .event(let name, let payload):
+                    NSLog("PoolStatus live packet name=%@ joined=%@ bytes=%d", name, joined ? "yes" : "no", payload.count)
                     if joined, let update = LiveUpdate(name: name, payload: payload) {
-                        apply(update)
+                        // live socket I/O is off the main actor; Event Log listeners and
+                        // @Observable views are registered/read there, so hop before applying
+                        await MainActor.run {
+                            apply(update)
+                        }
+                    } else {
+                        NSLog("PoolStatus live packet dropped name=%@ joined=%@", name, joined ? "yes" : "no")
                     }
                 case .close, .disconnect, .refused:
                     return joined
@@ -316,10 +330,28 @@ public final class StatusStore {
             heating = pushed
         case .tasks(let pushed):
             tasks = pushed
+        case .event(let entry):
+            latestLiveEvent = entry
+            liveEventsReceived += 1
+            let listeners = Array(liveEventListeners.values)
+            NSLog("PoolStatus live event applied id=%@ listeners=%d count=%d", entry.id, listeners.count, liveEventsReceived)
+            listeners.forEach { $0(entry) }
         }
         let waiters = pushWaiters.values
         pushWaiters.removeAll()
         waiters.forEach { $0.resume(returning: true) }
+    }
+
+    /// Hears each new event-log row the server pushes; returns a token to pass to
+    /// `removeLiveEventListener`.
+    public func onLiveEvent(_ listener: @escaping (EventEntry) -> Void) -> UUID {
+        let id = UUID()
+        liveEventListeners[id] = listener
+        return id
+    }
+
+    public func removeLiveEventListener(_ id: UUID) {
+        liveEventListeners.removeValue(forKey: id)
     }
 
     /// True when a push arrives within `limit`, false otherwise.

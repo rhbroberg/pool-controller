@@ -123,6 +123,22 @@ struct LivePacketTests {
         }
         #expect(heating.target == .pool)
         #expect(LiveUpdate(name: "weather", payload: Data("{}".utf8)) == nil)
+
+        let eventPayload = Data(#"{"id":"e1","timestamp":"2026-11-28T17:00:00.000Z","type":"action","user":"rhb","summary":"Turned the filter on"}"#.utf8)
+        guard case .event(let entry) = LiveUpdate(name: "eventLog", payload: eventPayload) else {
+            Issue.record("eventLog")
+            return
+        }
+        #expect(entry.id == "e1")
+        #expect(entry.summary == "Turned the filter on")
+        #expect(entry.kind == .actions)
+
+        let epochPayload = Data(#"{"id":"e2","timestamp":1732813200000,"type":"status","summary":"Filter on"}"#.utf8)
+        guard case .event(let epoch) = LiveUpdate(name: "eventLog", payload: epochPayload) else {
+            Issue.record("eventLog with epoch timestamp")
+            return
+        }
+        #expect(epoch.id == "e2")
         #expect(LiveUpdate(name: "readings", payload: Data(#""text""#.utf8)) == nil)
     }
 
@@ -198,6 +214,14 @@ struct LiveStatusTests {
 
         socket.push(#"42["heating",\#(Fixture.heating(target: "spa"))]"#)
         try await until("pushed heating shows") { store.heating?.target == .spa }
+
+        var liveIds: [String] = []
+        let token = store.onLiveEvent { liveIds.append($0.id) }
+        defer { store.removeLiveEventListener(token) }
+        socket.push(#"42["eventLog",{"id":"live-1","timestamp":"2026-11-28T18:07:00.000Z","type":"action","user":"rhb","summary":"Pressed the panel's plus key","details":[{"name":"plus","value":1}]}]"#)
+        try await until("pushed event-log row notifies listeners") { liveIds == ["live-1"] }
+        #expect(store.latestLiveEvent?.summary == "Pressed the panel's plus key")
+        #expect(store.liveEventsReceived == 1)
     }
 
     @Test("polls as usual again after losing the live updates, and reconnects")

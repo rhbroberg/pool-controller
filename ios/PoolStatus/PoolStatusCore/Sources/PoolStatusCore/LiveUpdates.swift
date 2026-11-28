@@ -100,6 +100,8 @@ public nonisolated enum LiveUpdate: Sendable {
     case heating(HeatingStatus)
     /// The same as `GET /tasks` answers.
     case tasks(TaskStatus)
+    /// One event-log row as `GET /events` returns it, saved just now.
+    case event(EventEntry)
 
     /// Nil for events the app doesn't know, or can't read.
     public init?(name: String, payload: Data) {
@@ -119,6 +121,14 @@ public nonisolated enum LiveUpdate: Sendable {
                 return nil
             }
             self = .tasks(tasks)
+        case "eventLog", "event": // "event" kept briefly for older servers during rollout
+            do {
+                self = .event(try StatusClient.decoder.decode(EventEntry.self, from: payload))
+            } catch {
+                // leave a breadcrumb in the simulator console when a live event-log row can't be read
+                NSLog("PoolStatus live event decode failed: \(error) payload=\(String(data: payload, encoding: .utf8) ?? "<binary>")")
+                return nil
+            }
         default:
             return nil
         }
@@ -194,22 +204,26 @@ private nonisolated struct WebSocketTaskSocket: LiveSocket {
     func receive(timeout: Duration) async throws -> String {
         try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask {
-                // the task's own receive doesn't stop when cancelled; ending the connection does
-                try await withTaskCancellationHandler {
-                    try await nextText()
-                } onCancel: {
-                    task.cancel(with: .goingAway, reason: nil)
-                }
+                try await nextText()
             }
             group.addTask {
                 try await Task.sleep(for: timeout)
                 throw LiveError.silent
             }
-            defer { group.cancelAll() }
-            guard let text = try await group.next() else {
-                throw LiveError.silent
+            do {
+                guard let text = try await group.next() else {
+                    throw LiveError.silent
+                }
+                // only the sleep remains; leave the socket up for the next receive
+                group.cancelAll()
+                return text
+            } catch {
+                group.cancelAll()
+                // URLSessionWebSocketTask.receive ignores Swift cancellation; end it so silence
+                // and parent cancel don't leave a hung receive behind the next reconnect
+                task.cancel(with: .goingAway, reason: nil)
+                throw error
             }
-            return text
         }
     }
 

@@ -71,6 +71,42 @@ struct EventLogTests {
         await model.loadUsers(client: server.client)
         #expect(model.users == ["owner", "operator"])
     }
+
+    @Test("ingests a live row at the top when it matches the filters")
+    func ingestLive() {
+        let model = EventLogModel()
+        let action = try! StatusClient.decoder.decode(
+            EventEntry.self,
+            from: Data(Self.event("live", minute: 10).utf8))
+        let reading = try! StatusClient.decoder.decode(
+            EventEntry.self,
+            from: Data(Self.event("temp", minute: 11, type: "info").utf8))
+        model.ingest(action)
+        model.ingest(reading)
+        model.ingest(action)
+        #expect(model.events.map(\.id) == ["live"], "readings are off by default; repeats are dropped")
+        model.ascending = true
+        model.kinds = [.actions]
+        let later = try! StatusClient.decoder.decode(
+            EventEntry.self,
+            from: Data(Self.event("later", minute: 12).utf8))
+        model.ingest(later)
+        #expect(model.events.map(\.id) == ["live", "later"])
+    }
+
+    @Test("StatusStore notifies Event Log listeners when a live event arrives")
+    @MainActor
+    func storeNotifiesLiveEventListeners() throws {
+        let store = StatusStore.preview()
+        var seen: [String] = []
+        let token = store.onLiveEvent { seen.append($0.id) }
+        defer { store.removeLiveEventListener(token) }
+        let payload = Data(Self.event("pushed", minute: 20).utf8)
+        store.apply(try #require(LiveUpdate(name: "eventLog", payload: payload)))
+        #expect(seen == ["pushed"])
+        #expect(store.latestLiveEvent?.id == "pushed")
+        #expect(store.liveEventsReceived == 1)
+    }
 }
 
 @Suite("Panel")

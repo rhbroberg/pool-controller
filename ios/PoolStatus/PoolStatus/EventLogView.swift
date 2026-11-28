@@ -14,6 +14,8 @@ struct EventLogView: View {
     }
 
     var body: some View {
+        // establish Observation of live pushes (same pattern as readings on the dashboard)
+        let liveCount = store.liveEventsReceived
         List {
             ForEach(model.events) { event in
                 EventRow(event: event)
@@ -57,6 +59,23 @@ struct EventLogView: View {
         .task(id: FilterKey(serverAddress: store.serverAddress, kinds: model.kinds, user: model.user,
                             ascending: model.ascending)) {
             await model.reload(client: store.client)
+        }
+        .onChange(of: liveCount) { _, _ in
+            if let entry = store.latestLiveEvent {
+                model.ingest(entry)
+            }
+        }
+        // also subscribe directly: covers the first push before onChange is armed, and any
+        // Observation edge cases with @Environment
+        .task {
+            let model = model
+            let id = store.onLiveEvent { entry in
+                model.ingest(entry)
+            }
+            defer { store.removeLiveEventListener(id) }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60 * 60))
+            }
         }
     }
 
