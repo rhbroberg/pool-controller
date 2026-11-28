@@ -1,7 +1,6 @@
 // The pool's state as the page shows it: readings, heating, the connection and the sign-in.
 
-import { ApiError, isAbort, toReading } from './api.js';
-import {
+import { ApiError, isAbort, toDate, toReading } from './api.js';import {
     canControl,
     isAdmin,
     isOn,
@@ -22,6 +21,7 @@ import type {
     HeatingDeviceStatus,
     HeatingStatus,
     LiveReadingsPush,
+    LiveEventEntry,
     MaintenanceJob,
     Reading,
     ReprocessRun,
@@ -132,6 +132,8 @@ export class StatusStore {
     } | null;
     pushWaiters: Set<(pushed?: boolean) => void>;
     pushesApplied: number;
+    /** Event Log views that want each new row as it is saved */
+    liveEventListeners: Set<(event: LiveEventEntry & { timestamp: Date | null }) => void>;
     /**
      * live, a LiveConnection, pushes changes as the controller reports them; without it, or while
      * it can't reach the server, the store polls
@@ -185,6 +187,7 @@ export class StatusStore {
         this.pushWaiters = new Set();
         // counts pushes, so a refresh that asked before one doesn't put back what it replaced
         this.pushesApplied = 0;
+        this.liveEventListeners = new Set();
         this.live = live;
         if (live) {
             live.onEvent = (name, data) => this.receivePush(name, data);
@@ -203,6 +206,12 @@ export class StatusStore {
     subscribe(listener: (store: StatusStore) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
+    }
+
+    /** hears each new event-log row the server pushes; returns an unsubscribe */
+    onLiveEvent(listener: (event: LiveEventEntry & { timestamp: Date | null }) => void) {
+        this.liveEventListeners.add(listener);
+        return () => this.liveEventListeners.delete(listener);
     }
 
     changed() {
@@ -352,6 +361,10 @@ export class StatusStore {
             // a task is confirmed by this push rather than the readings before it
             this.pushWaiters.forEach((wake) => wake(true));
             this.changed();
+        } else if ((name === 'eventLog' || name === 'event') && data && typeof data === 'object' && typeof (data as LiveEventEntry).id === 'string') {
+            const raw = data as LiveEventEntry;
+            const entry = { ...raw, timestamp: toDate(raw.timestamp as string | number | Date | null | undefined) };
+            this.liveEventListeners.forEach((listener) => listener(entry));
         }
     }
 

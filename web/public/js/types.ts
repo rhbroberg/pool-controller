@@ -88,6 +88,16 @@ export interface HistoryResponse {
 /** live push payloads the store understands */
 export type LiveReadingsPush = { readings: Array<{ name: string; category: string; value: unknown; timestamp?: unknown; message?: string }> };
 
+/** one event-log row as GET /events and the live `event` push carry it */
+export type LiveEventEntry = {
+    id: string;
+    timestamp: unknown;
+    type: string;
+    user?: string | null;
+    summary: string;
+    details?: Array<{ name: string; value: unknown }>;
+};
+
 /** narrow an unknown catch value to an Error-like message when present */
 export const errorMessageOf = (error: unknown): string | undefined => {
     if (error instanceof Error) {

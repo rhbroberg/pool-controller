@@ -43,7 +43,7 @@ export const isAbort = (error: unknown) => {
     return name === 'AbortError' || name === 'TimeoutError';
 };
 
-const toDate = (value: string | number | Date | null | undefined) => value ? new Date(value) : null;
+export const toDate = (value: string | number | Date | null | undefined) => value ? new Date(value) : null;
 
 /** a reading as GET /status and the live updates send it, with its value a number */
 export const toReading = (reading: { name: string; category: string; value: unknown; timestamp?: unknown; message?: string }): Reading => ({

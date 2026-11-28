@@ -366,6 +366,32 @@ describe('status store with live updates', () => {
         assert.deepEqual(store.readings, []);
     });
 
+    it('hands each new event-log row to listeners, like tail -f', () => {
+        const live = fakeLive();
+        const store = new StatusStore(fakeClient([]), { live });
+        const seen: any[] = [];
+        const stop = store.onLiveEvent((event) => seen.push(event));
+        (live as any).onEvent('eventLog', {
+            id: 'e1',
+            timestamp: '2026-11-28T17:00:00.000Z',
+            type: 'action',
+            user: 'rhb',
+            summary: 'Turned the filter on'
+        });
+        (live as any).onEvent('eventLog', { summary: 'no id' });
+        assert.equal(seen.length, 1);
+        assert.equal(seen[0].id, 'e1');
+        assert.equal(seen[0].timestamp!.toISOString(), '2026-11-28T17:00:00.000Z');
+        stop();
+        (live as any).onEvent('eventLog', {
+            id: 'e2',
+            timestamp: '2026-11-28T17:01:00.000Z',
+            type: 'status',
+            summary: 'Filter on'
+        });
+        assert.equal(seen.length, 1, 'unsubscribed listeners hear nothing more');
+    });
+
     it('polls less often while live, and refreshes at once on joining or losing the live updates', async () => {
         const live = fakeLive();
         const waits: any[] = [];

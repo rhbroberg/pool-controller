@@ -14,7 +14,7 @@ const EVERYONE = '';
 const CONTROLLER = 'controller';
 
 export const mountEventLog = (root: any, app: any) => {
-    const { client } = app;
+    const { client, store } = app;
     let kinds = new Set(DEFAULT_EVENT_KINDS);
     let user = EVERYONE;
     let ascending = false;
@@ -28,6 +28,30 @@ export const mountEventLog = (root: any, app: any) => {
     // bumped on every reload, so a page that arrives after the filters change is dropped
     let generation = 0;
     let observer: any = null;
+
+    /** whether a live row belongs in the list under the current filters */
+    const matchesFilters = (event: any) => {
+        const kind = eventKindOf(event.type);
+        if (!kinds.has(kind.id)) {
+            return false;
+        }
+        if (user === CONTROLLER) {
+            return !event.user;
+        }
+        if (user && user !== EVERYONE) {
+            return event.user === user;
+        }
+        return true;
+    };
+
+    /** insert a newly saved row like `tail -f`, without refetching the page */
+    const ingestLive = (event: any) => {
+        if (!matchesFilters(event) || events.some((known) => known.id === event.id)) {
+            return;
+        }
+        events = ascending ? [...events, event] : [event, ...events];
+        redraw();
+    };
 
     const isDefaultKinds = () => kinds.size === DEFAULT_EVENT_KINDS.length && DEFAULT_EVENT_KINDS.every((kind) => kinds.has(kind));
 
@@ -244,8 +268,10 @@ export const mountEventLog = (root: any, app: any) => {
     redraw();
     loadUsers();
     reload();
+    const stopLive = store && typeof store.onLiveEvent === 'function' ? store.onLiveEvent(ingestLive) : () => {};
     return () => {
         generation += 1;
+        stopLive();
         if (observer) {
             observer.disconnect();
         }
